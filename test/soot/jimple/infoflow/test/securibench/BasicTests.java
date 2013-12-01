@@ -55,6 +55,7 @@ public class BasicTests extends JUnitTests {
 	Infoflow infoflow = initInfoflow();
 	List<String> epoints = new ArrayList<String>();
 	epoints.add("<securibench.micro.basic.Basic3: void doGet(javax.servlet.http.HttpServletRequest,javax.servlet.http.HttpServletResponse)>");
+infoflow.setEnableStaticFieldTracking(false);
 	infoflow.computeInfoflow(path, entryPointCreator, epoints, sources, sinks);
 	checkInfoflow(infoflow,1);
 	}

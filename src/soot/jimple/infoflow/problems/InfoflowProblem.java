@@ -791,7 +791,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						for (TaintPropagationHandler tp : taintPropagationHandlers)
 							tp.notifyFlowIn(stmt, Collections.singleton(source),
 									interproceduralCFG(), FlowFunctionType.CallFlowFunction);
-
+						
 						// If we have an exclusive taint wrapper for the target
 						// method, we do not perform an own taint propagation. 
 						if(taintWrapper != null && taintWrapper.isExclusive(stmt, source.getAccessPath())) {
@@ -835,16 +835,25 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (enableStaticFields && source.getAccessPath().isStaticFieldRef())
 							if (fieldsReadByCallee != null && !isFieldReadByCallee(fieldsReadByCallee, source))
 								return Collections.emptySet();
-						
+												
 						Set<Abstraction> res = new HashSet<Abstraction>();
 						// check if whole object is tainted (happens with strings, for example:)
 						if (!dest.isStatic() && ie instanceof InstanceInvokeExpr) {
 							InstanceInvokeExpr vie = (InstanceInvokeExpr) ie;
 							// this might be enough because every call must happen with a local variable which is tainted itself:
 							if (mayAlias(vie.getBase(), source.getAccessPath().getPlainValue())) {
+								
+								if (!dest.toString().contains("hashCode()") || dest.getDeclaringClass().getName().equals("java.lang.String"))
+								if (!dest.getName().equals("equals") || dest.getDeclaringClass().getName().equals("java.lang.String"))
+								if (!dest.getName().equals("size") || dest.getDeclaringClass().getName().equals("java.lang.String")) {
+SootMethod sm = interproceduralCFG().getMethodOf(src);
+System.out.println(dest.getSignature());
+
+								
 								Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
 										(dest.getActiveBody().getThisLocal()), stmt);
 								res.add(abs);
+								}
 							}
 						}
 
@@ -865,6 +874,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (enableStaticFields && source.getAccessPath().isStaticFieldRef())
 							res.add(source);
 
+						if (!res.isEmpty() && dest.toString().contains("Set"))
+							System.out.println("x");
+
+						
 						return res;
 					}
 				};

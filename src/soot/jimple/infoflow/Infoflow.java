@@ -163,8 +163,7 @@ public class Infoflow extends AbstractInfoflow {
 			Options.v().set_output_format(Options.output_format_none);
 		Options.v().set_whole_program(true);
 		Options.v().set_soot_classpath(path);
-		Options.v().set_process_dir(new ArrayList<String>(classes));
-
+		
 		// Configure the callgraph algorithm
 		switch (callgraphAlgorithm) {
 			case AutomaticSelection:
@@ -236,7 +235,7 @@ public class Infoflow extends AbstractInfoflow {
 		// entryPoints are the entryPoints required by Soot to calculate Graph - if there is no main method,
 		// we have to create a new main method and use it as entryPoint and store our real entryPoints
 		Scene.v().setEntryPoints(Collections.singletonList(entryPointCreator.createDummyMain(entryPoints)));
-
+		
 		// We explicitly select the packs we want to run for performance reasons
         PackManager.v().getPack("wjpp").apply();
         PackManager.v().getPack("cg").apply();

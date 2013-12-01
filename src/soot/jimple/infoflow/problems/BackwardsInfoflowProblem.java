@@ -368,9 +368,13 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								}
 								if (!param) {
 									if (iStmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
+if (!dest.toString().contains("hashCode()") || dest.getDeclaringClass().getName().equals("java.lang.String"))
+if (!dest.getName().equals("equals") || dest.getDeclaringClass().getName().equals("java.lang.String"))
+if (!dest.getName().equals("size") || dest.getDeclaringClass().getName().equals("java.lang.String")){
 										Abstraction abs = source.deriveNewAbstraction
 												(source.getAccessPath().copyWithNewValue(thisL), (Stmt) src);
 										res.add(abs);
+}
 									}
 								}
 							}
