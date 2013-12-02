@@ -26,9 +26,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import soot.ArrayType;
+import soot.IntType;
 import soot.Local;
 import soot.SootField;
 import soot.SootMethod;
+import soot.Type;
 import soot.Unit;
 import soot.Value;
 import soot.ValueBox;
@@ -43,6 +46,7 @@ import soot.jimple.IfStmt;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
+import soot.jimple.LengthExpr;
 import soot.jimple.LookupSwitchStmt;
 import soot.jimple.ReturnStmt;
 import soot.jimple.StaticFieldRef;
@@ -59,8 +63,8 @@ import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler.FlowFunctionType;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
-import soot.jimple.infoflow.solver.InfoflowCFG;
 import soot.jimple.infoflow.solver.IInfoflowCFG.UnitContainer;
+import soot.jimple.infoflow.solver.InfoflowCFG;
 import soot.jimple.infoflow.solver.functions.SolverCallFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverCallToReturnFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverNormalFlowFunction;
@@ -266,7 +270,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 	private boolean mustAlias(Value val1, Value val2) {
 		return val1.equals(val2);
 	}
-		
+			
 	@Override
 	public FlowFunctions<Unit, Abstraction, SootMethod> createFlowFunctionsFactory() {
 		return new FlowFunctions<Unit, Abstraction, SootMethod>() {
@@ -286,7 +290,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					Abstraction source,
 					Set<Abstraction> taintSet,
 					boolean cutFirstField,
-					SootMethod method) {
+					SootMethod method,
+					Type targetType) {
 				// Keep the original taint
 				taintSet.add(source);
 				
@@ -299,10 +304,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				if (targetValue instanceof ArrayRef)
 					baseTarget = ((ArrayRef) targetValue).getBase();
 
-				// also taint the target of the assignment
+				// also taint the target of the assignment 
 				Abstraction newAbs;
 				if (!source.getAccessPath().isEmpty())
-					newAbs = source.deriveNewAbstraction(baseTarget, cutFirstField, src);
+					newAbs = source.deriveNewAbstraction(baseTarget, cutFirstField, src, targetType);
 				else
 					newAbs = source.deriveNewAbstraction(new AccessPath(targetValue), src);
 				taintSet.add(newAbs);
@@ -421,7 +426,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				// taint is propagated with assignStmt
 				else if (src instanceof AssignStmt) {
 					final AssignStmt assignStmt = (AssignStmt) src;
-					Value right = assignStmt.getRightOp();
+					final Value right = assignStmt.getRightOp();
 					Value left = assignStmt.getLeftOp();
 
 					final Value leftValue = BaseSelector.selectBase(left, true);
@@ -503,6 +508,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									addLeftValue = true;
 							}
 							
+							Type targetType = null;
 							if (!addLeftValue) {
 								for (Value rightValue : rightVals) {
 									// check if static variable is tainted (same name, same class)
@@ -528,14 +534,16 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										// with the start of the given one
 										if (newSource.getAccessPath().isInstanceFieldRef()) {
 											if (mayAlias(new AccessPath(rightRef), new AccessPath
-													(newSource.getAccessPath().getPlainLocal(),
-													newSource.getAccessPath().getFirstField()))) {
+														(newSource.getAccessPath().getPlainLocal(),
+														newSource.getAccessPath().getFirstField()))) {
 												addLeftValue = true;
 												cutFirstField = true;
 											}
 										}
-										else if (mayAlias(rightBase, sourceBase))
+										else if (mayAlias(rightBase, sourceBase)) {
 											addLeftValue = true;
+											targetType = rightRef.getField().getType();
+										}
 									}
 									// indirect taint propagation:
 									// if rightvalue is local and source is instancefield of this local:
@@ -545,29 +553,51 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										Local base = newSource.getAccessPath().getPlainLocal();
 										if (mayAlias(rightValue, base)) {
 											addLeftValue = true;
+											targetType = newSource.getAccessPath().getType();
 										}
 									}
 									//y = x[i] && x tainted -> x, y tainted
 									else if (rightValue instanceof ArrayRef) {
 										Local rightBase = (Local) ((ArrayRef) rightValue).getBase();
-										if (mayAlias(rightBase, newSource.getAccessPath().getPlainValue()))
+										if (mayAlias(rightBase, newSource.getAccessPath().getPlainValue())) {
 											addLeftValue = true;
+											
+											targetType = newSource.getAccessPath().getType();
+											assert targetType instanceof ArrayType;
+										}
 									}
 									// generic case, is true for Locals, ArrayRefs that are equal etc..
 									//y = x && x tainted --> y, x tainted
 									else if (mayAlias(rightValue, newSource.getAccessPath().getPlainValue())) {
-										addLeftValue = true;
+										addLeftValue = true;										
+										targetType = newSource.getAccessPath().getType();
 									}
 								}
 							}
 
 							// if one of them is true -> add leftValue
 							if (addLeftValue) {
+								if (!newSource.getAccessPath().isEmpty()) {
+									// Special type handling for certain operations
+									if (assignStmt.getRightOp() instanceof LengthExpr) {
+										assert newSource.getAccessPath().getType() instanceof ArrayType;
+										targetType = IntType.v();
+									}
+									
+									// Special handling for array (de)construction
+									if (targetType != null) {
+										if (leftValue instanceof ArrayRef)
+											targetType = ArrayType.v(targetType, 1);
+										else if (assignStmt.getRightOp() instanceof ArrayRef)
+											targetType = ((ArrayType) targetType).getArrayElementType();
+									}
+								}
+								
 								if (isSink && newSource.isAbstractionActive() && newSource.getAccessPath().isEmpty())
 									results.add(new AbstractionAtSink(newSource, leftValue, assignStmt));
 								if(triggerInaktiveTaintOrReverseFlow(leftValue, newSource) || newSource.isAbstractionActive())
 									addTaintViaStmt(d1, (Stmt) src, leftValue, newSource, res, cutFirstField,
-											interproceduralCFG().getMethodOf(src));
+											interproceduralCFG().getMethodOf(src), targetType);
 								res.add(newSource);
 								return res;
 							}
@@ -841,20 +871,12 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (!dest.isStatic() && ie instanceof InstanceInvokeExpr) {
 							InstanceInvokeExpr vie = (InstanceInvokeExpr) ie;
 							// this might be enough because every call must happen with a local variable which is tainted itself:
-							if (mayAlias(vie.getBase(), source.getAccessPath().getPlainValue())) {
-								
-								if (!dest.toString().contains("hashCode()") || dest.getDeclaringClass().getName().equals("java.lang.String"))
-								if (!dest.getName().equals("equals") || dest.getDeclaringClass().getName().equals("java.lang.String"))
-								if (!dest.getName().equals("size") || dest.getDeclaringClass().getName().equals("java.lang.String")) {
-SootMethod sm = interproceduralCFG().getMethodOf(src);
-System.out.println(dest.getSignature());
-
-								
-								Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
-										(dest.getActiveBody().getThisLocal()), stmt);
-								res.add(abs);
+							if (mayAlias(vie.getBase(), source.getAccessPath().getPlainValue()))
+								if (hasCompatibleTypes(source.getAccessPath(), dest.getDeclaringClass())) {
+									Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
+											(dest.getActiveBody().getThisLocal()), stmt);
+									res.add(abs);
 								}
-							}
 						}
 
 						//special treatment for clinit methods - no param mapping possible
@@ -873,10 +895,6 @@ System.out.println(dest.getSignature());
 						// staticfieldRefs must be analyzed even if they are not part of the params:
 						if (enableStaticFields && source.getAccessPath().isStaticFieldRef())
 							res.add(source);
-
-						if (!res.isEmpty() && dest.toString().contains("Set"))
-							System.out.println("x");
-
 						
 						return res;
 					}

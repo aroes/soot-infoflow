@@ -22,6 +22,7 @@ import java.util.Set;
 import soot.NullType;
 import soot.SootField;
 import soot.SootMethod;
+import soot.Type;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.Stmt;
@@ -276,21 +277,36 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	}
 	
 	public final Abstraction deriveNewAbstraction(Value taint, Unit activationUnit){
-		return this.deriveNewAbstraction(taint, false, activationUnit);
+		return this.deriveNewAbstraction(taint, false, activationUnit, null);
 	}
 	
-	public final Abstraction deriveNewAbstraction(Value taint, boolean cutFirstField, Unit newActUnit){
+	public final Abstraction deriveNewAbstraction(Value taint, boolean cutFirstField, Unit newActUnit,
+			Type baseType){
 		assert !this.getAccessPath().isEmpty();
 
 		Abstraction a;
 		SootField[] orgFields = accessPath.getFields();
 		SootField[] fields = null;
+
 		if (orgFields != null) {
 			fields = new SootField[cutFirstField ? orgFields.length - 1 : orgFields.length];
 			for (int i = cutFirstField ? 1 : 0; i < orgFields.length; i++)
 				fields[cutFirstField ? i - 1 : i] = orgFields[i];
 		}
-		AccessPath newAP = new AccessPath(taint, fields);
+
+		Type[] orgTypes = accessPath.getFieldTypes();
+		Type[] types = null;
+		
+		if (orgTypes != null) {
+			types = new Type[cutFirstField ? orgTypes.length - 1 : orgTypes.length];
+			for (int i = cutFirstField ? 1 : 0; i < orgTypes.length; i++)
+				types[cutFirstField ? i - 1 : i] = orgTypes[i];
+		}
+		
+		if (cutFirstField)
+			baseType = accessPath.getFirstFieldType();
+		
+		AccessPath newAP = new AccessPath(taint, fields, baseType, types);
 		
 		a = deriveNewAbstractionMutable(newAP, (Stmt) newActUnit);
 		if (flowSensitiveAliasing && isActive) {
@@ -324,7 +340,8 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	 */
 	public final Abstraction deriveNewAbstractionOnCatch(Value taint, Unit newActivationUnit){
 		assert this.exceptionThrown;
-		Abstraction abs = deriveNewAbstractionMutable(new AccessPath(taint), (Stmt) newActivationUnit);
+		Abstraction abs = deriveNewAbstractionMutable(new AccessPath(taint),
+				(Stmt) newActivationUnit);
 		abs.exceptionThrown = false;
 		
 		if(flowSensitiveAliasing && isActive) {
