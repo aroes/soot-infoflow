@@ -32,7 +32,6 @@ import soot.Value;
 import soot.jimple.AssignStmt;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.InstanceInvokeExpr;
-import soot.jimple.StaticInvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.util.SootMethodRepresentationParser;
@@ -48,39 +47,45 @@ import soot.jimple.internal.JAssignStmt;
  * @author Christian Fritz, Steven Arzt
  *
  */
-public class EasyTaintWrapper extends AbstractTaintWrapper {
+public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 	private final Map<String, List<String>> classList;
 	private final Map<String, List<String>> excludeList;
 	private final Map<String, List<String>> killList;
 	private final Set<String> includeList;
-	private boolean aggressiveMode = false;
 	
-	public EasyTaintWrapper(HashMap<String, List<String>> classList){
-		this.classList = classList;
-		this.excludeList = new HashMap<String, List<String>>();
-		this.killList = new HashMap<String, List<String>>();
-		this.includeList = new HashSet<String>();
+	private boolean aggressiveMode = false;
+	private boolean alwaysModelEqualsHashCode = true;
+	
+	public EasyTaintWrapper(Map<String, List<String>> classList){
+		this(classList, new HashMap<String, List<String>>(),
+				new HashMap<String, List<String>>(),
+				new HashSet<String>());
 	}
 	
-	public EasyTaintWrapper(HashMap<String, List<String>> classList,
-			HashMap<String, List<String>> excludeList) {
-		this.classList = classList;
-		this.excludeList = excludeList;
-		this.killList = new HashMap<String, List<String>>();
-		this.includeList = new HashSet<String>();
+	public EasyTaintWrapper(Map<String, List<String>> classList,
+			Map<String, List<String>> excludeList) {
+		this(classList, excludeList, new HashMap<String, List<String>>(),
+				new HashSet<String>());
 	}
 
-	public EasyTaintWrapper(HashMap<String, List<String>> classList,
-			HashMap<String, List<String>> excludeList,
-			HashMap<String, List<String>> killList) {
+	public EasyTaintWrapper(Map<String, List<String>> classList,
+			Map<String, List<String>> excludeList,
+			Map<String, List<String>> killList) {
+		this(classList, excludeList, killList, new HashSet<String>());
+	}
+
+	public EasyTaintWrapper(Map<String, List<String>> classList,
+			Map<String, List<String>> excludeList,
+			Map<String, List<String>> killList,
+			Set<String> includeList) {
 		this.classList = classList;
 		this.excludeList = excludeList;
 		this.killList = killList;
-		this.includeList = new HashSet<String>();
+		this.includeList = includeList;
 	}
 
-    public EasyTaintWrapper(String f) throws IOException{
+	public EasyTaintWrapper(String f) throws IOException{
         this(new File(f));
     }
 
@@ -117,6 +122,10 @@ public class EasyTaintWrapper extends AbstractTaintWrapper {
 		}
 	}
 	
+	public EasyTaintWrapper(EasyTaintWrapper taintWrapper) {
+		this(taintWrapper.classList, taintWrapper.excludeList, taintWrapper.killList, taintWrapper.includeList);
+	}
+	
 	@Override
 	public Set<AccessPath> getTaintsForMethod(Stmt stmt, AccessPath taintedPath) {
 		if (!stmt.containsInvokeExpr())
@@ -131,15 +140,10 @@ public class EasyTaintWrapper extends AbstractTaintWrapper {
 		if (method.isPhantom() || !method.hasActiveBody())
 			taints.add(taintedPath);
 
-		// If this is not one of the supported classes, we skip it
-		boolean isSupported = false;
-		for (String supportedClass : this.includeList)
-			if (method.getDeclaringClass().getName().startsWith(supportedClass)) {
-				isSupported = true;
-				break;
-			}
-		if (!isSupported && !aggressiveMode)
-			return Collections.emptySet();
+		// For the moment, we don't implement static taints on wrappers. Pass it on
+		// not to break anything
+		if(taintedPath.isStaticFieldRef())
+			return Collections.singleton(taintedPath);
 
 		// For implicit flows, we always taint the return value and the base
 		// object on the empty abstraction.
@@ -152,15 +156,24 @@ public class EasyTaintWrapper extends AbstractTaintWrapper {
 					taints.add(new AccessPath(((InstanceInvokeExpr) stmt.getInvokeExpr()).getBase()));
 			return taints;
 		}
+		
+		// Do we handle equals() and hashCode() separately?
+		boolean taintEqualsHashCode = alwaysModelEqualsHashCode
+				&& (method.getSubSignature().equals("boolean equals(java.lang.Object)")
+						|| method.getSubSignature().equals("int hashCode()"));
 
-		// For the moment, we don't implement static taints on wrappers. Pass it on
-		// not to break anything
-		if(taintedPath.isStaticFieldRef())
-			return Collections.singleton(taintedPath);
-
+		// If this is not one of the supported classes, we skip it
+		boolean isSupported = false;
+		for (String supportedClass : this.includeList)
+			if (method.getDeclaringClass().getName().startsWith(supportedClass)) {
+				isSupported = true;
+				break;
+			}
+		if (!isSupported && !aggressiveMode && !taintEqualsHashCode)
+			return taints;
+		
 		if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
-			InstanceInvokeExpr iiExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();
-			
+			InstanceInvokeExpr iiExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();			
 			if (iiExpr.getBase().equals(taintedPath.getPlainValue())) {
 				// If the base object is tainted, we have to check whether we must kill the taint
 				List<String> killMethods = this.killList.get(stmt.getInvokeExpr().getMethod().getDeclaringClass().getName());
@@ -171,6 +184,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper {
 				// tainted values
 				if (stmt instanceof JAssignStmt) {
 					AssignStmt assign = (AssignStmt) stmt;
+
 					// Check for exclusions
 					List<String> excludedMethods = this.excludeList.get(assign.getInvokeExpr().getMethod().getDeclaringClass().getName());
 					if (excludedMethods == null || !excludedMethods.contains
@@ -185,25 +199,21 @@ public class EasyTaintWrapper extends AbstractTaintWrapper {
 		
 		// Even in aggressive mode, we do not taint base objects based on
 		// parameters unless we know what the method is doing
-		if (!isSupported)
-			return Collections.emptySet();
+		if (!isSupported && !taintEqualsHashCode)
+			return taints;
 
 		//if param is tainted && classList contains classname && if list. contains signature of method -> add propagation
 		for (Value param : stmt.getInvokeExpr().getArgs())
-			if (param.equals(taintedPath.getPlainValue())) {		
-				if(methodList.contains(method.getSubSignature())) {
+			if (param.equals(taintedPath.getPlainValue())) {
+				if (taintEqualsHashCode || methodList.contains(method.getSubSignature())) {
 					// If we call a method on an instance, this instance is assumed to be tainted
-					if(stmt.getInvokeExprBox().getValue() instanceof InstanceInvokeExpr) {
+					if(stmt.getInvokeExprBox().getValue() instanceof InstanceInvokeExpr)
 						taints.add(new AccessPath(((InstanceInvokeExpr) stmt.getInvokeExprBox().getValue()).getBase()));
-						
-						// If make sure to also taint the left side of an assignment
-						// if the object just got tainted 
-						if(stmt instanceof JAssignStmt)
-							taints.add(new AccessPath(((JAssignStmt)stmt).getLeftOp()));
-					}
-					else if (stmt.getInvokeExprBox().getValue() instanceof StaticInvokeExpr)
-						if (stmt instanceof JAssignStmt)
-							taints.add(new AccessPath(((JAssignStmt)stmt).getLeftOp()));
+					
+					// If make sure to also taint the left side of an assignment
+					// if the object just got tainted 
+					if(stmt instanceof JAssignStmt)
+						taints.add(new AccessPath(((JAssignStmt)stmt).getLeftOp()));
 				}
 					
 				// The parameter as such stays tainted
@@ -268,6 +278,12 @@ public class EasyTaintWrapper extends AbstractTaintWrapper {
 				return true;
 		}
 		
+		// Do we always model equals() and hashCode()?
+		final String methodSubSig = stmt.getInvokeExpr().getMethod().getSubSignature();
+		if (alwaysModelEqualsHashCode
+				&& (methodSubSig.equals("boolean equals(java.lang.Object)") || methodSubSig.equals("int hashCode()")))
+			return true;
+		
 		return hasMethodsForClass(method.getDeclaringClass());
 	}
 	
@@ -291,6 +307,32 @@ public class EasyTaintWrapper extends AbstractTaintWrapper {
 	 */
 	public boolean getAggressiveMode() {
 		return this.aggressiveMode;
+	}
+	
+	/**
+	 * Sets whether the equals() and hashCode() methods shall always be modeled,
+	 * regardless of the target type.
+	 * @param alwaysModelEqualsHashCode True if the equals() and hashCode()
+	 * methods shall always be modeled, regardless of the target type, otherwise
+	 * false
+	 */
+	public void setAlwaysModelEqualsHashCode(boolean alwaysModelEqualsHashCode) {
+		this.alwaysModelEqualsHashCode = alwaysModelEqualsHashCode;
+	}
+	
+	/**
+	 * Gets whether the equals() and hashCode() methods shall always be modeled,
+	 * regardless of the target type.
+	 * @return True if the equals() and hashCode() methods shall always be modeled,
+	 * regardless of the target type, otherwise false
+	 */
+	public boolean getAlwaysModelEqualsHashCode() {
+		return this.alwaysModelEqualsHashCode;
+	}
+	
+	@Override
+	public EasyTaintWrapper clone() {
+		return new EasyTaintWrapper(this);
 	}
 
 }
