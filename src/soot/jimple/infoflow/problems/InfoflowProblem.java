@@ -581,10 +581,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								// If the right side is a typecast, it must be compatible,
 								// or this path is not realizable
 								if (assignStmt.getRightOp() instanceof CastExpr)
-									if (!hasCompatibleTypes(newSource.getAccessPath(),
-											((CastExpr) assignStmt.getRightOp()).getCastType()))
+									if (!canCastType(((CastExpr) assignStmt.getRightOp()).getCastType(),
+											newSource.getAccessPath().getType()))
 										return Collections.emptySet();
-
+								
 								if (!newSource.getAccessPath().isEmpty()) {
 									// Special type handling for certain operations
 									if (assignStmt.getRightOp() instanceof LengthExpr) {
@@ -882,7 +882,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							InstanceInvokeExpr vie = (InstanceInvokeExpr) ie;
 							// this might be enough because every call must happen with a local variable which is tainted itself:
 							if (mayAlias(vie.getBase(), source.getAccessPath().getPlainValue()))
-								if (hasCompatibleTypes(source.getAccessPath(), dest.getDeclaringClass())) {
+								if (hasCompatibleTypesForCall(source.getAccessPath(), dest.getDeclaringClass())) {
 									Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
 											(dest.getActiveBody().getThisLocal()), stmt);
 									res.add(abs);

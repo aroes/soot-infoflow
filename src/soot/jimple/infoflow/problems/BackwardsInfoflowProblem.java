@@ -380,7 +380,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							Local thisL = dest.getActiveBody().getThisLocal();
 							InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) iStmt.getInvokeExpr();
 							if (iIExpr.getBase().equals(sourceBase)
-									&& (hasCompatibleTypes(source.getAccessPath(), dest.getDeclaringClass()))) {
+									&& (hasCompatibleTypesForCall(source.getAccessPath(), dest.getDeclaringClass()))) {
 								boolean param = false;
 								// check if it is not one of the params (then we have already fixed it)
 								for (int i = 0; i < dest.getParameterCount(); i++) {

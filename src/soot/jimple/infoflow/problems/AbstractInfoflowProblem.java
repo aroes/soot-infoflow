@@ -18,6 +18,8 @@ import java.util.Map;
 import java.util.Set;
 
 import soot.ArrayType;
+import soot.IntType;
+import soot.LongType;
 import soot.PrimType;
 import soot.RefType;
 import soot.Scene;
@@ -71,46 +73,28 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 		super(icfg);
 	}
 	
-	protected boolean hasCompatibleTypes(AccessPath ap, Type tp) {
-		if (ap.getType() instanceof PrimType)
-			return tp instanceof PrimType;
-		if (tp instanceof PrimType)
-			return ap.getType() instanceof PrimType;
+	protected boolean canCastType(Type destType, Type sourceType) {
+		if (Scene.v().getFastHierarchy().canStoreType(destType, sourceType))
+			return true;
 		
-		if (ap.getType() instanceof ArrayType
-				&& !(tp instanceof ArrayType)
-				&& !(tp instanceof RefType && ((RefType) tp).getSootClass().getName().equals("java.lang.Object")))
-			return false;
-		if (tp instanceof ArrayType
-				&& !(ap.getType() instanceof ArrayType)
-				&& !(ap.getType() instanceof RefType && ((RefType) ap.getType()).getSootClass().getName().equals("java.lang.Object")))
-			return false;
-		
-		return true;
+		if (destType instanceof PrimType && sourceType instanceof PrimType)
+			if (sourceType instanceof LongType && destType instanceof IntType
+					|| destType instanceof LongType && sourceType instanceof IntType)
+				return true;
+			
+		return false;
 	}
-	
-	protected boolean hasCompatibleTypes(AccessPath ap, SootClass dest) {
-		if (ap.getType() instanceof PrimType)
+		
+	protected boolean hasCompatibleTypesForCall(AccessPath apBase, SootClass dest) {
+		// Cannot invoke a method on a primitive type
+		if (apBase.getType() instanceof PrimType)
 			return false;
+		// Cannot invoke a method on an array
+		if (apBase.getType() instanceof ArrayType)
+			return dest.getName().equals("java.lang.Object");
 		
-		SootClass sc1 = ((RefType) ap.getType()).getSootClass();
-		if (sc1.isInterface() && dest.isInterface())
-			return Scene.v().getActiveHierarchy().isInterfaceSubinterfaceOf(sc1, dest)
-					|| Scene.v().getActiveHierarchy().isInterfaceSubinterfaceOf(dest, sc1);
-		
-		if (sc1.isInterface() && !dest.isInterface()) {
-			SootClass curClass = dest;
-			while (curClass != null) {
-				for (SootClass intf : curClass.getInterfaces())
-					if (Scene.v().getActiveHierarchy().getSuperinterfacesOfIncluding(intf).contains(sc1))
-						return true;
-				curClass = curClass.hasSuperclass() ? curClass.getSuperclass() : null;
-			}
-			return false;
-		}
-		
-		return Scene.v().getActiveHierarchy().isClassSubclassOfIncluding(dest, sc1)
-				|| Scene.v().getActiveHierarchy().isClassSubclassOfIncluding(sc1, dest);
+		return Scene.v().getFastHierarchy().canStoreType(apBase.getType(), dest.getType())
+				|| Scene.v().getFastHierarchy().canStoreType(dest.getType(), apBase.getType());
 	}
 
 	public void setSolver(IInfoflowSolver solver) {
