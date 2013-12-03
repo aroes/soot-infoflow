@@ -74,7 +74,8 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	}
 	
 	protected boolean canCastType(Type destType, Type sourceType) {
-		if (Scene.v().getFastHierarchy().canStoreType(destType, sourceType))
+		if (Scene.v().getFastHierarchy().canStoreType(destType, sourceType) // cast-up, i.e. Object to String
+				|| Scene.v().getFastHierarchy().canStoreType(sourceType, destType)) // cast-down, i.e. String to Object
 			return true;
 		
 		if (destType instanceof PrimType && sourceType instanceof PrimType)
