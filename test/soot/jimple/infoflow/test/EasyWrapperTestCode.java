@@ -104,4 +104,58 @@ public class EasyWrapperTestCode {
 		cm.publish(a.getConstant());
 	}
 	
+	private interface I1 {
+		public String getSecret();
+		public void taintMe(String s);
+	}
+	
+	private interface I2 extends I1 {
+		
+	}
+	
+	private class C implements I2 {
+		private String data;
+		
+		public C(String data) {
+			this.data = data;
+		}
+		
+		public String getSecret() {
+			return "Fake secret";
+		}
+		
+		public void taintMe(String s) {
+			// do nothing
+		}
+		
+		public String getData() {
+			return this.data;
+		}
+		
+	}
+	
+	public void interfaceInheritanceTest() {
+		String tainted = TelephonyManager.getDeviceId();
+		C c = new C(tainted);
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(c.getSecret());
+	}
+
+	public void interfaceInheritanceTest2() {
+		String tainted = TelephonyManager.getDeviceId();
+		C c = new C("");
+		c.taintMe(tainted);
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(c.getData());
+	}
+
+	public void interfaceInheritanceTest3() {
+		String tainted = TelephonyManager.getDeviceId();
+		C c = new C("");
+		I2 i2 = (I2) c;
+		i2.taintMe(tainted);
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(c.getData());
+	}
+
 }

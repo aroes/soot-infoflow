@@ -112,4 +112,49 @@ public class EasyWrapperTests extends JUnitTests {
 		negativeCheckInfoflow(infoflow);
     }
 
+	@Test(timeout=300000)
+    public void interfaceInheritanceTest(){
+		EasyTaintWrapper wrapper = easyWrapper.clone();
+		wrapper.addIncludePrefix("soot.jimple.infoflow.test");
+		wrapper.addMethodForWrapping("soot.jimple.infoflow.test.EasyWrapperTestCode$I1",
+				"java.lang.String getSecret()");
+		
+		Infoflow infoflow = initInfoflow();
+    	List<String> epoints = new ArrayList<String>();
+    	epoints.add("<soot.jimple.infoflow.test.EasyWrapperTestCode: void interfaceInheritanceTest()>");
+    	infoflow.setTaintWrapper(wrapper);
+    	infoflow.computeInfoflow(path, epoints,sources, sinks);
+		checkInfoflow(infoflow, 1);
+    }
+
+	@Test(timeout=300000)
+    public void interfaceInheritanceTest2(){
+		EasyTaintWrapper wrapper = easyWrapper.clone();
+		wrapper.addIncludePrefix("soot.jimple.infoflow.test");
+		wrapper.addMethodForWrapping("soot.jimple.infoflow.test.EasyWrapperTestCode$I1",
+				"void taintMe(java.lang.String)");
+		
+		Infoflow infoflow = initInfoflow();
+    	List<String> epoints = new ArrayList<String>();
+    	epoints.add("<soot.jimple.infoflow.test.EasyWrapperTestCode: void interfaceInheritanceTest2()>");
+    	infoflow.setTaintWrapper(wrapper);
+    	infoflow.computeInfoflow(path, epoints,sources, sinks);
+		checkInfoflow(infoflow, 1);
+    }
+
+	@Test(timeout=300000)
+    public void interfaceInheritanceTest3(){
+		EasyTaintWrapper wrapper = easyWrapper.clone();
+		wrapper.addIncludePrefix("soot.jimple.infoflow.test");
+		wrapper.addMethodForWrapping("soot.jimple.infoflow.test.EasyWrapperTestCode$I1",
+				"void taintMe(java.lang.String)");
+		
+		Infoflow infoflow = initInfoflow();
+    	List<String> epoints = new ArrayList<String>();
+    	epoints.add("<soot.jimple.infoflow.test.EasyWrapperTestCode: void interfaceInheritanceTest3()>");
+    	infoflow.setTaintWrapper(wrapper);
+    	infoflow.computeInfoflow(path, epoints,sources, sinks);
+		checkInfoflow(infoflow, 1);
+    }
+
 }

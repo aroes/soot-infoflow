@@ -248,7 +248,8 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 		
 		if(DataTypeHandler.isFieldRefOrArrayRef(val)
 				|| source.getAccessPath().isInstanceFieldRef()
-				|| source.getAccessPath().isStaticFieldRef())
+				|| source.getAccessPath().isStaticFieldRef()
+				|| (val.getType() instanceof RefType && source.getAccessPath().getType() instanceof RefType))
 			return true;
 		
 		return false;

@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import soot.ArrayType;
 import soot.IntType;
 import soot.Local;
+import soot.RefType;
 import soot.SootField;
 import soot.SootMethod;
 import soot.Type;
@@ -162,7 +163,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 
 				// If the taint wrapper creates a new taint, this must be propagated
 				// backwards as there might be aliases for the base object
+				// Note that we don't only need to check for heap writes such as a.x = y,
+				// but also for base object taints ("a" in this case).
 				if ((enableStaticFields && newAbs.getAccessPath().isStaticFieldRef())
+						|| (val.getType() instanceof RefType && newAbs.getAccessPath().getType() instanceof RefType)
 						|| triggerInaktiveTaintOrReverseFlow(val.getPlainValue(), newAbs))
 					computeAliasTaints(d1, (Stmt) iStmt, val.getPlainValue(), res,
 							interproceduralCFG().getMethodOf(iStmt), newAbs);											

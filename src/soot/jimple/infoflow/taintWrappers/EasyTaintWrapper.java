@@ -49,35 +49,35 @@ import soot.jimple.internal.JAssignStmt;
  */
 public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable {
     private final Logger logger = LoggerFactory.getLogger(getClass());
-	private final Map<String, List<String>> classList;
-	private final Map<String, List<String>> excludeList;
-	private final Map<String, List<String>> killList;
+	private final Map<String, Set<String>> classList;
+	private final Map<String, Set<String>> excludeList;
+	private final Map<String, Set<String>> killList;
 	private final Set<String> includeList;
 	
 	private boolean aggressiveMode = false;
 	private boolean alwaysModelEqualsHashCode = true;
 	
-	public EasyTaintWrapper(Map<String, List<String>> classList){
-		this(classList, new HashMap<String, List<String>>(),
-				new HashMap<String, List<String>>(),
+	public EasyTaintWrapper(Map<String, Set<String>> classList){
+		this(classList, new HashMap<String, Set<String>>(),
+				new HashMap<String, Set<String>>(),
 				new HashSet<String>());
 	}
 	
-	public EasyTaintWrapper(Map<String, List<String>> classList,
-			Map<String, List<String>> excludeList) {
-		this(classList, excludeList, new HashMap<String, List<String>>(),
+	public EasyTaintWrapper(Map<String, Set<String>> classList,
+			Map<String, Set<String>> excludeList) {
+		this(classList, excludeList, new HashMap<String, Set<String>>(),
 				new HashSet<String>());
 	}
 
-	public EasyTaintWrapper(Map<String, List<String>> classList,
-			Map<String, List<String>> excludeList,
-			Map<String, List<String>> killList) {
+	public EasyTaintWrapper(Map<String, Set<String>> classList,
+			Map<String, Set<String>> excludeList,
+			Map<String, Set<String>> killList) {
 		this(classList, excludeList, killList, new HashSet<String>());
 	}
 
-	public EasyTaintWrapper(Map<String, List<String>> classList,
-			Map<String, List<String>> excludeList,
-			Map<String, List<String>> killList,
+	public EasyTaintWrapper(Map<String, Set<String>> classList,
+			Map<String, Set<String>> excludeList,
+			Map<String, Set<String>> killList,
 			Set<String> includeList) {
 		this.classList = classList;
 		this.excludeList = excludeList;
@@ -176,7 +176,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 			InstanceInvokeExpr iiExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();			
 			if (iiExpr.getBase().equals(taintedPath.getPlainValue())) {
 				// If the base object is tainted, we have to check whether we must kill the taint
-				List<String> killMethods = this.killList.get(stmt.getInvokeExpr().getMethod().getDeclaringClass().getName());
+				Set<String> killMethods = this.killList.get(stmt.getInvokeExpr().getMethod().getDeclaringClass().getName());
 				if (killMethods != null && killMethods.contains(stmt.getInvokeExpr().getMethod().getSubSignature()))
 					return Collections.emptySet();
 
@@ -186,7 +186,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 					AssignStmt assign = (AssignStmt) stmt;
 
 					// Check for exclusions
-					List<String> excludedMethods = this.excludeList.get(assign.getInvokeExpr().getMethod().getDeclaringClass().getName());
+					Set<String> excludedMethods = this.excludeList.get(assign.getInvokeExpr().getMethod().getDeclaringClass().getName());
 					if (excludedMethods == null || !excludedMethods.contains
 							(assign.getInvokeExpr().getMethod().getSubSignature()))
 						taints.add(new AccessPath(assign.getLeftOp()));
@@ -253,7 +253,12 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		if (classList.containsKey(c.getName()))
 			return true;
 		
-		if(!c.isInterface()) {
+		if (c.isInterface()) {
+			// We must also check for super interfaces
+			// TODO
+		}
+		
+		if (!c.isInterface()) {
 			// We have to walk up the hierarchy to also include all methods
 			// registered for superclasses
 			List<SootClass> superclasses = Scene.v().getActiveHierarchy().getSuperclassesOf(c);
@@ -328,6 +333,30 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 	 */
 	public boolean getAlwaysModelEqualsHashCode() {
 		return this.alwaysModelEqualsHashCode;
+	}
+	
+	/**
+	 * Registers a prefix of class names to be included when generating taints.
+	 * All classes whose names don't start with a registered prefix will be
+	 * skipped.
+	 * @param prefix The prefix to register
+	 */
+	public void addIncludePrefix(String prefix) {
+		this.includeList.add(prefix);
+	}
+	
+	/**
+	 * Adds a method to which the taint wrapping rules shall apply
+	 * @param className The class containing the method to be wrapped
+	 * @param subSignature The subsignature of the method to be wrapped
+	 */
+	public void addMethodForWrapping(String className, String subSignature) {
+		Set<String> methods = this.classList.get(className);
+		if (methods == null) {
+			methods = new HashSet<String>();
+			this.classList.put(className, methods);
+		}
+		methods.add(subSignature);
 	}
 	
 	@Override

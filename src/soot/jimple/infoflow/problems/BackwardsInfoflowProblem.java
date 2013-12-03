@@ -107,11 +107,9 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					// If we have an assignment to the base local of the current taint,
 					// all taint propagations must be below that point, so this is the
 					// right point to turn around.
-					if (triggerInaktiveTaintOrReverseFlow(leftValue, source)) {
-						Abstraction fabs = getForwardAbstraction(source);
-						for (Unit u : interproceduralCFG().getPredsOf(defStmt))
-							fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, fabs));
-					}
+					Abstraction fabs = getForwardAbstraction(source);
+					for (Unit u : interproceduralCFG().getPredsOf(defStmt))
+						fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, fabs));
 				}
 				
 				if (defStmt instanceof AssignStmt) {
@@ -309,8 +307,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							if (dest instanceof DefinitionStmt) {
 								DefinitionStmt defStmt = (DefinitionStmt) dest;
 								for (Abstraction newAbs : res)
-									if (baseMatches(defStmt.getLeftOp(), newAbs)
-											&& triggerInaktiveTaintOrReverseFlow(defStmt.getLeftOp(), newAbs)) {
+									if (baseMatches(defStmt.getLeftOp(), newAbs)) {
 										Abstraction fabs = getForwardAbstraction(newAbs);
 										for (Unit u : interproceduralCFG().getPredsOf(defStmt))
 											fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, fabs));
@@ -404,8 +401,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							assert dest.getParameterCount() == callArgs.size();
 							// check if param is tainted:
 							for (int i = 0; i < callArgs.size(); i++) {
-								if (callArgs.get(i).equals(source.getAccessPath().getPlainLocal()) /*&&
-										(triggerInaktiveTaintOrReverseFlow(callArgs.get(i), source) || source.isAbstractionActive())*/) {
+								if (callArgs.get(i).equals(source.getAccessPath().getPlainLocal())) {
 									Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
 											(paramLocals.get(i)), stmt);
 									res.add(abs);
@@ -450,8 +446,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								// that the first statement of a method never ends up in "src".
 								if (returnSite instanceof DefinitionStmt) {
 									DefinitionStmt defStmt = (DefinitionStmt) returnSite;
-									if (baseMatches(defStmt.getLeftOp(), source)
-											&& triggerInaktiveTaintOrReverseFlow(defStmt.getLeftOp(), source)) {
+									if (baseMatches(defStmt.getLeftOp(), source)) {
 										Abstraction fabs = getForwardAbstraction(source);
 										for (Unit u : interproceduralCFG().getPredsOf(defStmt))
 											fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, fabs));
