@@ -92,5 +92,10 @@ public class AbstractionAtSink {
 			return false;
 		return true;
 	}
+	
+	@Override
+	public String toString() {
+		return abstraction + " at " + sinkStmt;
+	}
 
 }

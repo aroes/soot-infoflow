@@ -36,6 +36,8 @@ public class SourceSinkTests extends JUnitTests{
 	
 	private static final String sourceGetSecret =
 			"<soot.jimple.infoflow.test.SourceSinkTestCode: soot.jimple.infoflow.test.SourceSinkTestCode$A getSecret()>";
+	private static final String sourceGetSecret2 =
+			"<soot.jimple.infoflow.test.SourceSinkTestCode: soot.jimple.infoflow.test.SourceSinkTestCode$B getSecret2()>";
 	
 	private abstract class BaseSourceSinkManager implements ISourceSinkManager {
 		
@@ -94,6 +96,32 @@ public class SourceSinkTests extends JUnitTests{
     	epoints.add("<soot.jimple.infoflow.test.SourceSinkTestCode: void testDataObject()>");
 		infoflow.computeInfoflow(path, new DefaultEntryPointCreator(), epoints, sourceSinkManager);
 		negativeCheckInfoflow(infoflow);
+    }
+
+	@Test(timeout=300000)
+    public void accessPathTypesTest(){
+		ISourceSinkManager sourceSinkManager = new BaseSourceSinkManager() {
+			
+			@Override
+			public SourceInfo getSourceInfo(Stmt sCallSite,
+					InterproceduralCFG<Unit, SootMethod> cfg) {
+				if (sCallSite.containsInvokeExpr()
+						&& (sCallSite.getInvokeExpr().getMethod().getName().equals("getSecret")
+								||(sCallSite.getInvokeExpr().getMethod().getName().equals("getSecret2"))))
+					return new SourceInfo(true);
+				return null;
+			}
+			
+		};
+		
+    	Infoflow infoflow = initInfoflow();
+    	List<String> epoints = new ArrayList<String>();
+    	epoints.add("<soot.jimple.infoflow.test.SourceSinkTestCode: void testAccessPathTypes()>");
+		infoflow.computeInfoflow(path, new DefaultEntryPointCreator(), epoints, sourceSinkManager);
+		Assert.assertTrue(infoflow.isResultAvailable());
+		Assert.assertEquals(1, infoflow.getResults().size());
+		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceGetSecret));
+		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceGetSecret2));
     }
 
 }
