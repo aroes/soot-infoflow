@@ -59,8 +59,8 @@ public class ImplicitFlowAliasStrategy extends AbstractBulkAliasStrategy {
 									|| assign.getLeftOp() instanceof Local)))
 						continue;
 				
-				final AccessPath apLeft = new AccessPath(assign.getLeftOp());
-				final AccessPath apRight = new AccessPath(assign.getRightOp());
+				final AccessPath apLeft = new AccessPath(assign.getLeftOp(), true);
+				final AccessPath apRight = new AccessPath(assign.getRightOp(), true);
 
 				Set<AccessPath> mapLeft = globalAliases.get(method, apLeft);
 				if (mapLeft == null) {
@@ -88,8 +88,8 @@ public class ImplicitFlowAliasStrategy extends AbstractBulkAliasStrategy {
 		
 		// Use global aliasing
 		Value baseValue = ((InstanceFieldRef) targetValue).getBase();
-		Set<AccessPath> aliases = globalAliases.get(method, new AccessPath(
-				baseValue));
+		Set<AccessPath> aliases = globalAliases.get(method, new AccessPath
+				(baseValue, true));
 		if (aliases != null)
 			for (AccessPath ap : aliases) {
 				Abstraction aliasAbs = newAbs.deriveNewAbstraction(

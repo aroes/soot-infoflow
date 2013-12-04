@@ -25,14 +25,15 @@ import soot.jimple.Stmt;
  */
 public abstract class MethodBasedSourceSinkManager implements ISourceSinkManager {
 
-	public abstract boolean isSourceMethod(SootMethod method);
+	public abstract SourceInfo getSourceMethodInfo(SootMethod method);
 	public abstract boolean isSinkMethod(SootMethod method);
 	
 	@Override
-	public boolean isSource(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg) {
+	public SourceInfo getSourceInfo(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg) {
 		assert sCallSite != null;
-		return sCallSite.containsInvokeExpr()
-				&& isSourceMethod(sCallSite.getInvokeExpr().getMethod());
+		if (!sCallSite.containsInvokeExpr())
+			return null;
+		return getSourceMethodInfo(sCallSite.getInvokeExpr().getMethod());
 	}
 
 	@Override

@@ -38,8 +38,12 @@ public class AccessPath implements Cloneable {
 	 * list of fields, either they are based on a concrete @value or they indicate a static field
 	 */
 	private final SootField[] fields;
+	
 	private final Type baseType;
 	private final Type[] fieldTypes;
+	
+	private final boolean taintSubFields;
+	
 	private int hashCode = 0;
 
 	/**
@@ -55,17 +59,19 @@ public class AccessPath implements Cloneable {
 		this.fields = null;
 		this.baseType = null;
 		this.fieldTypes = null;
+		this.taintSubFields = true;
 	}
 	
-	public AccessPath(Value val){
-		this(val, (SootField[]) null, null, (Type[]) null);
+	public AccessPath(Value val, boolean taintSubFields){
+		this(val, (SootField[]) null, null, (Type[]) null, taintSubFields);
 	}
 	
-	public AccessPath(Value val, SootField[] appendingFields){
-		this(val, appendingFields, null, (Type[]) null);
+	public AccessPath(Value val, SootField[] appendingFields, boolean taintSubFields){
+		this(val, appendingFields, null, (Type[]) null, taintSubFields);
 	}
 	
-	public AccessPath(Value val, SootField[] appendingFields, Type baseType, Type[] appendingFieldTypes){
+	public AccessPath(Value val, SootField[] appendingFields, Type baseType,
+			Type[] appendingFieldTypes, boolean taintSubFields){
 		assert (val == null && appendingFields != null && appendingFields.length > 0)
 		 	|| canContainValue(val);
 
@@ -129,17 +135,19 @@ public class AccessPath implements Cloneable {
 				&& !(this.value.getType() instanceof ArrayType)
 				&& !(this.value.getType() instanceof RefType && ((RefType) this.value.getType()).getSootClass().getName().equals("java.lang.Object")));
 		assert !isEmpty() || this.baseType == null;
+		
+		if (this.toString().equals("this(soot.jimple.infoflow.test.EasyWrapperTestCode"))
+			System.out.println("x");
+		
+		this.taintSubFields = taintSubFields;
 	}
 	
-	public AccessPath(SootField staticfield){
-		this.fields = new SootField[] { staticfield };
-		this.value = null;
-		this.baseType = staticfield.getType();
-		this.fieldTypes = new Type[] { staticfield.getType() };
+	public AccessPath(SootField staticfield, boolean taintSubFields){
+		this(null, new SootField[] { staticfield }, null, new Type[] { staticfield.getType() }, taintSubFields);
 	}
 
-	public AccessPath(Value base, SootField field){
-		this(base, new SootField[] { field }, null, new Type[] { field.getType() });
+	public AccessPath(Value base, SootField field, boolean taintSubFields){
+		this(base, new SootField[] { field }, null, new Type[] { field.getType() }, taintSubFields);
 		assert base instanceof Local;
 	}
 
@@ -208,6 +216,7 @@ public class AccessPath implements Cloneable {
 			this.hashCode = 1;
 			this.hashCode = prime * this.hashCode + ((fields == null) ? 0 : Arrays.hashCode(fields));
 			this.hashCode = prime * this.hashCode + ((value == null) ? 0 : value.hashCode());
+			this.hashCode = prime * (this.taintSubFields ? 1 : 0);
 			return this.hashCode;
 		}
 	}
@@ -226,6 +235,8 @@ public class AccessPath implements Cloneable {
 			if (other.value != null)
 				return false;
 		} else if (!value.equals(other.value))
+			return false;
+		if (this.taintSubFields != other.taintSubFields)
 			return false;
 		
 		assert this.hashCode() == obj.hashCode();
@@ -261,6 +272,8 @@ public class AccessPath implements Cloneable {
 						str += " ";
 					str += fields[i].toString();
 				}
+		if (taintSubFields)
+			str += " *";
 		return str;
 	}
 
@@ -277,7 +290,8 @@ public class AccessPath implements Cloneable {
 		if (this.value != null && this.value.equals(val))
 			return this;
 		
-		return new AccessPath(val, this.fields, newType, this.fieldTypes);
+		return new AccessPath(val, this.fields, newType, this.fieldTypes,
+				this.taintSubFields);
 	}
 	
 	@Override
@@ -286,7 +300,7 @@ public class AccessPath implements Cloneable {
 		if (this == emptyAccessPath)
 			return this;
 
-		AccessPath a = new AccessPath(value, fields, baseType, fieldTypes);
+		AccessPath a = new AccessPath(value, fields, baseType, fieldTypes, taintSubFields);
 		assert a.equals(this);
 		return a;
 	}
@@ -346,7 +360,7 @@ public class AccessPath implements Cloneable {
 					fieldTypes[offset + i] = ap.fieldTypes[i];
 				}
 		
-		return new AccessPath(this.value, fields, baseType, fieldTypes);
+		return new AccessPath(this.value, fields, baseType, fieldTypes, ap.taintSubFields);
 	}
 	
 	public AccessPath dropLastField() {
@@ -366,11 +380,15 @@ public class AccessPath implements Cloneable {
 			newFields = null;
 			newTypes = null;
 		}
-		return new AccessPath(value, newFields, baseType, newTypes);
+		return new AccessPath(value, newFields, baseType, newTypes, taintSubFields);
 	}
 
 	public Type getType() {
 		return this.baseType;
+	}
+	
+	public boolean getTaintSubFields() {
+		return this.taintSubFields;
 	}
 	
 }

@@ -157,4 +157,19 @@ public class EasyWrapperTests extends JUnitTests {
 		checkInfoflow(infoflow, 1);
     }
 
+	@Test(timeout=300000)
+    public void interfaceInheritanceTest4(){
+		EasyTaintWrapper wrapper = easyWrapper.clone();
+		wrapper.addIncludePrefix("soot.jimple.infoflow.test");
+		wrapper.addMethodForWrapping("soot.jimple.infoflow.test.EasyWrapperTestCode$I1",
+				"void taintMe(java.lang.String)");
+		
+		Infoflow infoflow = initInfoflow();
+    	List<String> epoints = new ArrayList<String>();
+    	epoints.add("<soot.jimple.infoflow.test.EasyWrapperTestCode: void interfaceInheritanceTest4()>");
+    	infoflow.setTaintWrapper(wrapper);
+    	infoflow.computeInfoflow(path, epoints,sources, sinks);
+		negativeCheckInfoflow(infoflow);
+    }
+	
 }

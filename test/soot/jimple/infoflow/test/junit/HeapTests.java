@@ -434,16 +434,16 @@ public class HeapTests extends JUnitTests {
 						InstanceInvokeExpr iinv = (InstanceInvokeExpr) stmt.getInvokeExpr();
 						if (taintedPath.getPlainLocal() == iinv.getArg(0)) {
 							RefType rt = (RefType) iinv.getBase().getType();
-							AccessPath ap = new AccessPath(iinv.getBase(), new SootField[] { rt.getSootClass().getFieldByName("b1")/*,
+							AccessPath ap = new AccessPath(iinv.getBase(), new SootField[] { rt.getSootClass().getFieldByName("b1"),/*,
 								Scene.v().getSootClass("soot.jimple.infoflow.test.HeapTestCode$B").getFieldByName("attr"),
-								Scene.v().getSootClass("soot.jimple.infoflow.test.HeapTestCode$A").getFieldByName("b")*/ });
+								Scene.v().getSootClass("soot.jimple.infoflow.test.HeapTestCode$A").getFieldByName("b")*/ }, true);
 							res.add(ap);
 						}
 						if (taintedPath.getPlainLocal() == iinv.getArg(1)) {
 							RefType rt = (RefType) iinv.getBase().getType();
 							AccessPath ap = new AccessPath(iinv.getBase(), new SootField[] { rt.getSootClass().getFieldByName("b2")/*,
 								Scene.v().getSootClass("soot.jimple.infoflow.test.HeapTestCode$B").getFieldByName("attr"),
-								Scene.v().getSootClass("soot.jimple.infoflow.test.HeapTestCode$A").getFieldByName("b")*/ });
+								Scene.v().getSootClass("soot.jimple.infoflow.test.HeapTestCode$A").getFieldByName("b")*/ }, true);
 							res.add(ap);
 						}
 					}
@@ -453,7 +453,7 @@ public class HeapTests extends JUnitTests {
 							RefType rt = (RefType) iinv.getBase().getType();
 							AccessPath ap = new AccessPath(iinv.getBase(), new SootField[] { rt.getSootClass().getFieldByName("b1")/*,
 									Scene.v().getSootClass("soot.jimple.infoflow.test.HeapTestCode$B").getFieldByName("attr"),
-									Scene.v().getSootClass("soot.jimple.infoflow.test.HeapTestCode$A").getFieldByName("b")*/} );
+									Scene.v().getSootClass("soot.jimple.infoflow.test.HeapTestCode$A").getFieldByName("b")*/}, true);
 							res.add(ap);
 						}
 						else if (taintedPath.getPlainValue() == iinv.getBase()
@@ -463,7 +463,8 @@ public class HeapTests extends JUnitTests {
 								&& taintedPath.getLastField().getName().equals("b")*/) {
 							DefinitionStmt def = (DefinitionStmt) stmt;
 							AccessPath ap = new AccessPath(def.getLeftOp(),
-									Scene.v().getSootClass("soot.jimple.infoflow.test.HeapTestCode$A").getFieldByName("b"));
+									Scene.v().getSootClass("soot.jimple.infoflow.test.HeapTestCode$A").getFieldByName("b"),
+									true);
 							res.add(ap);
 						}
 					}
@@ -490,8 +491,9 @@ public class HeapTests extends JUnitTests {
 	    	taintWrapper = false;
 	    	
 	    	Infoflow infoflow = initInfoflow();
+	    	infoflow.setFlowSensitiveAliasing(false);
 	    	int oldLength = Infoflow.getAccessPathLength();
-	    	infoflow.setAccessPathLength(3);
+	    	infoflow.setAccessPathLength(4);
 
 	    	infoflow.setInspectSources(false);
 	    	infoflow.setInspectSinks(false);

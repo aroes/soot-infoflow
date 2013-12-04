@@ -232,9 +232,9 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	 * @return true if a reverseFlow should be triggered or an inactive taint should be propagated (= resulting object is stored in heap = alias)
 	 */
 	public boolean triggerInaktiveTaintOrReverseFlow(Value val, Abstraction source){
-		if(val == null){
+		if(val == null || source.getAccessPath().isEmpty())
 			return false;
-		}
+		
 		//no string
 		if(!(val instanceof InstanceFieldRef) && !(val instanceof ArrayRef) 
 				&& val.getType() instanceof RefType && ((RefType)val.getType()).getClassName().equals("java.lang.String")){
@@ -252,8 +252,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 		
 		if(DataTypeHandler.isFieldRefOrArrayRef(val)
 				|| source.getAccessPath().isInstanceFieldRef()
-				|| source.getAccessPath().isStaticFieldRef()
-				|| (val.getType() instanceof RefType && source.getAccessPath().getType() instanceof RefType))
+				|| source.getAccessPath().isStaticFieldRef())
 			return true;
 		
 		return false;

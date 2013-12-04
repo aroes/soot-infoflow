@@ -150,10 +150,10 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		if (taintedPath.isEmpty()) {
 			taints.add(taintedPath);
 			if (stmt instanceof DefinitionStmt)
-				taints.add(new AccessPath(((DefinitionStmt) stmt).getLeftOp()));
+				taints.add(new AccessPath(((DefinitionStmt) stmt).getLeftOp(), true));
 			if (stmt.containsInvokeExpr())
 				if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr)
-					taints.add(new AccessPath(((InstanceInvokeExpr) stmt.getInvokeExpr()).getBase()));
+					taints.add(new AccessPath(((InstanceInvokeExpr) stmt.getInvokeExpr()).getBase(), true));
 			return taints;
 		}
 		
@@ -189,7 +189,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 					Set<String> excludedMethods = this.excludeList.get(assign.getInvokeExpr().getMethod().getDeclaringClass().getName());
 					if (excludedMethods == null || !excludedMethods.contains
 							(assign.getInvokeExpr().getMethod().getSubSignature()))
-						taints.add(new AccessPath(assign.getLeftOp()));
+						taints.add(new AccessPath(assign.getLeftOp(), true));
 				}
 
 				// If the base object is tainted, we pass this taint on
@@ -208,12 +208,12 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 				if (taintEqualsHashCode || methodList.contains(method.getSubSignature())) {
 					// If we call a method on an instance, this instance is assumed to be tainted
 					if(stmt.getInvokeExprBox().getValue() instanceof InstanceInvokeExpr)
-						taints.add(new AccessPath(((InstanceInvokeExpr) stmt.getInvokeExprBox().getValue()).getBase()));
+						taints.add(new AccessPath(((InstanceInvokeExpr) stmt.getInvokeExprBox().getValue()).getBase(), true));
 					
 					// If make sure to also taint the left side of an assignment
 					// if the object just got tainted 
 					if(stmt instanceof JAssignStmt)
-						taints.add(new AccessPath(((JAssignStmt)stmt).getLeftOp()));
+						taints.add(new AccessPath(((JAssignStmt)stmt).getLeftOp(), true));
 				}
 					
 				// The parameter as such stays tainted
@@ -252,11 +252,6 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 	private boolean hasMethodsForClass(SootClass c){
 		if (classList.containsKey(c.getName()))
 			return true;
-		
-		if (c.isInterface()) {
-			// We must also check for super interfaces
-			// TODO
-		}
 		
 		if (!c.isInterface()) {
 			// We have to walk up the hierarchy to also include all methods

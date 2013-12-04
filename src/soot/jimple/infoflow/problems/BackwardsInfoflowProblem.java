@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Set;
 
 import soot.ArrayType;
+import soot.IntType;
 import soot.Local;
 import soot.SootMethod;
 import soot.Type;
@@ -38,6 +39,7 @@ import soot.jimple.FieldRef;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
+import soot.jimple.LengthExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
@@ -140,37 +142,41 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					// If the tainted value 'b' is assigned to variable 'a' and 'a'
 					// is a heap object, we must also look for aliases of 'a' upwards
 					// from the current statement.
-					if (triggerInaktiveTaintOrReverseFlow(leftValue, source)) {
-						if (rightValue instanceof InstanceFieldRef) {
-							InstanceFieldRef ref = (InstanceFieldRef) rightValue;
-							if (source.getAccessPath().isInstanceFieldRef()
-									&& ref.getBase().equals(source.getAccessPath().getPlainValue())
-									&& ref.getField().equals(source.getAccessPath().getFirstField())) {
-								Abstraction abs = source.deriveNewAbstraction(leftValue, true, defStmt,
-										source.getAccessPath().getType());
-								res.add(abs);
-							}
-						}
-						else if (enableStaticFields && rightValue instanceof StaticFieldRef) {
-							StaticFieldRef ref = (StaticFieldRef) rightValue;
-							if (source.getAccessPath().isStaticFieldRef()
-									&& ref.getField().equals(source.getAccessPath().getFirstField())) {
-								Abstraction abs = source.deriveNewAbstraction(leftValue, true, defStmt,
-										source.getAccessPath().getType());
-								res.add(abs);
-							}
-						}
-						else if (rightValue.equals(source.getAccessPath().getPlainValue())) {
-							Type newType = source.getAccessPath().getType();
-							if (leftValue instanceof ArrayRef)
-								newType = ArrayType.v(newType, 1);
-							else if (assignStmt.getRightOp() instanceof ArrayRef)
-								newType = ((ArrayType) newType).getArrayElementType();
-								
-							Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
-									(leftValue, newType), defStmt);
+					if (rightValue instanceof InstanceFieldRef) {
+						InstanceFieldRef ref = (InstanceFieldRef) rightValue;
+						if (source.getAccessPath().isInstanceFieldRef()
+								&& ref.getBase().equals(source.getAccessPath().getPlainValue())
+								&& ref.getField().equals(source.getAccessPath().getFirstField())) {
+							Abstraction abs = source.deriveNewAbstraction(leftValue, true, defStmt,
+									source.getAccessPath().getType());
 							res.add(abs);
 						}
+					}
+					else if (enableStaticFields && rightValue instanceof StaticFieldRef) {
+						StaticFieldRef ref = (StaticFieldRef) rightValue;
+						if (source.getAccessPath().isStaticFieldRef()
+								&& ref.getField().equals(source.getAccessPath().getFirstField())) {
+							Abstraction abs = source.deriveNewAbstraction(leftValue, true, defStmt,
+									source.getAccessPath().getType());
+							res.add(abs);
+						}
+					}
+					else if (rightValue.equals(source.getAccessPath().getPlainValue())) {
+						Type newType = source.getAccessPath().getType();
+						if (leftValue instanceof ArrayRef)
+							newType = ArrayType.v(newType, 1);
+						else if (assignStmt.getRightOp() instanceof ArrayRef)
+							newType = ((ArrayType) newType).getArrayElementType();
+
+						// Special type handling for certain operations
+						if (assignStmt.getRightOp() instanceof LengthExpr) {
+							assert source.getAccessPath().getType() instanceof ArrayType;
+							newType = IntType.v();
+						}
+							
+						Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
+								(leftValue, newType), defStmt);
+						res.add(abs);
 					}
 
 					// If we have the tainted value on the left side of the assignment,
@@ -192,9 +198,6 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 										addRightValue = true;
 										cutFirstField = true;
 									}
-								} else {
-									addRightValue = true;
-									targetType = source.getAccessPath().getFirstFieldType();
 								}
 							}
 							// indirect taint propagation:
@@ -224,6 +227,10 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								else if (leftValue instanceof ArrayRef)
 									targetType = ((ArrayType) targetType).getArrayElementType();
 							}
+							
+							// Special type handling for certain operations
+							if (assignStmt.getRightOp() instanceof LengthExpr)
+								targetType = null;
 							
 							Abstraction newAbs = source.deriveNewAbstraction(rightValue, cutFirstField, defStmt,
 									targetType);
@@ -255,20 +262,22 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 			 * taint abstraction, otherwise false
 			 */
 			private boolean baseMatches(final Value baseValue, Abstraction source) {
-				boolean leftSideMatches = baseValue instanceof Local
-						&& baseValue.equals(source.getAccessPath().getPlainValue());
-				if (!leftSideMatches && baseValue instanceof InstanceFieldRef) {
+				if (baseValue instanceof Local) {
+					if (baseValue.equals(source.getAccessPath().getPlainValue()))
+						return true;
+				}
+				else if (baseValue instanceof InstanceFieldRef) {
 					InstanceFieldRef ifr = (InstanceFieldRef) baseValue;
 					if (ifr.getBase().equals(source.getAccessPath().getPlainValue())
 							&& ifr.getField().equals(source.getAccessPath().getFirstField()))
-						leftSideMatches = true;
+						return true;
 				}
-				if (!leftSideMatches && baseValue instanceof StaticFieldRef) {
+				else if (baseValue instanceof StaticFieldRef) {
 					StaticFieldRef sfr = (StaticFieldRef) baseValue;
 					if (sfr.getField().equals(source.getAccessPath().getFirstField()))
-						leftSideMatches = true;
+						return true;
 				}
-				return leftSideMatches;
+				return false;
 			}
 			
 			/**
@@ -341,9 +350,9 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						// taint is propagated in CallToReturnFunction, so we do not need any taint here if it is exclusive:
 						if(taintWrapper != null && taintWrapper.isExclusive(stmt, source.getAccessPath()))
 							return Collections.emptySet();
-
-						Set<Abstraction> res = new HashSet<Abstraction>();
 						
+						Set<Abstraction> res = new HashSet<Abstraction>();
+												
 						// if the returned value is tainted - taint values from return statements
 						if (src instanceof DefinitionStmt) {
 							DefinitionStmt defnStmt = (DefinitionStmt) src;
@@ -412,7 +421,6 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						for (Abstraction abs : res)
 							if (!abs.getAccessPath().isEmpty())
 								fSolver.injectContext(solver, dest, abs, src, source);
-					
 						return res;
 					}
 				};
@@ -446,7 +454,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								// that the first statement of a method never ends up in "src".
 								if (returnSite instanceof DefinitionStmt) {
 									DefinitionStmt defStmt = (DefinitionStmt) returnSite;
-									if (baseMatches(defStmt.getLeftOp(), source)) {
+									if (baseMatches(defStmt.getLeftOp(), source)
+											/*&& triggerInaktiveTaintOrReverseFlow(defStmt.getLeftOp(), source)*/) {
 										Abstraction fabs = getForwardAbstraction(source);
 										for (Unit u : interproceduralCFG().getPredsOf(defStmt))
 											fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, fabs));

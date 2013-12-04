@@ -188,11 +188,13 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	
 	private final boolean flowSensitiveAliasing;
 	
-	public Abstraction(Value taint, Value currentVal, Stmt currentStmt,
-			boolean exceptionThrown, boolean isActive, Unit activationUnit,
+	public Abstraction(Value taint, boolean taintSubFields,
+			Value sourceVal, Stmt sourceStmt,
+			boolean exceptionThrown,
+			boolean isActive, Unit activationUnit,
 			boolean flowSensitiveAliasing){
-		this.sourceContext = new SourceContext(currentVal, currentStmt);
-		this.accessPath = new AccessPath(taint);
+		this.sourceContext = new SourceContext(sourceVal, sourceStmt);
+		this.accessPath = new AccessPath(taint, taintSubFields);
 		
 		if (flowSensitiveAliasing)
 			this.activationUnit = activationUnit;
@@ -256,9 +258,19 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	}
 
 	public Abstraction deriveNewAbstraction(AccessPath p, Stmt currentStmt){
+		return deriveNewAbstraction(p, currentStmt, null);
+	}
+
+	public Abstraction deriveNewAbstraction(AccessPath p, Stmt currentStmt, Stmt activationUnit){
+		if (activationUnit != null && activationUnit.toString().equals("this.<soot.jimple.infoflow.test.EasyWrapperTestCode$C: soot.jimple.infoflow.test.EasyWrapperTestCode this$0> = l1"))
+			System.out.println("x");
+		
 		if (this.accessPath.equals(p) && this.currentStmt == currentStmt)
 			return this;
-		return deriveNewAbstractionMutable(p, currentStmt);
+		Abstraction abs = deriveNewAbstractionMutable(p, currentStmt);
+		if (abs.isActive && flowSensitiveAliasing && activationUnit != null)
+			abs.activationUnit = activationUnit;
+		return abs;
 	}
 	
 	private Abstraction deriveNewAbstractionMutable(AccessPath p, Stmt currentStmt){
@@ -306,10 +318,14 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		if (cutFirstField)
 			baseType = accessPath.getFirstFieldType();
 		
-		AccessPath newAP = new AccessPath(taint, fields, baseType, types);
+		AccessPath newAP = new AccessPath(taint, fields, baseType, types,
+				accessPath.getTaintSubFields());
 		
 		a = deriveNewAbstractionMutable(newAP, (Stmt) newActUnit);
 		if (flowSensitiveAliasing && isActive) {
+if (newActUnit != null && newActUnit.toString().equals("this.<soot.jimple.infoflow.test.EasyWrapperTestCode$C: soot.jimple.infoflow.test.EasyWrapperTestCode this$0> = l1"))
+System.out.println("x");
+
 			assert newActUnit != null;
 			if (!this.getAccessPath().isEmpty())
 				a.activationUnit = newActUnit;
@@ -340,7 +356,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	 */
 	public final Abstraction deriveNewAbstractionOnCatch(Value taint, Unit newActivationUnit){
 		assert this.exceptionThrown;
-		Abstraction abs = deriveNewAbstractionMutable(new AccessPath(taint),
+		Abstraction abs = deriveNewAbstractionMutable(new AccessPath(taint, true),
 				(Stmt) newActivationUnit);
 		abs.exceptionThrown = false;
 		
@@ -650,7 +666,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		
 	public static Abstraction getZeroAbstraction(boolean flowSensitiveAliasing) {
 		if (zeroValue == null)
-			zeroValue = new Abstraction(new JimpleLocal("zero", NullType.v()), null,
+			zeroValue = new Abstraction(new JimpleLocal("zero", NullType.v()), false, null,
 					null, false, true, null, flowSensitiveAliasing);
 		return zeroValue;
 	}

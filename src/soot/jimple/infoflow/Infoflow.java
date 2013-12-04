@@ -338,7 +338,7 @@ public class Infoflow extends AbstractInfoflow {
 						PatchingChain<Unit> units = m.getActiveBody().getUnits();
 						for (Unit u : units) {
 							Stmt s = (Stmt) u;
-							if (sourcesSinks.isSource(s, iCfg)) {
+							if (sourcesSinks.getSourceInfo(s, iCfg) != null) {
 								forwardProblem.addInitialSeeds(u, Collections.singleton(forwardProblem.zeroValue()));
 								logger.debug("Source found: {}", u);
 							}

@@ -158,4 +158,13 @@ public class EasyWrapperTestCode {
 		cm.publish(c.getData());
 	}
 
+	public void interfaceInheritanceTest4() {
+		String tainted = TelephonyManager.getDeviceId();
+		C c = new C("");
+		I2 i2 = (I2) c;
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(c.getData());
+		i2.taintMe(tainted);
+	}
+
 }

@@ -24,8 +24,8 @@ public class EmptySourceSinkManager extends MethodBasedSourceSinkManager {
 	}
 	
 	@Override
-	public boolean isSourceMethod(SootMethod sMethod) {
-		return false;
+	public SourceInfo getSourceMethodInfo(SootMethod sMethod) {
+		return null;
 	}
 
 	@Override

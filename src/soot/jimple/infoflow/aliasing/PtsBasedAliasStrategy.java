@@ -46,11 +46,12 @@ public class PtsBasedAliasStrategy extends AbstractBulkAliasStrategy {
 	@Override
 	public void computeAliasTaints(Abstraction d1, Stmt src, Value targetValue,
 			Set<Abstraction> taintSet, SootMethod method, Abstraction newAbs) {
-		computeAliasTaintsInternal(d1, method, newAbs, Collections.<SootField>emptyList(), src);
+		computeAliasTaintsInternal(d1, method, newAbs, Collections.<SootField>emptyList(),
+				newAbs.getAccessPath().getTaintSubFields(), src);
 	}
 
 	public void computeAliasTaintsInternal(Abstraction d1, SootMethod method,
-			Abstraction newAbs, List<SootField> appendFields, Stmt actStmt) {
+			Abstraction newAbs, List<SootField> appendFields, boolean taintSubFields, Stmt actStmt) {
 		synchronized(aliases) {
 			if (aliases.contains(method, newAbs)) {
 				Set<Abstraction> d1s = aliases.get(method, newAbs);
@@ -94,7 +95,7 @@ public class PtsBasedAliasStrategy extends AbstractBulkAliasStrategy {
 						|| assign.getRightOp() instanceof ArrayRef)
 					if (isAliasedAtStmt(ptsTaint, assign.getRightOp())) {
 						Abstraction aliasAbsLeft = newAbs.deriveNewAbstraction(new AccessPath
-								(assign.getLeftOp(), appendFieldsA), stmt).deriveInactiveAbstraction();
+								(assign.getLeftOp(), appendFieldsA, taintSubFields), stmt).deriveInactiveAbstraction();
 						getForwardSolver().processEdge(new PathEdge<Unit, Abstraction>(d1, actStmt, aliasAbsLeft));
 					}
 
@@ -106,7 +107,7 @@ public class PtsBasedAliasStrategy extends AbstractBulkAliasStrategy {
 							|| assign.getRightOp() instanceof ArrayRef)
 						if (isAliasedAtStmt(ptsTaint, assign.getLeftOp())) {
 							Abstraction aliasAbsRight = newAbs.deriveNewAbstraction(new AccessPath
-									(assign.getRightOp(), appendFieldsA), stmt).deriveInactiveAbstraction();
+									(assign.getRightOp(), appendFieldsA, taintSubFields), stmt).deriveInactiveAbstraction();
 							getForwardSolver().processEdge(new PathEdge<Unit, Abstraction>(d1, actStmt, aliasAbsRight));
 						}
 			}
@@ -118,7 +119,7 @@ public class PtsBasedAliasStrategy extends AbstractBulkAliasStrategy {
 				List<SootField> appendList = new LinkedList<SootField>(appendFields);
 				appendList.add(newAbs.getAccessPath().getFirstField());
 				computeAliasTaintsInternal(d1, method, newAbs.deriveNewAbstraction
-						(newAbs.getAccessPath().dropLastField(), stmt), appendList, actStmt);
+						(newAbs.getAccessPath().dropLastField(), stmt), appendList, taintSubFields, actStmt);
 			}
 		}
 	}
