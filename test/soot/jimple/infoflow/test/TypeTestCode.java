@@ -11,6 +11,7 @@
 
 package soot.jimple.infoflow.test;
 
+import soot.jimple.infoflow.test.android.Bundle;
 import soot.jimple.infoflow.test.android.ConnectionManager;
 import soot.jimple.infoflow.test.android.TelephonyManager;
 
@@ -33,6 +34,16 @@ public class TypeTestCode {
 	
 	private class A {
 		String data;
+		String data2;
+		
+		public A() {
+			
+		}
+		
+		@SuppressWarnings("unused")
+		public A(String data) {
+			this.data = data;
+		}
 		
 		String bar() {
 			return this.data;
@@ -41,6 +52,11 @@ public class TypeTestCode {
 		void leak() {
 			ConnectionManager cm = new ConnectionManager();
 			cm.publish("A: " + data);
+		}
+		
+		@Override
+		public String toString() {
+			return "data: " + data + ", data2: " + data2;
 		}
 	}
 	
@@ -140,6 +156,23 @@ public class TypeTestCode {
 		A b = new B();
 		b.data = TelephonyManager.getDeviceId();
 		callIt(b);
+	}
+	
+	public void arrayObjectCastTest() {
+		Object obj = Bundle.get("foo");
+		A foo2[] = (A[]) obj;
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(foo2[0].data);
+	}
+
+	public void arrayObjectCastTest2() {
+		Object obj = Bundle.get("foo");
+		A foo2[] = (A[]) obj;
+		obj = foo2[0];
+		A a = (A) obj;
+		a.data2 = a.data;
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(a.data);
 	}
 
 }

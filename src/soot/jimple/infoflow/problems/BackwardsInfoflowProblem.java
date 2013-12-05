@@ -33,6 +33,7 @@ import soot.Value;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
 import soot.jimple.BinopExpr;
+import soot.jimple.CastExpr;
 import soot.jimple.Constant;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.FieldRef;
@@ -103,7 +104,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				final boolean leftSideMatches = baseMatches(leftValue, source);
 				if (!leftSideMatches)
 					res.add(source);
-
+				
 				// Is the left side overwritten completely?
 				if (leftSideMatches) {
 					// If we have an assignment to the base local of the current taint,
@@ -114,7 +115,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, fabs));
 				}
 				
-				if (defStmt instanceof AssignStmt) {
+				if (defStmt instanceof AssignStmt) {				
 					// Get the right side of the assignment
 					final AssignStmt assignStmt = (AssignStmt) defStmt;
 					final Value rightValue = BaseSelector.selectBase(assignStmt.getRightOp(), false);
@@ -215,7 +216,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							}
 							// generic case, is true for Locals, ArrayRefs that are equal etc..
 						} else if (leftValue.equals(source.getAccessPath().getPlainValue())) {
-							addRightValue = true;							
+							addRightValue = true;
 						}
 						
 						// if one of them is true -> add rightValue
@@ -230,6 +231,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							
 							// Special type handling for certain operations
 							if (assignStmt.getRightOp() instanceof LengthExpr)
+								targetType = null;
+							else if (assignStmt.getRightOp() instanceof CastExpr)
 								targetType = null;
 							
 							Abstraction newAbs = source.deriveNewAbstraction(rightValue, cutFirstField, defStmt,

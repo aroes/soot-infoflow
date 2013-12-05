@@ -167,11 +167,12 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				// backwards as there might be aliases for the base object
 				// Note that we don't only need to check for heap writes such as a.x = y,
 				// but also for base object taints ("a" in this case).
-				if ((enableStaticFields && newAbs.getAccessPath().isStaticFieldRef())
-						|| (val.getType() instanceof RefType && newAbs.getAccessPath().getType() instanceof RefType)
-						|| triggerInaktiveTaintOrReverseFlow(val.getPlainValue(), newAbs))
-					computeAliasTaints(d1, (Stmt) iStmt, val.getPlainValue(), res,
-							interproceduralCFG().getMethodOf(iStmt), newAbs);
+				if (!val.equals(source.getAccessPath()))
+					if ((enableStaticFields && newAbs.getAccessPath().isStaticFieldRef())
+							|| (val.getType() instanceof RefType && newAbs.getAccessPath().getType() instanceof RefType)
+							|| triggerInaktiveTaintOrReverseFlow(val.getPlainValue(), newAbs))
+						computeAliasTaints(d1, (Stmt) iStmt, val.getPlainValue(), res,
+								interproceduralCFG().getMethodOf(iStmt), newAbs);
 			}
 		}
 
@@ -590,10 +591,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							if (addLeftValue) {
 								// If the right side is a typecast, it must be compatible,
 								// or this path is not realizable
-								if (assignStmt.getRightOp() instanceof CastExpr)
+								if (assignStmt.getRightOp() instanceof CastExpr) {
 									if (!canCastType(((CastExpr) assignStmt.getRightOp()).getCastType(),
 											newSource.getAccessPath().getType()))
 										return Collections.emptySet();
+								}
 								
 								if (!newSource.getAccessPath().isEmpty()) {
 									// Special type handling for certain operations
@@ -601,6 +603,21 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										assert newSource.getAccessPath().getType() instanceof ArrayType;
 										targetType = IntType.v();
 									}
+									else if (assignStmt.getRightOp() instanceof CastExpr) {
+										// If we cast java.lang.Object to an array type,
+										// we must update our typing information
+										CastExpr cast = (CastExpr) assignStmt.getRightOp();
+										if (cast.getType() instanceof ArrayType && !(targetType instanceof ArrayType)) {
+											assert targetType instanceof RefType;
+											assert ((RefType) targetType).getSootClass()
+													.getName().equals("java.lang.Object");
+											targetType = cast.getType();
+										}
+										
+									}
+									
+									// TODO: other direction. test case?
+
 									
 									// Special handling for array (de)construction
 									if (targetType != null) {

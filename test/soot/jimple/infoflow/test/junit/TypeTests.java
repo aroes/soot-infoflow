@@ -78,4 +78,22 @@ public class TypeTests extends JUnitTests {
 		checkInfoflow(infoflow, 1);	
 	}
 
+	@Test(timeout=300000)
+	public void arrayObjectCastTest(){
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.TypeTestCode: void arrayObjectCastTest()>");
+		infoflow.computeInfoflow(path, epoints,sources, sinks);
+		checkInfoflow(infoflow, 1);	
+	}
+
+	@Test(timeout=300000)
+	public void arrayObjectCastTest2(){
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.TypeTestCode: void arrayObjectCastTest2()>");
+		infoflow.computeInfoflow(path, epoints,sources, sinks);
+		checkInfoflow(infoflow, 1);	
+	}
+
 }
