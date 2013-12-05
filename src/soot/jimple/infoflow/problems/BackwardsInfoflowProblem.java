@@ -225,8 +225,10 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								// Special handling for some operations
 								if (assignStmt.getRightOp() instanceof ArrayRef)
 									targetType = ArrayType.v(targetType, 1);
-								else if (leftValue instanceof ArrayRef)
+								else if (leftValue instanceof ArrayRef) {
+									assert source.getAccessPath().getType() instanceof ArrayType;
 									targetType = ((ArrayType) targetType).getArrayElementType();
+								}
 							}
 							
 							// Special type handling for certain operations
@@ -368,7 +370,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 										if (rStmt.getOp() instanceof Local
 												|| rStmt.getOp() instanceof FieldRef) {
 											Abstraction abs = source.deriveNewAbstraction
-													(source.getAccessPath().copyWithNewValue(rStmt.getOp()), (Stmt) src);
+													(source.getAccessPath().copyWithNewValue(rStmt.getOp(), null), (Stmt) src);
 											assert abs != source;		// our source abstraction must be immutable
 											res.add(abs);
 										}
