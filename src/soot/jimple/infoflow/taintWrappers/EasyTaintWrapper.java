@@ -208,7 +208,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 				if (taintEqualsHashCode || methodList.contains(method.getSubSignature())) {
 					// If we call a method on an instance, this instance is assumed to be tainted
 					if(stmt.getInvokeExprBox().getValue() instanceof InstanceInvokeExpr)
-						taints.add(new AccessPath(((InstanceInvokeExpr) stmt.getInvokeExprBox().getValue()).getBase(), true));
+						taints.add(new AccessPath(((InstanceInvokeExpr) stmt.getInvokeExprBox().getValue()).getBase(), false));
 					
 					// If make sure to also taint the left side of an assignment
 					// if the object just got tainted 
@@ -244,22 +244,34 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		// If we implement interfaces, we also need to check whether they in
 		// turn are in our method list
 		for (SootClass ifc : c.getInterfaces())
-			methodList.addAll(getMethodsForClass(ifc));
+			for (SootClass pifc : Scene.v().getActiveHierarchy().getSuperinterfacesOfIncluding(ifc))
+				methodList.addAll(getMethodsForClass(pifc));
 		
 		return methodList;
 	}
 
-	private boolean hasMethodsForClass(SootClass c){
-		if (classList.containsKey(c.getName()))
+	private boolean hasMethodsForClass(SootMethod m) {
+		if (classList.containsKey(m.getDeclaringClass().getName())
+				|| excludeList.containsKey(m.getDeclaringClass().getName())
+				|| killList.containsKey(m.getDeclaringClass().getName()))
 			return true;
 		
-		if (!c.isInterface()) {
+		if (!m.getDeclaringClass().isInterface()) {
 			// We have to walk up the hierarchy to also include all methods
 			// registered for superclasses
-			List<SootClass> superclasses = Scene.v().getActiveHierarchy().getSuperclassesOf(c);
-			for(SootClass sclass : superclasses){
-				if(classList.containsKey(sclass.getName()))
+			List<SootClass> superclasses = Scene.v().getActiveHierarchy().getSuperclassesOfIncluding(m.getDeclaringClass());
+			for(SootClass sclass : superclasses) {
+				if ((classList.containsKey(sclass.getName()) && classList.get(sclass.getName()).contains(m.getSubSignature()))
+						|| excludeList.containsKey(sclass.getName()) && excludeList.get(sclass.getName()).contains(m.getSubSignature())
+						|| killList.containsKey(sclass.getName()) && killList.get(sclass.getName()).contains(m.getSubSignature()))
 					return true;
+
+				for (SootClass ifc : sclass.getInterfaces())
+					for (SootClass pifc : Scene.v().getActiveHierarchy().getSuperinterfacesOfIncluding(ifc))
+						if ((classList.containsKey(pifc.getName()) && classList.get(pifc.getName()).contains(m.getSubSignature()))
+								|| excludeList.containsKey(pifc.getName()) && excludeList.get(pifc.getName()).contains(m.getSubSignature())
+								|| killList.containsKey(pifc.getName()) && killList.get(pifc.getName()).contains(m.getSubSignature()))
+							return true;
 			}
 		}
 		
@@ -284,7 +296,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 				&& (methodSubSig.equals("boolean equals(java.lang.Object)") || methodSubSig.equals("int hashCode()")))
 			return true;
 		
-		return hasMethodsForClass(method.getDeclaringClass());
+		return hasMethodsForClass(method);
 	}
 	
 	/**

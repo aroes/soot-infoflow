@@ -678,5 +678,13 @@ public class HeapTestCode {
 		b.attr.b = TelephonyManager.getDeviceId();
 		cm.publish(a.b);
 	}
+	
+	public void fieldBaseOverwriteTest() {
+		A a = new A();
+		a.b = TelephonyManager.getDeviceId();
+		A a2 = a;
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(a2.b);		
+	}
 
 }

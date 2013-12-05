@@ -260,33 +260,6 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 
 				return res;
 			}
-
-			/**
-			 * Checks whether the given base value matches the base of the given
-			 * taint abstraction
-			 * @param baseValue The value to check
-			 * @param source The taint abstraction to check
-			 * @return True if the given value has the same base value as the given
-			 * taint abstraction, otherwise false
-			 */
-			private boolean baseMatches(final Value baseValue, Abstraction source) {
-				if (baseValue instanceof Local) {
-					if (baseValue.equals(source.getAccessPath().getPlainValue()))
-						return true;
-				}
-				else if (baseValue instanceof InstanceFieldRef) {
-					InstanceFieldRef ifr = (InstanceFieldRef) baseValue;
-					if (ifr.getBase().equals(source.getAccessPath().getPlainValue())
-							&& ifr.getField().equals(source.getAccessPath().getFirstField()))
-						return true;
-				}
-				else if (baseValue instanceof StaticFieldRef) {
-					StaticFieldRef sfr = (StaticFieldRef) baseValue;
-					if (sfr.getField().equals(source.getAccessPath().getFirstField()))
-						return true;
-				}
-				return false;
-			}
 			
 			/**
 			 * Computes the abstraction to be injected into the forward solver

@@ -22,18 +22,20 @@ import org.slf4j.LoggerFactory;
 
 import soot.ArrayType;
 import soot.IntType;
+import soot.Local;
 import soot.LongType;
 import soot.PrimType;
-import soot.RefType;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
 import soot.Value;
-import soot.jimple.ArrayRef;
 import soot.jimple.Constant;
+import soot.jimple.DefinitionStmt;
 import soot.jimple.InstanceFieldRef;
+import soot.jimple.StaticFieldRef;
+import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler;
@@ -65,6 +67,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	protected boolean enableStaticFields = true;
 	protected boolean enableExceptions = true;
 	protected boolean flowSensitiveAliasing = true;
+	protected boolean enableTypeChecking = true;
 
 	protected boolean inspectSources = false;
 	protected boolean inspectSinks = false;
@@ -84,6 +87,9 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	}
 	
 	protected boolean canCastType(Type destType, Type sourceType) {
+		if (!enableTypeChecking)
+			return true;
+		
 		// If we don't have a source type, we generally allow the cast
 		if (sourceType == null)
 			return true;
@@ -101,6 +107,9 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	}
 		
 	protected boolean hasCompatibleTypesForCall(AccessPath apBase, SootClass dest) {
+		if (!enableTypeChecking)
+			return true;
+
 		// Cannot invoke a method on a primitive type
 		if (apBase.getType() instanceof PrimType)
 			return false;
@@ -241,29 +250,58 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	 * @param source the source from which the taints comes from. Important if not the value, but a field is tainted
 	 * @return true if a reverseFlow should be triggered or an inactive taint should be propagated (= resulting object is stored in heap = alias)
 	 */
-	public boolean triggerInaktiveTaintOrReverseFlow(Value val, Abstraction source){
-		if(val == null || source.getAccessPath().isEmpty())
+	public boolean triggerInaktiveTaintOrReverseFlow(Stmt stmt, Abstraction source){
+		if (stmt == null || source.getAccessPath().isEmpty())
 			return false;
 		
-		//no string
-		if (!(val instanceof InstanceFieldRef) && !(val instanceof ArrayRef) 
-				&& val.getType() instanceof RefType && ((RefType)val.getType()).getClassName().equals("java.lang.String"))
-			return false;
-		if (val instanceof InstanceFieldRef && ((InstanceFieldRef)val).getBase().getType() instanceof RefType &&
-				 ((RefType)((InstanceFieldRef)val).getBase().getType()).getClassName().equals("java.lang.String"))
-			return false;
+		if (stmt instanceof DefinitionStmt) {
+			DefinitionStmt defStmt = (DefinitionStmt) stmt;
+			// If the left side is overwritten completely, we do not need to
+			// look for aliases. This also covers strings.
+			if (defStmt.getLeftOp() instanceof Local
+					&& defStmt.getLeftOp() == source.getAccessPath().getPlainValue())
+				return false;
+
+			// Primitive types or constants do not have aliases
+			if (defStmt.getLeftOp().getType() instanceof PrimType)
+				return false;
+			if (defStmt.getLeftOp() instanceof Constant)
+				return false;
+			
+			// If the left side is a field or array reference (which is not
+			// overwritten completely), we must look for aliases.
+			if (DataTypeHandler.isFieldRefOrArrayRef(defStmt.getLeftOp()))
+				return true;
+		}
 		
-		// Primitive types or constants do not have aliases
-		if (val.getType() instanceof PrimType)
-			return false;
-		if (val instanceof Constant)
-			return false;
-		
-		if(DataTypeHandler.isFieldRefOrArrayRef(val)
-				|| source.getAccessPath().isInstanceFieldRef()
-				|| source.getAccessPath().isStaticFieldRef())
-			return true;
-		
+		return source.getAccessPath().isInstanceFieldRef()
+				|| source.getAccessPath().isStaticFieldRef();
+	}
+	
+	/**
+	 * Checks whether the given base value matches the base of the given
+	 * taint abstraction
+	 * @param baseValue The value to check
+	 * @param source The taint abstraction to check
+	 * @return True if the given value has the same base value as the given
+	 * taint abstraction, otherwise false
+	 */
+	protected boolean baseMatches(final Value baseValue, Abstraction source) {
+		if (baseValue instanceof Local) {
+			if (baseValue.equals(source.getAccessPath().getPlainValue()))
+				return true;
+		}
+		else if (baseValue instanceof InstanceFieldRef) {
+			InstanceFieldRef ifr = (InstanceFieldRef) baseValue;
+			if (ifr.getBase().equals(source.getAccessPath().getPlainValue())
+					&& ifr.getField().equals(source.getAccessPath().getFirstField()))
+				return true;
+		}
+		else if (baseValue instanceof StaticFieldRef) {
+			StaticFieldRef sfr = (StaticFieldRef) baseValue;
+			if (sfr.getField().equals(source.getAccessPath().getFirstField()))
+				return true;
+		}
 		return false;
 	}
 	
