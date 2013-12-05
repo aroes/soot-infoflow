@@ -49,6 +49,8 @@ import soot.jimple.infoflow.solver.BackwardsInfoflowCFG;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
 import soot.jimple.infoflow.solver.functions.SolverCallToReturnFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverNormalFlowFunction;
+import soot.jimple.infoflow.source.ISourceSinkManager;
+import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
 import soot.jimple.infoflow.util.BaseSelector;
 
@@ -62,12 +64,13 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 		taintWrapper = wrapper;
 	}
 
-	public BackwardsInfoflowProblem(InterproceduralCFG<Unit, SootMethod> icfg) {
-		super(icfg);
+	public BackwardsInfoflowProblem(ISourceSinkManager sourceSinkManager) {
+		this(new BackwardsInfoflowCFG(), sourceSinkManager);
 	}
 
-	public BackwardsInfoflowProblem() {
-		super(new BackwardsInfoflowCFG());
+	public BackwardsInfoflowProblem(InterproceduralCFG<Unit, SootMethod> icfg,
+			ISourceSinkManager sourceSinkManager) {
+		super(icfg, sourceSinkManager);
 	}
 
 	public void setForwardSolver(IInfoflowSolver forwardSolver) {
@@ -128,7 +131,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							return Collections.emptySet();
 						}
 					}
-
+					
 					// If we assign a constant, there is no need to track the right side
 					// any further or do any forward propagation since constants cannot
 					// carry taint.
@@ -346,12 +349,23 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				for (int i = 0; i < dest.getParameterCount(); i++)
 					paramLocals.add(dest.getActiveBody().getParameterLocal(i));
 
+				final SourceInfo sourceInfo = sourceSinkManager != null
+						? sourceSinkManager.getSourceInfo((Stmt) src, interproceduralCFG()) : null;
+				final boolean isSink = sourceSinkManager != null
+						? sourceSinkManager.isSink(stmt, interproceduralCFG()) : false;
+
 				return new FlowFunction<Abstraction>() {
 
 					public Set<Abstraction> computeTargets(Abstraction source) {
 						if (source.equals(zeroValue))
 							return Collections.emptySet();
 						
+						//if we do not have to look into sources or sinks:
+						if (!inspectSources && sourceInfo != null)
+							return Collections.emptySet();
+						if (!inspectSinks && isSink)
+							return Collections.emptySet();
+
 						// taint is propagated in CallToReturnFunction, so we do not need any taint here if it is exclusive:
 						if(taintWrapper != null && taintWrapper.isExclusive(stmt, source.getAccessPath()))
 							return Collections.emptySet();

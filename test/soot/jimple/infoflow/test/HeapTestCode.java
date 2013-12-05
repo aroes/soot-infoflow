@@ -668,5 +668,15 @@ public class HeapTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(b1.attr.b);
 	}
+	
+	public void aliasTaintLeakTaintTest() {
+		B b = new B();
+		b.attr = new A();
+		A a = b.attr;
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(b.attr.b);
+		b.attr.b = TelephonyManager.getDeviceId();
+		cm.publish(a.b);
+	}
 
 }

@@ -17,6 +17,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import soot.ArrayType;
 import soot.IntType;
 import soot.LongType;
@@ -38,6 +41,7 @@ import soot.jimple.infoflow.nativ.DefaultNativeCallHandler;
 import soot.jimple.infoflow.nativ.NativeCallHandler;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
+import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
 import soot.jimple.infoflow.util.DataTypeHandler;
 import soot.jimple.toolkits.ide.DefaultJimpleIFDSTabulationProblem;
@@ -51,15 +55,19 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 
 	protected final Map<Unit, Set<Abstraction>> initialSeeds = new HashMap<Unit, Set<Abstraction>>();
 	protected ITaintPropagationWrapper taintWrapper;
-	protected NativeCallHandler ncHandler = new DefaultNativeCallHandler();
 	
-	protected boolean enableImplicitFlows = false;
+	protected final NativeCallHandler ncHandler = new DefaultNativeCallHandler();
+	protected final ISourceSinkManager sourceSinkManager;
+
+    protected final Logger logger = LoggerFactory.getLogger(getClass());
+
+    protected boolean enableImplicitFlows = false;
 	protected boolean enableStaticFields = true;
 	protected boolean enableExceptions = true;
 	protected boolean flowSensitiveAliasing = true;
 
-	protected boolean inspectSources = true;
-	protected boolean inspectSinks = true;
+	protected boolean inspectSources = false;
+	protected boolean inspectSinks = false;
 
 	Abstraction zeroValue = null;
 	
@@ -69,8 +77,10 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	
 	protected Set<TaintPropagationHandler> taintPropagationHandlers = new HashSet<TaintPropagationHandler>();
 	
-	public AbstractInfoflowProblem(InterproceduralCFG<Unit, SootMethod> icfg) {
+	public AbstractInfoflowProblem(InterproceduralCFG<Unit, SootMethod> icfg,
+			ISourceSinkManager sourceSinkManager) {
 		super(icfg);
+		this.sourceSinkManager = sourceSinkManager;
 	}
 	
 	protected boolean canCastType(Type destType, Type sourceType) {

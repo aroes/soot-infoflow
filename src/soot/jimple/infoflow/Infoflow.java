@@ -296,7 +296,7 @@ public class Infoflow extends AbstractInfoflow {
 				final IAliasingStrategy aliasingStrategy;
 				switch (aliasingAlgorithm) {
 					case FlowSensitive:
-						backProblem = new BackwardsInfoflowProblem();
+						backProblem = new BackwardsInfoflowProblem(sourcesSinks);
 						backSolver = new InfoflowSolver(backProblem, executor);
 						aliasingStrategy = new FlowSensitiveAliasStrategy(iCfg, backSolver);
 						break;

@@ -23,9 +23,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import soot.ArrayType;
 import soot.IntType;
 import soot.Local;
@@ -81,9 +78,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 
 	private final IAliasingStrategy aliasingStrategy;
 	private final IAliasingStrategy implicitFlowAliasingStrategy;
-	private final ISourceSinkManager sourceSinkManager;
-
-    private final Logger logger = LoggerFactory.getLogger(getClass());
     
     private final Map<Unit, Set<Unit>> activationUnitsToCallSites = new ConcurrentHashMap<Unit, Set<Unit>>();
     private final Map<Unit, Set<Abstraction>> implicitTargets = new ConcurrentHashMap<Unit, Set<Abstraction>>();
@@ -110,8 +104,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 	
 	public InfoflowProblem(IInfoflowCFG icfg, ISourceSinkManager sourceSinkManager,
 			IAliasingStrategy aliasingStrategy) {
-		super(icfg);
-		this.sourceSinkManager = sourceSinkManager;
+		super(icfg, sourceSinkManager);
 		this.aliasingStrategy = aliasingStrategy;
 		this.implicitFlowAliasingStrategy = new ImplicitFlowAliasStrategy(icfg);
 	}
