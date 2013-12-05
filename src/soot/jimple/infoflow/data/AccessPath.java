@@ -216,7 +216,7 @@ public class AccessPath implements Cloneable {
 			this.hashCode = 1;
 			this.hashCode = prime * this.hashCode + ((fields == null) ? 0 : Arrays.hashCode(fields));
 			this.hashCode = prime * this.hashCode + ((value == null) ? 0 : value.hashCode());
-			this.hashCode = prime * (this.taintSubFields ? 1 : 0);
+			this.hashCode = prime * this.hashCode + (this.taintSubFields ? 1 : 0);
 			return this.hashCode;
 		}
 	}
