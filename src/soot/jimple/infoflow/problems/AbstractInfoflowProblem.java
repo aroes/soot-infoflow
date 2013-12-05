@@ -246,18 +246,17 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 			return false;
 		
 		//no string
-		if(!(val instanceof InstanceFieldRef) && !(val instanceof ArrayRef) 
-				&& val.getType() instanceof RefType && ((RefType)val.getType()).getClassName().equals("java.lang.String")){
+		if (!(val instanceof InstanceFieldRef) && !(val instanceof ArrayRef) 
+				&& val.getType() instanceof RefType && ((RefType)val.getType()).getClassName().equals("java.lang.String"))
 			return false;
-		}
-		if(val instanceof InstanceFieldRef && ((InstanceFieldRef)val).getBase().getType() instanceof RefType &&
-				 ((RefType)((InstanceFieldRef)val).getBase().getType()).getClassName().equals("java.lang.String")){
+		if (val instanceof InstanceFieldRef && ((InstanceFieldRef)val).getBase().getType() instanceof RefType &&
+				 ((RefType)((InstanceFieldRef)val).getBase().getType()).getClassName().equals("java.lang.String"))
 			return false;
-		}
-		if(val.getType() instanceof PrimType){
+		
+		// Primitive types or constants do not have aliases
+		if (val.getType() instanceof PrimType)
 			return false;
-		}
-		if(val instanceof Constant)
+		if (val instanceof Constant)
 			return false;
 		
 		if(DataTypeHandler.isFieldRefOrArrayRef(val)

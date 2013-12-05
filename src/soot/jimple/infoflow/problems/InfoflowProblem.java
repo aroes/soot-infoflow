@@ -160,12 +160,17 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				// backwards as there might be aliases for the base object
 				// Note that we don't only need to check for heap writes such as a.x = y,
 				// but also for base object taints ("a" in this case).
-				if (!val.equals(source.getAccessPath()))
+				if (!val.equals(source.getAccessPath())) {
+					boolean taintsBaseValue = val.getType() instanceof RefType
+							&& newAbs.getAccessPath().getType() instanceof RefType
+							&& iStmt.getInvokeExpr() instanceof InstanceInvokeExpr
+							&& ((InstanceInvokeExpr) iStmt.getInvokeExpr()).getBase() == val.getPlainValue();
 					if ((enableStaticFields && newAbs.getAccessPath().isStaticFieldRef())
-							|| (val.getType() instanceof RefType && newAbs.getAccessPath().getType() instanceof RefType)
+							|| taintsBaseValue
 							|| triggerInaktiveTaintOrReverseFlow(val.getPlainValue(), newAbs))
 						computeAliasTaints(d1, (Stmt) iStmt, val.getPlainValue(), res,
 								interproceduralCFG().getMethodOf(iStmt), newAbs);
+				}
 			}
 		}
 
