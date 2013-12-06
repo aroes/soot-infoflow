@@ -259,7 +259,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	 * @param source the source from which the taints comes from. Important if not the value, but a field is tainted
 	 * @return true if a reverseFlow should be triggered or an inactive taint should be propagated (= resulting object is stored in heap = alias)
 	 */
-	protected boolean triggerInaktiveTaintOrReverseFlow(Stmt stmt, Abstraction source){
+	protected boolean triggerInaktiveTaintOrReverseFlow(Stmt stmt, Value val, Abstraction source){
 		if (stmt == null || source.getAccessPath().isEmpty())
 			return false;
 		
@@ -270,18 +270,18 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 			if (defStmt.getLeftOp() instanceof Local
 					&& defStmt.getLeftOp() == source.getAccessPath().getPlainValue())
 				return false;
-
-			// Primitive types or constants do not have aliases
-			if (defStmt.getLeftOp().getType() instanceof PrimType)
-				return false;
-			if (defStmt.getLeftOp() instanceof Constant)
-				return false;
-			
-			// If the left side is a field or array reference (which is not
-			// overwritten completely), we must look for aliases.
-			if (DataTypeHandler.isFieldRefOrArrayRef(defStmt.getLeftOp()))
-				return true;
 		}
+
+		// Primitive types or constants do not have aliases
+		if (val.getType() instanceof PrimType)
+			return false;
+		if (val instanceof Constant)
+			return false;
+			
+		// If the left side is a field or array reference (which is not
+		// overwritten completely), we must look for aliases.
+		if (DataTypeHandler.isFieldRefOrArrayRef(val))
+			return true;
 		
 		return source.getAccessPath().isInstanceFieldRef()
 				|| source.getAccessPath().isStaticFieldRef();

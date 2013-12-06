@@ -174,7 +174,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					
 					if (!taintedValueOverwritten && (taintsStaticField
 							|| (taintsBaseValue && newAbs.getAccessPath().getTaintSubFields())
-							|| triggerInaktiveTaintOrReverseFlow(iStmt, newAbs)))
+							|| triggerInaktiveTaintOrReverseFlow(iStmt, val.getPlainValue(), newAbs)))
 						computeAliasTaints(d1, (Stmt) iStmt, val.getPlainValue(), res,
 								interproceduralCFG().getMethodOf(iStmt), newAbs);
 				}
@@ -325,7 +325,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					newAbs = source.deriveNewAbstraction(new AccessPath(targetValue, true), src);
 				taintSet.add(newAbs);
 								
-				if (triggerInaktiveTaintOrReverseFlow(src, newAbs)
+				if (triggerInaktiveTaintOrReverseFlow(src, targetValue, newAbs)
 						&& newAbs.isAbstractionActive()) {
 					// If we overwrite the complete local, there is no need for
 					// a backwards analysis
@@ -416,7 +416,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								res.add(abs);
 								
 								// Compute the aliases
-								if (triggerInaktiveTaintOrReverseFlow(is, abs))
+								if (triggerInaktiveTaintOrReverseFlow(is, is.getLeftOp(), abs))
 									computeAliasTaints(d1, is, is.getLeftOp(), res, interproceduralCFG().getMethodOf(is), abs);
 								
 								return res;
@@ -483,7 +483,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
                                 res.add(abs);
                                 
                                 // Compute the aliases
-								if (triggerInaktiveTaintOrReverseFlow(assignStmt, abs))
+								if (triggerInaktiveTaintOrReverseFlow(assignStmt, assignStmt.getLeftOp(), abs))
 									computeAliasTaints(d1, assignStmt, assignStmt.getLeftOp(), res,
 											interproceduralCFG().getMethodOf(assignStmt), abs);
 								
@@ -637,7 +637,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 																
 								if (isSink && newSource.isAbstractionActive() && newSource.getAccessPath().isEmpty())
 									results.add(new AbstractionAtSink(newSource, leftValue, assignStmt));
-								if (triggerInaktiveTaintOrReverseFlow(assignStmt, newSource) || newSource.isAbstractionActive())
+								if (triggerInaktiveTaintOrReverseFlow(assignStmt, leftValue, newSource) || newSource.isAbstractionActive())
 									addTaintViaStmt(d1, (Stmt) src, leftValue, newSource, res, cutFirstField,
 											interproceduralCFG().getMethodOf(src), targetType);
 								
@@ -994,7 +994,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									HashSet<Abstraction> res = new HashSet<Abstraction>();
 									res.add(abs);
 									
-									if(triggerInaktiveTaintOrReverseFlow(def, abs) && !callerD1sConditional)
+									if(triggerInaktiveTaintOrReverseFlow(def, def.getLeftOp(), abs) && !callerD1sConditional)
 										for (Abstraction d1 : callerD1s)
 											computeAliasTaints(d1, (Stmt) callSite, def.getLeftOp(), res,
 													interproceduralCFG().getMethodOf(callSite), abs);
@@ -1062,7 +1062,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								registerActivationCallSite(callSite, abs);
 								res.add(abs);
 								
-								if(triggerInaktiveTaintOrReverseFlow(defnStmt, abs) && !callerD1sConditional)
+								if(triggerInaktiveTaintOrReverseFlow(defnStmt, leftOp, abs) && !callerD1sConditional)
 									for (Abstraction d1 : callerD1s)
 										computeAliasTaints(d1, (Stmt) callSite, leftOp, res,
 												interproceduralCFG().getMethodOf(callSite), abs);
@@ -1102,7 +1102,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									registerActivationCallSite(callSite, abs);
 
 									res.add(abs);
-									if (triggerInaktiveTaintOrReverseFlow((Stmt) callSite, newSource) && !callerD1sConditional) {
+									if (triggerInaktiveTaintOrReverseFlow((Stmt) callSite, originalCallArg, newSource)
+											&& !callerD1sConditional) {
 										for (Abstraction d1 : callerD1s)
 											computeAliasTaints(d1, (Stmt) callSite, originalCallArg, res,
 												interproceduralCFG().getMethodOf(callSite), abs);											
@@ -1135,7 +1136,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 											registerActivationCallSite(callSite, abs);
 											res.add(abs);
 
-											if(triggerInaktiveTaintOrReverseFlow(stmt, abs) && !callerD1sConditional){
+											if(triggerInaktiveTaintOrReverseFlow(stmt, iIExpr.getBase(), abs) && !callerD1sConditional){
 												for (Abstraction d1 : callerD1s)
 													computeAliasTaints(d1, (Stmt) callSite, iIExpr.getBase(), res,
 															interproceduralCFG().getMethodOf(callSite), abs);											
@@ -1210,7 +1211,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								res.add(abs);
 								
 								// Compute the aliases
-								if (triggerInaktiveTaintOrReverseFlow(iStmt, abs))
+								if (triggerInaktiveTaintOrReverseFlow(iStmt, target, abs))
 									computeAliasTaints(d1, iStmt, target, res, interproceduralCFG().getMethodOf(call), abs);
 								
 								return res;
@@ -1287,7 +1288,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									// Compute the aliases
 									for (Abstraction abs : nativeAbs)
 										if (abs.getAccessPath().isStaticFieldRef()
-												|| triggerInaktiveTaintOrReverseFlow(iStmt, abs))
+												|| triggerInaktiveTaintOrReverseFlow(iStmt, abs.getAccessPath().getPlainValue(), abs))
 											computeAliasTaints(d1, (Stmt) call, abs.getAccessPath().getPlainValue(), res,
 													interproceduralCFG().getMethodOf(call), abs);
 								}
