@@ -529,8 +529,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							boolean aliasOverwritten = !addLeftValue && !newSource.isAbstractionActive()
 									&& baseMatchesStrict(right, newSource)
 									&& right.getType() instanceof RefType
-									&& (!source.getAccessPath().getTaintSubFields()
-										|| ((RefType) right.getType()).getSootClass().getName().equals("java.lang.String")); // weird hack to distinguish cutoffs from base overrides
+									&& !source.dependsOnCutAP();
 							
 							Type targetType = null;
 							if (!addLeftValue && !aliasOverwritten) {

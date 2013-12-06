@@ -43,6 +43,7 @@ public class AccessPath implements Cloneable {
 	private final Type[] fieldTypes;
 	
 	private final boolean taintSubFields;
+	private final boolean cutOffApproximation;
 	
 	private int hashCode = 0;
 
@@ -60,6 +61,7 @@ public class AccessPath implements Cloneable {
 		this.baseType = null;
 		this.fieldTypes = null;
 		this.taintSubFields = true;
+		this.cutOffApproximation = false;
 	}
 	
 	public AccessPath(Value val, boolean taintSubFields){
@@ -111,10 +113,14 @@ public class AccessPath implements Cloneable {
 		int fNum = (baseField == null ? 0 : 1)
 				+ (appendingFields == null ? 0 : appendingFields.length);
 		int fieldNum = Math.min(Infoflow.getAccessPathLength(), fNum);
-		if (fNum > fieldNum)
+		if (fNum > fieldNum) {
 			this.taintSubFields = true;
-		else
+			this.cutOffApproximation = true;
+		}
+		else {
 			this.taintSubFields = taintSubFields;
+			this.cutOffApproximation = false;
+		}
 		
 		if (fieldNum == 0) {
 			this.fields = null;
@@ -391,6 +397,10 @@ public class AccessPath implements Cloneable {
 	
 	public boolean getTaintSubFields() {
 		return this.taintSubFields;
+	}
+	
+	public boolean isCutOffApproximation() {
+		return this.cutOffApproximation;
 	}
 	
 }

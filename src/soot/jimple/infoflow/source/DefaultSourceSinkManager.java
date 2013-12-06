@@ -14,7 +14,6 @@ import heros.InterproceduralCFG;
 
 import java.util.List;
 
-import soot.PrimType;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.IdentityStmt;

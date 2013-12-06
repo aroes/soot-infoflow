@@ -132,6 +132,9 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						}
 					}
 					
+					if (defStmt.toString().equals("$r1 = b.<soot.jimple.infoflow.test.HeapTestCode$B: soot.jimple.infoflow.test.HeapTestCode$A attr>"))
+						System.out.println("x");
+					
 					// If we assign a constant, there is no need to track the right side
 					// any further or do any forward propagation since constants cannot
 					// carry taint.
@@ -146,48 +149,42 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					// If the tainted value 'b' is assigned to variable 'a' and 'a'
 					// is a heap object, we must also look for aliases of 'a' upwards
 					// from the current statement.
-					/*
-					if (triggerInaktiveTaintOrReverseFlow(defStmt, defStmt.getLeftOp(), source)
-							&& !(leftValue instanceof Local && baseMatches(rightValue, source)
-									&& !source.getAccessPath().getTaintSubFields())) {
-					*/
-						if (rightValue instanceof InstanceFieldRef) {
-							InstanceFieldRef ref = (InstanceFieldRef) rightValue;
-							if (source.getAccessPath().isInstanceFieldRef()
-									&& ref.getBase().equals(source.getAccessPath().getPlainValue())
-									&& ref.getField().equals(source.getAccessPath().getFirstField())) {
-								Abstraction abs = source.deriveNewAbstraction(leftValue, true, defStmt,
-										source.getAccessPath().getType());
-								res.add(abs);
-							}
-						}
-						else if (enableStaticFields && rightValue instanceof StaticFieldRef) {
-							StaticFieldRef ref = (StaticFieldRef) rightValue;
-							if (source.getAccessPath().isStaticFieldRef()
-									&& ref.getField().equals(source.getAccessPath().getFirstField())) {
-								Abstraction abs = source.deriveNewAbstraction(leftValue, true, defStmt,
-										source.getAccessPath().getType());
-								res.add(abs);
-							}
-						}
-						else if (rightValue.equals(source.getAccessPath().getPlainValue())) {
-							Type newType = source.getAccessPath().getType();
-							if (leftValue instanceof ArrayRef)
-								newType = ArrayType.v(newType, 1);
-							else if (assignStmt.getRightOp() instanceof ArrayRef)
-								newType = ((ArrayType) newType).getArrayElementType();
-	
-							// Special type handling for certain operations
-							if (assignStmt.getRightOp() instanceof LengthExpr) {
-								assert source.getAccessPath().getType() instanceof ArrayType;
-								newType = IntType.v();
-							}
-								
-							Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
-									(leftValue, newType), defStmt);
+					if (rightValue instanceof InstanceFieldRef) {
+						InstanceFieldRef ref = (InstanceFieldRef) rightValue;
+						if (source.getAccessPath().isInstanceFieldRef()
+								&& ref.getBase().equals(source.getAccessPath().getPlainValue())
+								&& ref.getField().equals(source.getAccessPath().getFirstField())) {
+							Abstraction abs = source.deriveNewAbstraction(leftValue, true, defStmt,
+									source.getAccessPath().getType());
 							res.add(abs);
 						}
-//					}
+					}
+					else if (enableStaticFields && rightValue instanceof StaticFieldRef) {
+						StaticFieldRef ref = (StaticFieldRef) rightValue;
+						if (source.getAccessPath().isStaticFieldRef()
+								&& ref.getField().equals(source.getAccessPath().getFirstField())) {
+							Abstraction abs = source.deriveNewAbstraction(leftValue, true, defStmt,
+									source.getAccessPath().getType());
+							res.add(abs);
+						}
+					}
+					else if (rightValue.equals(source.getAccessPath().getPlainValue())) {
+						Type newType = source.getAccessPath().getType();
+						if (leftValue instanceof ArrayRef)
+							newType = ArrayType.v(newType, 1);
+						else if (assignStmt.getRightOp() instanceof ArrayRef)
+							newType = ((ArrayType) newType).getArrayElementType();
+	
+						// Special type handling for certain operations
+						if (assignStmt.getRightOp() instanceof LengthExpr) {
+							assert source.getAccessPath().getType() instanceof ArrayType;
+							newType = IntType.v();
+						}
+								
+						Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
+								(leftValue, newType), defStmt);
+						res.add(abs);
+					}
 
 					// If we have the tainted value on the left side of the assignment,
 					// we also have to look or aliases of the value on the right side of

@@ -186,6 +186,12 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	 */
 	private List<UnitContainer> postdominators = null;
 	
+	/**
+	 * Only valid for inactive abstractions. Specifies whether an access paths
+	 * has been cut during alias analysis.
+	 */
+	private boolean dependsOnCutAP = false;
+	
 	private final boolean flowSensitiveAliasing;
 	
 	public Abstraction(Value taint, boolean taintSubFields,
@@ -238,6 +244,8 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 			flowSensitiveAliasing = original.flowSensitiveAliasing;
 			assert flowSensitiveAliasing || this.activationUnit == null;
 			assert this.isActive || flowSensitiveAliasing;
+			
+			dependsOnCutAP = original.dependsOnCutAP;
 		}
 		accessPath = p;
 		neighbors = null;
@@ -280,6 +288,8 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		
 		if (!abs.getAccessPath().isEmpty())
 			abs.postdominators = null;
+		if (!abs.isActive)
+			abs.dependsOnCutAP = abs.dependsOnCutAP || p.isCutOffApproximation();
 		
 		abs.sourceContext = null;
 		return abs;
@@ -590,6 +600,8 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 			return false;
 		if(this.flowSensitiveAliasing != other.flowSensitiveAliasing)
 			return false;
+		if(this.dependsOnCutAP != other.dependsOnCutAP)
+			return false;
 		return true;
 	}
 	
@@ -610,6 +622,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 			this.hashCode = prime * this.hashCode + (isActive ? 1231 : 1237);
 			this.hashCode = prime * this.hashCode + ((postdominators == null) ? 0 : postdominators.hashCode());
 			this.hashCode = prime * this.hashCode + (flowSensitiveAliasing ? 1231 : 1237);
+			this.hashCode = prime * this.hashCode + (dependsOnCutAP ? 1231 : 1237);
 			return hashCode;
 		}
 	}
@@ -636,6 +649,10 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	 */
 	public SourceContext getSourceContext() {
 		return sourceContext;
+	}
+	
+	public boolean dependsOnCutAP() {
+		return dependsOnCutAP;
 	}
 	
 	@Override
