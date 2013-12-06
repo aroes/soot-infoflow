@@ -208,7 +208,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 				if (taintEqualsHashCode || methodList.contains(method.getSubSignature())) {
 					// If we call a method on an instance, this instance is assumed to be tainted
 					if(stmt.getInvokeExprBox().getValue() instanceof InstanceInvokeExpr)
-						taints.add(new AccessPath(((InstanceInvokeExpr) stmt.getInvokeExprBox().getValue()).getBase(), false));
+						taints.add(new AccessPath(((InstanceInvokeExpr) stmt.getInvokeExprBox().getValue()).getBase(), true));
 					
 					// If make sure to also taint the left side of an assignment
 					// if the object just got tainted 

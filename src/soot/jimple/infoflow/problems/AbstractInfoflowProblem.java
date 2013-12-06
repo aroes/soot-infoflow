@@ -314,6 +314,27 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 		return false;
 	}
 	
+	/**
+	 * Checks whether the given base value matches the base of the given
+	 * taint abstraction and ends there. So a will match a, but not a.x.
+	 * Not that this function will still match a to a.*.
+	 * @param baseValue The value to check
+	 * @param source The taint abstraction to check
+	 * @return True if the given value has the same base value as the given
+	 * taint abstraction and no further elements, otherwise false
+	 */
+	protected boolean baseMatchesStrict(final Value baseValue, Abstraction source) {
+		if (!baseMatches(baseValue, source))
+			return false;
+		
+		if (baseValue instanceof Local)
+			return source.getAccessPath().isLocal();
+		else if (baseValue instanceof InstanceFieldRef || baseValue instanceof StaticFieldRef)
+			return source.getAccessPath().getFieldCount() == 1;
+		
+		throw new RuntimeException("Unexpected left side");
+	}
+	
 	@Override
 	public IInfoflowCFG interproceduralCFG() {
 		return (IInfoflowCFG) super.interproceduralCFG();

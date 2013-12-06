@@ -260,16 +260,16 @@ public class HeapTests extends JUnitTests {
 	public void threeLevelShortAPTest() {
 		taintWrapper = false;
 		Infoflow infoflow = initInfoflow();
-
+		
 		int oldAPLength = Infoflow.getAccessPathLength();
 		infoflow.setAccessPathLength(1);
-
+		
 		infoflow.setInspectSinks(false);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void threeLevelTest()>");
 		infoflow.computeInfoflow(path, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
-
+		
 		infoflow.setAccessPathLength(oldAPLength); // this is a global setting!
 													// Restore it when we're
 													// done

@@ -324,7 +324,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				else
 					newAbs = source.deriveNewAbstraction(new AccessPath(targetValue, true), src);
 				taintSet.add(newAbs);
-								
+				
 				if (triggerInaktiveTaintOrReverseFlow(src, targetValue, newAbs)
 						&& newAbs.isAbstractionActive()) {
 					// If we overwrite the complete local, there is no need for
@@ -523,8 +523,17 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									addLeftValue = true;
 							}
 							
+							// If we have a = x with the taint "x" being inactive,
+							// we must not taint the left side. We can only taint
+							// the left side if the tainted value is some "x.y".
+							boolean aliasOverwritten = !addLeftValue && !newSource.isAbstractionActive()
+									&& baseMatchesStrict(right, newSource)
+									&& right.getType() instanceof RefType
+									&& (!source.getAccessPath().getTaintSubFields()
+										|| ((RefType) right.getType()).getSootClass().getName().equals("java.lang.String")); // weird hack to distinguish cutoffs from base overrides
+							
 							Type targetType = null;
-							if (!addLeftValue) {
+							if (!addLeftValue && !aliasOverwritten) {
 								for (Value rightValue : rightVals) {
 									// check if static variable is tainted (same name, same class)
 									//y = X.f && X.f tainted --> y, X.f tainted

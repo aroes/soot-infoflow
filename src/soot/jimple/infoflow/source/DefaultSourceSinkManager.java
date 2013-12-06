@@ -14,6 +14,7 @@ import heros.InterproceduralCFG;
 
 import java.util.List;
 
+import soot.PrimType;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.IdentityStmt;
@@ -86,9 +87,11 @@ public class DefaultSourceSinkManager extends MethodBasedSourceSinkManager {
 	
 	@Override
 	public SourceInfo getSourceMethodInfo(SootMethod sMethod) {
-		return sources.contains(sMethod.toString()) ? sourceInfo : null;
+		if (!sources.contains(sMethod.toString()))
+			return null;
+		return sourceInfo;
 	}
-
+	
 	@Override
 	public boolean isSinkMethod(SootMethod sMethod) {
 		return sinks.contains(sMethod.toString());

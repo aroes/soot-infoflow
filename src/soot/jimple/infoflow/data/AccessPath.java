@@ -106,9 +106,16 @@ public class AccessPath implements Cloneable {
 			bFieldType = null;			
 		}
 
-		int fieldNum = (baseField == null ? 0 : 1)
+		// Cut the fields at the maximum access path length. If this happens,
+		// we must always add a star
+		int fNum = (baseField == null ? 0 : 1)
 				+ (appendingFields == null ? 0 : appendingFields.length);
-		fieldNum = Math.min(Infoflow.getAccessPathLength(), fieldNum);
+		int fieldNum = Math.min(Infoflow.getAccessPathLength(), fNum);
+		if (fNum > fieldNum)
+			this.taintSubFields = true;
+		else
+			this.taintSubFields = taintSubFields;
+		
 		if (fieldNum == 0) {
 			this.fields = null;
 			this.fieldTypes = null;
@@ -135,11 +142,6 @@ public class AccessPath implements Cloneable {
 				&& !(this.value.getType() instanceof ArrayType)
 				&& !(this.value.getType() instanceof RefType && ((RefType) this.value.getType()).getSootClass().getName().equals("java.lang.Object")));
 		assert !isEmpty() || this.baseType == null;
-		
-		if (this.toString().equals("this(soot.jimple.infoflow.test.EasyWrapperTestCode"))
-			System.out.println("x");
-		
-		this.taintSubFields = taintSubFields;
 	}
 	
 	public AccessPath(SootField staticfield, boolean taintSubFields){
