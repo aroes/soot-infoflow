@@ -132,9 +132,6 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						}
 					}
 					
-					if (defStmt.toString().equals("$r1 = b.<soot.jimple.infoflow.test.HeapTestCode$B: soot.jimple.infoflow.test.HeapTestCode$A attr>"))
-						System.out.println("x");
-					
 					// If we assign a constant, there is no need to track the right side
 					// any further or do any forward propagation since constants cannot
 					// carry taint.
