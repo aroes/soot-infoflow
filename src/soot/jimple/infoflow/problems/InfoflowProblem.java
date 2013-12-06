@@ -27,7 +27,6 @@ import soot.ArrayType;
 import soot.IntType;
 import soot.Local;
 import soot.RefType;
-import soot.Scene;
 import soot.SootField;
 import soot.SootMethod;
 import soot.Type;

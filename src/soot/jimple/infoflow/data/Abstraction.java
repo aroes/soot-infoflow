@@ -262,9 +262,6 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	}
 
 	public Abstraction deriveNewAbstraction(AccessPath p, Stmt currentStmt, Stmt activationUnit){
-		if (activationUnit != null && activationUnit.toString().equals("this.<soot.jimple.infoflow.test.EasyWrapperTestCode$C: soot.jimple.infoflow.test.EasyWrapperTestCode this$0> = l1"))
-			System.out.println("x");
-		
 		if (this.accessPath.equals(p) && this.currentStmt == currentStmt)
 			return this;
 		Abstraction abs = deriveNewAbstractionMutable(p, currentStmt);
@@ -323,9 +320,6 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		
 		a = deriveNewAbstractionMutable(newAP, (Stmt) newActUnit);
 		if (flowSensitiveAliasing && isActive) {
-if (newActUnit != null && newActUnit.toString().equals("this.<soot.jimple.infoflow.test.EasyWrapperTestCode$C: soot.jimple.infoflow.test.EasyWrapperTestCode this$0> = l1"))
-System.out.println("x");
-
 			assert newActUnit != null;
 			if (!this.getAccessPath().isEmpty())
 				a.activationUnit = newActUnit;

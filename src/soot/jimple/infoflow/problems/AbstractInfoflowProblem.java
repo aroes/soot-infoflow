@@ -189,6 +189,15 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	public void setFlowSensitiveAliasing(boolean flowSensitiveAliasing) {
 		this.flowSensitiveAliasing = flowSensitiveAliasing;
 	}
+	
+	/**
+	 * Sets whether type checking shall be done on casts and method calls
+	 * @param enableTypeChecking True if type checking shall be performed,
+	 * otherwise false
+	 */
+	public void setEnableTypeChecking(boolean enableTypeChecking) {
+		this.enableTypeChecking = enableTypeChecking;
+	}
 
 	@Override
 	public Abstraction createZeroValue() {
@@ -250,7 +259,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	 * @param source the source from which the taints comes from. Important if not the value, but a field is tainted
 	 * @return true if a reverseFlow should be triggered or an inactive taint should be propagated (= resulting object is stored in heap = alias)
 	 */
-	public boolean triggerInaktiveTaintOrReverseFlow(Stmt stmt, Abstraction source){
+	protected boolean triggerInaktiveTaintOrReverseFlow(Stmt stmt, Abstraction source){
 		if (stmt == null || source.getAccessPath().isEmpty())
 			return false;
 		

@@ -604,4 +604,20 @@ public class HeapTests extends JUnitTests {
 		Assert.assertEquals(1, infoflow.getResults().size());
 	}
 	
+	@Test(timeout = 300000)
+	public void doubleAliasTest() {
+		taintWrapper = false;
+
+		Infoflow infoflow = initInfoflow();
+		infoflow.setInspectSources(false);
+		infoflow.setInspectSinks(false);
+		infoflow.setEnableImplicitFlows(false);
+
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void doubleAliasTest()>");
+		infoflow.computeInfoflow(path, epoints, sources, sinks);
+		checkInfoflow(infoflow, 2);
+		Assert.assertEquals(2, infoflow.getResults().size());
+	}
+
 }
