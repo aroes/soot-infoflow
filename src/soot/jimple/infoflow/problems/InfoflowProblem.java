@@ -153,25 +153,27 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 		if(vals != null) {
 			for (AccessPath val : vals) {
 				// The new abstraction gets activated where it was generated
-				Abstraction newAbs = source.deriveNewAbstraction(val, iStmt, iStmt);
-				res.add(newAbs);
+				if (val.equals(source.getAccessPath()))
+					res.add(source);
+				else {
+					Abstraction newAbs = source.deriveNewAbstraction(val, iStmt, iStmt);
+					res.add(newAbs);
 				
-				// If the taint wrapper creates a new taint, this must be propagated
-				// backwards as there might be aliases for the base object
-				// Note that we don't only need to check for heap writes such as a.x = y,
-				// but also for base object taints ("a" in this case).
-				if (!val.equals(source.getAccessPath())) {
+					// If the taint wrapper creates a new taint, this must be propagated
+					// backwards as there might be aliases for the base object
+					// Note that we don't only need to check for heap writes such as a.x = y,
+					// but also for base object taints ("a" in this case).
 					boolean taintsBaseValue = val.getType() instanceof RefType
 							&& !((RefType) val.getType()).getSootClass().getName().equals("java.lang.String")
 							&& newAbs.getAccessPath().getType() instanceof RefType
 							&& iStmt.getInvokeExpr() instanceof InstanceInvokeExpr
 							&& ((InstanceInvokeExpr) iStmt.getInvokeExpr()).getBase() == val.getPlainValue();
 					boolean taintsStaticField = enableStaticFields && newAbs.getAccessPath().isStaticFieldRef();
-					
+						
 					// If the tainted value gets overwritten, it cannot have aliases afterwards
 					boolean taintedValueOverwritten = (iStmt instanceof DefinitionStmt)
 							? baseMatches(((DefinitionStmt) iStmt).getLeftOp(), newAbs) : false;
-					
+						
 					if (!taintedValueOverwritten && (taintsStaticField
 							|| (taintsBaseValue && newAbs.getAccessPath().getTaintSubFields())
 							|| triggerInaktiveTaintOrReverseFlow(iStmt, val.getPlainValue(), newAbs)))
