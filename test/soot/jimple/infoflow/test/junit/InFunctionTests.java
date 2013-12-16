@@ -83,6 +83,8 @@ public class InFunctionTests extends JUnitTests {
     @Test(timeout=300000)
     public void inFunctionTest4(){
     	Infoflow infoflow = initInfoflow();
+    	Assert.assertNotNull(infoflow.getTaintWrapper());
+    	
     	List<String> epoint = new ArrayList<String>();
     	epoint.add("<soot.jimple.infoflow.test.InFunctionCode: void setTmp(java.lang.String)>");
     	epoint.add("<soot.jimple.infoflow.test.InFunctionCode: java.lang.String foo(java.lang.String,java.lang.String)>");
