@@ -163,7 +163,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 	    
 	    @Test(timeout=300000)
 	    public void multiAliasTest(){
-	    	taintWrapper = false;
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	List<String> epoints = new ArrayList<String>();
@@ -175,7 +174,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	    @Test(timeout=300000)
 	    public void overwriteAliasTest(){
-	    	taintWrapper = false;
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	List<String> epoints = new ArrayList<String>();
@@ -187,7 +185,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 	    
 	    @Test(timeout=300000)
 	    public void arrayAliasTest(){
-	    	taintWrapper = false;
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	List<String> epoints = new ArrayList<String>();
@@ -199,7 +196,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	    @Test(timeout=300000)
 	    public void functionAliasTest(){
-	    	taintWrapper = false;
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	List<String> epoints = new ArrayList<String>();
@@ -211,7 +207,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	    @Test(timeout=300000)
 	    public void functionAliasTest2(){
-	    	taintWrapper = false;
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	List<String> epoints = new ArrayList<String>();
@@ -223,7 +218,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	    @Test(timeout=300000)
 	    public void multiLevelTest(){
-	    	taintWrapper = false;
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	List<String> epoints = new ArrayList<String>();
@@ -235,7 +229,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	    @Test(timeout=300000)
 	    public void multiLevelTest2(){
-	    	taintWrapper = false;
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	List<String> epoints = new ArrayList<String>();
@@ -247,7 +240,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	    @Test(timeout=300000)
 	    public void negativeMultiLevelTest(){
-	    	taintWrapper = false;
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	List<String> epoints = new ArrayList<String>();
@@ -258,7 +250,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	    @Test(timeout=300000)
 	    public void negativeMultiLevelTest2(){
-	    	taintWrapper = false;
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	List<String> epoints = new ArrayList<String>();
@@ -269,7 +260,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	    @Test(timeout=300000)
 	    public void threeLevelTest(){
-	    	taintWrapper = false;
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	infoflow.setInspectSinks(false);
@@ -282,7 +272,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	    @Test(timeout=300000)
 	    public void threeLevelShortAPTest(){
-	    	taintWrapper = false;
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	
@@ -301,7 +290,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	    @Test(timeout=300000)
 	    public void recursionTest(){
-	    	taintWrapper = false;
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	infoflow.setInspectSinks(false);
@@ -314,7 +302,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	    @Test(timeout=300000)
 	    public void activationUnitTest1(){
-	    	taintWrapper = false;
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	infoflow.setInspectSinks(false);
@@ -327,7 +314,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	    @Test(timeout=300000)
 	    public void activationUnitTest2(){
-	    	taintWrapper = false;
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	infoflow.setInspectSinks(false);
@@ -340,7 +326,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	    @Test(timeout=300000)
 	    public void activationUnitTest3(){
-	    	taintWrapper = false;
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	infoflow.setInspectSinks(false);
@@ -353,7 +338,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	    @Test(timeout=300000)
 	    public void activationUnitTest4(){
-	    	taintWrapper = false;
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	infoflow.setInspectSinks(false);
@@ -366,7 +350,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	    @Test(timeout=300000)
 	    public void activationUnitTest4b(){
-	    	taintWrapper = false;
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	infoflow.setInspectSinks(false);
@@ -379,7 +362,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	    @Test(timeout=300000)
 	    public void activationUnitTest5(){
-	    	taintWrapper = false;
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	infoflow.setInspectSinks(false);
@@ -392,7 +374,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	    @Test(timeout=300000)
 	    public void returnAliasTest(){
-	    	taintWrapper = false;
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	infoflow.setInspectSinks(false);
@@ -405,7 +386,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 	    
 	    @Test(timeout=300000)
 	    public void callPerformanceTest(){
-	    	taintWrapper = false;
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	infoflow.setInspectSinks(false);
@@ -418,8 +398,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 	    
 	    @Test(timeout=300000)
 	    public void aliasesTest(){
-	    	taintWrapper = false;
-	    	
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	int oldLength = Infoflow.getAccessPathLength();
@@ -440,8 +418,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	    @Test(timeout=300000)
 	    public void wrapperAliasesTest(){
-	    	taintWrapper = false;
-	    	
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	int oldLength = Infoflow.getAccessPathLength();
@@ -524,8 +500,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	    @Test(timeout=300000)
 	    public void negativeAliasesTest(){
-	    	taintWrapper = false;
-	    	
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	int oldLength = Infoflow.getAccessPathLength();
@@ -545,8 +519,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	    @Test(timeout=300000)
 	    public void aliasPerformanceTest(){
-	    	taintWrapper = false;
-	    	
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	int oldLength = Infoflow.getAccessPathLength();
@@ -567,8 +539,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 	    
 	    @Test(timeout=300000)
 	    public void backwardsParameterTest(){
-	    	taintWrapper = false;
-	    	
 	    	Infoflow infoflow = initInfoflow();
 			infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 	    	infoflow.setInspectSources(false);
