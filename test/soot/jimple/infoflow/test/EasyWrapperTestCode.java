@@ -10,6 +10,7 @@
  ******************************************************************************/
 package soot.jimple.infoflow.test;
 
+import soot.jimple.infoflow.test.android.AccountManager;
 import soot.jimple.infoflow.test.android.ConnectionManager;
 import soot.jimple.infoflow.test.android.TelephonyManager;
 
@@ -165,6 +166,13 @@ public class EasyWrapperTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(c.getData());
 		i2.taintMe(tainted);
+	}
+	
+	public void stringConcatTest() {
+		String tainted = TelephonyManager.getDeviceId();
+		String tainted2 = (new AccountManager()).getPassword();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(tainted + tainted2);
 	}
 
 }

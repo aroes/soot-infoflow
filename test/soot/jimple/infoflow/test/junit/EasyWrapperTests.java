@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import soot.jimple.infoflow.Infoflow;
@@ -170,6 +171,19 @@ public class EasyWrapperTests extends JUnitTests {
     	infoflow.setTaintWrapper(wrapper);
     	infoflow.computeInfoflow(path, epoints,sources, sinks);
 		negativeCheckInfoflow(infoflow);
+    }
+	
+	@Test(timeout=300000)
+    public void stringConcatTest(){
+		Infoflow infoflow = initInfoflow();
+    	List<String> epoints = new ArrayList<String>();
+    	epoints.add("<soot.jimple.infoflow.test.EasyWrapperTestCode: void stringConcatTest()>");
+    	infoflow.setTaintWrapper(easyWrapper);
+    	infoflow.computeInfoflow(path, epoints,sources, sinks);
+
+    	checkInfoflow(infoflow, 1);
+		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));
+		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourcePwd));
     }
 	
 }
