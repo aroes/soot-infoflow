@@ -15,6 +15,7 @@ import heros.solver.LinkedNode;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -664,15 +665,19 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		if (originalAbstraction == this)
 			return;
 		
+		Set<Abstraction> orgNeighbors = null;
+		synchronized (originalAbstraction) {
+			if (originalAbstraction.neighbors != null) {
+				orgNeighbors = new HashSet<Abstraction>(originalAbstraction.neighbors);
+				originalAbstraction.neighbors = null;
+			}
+		}
+
 		synchronized (this) {
 			if (neighbors == null)
 				neighbors = Sets.newIdentityHashSet();
-			synchronized (originalAbstraction) {
-				if (originalAbstraction.neighbors != null) {
-					neighbors.addAll(originalAbstraction.neighbors);
-					originalAbstraction.neighbors = null;
-				}
-			}
+			if (orgNeighbors != null)
+				neighbors.addAll(orgNeighbors);
 			
 			if (this.predecessor != originalAbstraction.predecessor
 					|| this.currentStmt != originalAbstraction.currentStmt)
