@@ -663,15 +663,20 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		// We should not register ourselves as a neighbor
 		if (originalAbstraction == this)
 			return;
-		if (this.predecessor == originalAbstraction.predecessor
-				&& this.currentStmt == originalAbstraction.currentStmt)
-			return;
 		
 		synchronized (this) {
 			if (neighbors == null)
 				neighbors = Sets.newIdentityHashSet();
+			synchronized (originalAbstraction) {
+				if (originalAbstraction.neighbors != null) {
+					neighbors.addAll(originalAbstraction.neighbors);
+					originalAbstraction.neighbors = null;
+				}
+			}
 			
-			this.neighbors.add(originalAbstraction);
+			if (this.predecessor != originalAbstraction.predecessor
+					|| this.currentStmt != originalAbstraction.currentStmt)
+				this.neighbors.add(originalAbstraction);
 		}
 	}
 		

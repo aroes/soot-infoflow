@@ -1381,12 +1381,15 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
     	logger.debug("Running path reconstruction");
     	InfoflowResults results = new InfoflowResults();
     	logger.info("Obtainted {} connections between sources and sinks", this.results.size());
-    	for (AbstractionAtSink abs : this.results)
+    	int curResIdx = 0;
+    	for (AbstractionAtSink abs : this.results) {
+    		logger.info("Building path " + ++curResIdx);
     		for (SourceContextAndPath context : computePaths ? abs.getAbstraction().getPaths()
     				: abs.getAbstraction().getSources())
 				results.addResult(abs.getSinkValue(), abs.getSinkStmt(),
 						context.getValue(), context.getStmt(),
 						context.getPath(), abs.getSinkStmt());
+    	}
     	logger.debug("Path reconstruction done.");
     	
     	this.infoflowResults = results;
