@@ -329,10 +329,11 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 		Set<N> startPointsOf = icfg.getStartPointsOf(methodThatNeedsSummary);
 		for(N sP: startPointsOf) {
 			//line 21.1 of Naeem/Lhotak/Rodriguez
-			inc.putAll(incoming(d1, sP));
-			
 			//register end-summary
-			addEndSummary(sP, d1, n, d2);
+			synchronized (incoming) {
+				inc.putAll(incoming(d1, sP));
+				addEndSummary(sP, d1, n, d2);
+			}
 		}
 		
 		//for each incoming call edge already processed
