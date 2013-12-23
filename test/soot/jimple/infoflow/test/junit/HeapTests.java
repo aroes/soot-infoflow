@@ -26,6 +26,7 @@ import soot.SootField;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.IInfoflow.AliasingAlgorithm;
 import soot.jimple.infoflow.Infoflow;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.taintWrappers.AbstractTaintWrapper;
@@ -470,7 +471,7 @@ public class HeapTests extends JUnitTests {
 	@Test(timeout = 300000)
 	public void negativeAliasesTest() {
 		Infoflow infoflow = initInfoflow();
-		infoflow.setFlowSensitiveAliasing(false);
+		infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		int oldLength = Infoflow.getAccessPathLength();
 		infoflow.setAccessPathLength(4);
 
@@ -514,13 +515,12 @@ public class HeapTests extends JUnitTests {
 		infoflow.setInspectSources(false);
 		infoflow.setInspectSinks(false);
 		infoflow.setEnableImplicitFlows(false);
-		infoflow.setFlowSensitiveAliasing(false);
+		infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void aliasPerformanceTest()>");
 		infoflow.computeInfoflow(path, epoints, sources, sinks);
-		checkInfoflow(infoflow, 3); // we're not flow sensitive, so we get a
-									// spurious one
+		checkInfoflow(infoflow, 3);	// PTS-based alias analysis is not flow-sensitive
 		Assert.assertEquals(3, infoflow.getResults().size());
 
 		infoflow.setAccessPathLength(oldLength);

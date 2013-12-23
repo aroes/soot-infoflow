@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +46,7 @@ import soot.jimple.infoflow.solver.IInfoflowCFG;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
+import soot.jimple.infoflow.util.ConcurrentHashSet;
 import soot.jimple.infoflow.util.DataTypeHandler;
 import soot.jimple.toolkits.ide.DefaultJimpleIFDSTabulationProblem;
 /**
@@ -79,6 +81,8 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	protected boolean stopAfterFirstFlow = false;
 	
 	protected Set<TaintPropagationHandler> taintPropagationHandlers = new HashSet<TaintPropagationHandler>();
+
+	private Map<Unit, Set<Unit>> activationUnitsToCallSites = new ConcurrentHashMap<Unit, Set<Unit>>();
 	
 	public AbstractInfoflowProblem(InterproceduralCFG<Unit, SootMethod> icfg,
 			ISourceSinkManager sourceSinkManager) {
@@ -335,6 +339,50 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 		throw new RuntimeException("Unexpected left side");
 	}
 	
+	protected boolean isCallSiteActivatingTaint(Unit callSite, Unit activationUnit) {
+		if (!flowSensitiveAliasing)
+			return false;
+
+		if (activationUnit == null)
+			return false;
+		Set<Unit> callSites = activationUnitsToCallSites.get(activationUnit);
+		return (callSites != null && callSites.contains(callSite));
+	}
+	
+	protected boolean registerActivationCallSite(Unit callSite, SootMethod callee, Abstraction activationAbs) {
+		if (!flowSensitiveAliasing)
+			return false;
+		Unit activationUnit = activationAbs.getActivationUnit();
+		if (activationUnit == null)
+			return false;
+		
+		synchronized (activationUnitsToCallSites) {
+			if (!activationUnitsToCallSites.containsKey(activationUnit))
+				activationUnitsToCallSites.put(activationUnit, new ConcurrentHashSet<Unit>());
+		}
+		Set<Unit> callSites = activationUnitsToCallSites.get(activationUnit);
+		if (callSites.contains(callSite))
+			return false;
+		
+		if (!activationAbs.isAbstractionActive())
+			if (!callee.getActiveBody().getUnits().contains(activationUnit)) {
+				boolean found = false;
+				for (Unit au : callSites)
+					if (callee.getActiveBody().getUnits().contains(au)) {
+						found = true;
+						break;
+					}
+				if (!found)
+					return false;
+			}
+
+		return callSites.add(callSite);
+	}
+	
+	public void setActivationUnitsToCallSites(AbstractInfoflowProblem other) {
+		this.activationUnitsToCallSites = other.activationUnitsToCallSites;
+	}
+
 	@Override
 	public IInfoflowCFG interproceduralCFG() {
 		return (IInfoflowCFG) super.interproceduralCFG();

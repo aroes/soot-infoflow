@@ -25,6 +25,7 @@ import heros.solver.CountingThreadPoolExecutor;
 import heros.solver.PathEdge;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -93,20 +94,8 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 	protected final Map<N,Set<D>> initialSeeds;
 	
 	@DontSynchronize("benign races")
-	public long flowFunctionApplicationCount;
-
-	@DontSynchronize("benign races")
-	public long flowFunctionConstructionCount;
-	
-	@DontSynchronize("benign races")
 	public long propagationCount;
 	
-	@DontSynchronize("benign races")
-	public long durationFlowFunctionConstruction;
-	
-	@DontSynchronize("benign races")
-	public long durationFlowFunctionApplication;
-
 	@DontSynchronize("stateless")
 	protected final D zeroValue;
 	
@@ -179,10 +168,8 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 	 */
 	protected void awaitCompletionComputeValuesAndShutdown() {
 		{
-			final long before = System.currentTimeMillis();
 			//run executor and await termination of tasks
 			runExecutorAndAwaitCompletion();
-			durationFlowFunctionConstruction = System.currentTimeMillis() - before;
 		}
 		if(logger.isDebugEnabled())
 			printStats();
@@ -247,7 +234,6 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 			
 			//compute the call-flow function
 			FlowFunction<D> function = flowFunctions.getCallFlowFunction(n, sCalledProcN);
-			flowFunctionConstructionCount++;
 			Set<D> res = computeCallFlowFunction(function, d1, d2);
 			
 			//for each callee's start point(s)
@@ -278,7 +264,6 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 							for(N retSiteN: returnSiteNs) {
 								//compute return-flow function
 								FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
-								flowFunctionConstructionCount++;
 								//for each target value of the function
 								for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d2)))
 									propagate(d1, retSiteN, d5, n, false);
@@ -292,7 +277,6 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 		//process intra-procedural flows along call-to-return flow functions
 		for (N returnSiteN : returnSiteNs) {
 			FlowFunction<D> callToReturnFlowFunction = flowFunctions.getCallToReturnFlowFunction(n, returnSiteN);
-			flowFunctionConstructionCount++;
 			for(D d3: computeCallToReturnFlowFunction(callToReturnFlowFunction, d1, d2))
 				propagate(d1, returnSiteN, d3, n, false);
 		}
@@ -341,17 +325,14 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 		final D d2 = edge.factAtTarget();
 		
 		//for each of the method's start points, determine incoming calls
+		Map<N,Set<D>> inc = new HashMap<N, Set<D>>();
 		Set<N> startPointsOf = icfg.getStartPointsOf(methodThatNeedsSummary);
-		Map<N,Set<D>> inc = null;
 		for(N sP: startPointsOf) {
 			//line 21.1 of Naeem/Lhotak/Rodriguez
+			inc.putAll(incoming(d1, sP));
 			
 			//register end-summary
-			synchronized (incoming) {
-				addEndSummary(sP, d1, n, d2);
-				//copy to avoid concurrent modification exceptions by other threads
-				inc = incoming(d1, sP);
-			}
+			addEndSummary(sP, d1, n, d2);
 		}
 		
 		//for each incoming call edge already processed
@@ -364,7 +345,6 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
 					//compute return-flow function
 					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
-					flowFunctionConstructionCount++;
 					Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, entry.getValue());
 					//for each incoming-call value
 					for(D d4: entry.getValue()) {
@@ -390,7 +370,6 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 				for(N c: callers) {
 					for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
 						FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
-						flowFunctionConstructionCount++;
 						Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, Collections.singleton(zeroValue));
 						for(D d5: targets)
 							propagate(zeroValue, retSiteC, d5, c, true);
@@ -401,7 +380,6 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 				//instead we thus call the return flow function will a null caller
 				if(callers.isEmpty()) {
 					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(null, methodThatNeedsSummary,n,null);
-					flowFunctionConstructionCount++;
 					retFunction.computeTargets(d2);
 				}
 			}
@@ -433,7 +411,6 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 		
 		for (N m : icfg.getSuccsOf(n)) {
 			FlowFunction<D> flowFunction = flowFunctions.getNormalFlowFunction(n,m);
-			flowFunctionConstructionCount++;
 			Set<D> res = computeNormalFlowFunction(flowFunction, d1, d2);
 			for (D d3 : res)
 				propagate(d1, m, d3, null, false); 
@@ -466,11 +443,9 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 	protected void propagate(D sourceVal, N target, D targetVal,
 		/* deliberately exposed to clients */ N relatedCallSite,
 		/* deliberately exposed to clients */ boolean isUnbalancedReturn) {
-		synchronized (jumpFn) {
-			if (!jumpFn.addFunction(sourceVal, target, targetVal))
-				return;
-		}
-
+		if (!jumpFn.addFunction(sourceVal, target, targetVal))
+			return;
+		
 		PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
 		scheduleEdgeProcessing(edge);
 
@@ -485,7 +460,7 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 	}
 
 	private void addEndSummary(N sP, D d1, N eP, D d2) {
-		synchronized (endSummary) {
+		synchronized (incoming) {
 			Map<N, Set<D>> summaries = endSummary.get(sP, d1);
 			if(summaries==null) {
 				summaries = new ConcurrentHashMap<N, Set<D>>();
@@ -501,14 +476,15 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 	}	
 	
 	private Map<N, Set<D>> incoming(D d1, N sP) {
-		synchronized (incoming) {
-			Map<N, Set<D>> map = incoming.get(sP, d1);
-			if(map==null) return Collections.emptyMap();
+		Map<N, Set<D>> map = incoming.get(sP, d1);
+		if(map==null) return Collections.emptyMap();
 			return map;
-		}
 	}
 	
 	protected void addIncoming(N sP, D d3, N n, D d2) {
+		if (n.toString().contains("specialinvoke this.<soot.jimple.infoflow.test.OverwriteTestCode: void setData(java.lang.String)>(null)") && d3.toString().contains("this"))
+			System.out.println("x");
+
 		synchronized (incoming) {
 			Map<N, Set<D>> summaries = incoming.get(sP, d3);
 			if(summaries==null) {

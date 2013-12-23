@@ -14,6 +14,7 @@ import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
+import soot.jimple.infoflow.solver.IInfoflowSolver;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
@@ -81,7 +82,7 @@ public class ImplicitFlowAliasStrategy extends AbstractBulkAliasStrategy {
 
 	@Override
 	public void computeAliasTaints(Abstraction d1, Stmt src, Value targetValue,
-			Set<Abstraction> taintSet, SootMethod method, Abstraction newAbs) {
+			Set<Abstraction> taintSet, SootMethod method, Abstraction newAbs) {	
 		// If we don't have an alias set for this method yet, we compute it
 		if (!globalAliases.containsRow(method))
 			computeGlobalAliases(method);
@@ -96,6 +97,21 @@ public class ImplicitFlowAliasStrategy extends AbstractBulkAliasStrategy {
 						ap.merge(newAbs.getAccessPath()), src);
 				taintSet.add(aliasAbs);
 			}
+	}
+
+	@Override
+	public void injectCallingContext(Abstraction abs, IInfoflowSolver fSolver,
+			SootMethod callee, Unit callSite, Abstraction source, Abstraction d1) {
+	}
+
+	@Override
+	public boolean isFlowSensitive() {
+		return false;
+	}
+
+	@Override
+	public boolean requiresAnalysisOnReturn() {
+		return true;
 	}
 	
 }

@@ -14,7 +14,6 @@ import heros.FlowFunction;
 import heros.FlowFunctions;
 import heros.InterproceduralCFG;
 import heros.flowfunc.Identity;
-import heros.flowfunc.KillAll;
 import heros.solver.PathEdge;
 
 import java.util.ArrayList;
@@ -45,10 +44,12 @@ import soot.jimple.ReturnStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
+import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.solver.BackwardsInfoflowCFG;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
 import soot.jimple.infoflow.solver.functions.SolverCallToReturnFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverNormalFlowFunction;
+import soot.jimple.infoflow.solver.functions.SolverReturnFlowFunction;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
@@ -118,7 +119,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, fabs));
 				}
 				
-				if (defStmt instanceof AssignStmt) {				
+				if (defStmt instanceof AssignStmt) {
 					// Get the right side of the assignment
 					final AssignStmt assignStmt = (AssignStmt) defStmt;
 					final Value rightValue = BaseSelector.selectBase(assignStmt.getRightOp(), false);
@@ -151,7 +152,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						if (source.getAccessPath().isInstanceFieldRef()
 								&& ref.getBase().equals(source.getAccessPath().getPlainValue())
 								&& ref.getField().equals(source.getAccessPath().getFirstField())) {
-							Abstraction abs = source.deriveNewAbstraction(leftValue, true, defStmt,
+							Abstraction abs = source.deriveNewAbstraction(leftValue, true,
 									source.getAccessPath().getType());
 							res.add(abs);
 						}
@@ -160,7 +161,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						StaticFieldRef ref = (StaticFieldRef) rightValue;
 						if (source.getAccessPath().isStaticFieldRef()
 								&& ref.getField().equals(source.getAccessPath().getFirstField())) {
-							Abstraction abs = source.deriveNewAbstraction(leftValue, true, defStmt,
+							Abstraction abs = source.deriveNewAbstraction(leftValue, true,
 									source.getAccessPath().getType());
 							res.add(abs);
 						}
@@ -240,12 +241,14 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							else if (assignStmt.getRightOp() instanceof CastExpr)
 								targetType = null;
 							
-							Abstraction newAbs = source.deriveNewAbstraction(rightValue, cutFirstField, defStmt,
+							Abstraction newAbs = source.deriveNewAbstraction(rightValue, cutFirstField,
 									targetType);
 							res.add(newAbs);
 						}
 					}
 				}
+				else
+					res.add(source);
 
 				// Trigger the forward solver with every newly-created alias
 				// on a static field. Since we don't have a fixed turn-around
@@ -409,18 +412,103 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								}
 							}
 						}
-						
-						for (Abstraction abs : res)
-							if (!abs.getAccessPath().isEmpty())
-								fSolver.injectContext(solver, dest, abs, src, source);
 						return res;
 					}
 				};
 			}
 
 			@Override
-			public FlowFunction<Abstraction> getReturnFlowFunction(final Unit callSite, final SootMethod callee, Unit exitStmt, final Unit retSite) {
-				return KillAll.v();
+			public FlowFunction<Abstraction> getReturnFlowFunction(final Unit callSite, final SootMethod callee,
+					final Unit exitStmt, final Unit retSite) {
+				final ReturnStmt returnStmt = (exitStmt instanceof ReturnStmt) ? (ReturnStmt) exitStmt : null;
+				
+				return new SolverReturnFlowFunction() {
+					
+					@Override
+					public Set<Abstraction> computeTargets(Abstraction source,
+							Set<Abstraction> callerD1s) {
+						if (source.equals(zeroValue))
+							return Collections.emptySet();
+						
+						// If we have no caller, we have nowhere to propagate. This
+						// can happen when leaving the main method.
+						if (callSite == null)
+							return Collections.emptySet();
+						
+						// easy: static
+						if (enableStaticFields && source.getAccessPath().isStaticFieldRef()) {
+							registerActivationCallSite(callSite, callee, source);
+							return Collections.singleton(source);
+						}
+
+						final Value sourceBase = source.getAccessPath().getPlainLocal();
+						Set<Abstraction> res = new HashSet<Abstraction>();
+
+						// if we have a returnStmt we have to look at the returned value:
+						if (returnStmt != null && callSite instanceof DefinitionStmt) {
+							DefinitionStmt defnStmt = (DefinitionStmt) callSite;
+							Value leftOp = defnStmt.getLeftOp();
+							
+							if (leftOp == source.getAccessPath().getPlainValue()) {
+								Abstraction abs = source.deriveNewAbstraction
+										(source.getAccessPath().copyWithNewValue(leftOp), (Stmt) exitStmt);
+								res.add(abs);
+								registerActivationCallSite(callSite, callee, abs);
+							}
+						}
+						
+						// check one of the call params are tainted (not if simple type)
+						{
+						Value originalCallArg = null;
+						for (int i = 0; i < callee.getParameterCount(); i++) {
+							if (callee.getActiveBody().getParameterLocal(i) == sourceBase) 
+								if (callSite instanceof Stmt) {
+									Stmt iStmt = (Stmt) callSite;
+									originalCallArg = iStmt.getInvokeExpr().getArg(i);
+									
+									// If this is a constant parameter, we can safely ignore it
+									if (!AccessPath.canContainValue(originalCallArg))
+										continue;
+
+									Abstraction abs = source.deriveNewAbstraction
+											(source.getAccessPath().copyWithNewValue(originalCallArg), (Stmt) exitStmt);
+									res.add(abs);
+									registerActivationCallSite(callSite, callee, abs);
+								}
+						}
+						}
+						
+						{
+						if (!callee.isStatic()) {
+							Local thisL = callee.getActiveBody().getThisLocal();
+							if (thisL == sourceBase) {
+								boolean param = false;
+								// check if it is not one of the params (then we have already fixed it)
+								for (int i = 0; i < callee.getParameterCount(); i++) {
+									if (callee.getActiveBody().getParameterLocal(i) == sourceBase) {
+										param = true;
+										break;
+									}
+								}
+								if (!param) {
+									if (callSite instanceof Stmt) {
+										Stmt stmt = (Stmt) callSite;
+										if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
+											InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();
+											Abstraction abs = source.deriveNewAbstraction
+													(source.getAccessPath().copyWithNewValue(iIExpr.getBase()), stmt);
+											res.add(abs);
+											registerActivationCallSite(callSite, callee, abs);
+										}
+									}
+								}
+							}
+							}
+						}
+						
+						return res;
+					}
+				};
 			}
 
 			@Override
@@ -432,7 +520,10 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					return new SolverCallToReturnFlowFunction() {
 						@Override
 						public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
-							// only pass source if the source is not created by this methodcall
+							if (source.equals(zeroValue))
+								return Collections.emptySet();
+
+							// only pass source if the source is not created by this method call
 							if (iStmt instanceof DefinitionStmt && ((DefinitionStmt) iStmt).getLeftOp().equals
 									(source.getAccessPath().getPlainValue())){
 								//terminates here, but we have to start a forward pass to consider all method calls:

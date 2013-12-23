@@ -104,7 +104,7 @@ public class AccessPath implements Cloneable {
 		}
 		else {
 			this.value = val;
-			this.baseType = baseType == null ? this.value.getType() : baseType;
+			this.baseType = baseType == null ? (this.value == null ? null : this.value.getType()) : baseType;
 			bFieldType = null;			
 		}
 
@@ -190,6 +190,12 @@ public class AccessPath implements Cloneable {
 		return fields[fields.length - 1];
 	}
 	
+	public Type getLastFieldType() {
+		if (fieldTypes == null || fieldTypes.length == 0)
+			return null;
+		return fieldTypes[fieldTypes.length - 1];
+	}
+
 	public SootField getFirstField(){
 		if (fields == null || fields.length == 0)
 			return null;
@@ -353,22 +359,26 @@ public class AccessPath implements Cloneable {
 	 * @return The new access path
 	 */
 	public AccessPath merge(AccessPath ap) {
+		return appendFields(ap.fields, ap.fieldTypes, ap.taintSubFields);
+	}
+
+	public AccessPath appendFields(SootField[] apFields, Type[] apFieldTypes, boolean taintSubFields) {	
 		int offset = this.fields == null ? 0 : this.fields.length;
-		SootField[] fields = new SootField[offset + (ap.fields == null ? 0 : ap.fields.length)];
-		Type[] fieldTypes = new Type[offset + (ap.fields == null ? 0 : ap.fields.length)];
+		SootField[] fields = new SootField[offset + (apFields == null ? 0 : apFields.length)];
+		Type[] fieldTypes = new Type[offset + (apFields == null ? 0 : apFields.length)];
 		if (this.fields != null)
 			for (int i = 0; i < this.fields.length; i++) {
 				fields[i] = this.fields[i];
 				fieldTypes[i] = this.fieldTypes[i];
 			}
-		if (ap.fields != null)
-			if (ap.fields != null && ap.fields.length > 0)
-				for (int i = 0; i < ap.fields.length; i++) {
-					fields[offset + i] = ap.fields[i];
-					fieldTypes[offset + i] = ap.fieldTypes[i];
+		if (apFields != null)
+			if (apFields != null && apFields.length > 0)
+				for (int i = 0; i < apFields.length; i++) {
+					fields[offset + i] = apFields[i];
+					fieldTypes[offset + i] = apFieldTypes[i];
 				}
 		
-		return new AccessPath(this.value, fields, baseType, fieldTypes, ap.taintSubFields);
+		return new AccessPath(this.value, fields, baseType, fieldTypes, taintSubFields);
 	}
 	
 	public AccessPath dropLastField() {

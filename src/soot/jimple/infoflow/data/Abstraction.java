@@ -186,6 +186,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	 * branch. Do not use the synchronized Stack class here to avoid deadlocks.
 	 */
 	private List<UnitContainer> postdominators = null;
+	private boolean isImplicit = false;
 	
 	/**
 	 * Only valid for inactive abstractions. Specifies whether an access paths
@@ -198,8 +199,18 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	public Abstraction(Value taint, boolean taintSubFields,
 			Value sourceVal, Stmt sourceStmt,
 			boolean exceptionThrown,
+			boolean flowSensitiveAliasing,
+			boolean isImplicit){
+		this(taint, taintSubFields, sourceVal, sourceStmt, exceptionThrown,
+				true, null, flowSensitiveAliasing, isImplicit);
+	}
+
+	protected Abstraction(Value taint, boolean taintSubFields,
+			Value sourceVal, Stmt sourceStmt,
+			boolean exceptionThrown,
 			boolean isActive, Unit activationUnit,
-			boolean flowSensitiveAliasing){
+			boolean flowSensitiveAliasing,
+			boolean isImplicit){
 		this.sourceContext = new SourceContext(sourceVal, sourceStmt);
 		this.accessPath = new AccessPath(taint, taintSubFields);
 		
@@ -217,6 +228,9 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		
 		this.flowSensitiveAliasing = flowSensitiveAliasing;
 		this.neighbors = null;
+		this.isImplicit = isImplicit;
+		
+		assert this.activationUnit == null || !this.isActive;
 	}
 
 	/**
@@ -231,6 +245,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 			exceptionThrown = false;
 			activationUnit = null;
 			flowSensitiveAliasing = true;
+			isImplicit = false;
 		}
 		else {
 			sourceContext = original.sourceContext;
@@ -247,12 +262,15 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 			assert this.isActive || flowSensitiveAliasing;
 			
 			dependsOnCutAP = original.dependsOnCutAP;
+			isImplicit = original.isImplicit;
 		}
 		accessPath = p;
 		neighbors = null;
+		
+		assert this.activationUnit == null || !this.isActive;
 	}
 	
-	public final Abstraction deriveInactiveAbstraction(){
+	public final Abstraction deriveInactiveAbstraction(Unit activationUnit){
 		if (!flowSensitiveAliasing)
 			return this;
 		
@@ -263,19 +281,20 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		Abstraction a = deriveNewAbstractionMutable(accessPath, null);
 		a.isActive = false;
 		a.postdominators = null;
+		a.activationUnit = activationUnit;
 		return a;
 	}
 
 	public Abstraction deriveNewAbstraction(AccessPath p, Stmt currentStmt){
-		return deriveNewAbstraction(p, currentStmt, null);
+		return deriveNewAbstraction(p, currentStmt, isImplicit);
 	}
-
-	public Abstraction deriveNewAbstraction(AccessPath p, Stmt currentStmt, Stmt activationUnit){
+	
+	public Abstraction deriveNewAbstraction(AccessPath p, Stmt currentStmt,
+			boolean isImplicit){
 		if (this.accessPath.equals(p) && this.currentStmt == currentStmt)
 			return this;
 		Abstraction abs = deriveNewAbstractionMutable(p, currentStmt);
-		if (abs.isActive && flowSensitiveAliasing && activationUnit != null)
-			abs.activationUnit = activationUnit;
+		abs.isImplicit = isImplicit;
 		return abs;
 	}
 	
@@ -296,15 +315,14 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		return abs;
 	}
 	
-	public final Abstraction deriveNewAbstraction(Value taint, Unit activationUnit){
-		return this.deriveNewAbstraction(taint, false, activationUnit, null);
+	public final Abstraction deriveNewAbstraction(Value taint, boolean cutFirstField, Type baseType){
+		return deriveNewAbstraction(taint, cutFirstField, null, baseType);
 	}
-	
-	public final Abstraction deriveNewAbstraction(Value taint, boolean cutFirstField, Unit newActUnit,
+
+	public final Abstraction deriveNewAbstraction(Value taint, boolean cutFirstField, Stmt currentStmt,
 			Type baseType){
 		assert !this.getAccessPath().isEmpty();
 
-		Abstraction a;
 		SootField[] orgFields = accessPath.getFields();
 		SootField[] fields = null;
 
@@ -329,13 +347,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		AccessPath newAP = new AccessPath(taint, fields, baseType, types,
 				accessPath.getTaintSubFields());
 		
-		a = deriveNewAbstractionMutable(newAP, (Stmt) newActUnit);
-		if (flowSensitiveAliasing && isActive) {
-			assert newActUnit != null;
-			if (!this.getAccessPath().isEmpty())
-				a.activationUnit = newActUnit;
-		}
-		return a;
+		return deriveNewAbstractionMutable(newAP, currentStmt);
 	}
 
 	/**
@@ -359,16 +371,10 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	 * @param taint The value in which the tainted exception is stored
 	 * @return The newly derived abstraction
 	 */
-	public final Abstraction deriveNewAbstractionOnCatch(Value taint, Unit newActivationUnit){
+	public final Abstraction deriveNewAbstractionOnCatch(Value taint){
 		assert this.exceptionThrown;
-		Abstraction abs = deriveNewAbstractionMutable(new AccessPath(taint, true),
-				(Stmt) newActivationUnit);
+		Abstraction abs = deriveNewAbstractionMutable(new AccessPath(taint, true), null);
 		abs.exceptionThrown = false;
-		
-		if(flowSensitiveAliasing && isActive) {
-			assert newActivationUnit != null;
-			abs.activationUnit = newActivationUnit;
-		}
 		return abs;
 	}
 		
@@ -443,6 +449,10 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		return isActive;
 	}
 	
+	public boolean isImplicit() {
+		return isImplicit;
+	}
+	
 	@Override
 	public String toString(){
 		return (isActive?"":"_")+accessPath.toString() + " | "+(activationUnit==null?"":activationUnit.toString()) + ">>";
@@ -453,7 +463,22 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	}
 	
 	public Unit getActivationUnit(){
-		return activationUnit;
+		return getActivationUnit(new HashSet<Abstraction>());
+	}
+	
+	private Unit getActivationUnit(Set<Abstraction> doneSet){
+		if (!doneSet.add(this))
+			return null;
+		
+		if (this.activationUnit != null)
+			return this.activationUnit;
+		
+		if (this.predecessor != null) {
+			Unit au = this.predecessor.getActivationUnit(doneSet);
+			if (au != null)
+				return au;
+		}
+		return null;
 	}
 	
 	public Abstraction getActiveCopy(){
@@ -462,10 +487,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		Abstraction a = cloneWithPredecessor(null);
 		a.sourceContext = null;
 		a.isActive = true;
-		// do not kill the original activation point since we might return into
-		// a caller, find a new alias there and then need to know where both
-		// aliases originally became active.
-//		a.activationUnit = null;
+		a.activationUnit = null;
 		return a;
 	}
 	
@@ -480,13 +502,13 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	
 	public final Abstraction deriveConditionalAbstractionEnter(UnitContainer postdom,
 			Stmt conditionalUnit) {
+		assert this.isActive;
+		
 		if (postdominators != null && postdominators.contains(postdom))
 			return this;
 		
 		Abstraction abs = deriveNewAbstractionMutable
 				(AccessPath.getEmptyAccessPath(), conditionalUnit);
-		// TODO
-//		abs.activationUnit = null;
 		if (abs.postdominators == null)
 			abs.postdominators = Collections.singletonList(postdom);
 		else
@@ -501,7 +523,6 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		Abstraction abs = deriveNewAbstractionMutable
 				(AccessPath.getEmptyAccessPath(), (Stmt) conditionalCallSite);
 		abs.isActive = true;
-		abs.activationUnit = conditionalCallSite;
 		
 		// Postdominators are only kept intraprocedurally in order to not
 		// mess up the summary functions with caller-side information
@@ -603,6 +624,8 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 			return false;
 		if(this.dependsOnCutAP != other.dependsOnCutAP)
 			return false;
+		if(this.isImplicit != other.isImplicit)
+			return false;
 		return true;
 	}
 	
@@ -624,6 +647,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 			this.hashCode = prime * this.hashCode + ((postdominators == null) ? 0 : postdominators.hashCode());
 			this.hashCode = prime * this.hashCode + (flowSensitiveAliasing ? 1231 : 1237);
 			this.hashCode = prime * this.hashCode + (dependsOnCutAP ? 1231 : 1237);
+			this.hashCode = prime * this.hashCode + (isImplicit ? 1231 : 1237);
 			return hashCode;
 		}
 	}
@@ -688,7 +712,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	public static Abstraction getZeroAbstraction(boolean flowSensitiveAliasing) {
 		if (zeroValue == null)
 			zeroValue = new Abstraction(new JimpleLocal("zero", NullType.v()), false, null,
-					null, false, true, null, flowSensitiveAliasing);
+					null, false, true, null, flowSensitiveAliasing, false);
 		return zeroValue;
 	}
 	

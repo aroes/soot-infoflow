@@ -76,8 +76,7 @@ public class InfoflowSolver extends PathTrackingIFDSSolver<Unit, Abstraction, So
 					(solver.jumpFn.reverseLookup(callSite, d2));
 		}
 		for (Abstraction d1: otherAbstractions)
-			if (!d1.getAccessPath().isEmpty() && !d1.getAccessPath().isStaticFieldRef())
-				processEdge(new PathEdge<Unit, Abstraction>(d1, callSite, d2));
+			jumpFn.addFunction(d1, callSite, d2);
 	}
 	
 	@Override
@@ -149,16 +148,12 @@ public class InfoflowSolver extends PathTrackingIFDSSolver<Unit, Abstraction, So
 		if (!noProp)
 			super.propagate(sourceVal, target, targetVal, relatedCallSite, isUnbalancedReturn);
 	}
-
-	/**
-	 * Cleans up some unused memory. Results will still be available afterwards,
-	 * but no intermediate computation values.
-	 */
+	
 	public void cleanup() {
 		this.jumpFn.clear();
 		this.incoming.clear();
 		this.endSummary.clear();
 		this.cache.clear();
 	}
-	
+		
 }

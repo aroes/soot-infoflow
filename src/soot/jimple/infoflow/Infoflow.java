@@ -171,14 +171,17 @@ public class Infoflow extends AbstractInfoflow {
 					Options.v().setPhaseOption("cg.spark", "on");
 				else
 					Options.v().setPhaseOption("cg.spark", "vta:true");
+				Options.v().setPhaseOption("cg.spark", "string-constants:true");
 				break;
 			case RTA:
 				Options.v().setPhaseOption("cg.spark", "on");
 				Options.v().setPhaseOption("cg.spark", "rta:true");
+				Options.v().setPhaseOption("cg.spark", "string-constants:true");
 				break;
 			case VTA:
 				Options.v().setPhaseOption("cg.spark", "on");
 				Options.v().setPhaseOption("cg.spark", "vta:true");
+				Options.v().setPhaseOption("cg.spark", "string-constants:true");
 				break;
 			default:
 				throw new RuntimeException("Invalid callgraph algorithm");
@@ -410,11 +413,12 @@ public class Infoflow extends AbstractInfoflow {
 						backProblem.addTaintPropagationHandler(tp);
 					backProblem.setFlowSensitiveAliasing(flowSensitiveAliasing);
 					backProblem.setTaintWrapper(taintWrapper);
+					backProblem.setActivationUnitsToCallSites(forwardProblem);
 				}
 				
 				if (!enableStaticFields)
 					logger.warn("Static field tracking is disabled, results may be incomplete");
-				if (!flowSensitiveAliasing)
+				if (!aliasingStrategy.isFlowSensitive())
 					logger.warn("Using flow-insensitive alias tracking, results may be imprecise");
 
 				forwardSolver.solve();

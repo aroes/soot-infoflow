@@ -77,7 +77,9 @@ public class HeapTestsPtsAliasing extends JUnitTests {
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void simpleTest()>");
 		infoflow.computeInfoflow(path, epoints,sources, sinks);
-		negativeCheckInfoflow(infoflow);
+		// PTS are context-insensitive in Soot
+		checkInfoflow(infoflow, 1);
+		// negativeCheckInfoflow(infoflow);
     }
 	
 	@Test(timeout=300000)
@@ -255,7 +257,9 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 	    	List<String> epoints = new ArrayList<String>();
 	    	epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void negativeMultiLevelTaint2()>");
 			infoflow.computeInfoflow(path, epoints,sources, sinks);
-			negativeCheckInfoflow(infoflow);
+			// PTS-based alias check is flow-insensitive
+			checkInfoflow(infoflow, 1);
+			// negativeCheckInfoflow(infoflow);
 	    }
 
 	    @Test(timeout=300000)
@@ -531,8 +535,8 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 	    	List<String> epoints = new ArrayList<String>();
 	    	epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void aliasPerformanceTest()>");
 			infoflow.computeInfoflow(path, epoints,sources, sinks);
-			checkInfoflow(infoflow, 2);
-			Assert.assertEquals(2, infoflow.getResults().size());
+			checkInfoflow(infoflow, 3);	// +1 for flow insensitivty
+			Assert.assertEquals(3, infoflow.getResults().size());
 
 			infoflow.setAccessPathLength(oldLength);
 	    }
