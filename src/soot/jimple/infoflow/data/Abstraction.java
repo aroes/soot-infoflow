@@ -463,22 +463,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	}
 	
 	public Unit getActivationUnit(){
-		return getActivationUnit(new HashSet<Abstraction>());
-	}
-	
-	private Unit getActivationUnit(Set<Abstraction> doneSet){
-		if (!doneSet.add(this))
-			return null;
-		
-		if (this.activationUnit != null)
-			return this.activationUnit;
-		
-		if (this.predecessor != null) {
-			Unit au = this.predecessor.getActivationUnit(doneSet);
-			if (au != null)
-				return au;
-		}
-		return null;
+		return this.activationUnit;
 	}
 	
 	public Abstraction getActiveCopy(){

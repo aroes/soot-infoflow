@@ -391,7 +391,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 									}
 								}
 								if (!param) {
-									if (iStmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
+									if (hasCompatibleTypesForCall(source.getAccessPath(), dest.getDeclaringClass())) {
 										Abstraction abs = source.deriveNewAbstraction
 												(source.getAccessPath().copyWithNewValue(thisL), (Stmt) src);
 										res.add(abs);
