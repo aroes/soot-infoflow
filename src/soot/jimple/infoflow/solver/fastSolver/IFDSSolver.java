@@ -331,8 +331,8 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 			//line 21.1 of Naeem/Lhotak/Rodriguez
 			//register end-summary
 			synchronized (incoming) {
-				inc.putAll(incoming(d1, sP));
 				addEndSummary(sP, d1, n, d2);
+				inc.putAll(incoming(d1, sP));
 			}
 		}
 		
@@ -461,7 +461,7 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 	}
 
 	private void addEndSummary(N sP, D d1, N eP, D d2) {
-		synchronized (incoming) {
+		synchronized (endSummary) {
 			Map<N, Set<D>> summaries = endSummary.get(sP, d1);
 			if(summaries==null) {
 				summaries = new ConcurrentHashMap<N, Set<D>>();
@@ -477,9 +477,11 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 	}	
 	
 	private Map<N, Set<D>> incoming(D d1, N sP) {
-		Map<N, Set<D>> map = incoming.get(sP, d1);
-		if(map==null) return Collections.emptyMap();
+		synchronized (incoming) {
+			Map<N, Set<D>> map = incoming.get(sP, d1);
+			if(map==null) return Collections.emptyMap();
 			return map;
+		}
 	}
 	
 	protected void addIncoming(N sP, D d3, N n, D d2) {
