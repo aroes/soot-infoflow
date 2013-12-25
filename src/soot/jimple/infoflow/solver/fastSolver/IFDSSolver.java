@@ -28,8 +28,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -485,9 +485,6 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 	}
 	
 	protected void addIncoming(N sP, D d3, N n, D d2) {
-		if (n.toString().contains("specialinvoke this.<soot.jimple.infoflow.test.OverwriteTestCode: void setData(java.lang.String)>(null)") && d3.toString().contains("this"))
-			System.out.println("x");
-
 		synchronized (incoming) {
 			Map<N, Set<D>> summaries = incoming.get(sP, d3);
 			if(summaries==null) {

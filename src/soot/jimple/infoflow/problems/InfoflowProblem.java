@@ -337,17 +337,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			}
 			
 			private boolean isFieldReadByCallee(
-					final Set<?> fieldsReadByCallee, Abstraction source) {
-				boolean isFieldRead = fieldsReadByCallee == null;
-				if (!isFieldRead) {
-					for (Object oField : fieldsReadByCallee)
-						if (oField instanceof SootField)
-							if (source.getAccessPath().getFirstField() == oField) {
-								isFieldRead = true;
-								break;
-							}
-				}
-				return isFieldRead;
+					final Set<SootField> fieldsReadByCallee, Abstraction source) {
+				if (fieldsReadByCallee == null)
+					return true;
+				return fieldsReadByCallee.contains(source.getAccessPath().getFirstField());
 			}
 			
 			@Override
@@ -598,7 +591,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 													.getName().equals("java.lang.Object");
 											targetType = cast.getType();
 										}
-										
 									}
 									
 									// TODO: other direction. test case?
@@ -823,7 +815,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				final boolean isSink = sourceSinkManager != null
 						? sourceSinkManager.isSink(stmt, interproceduralCFG()) : false;
 				
-				final Set<?> fieldsReadByCallee = enableStaticFields ? interproceduralCFG().getReadVariables
+				final Set<SootField> fieldsReadByCallee = enableStaticFields ? interproceduralCFG().getReadVariables
 						(interproceduralCFG().getMethodOf(stmt), stmt) : null;
 
 				return new SolverCallFlowFunction() {
@@ -867,6 +859,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						// pseudo abstraction. We do not map parameters if we are handling an
 						// implicit flow anyway.
 						if (source.getAccessPath().isEmpty()) {
+							assert enableImplicitFlows;
+							
 							// Block the call site for further explicit tracking
 							if (d1 != null) {
 								synchronized (implicitTargets) {
@@ -1029,7 +1023,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									&& newSource.isAbstractionActive())
 								results.add(new AbstractionAtSink(newSource, returnStmt.getOp(), returnStmt));
 						}
-												
+						
 						// If we have no caller, we have nowhere to propagate. This
 						// can happen when leaving the main method.
 						if (callSite == null)
@@ -1090,7 +1084,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									// If this is a constant parameter, we can safely ignore it
 									if (!AccessPath.canContainValue(originalCallArg))
 										continue;
-
+									
 									Abstraction abs = newSource.deriveNewAbstraction
 											(newSource.getAccessPath().copyWithNewValue(originalCallArg), (Stmt) exitStmt);
 									res.add(abs);
@@ -1165,10 +1159,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					final boolean isSink = (sourceSinkManager != null)
 							? sourceSinkManager.isSink(iStmt, interproceduralCFG()) : false;
 
-					final Set<?> fieldsReadByCallee = enableStaticFields ? interproceduralCFG().getReadVariables
-							(interproceduralCFG().getMethodOf(call), (Stmt) call) : null;
-					final Set<?> fieldsWrittenByCallee = enableStaticFields ? interproceduralCFG().getWriteVariables
-							(interproceduralCFG().getMethodOf(call), (Stmt) call) : null;
+					final Set<SootField> fieldsReadByCallee = enableStaticFields ? interproceduralCFG().getReadVariables
+							(interproceduralCFG().getMethodOf(call), iStmt) : null;
+					final Set<SootField> fieldsWrittenByCallee = enableStaticFields ? interproceduralCFG().getWriteVariables
+							(interproceduralCFG().getMethodOf(call), iStmt) : null;
 
 					return new SolverCallToReturnFlowFunction() {
 

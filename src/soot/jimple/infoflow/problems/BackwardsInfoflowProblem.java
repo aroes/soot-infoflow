@@ -36,6 +36,7 @@ import soot.jimple.CastExpr;
 import soot.jimple.Constant;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.FieldRef;
+import soot.jimple.IdentityStmt;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
@@ -247,7 +248,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						}
 					}
 				}
-				else
+				else if (defStmt instanceof IdentityStmt)
 					res.add(source);
 
 				// Trigger the forward solver with every newly-created alias
@@ -374,28 +375,24 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							res.add(source);
 
 						// checks: this/fields
-
 						Value sourceBase = source.getAccessPath().getPlainValue();
-						Stmt iStmt = (Stmt) src;
 						if (!dest.isStatic()) {
 							Local thisL = dest.getActiveBody().getThisLocal();
-							InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) iStmt.getInvokeExpr();
+							InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();
 							if (iIExpr.getBase().equals(sourceBase)
 									&& (hasCompatibleTypesForCall(source.getAccessPath(), dest.getDeclaringClass()))) {
 								boolean param = false;
 								// check if it is not one of the params (then we have already fixed it)
 								for (int i = 0; i < dest.getParameterCount(); i++) {
-									if (iStmt.getInvokeExpr().getArg(i).equals(sourceBase)) {
+									if (stmt.getInvokeExpr().getArg(i).equals(sourceBase)) {
 										param = true;
 										break;
 									}
 								}
 								if (!param) {
-									if (hasCompatibleTypesForCall(source.getAccessPath(), dest.getDeclaringClass())) {
-										Abstraction abs = source.deriveNewAbstraction
-												(source.getAccessPath().copyWithNewValue(thisL), (Stmt) src);
-										res.add(abs);
-									}
+									Abstraction abs = source.deriveNewAbstraction
+											(source.getAccessPath().copyWithNewValue(thisL), (Stmt) src);
+									res.add(abs);
 								}
 							}
 						}
@@ -481,7 +478,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						{
 						if (!callee.isStatic()) {
 							Local thisL = callee.getActiveBody().getThisLocal();
-							if (thisL == sourceBase) {
+							if (thisL == sourceBase && 	hasCompatibleTypesForCall
+									(source.getAccessPath(), callee.getDeclaringClass())) {
 								boolean param = false;
 								// check if it is not one of the params (then we have already fixed it)
 								for (int i = 0; i < callee.getParameterCount(); i++) {

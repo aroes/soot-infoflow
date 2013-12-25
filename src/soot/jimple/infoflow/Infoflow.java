@@ -418,7 +418,7 @@ public class Infoflow extends AbstractInfoflow {
 				
 				if (!enableStaticFields)
 					logger.warn("Static field tracking is disabled, results may be incomplete");
-				if (!aliasingStrategy.isFlowSensitive())
+				if (!flowSensitiveAliasing || !aliasingStrategy.isFlowSensitive())
 					logger.warn("Using flow-insensitive alias tracking, results may be imprecise");
 
 				forwardSolver.solve();

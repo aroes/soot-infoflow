@@ -319,9 +319,6 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 				}
 				Local classLocal = localVarsForClasses.get(entry.getKey());
 				
-				if (currentClass.getName().equals("nxtvwpsa.dtljjuhwhhk.bgixlckwb"))
-					System.out.println("x");
-	
 				// Generate the lifecycles for the different kinds of Android classes
 				switch (componentType) {
 				case Activity:

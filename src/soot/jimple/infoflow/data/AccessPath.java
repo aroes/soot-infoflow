@@ -230,7 +230,9 @@ public class AccessPath implements Cloneable {
 			final int prime = 31;
 			this.hashCode = 1;
 			this.hashCode = prime * this.hashCode + ((fields == null) ? 0 : Arrays.hashCode(fields));
+			this.hashCode = prime * this.hashCode + ((fieldTypes == null) ? 0 : Arrays.hashCode(fieldTypes));
 			this.hashCode = prime * this.hashCode + ((value == null) ? 0 : value.hashCode());
+			this.hashCode = prime * this.hashCode + ((baseType == null) ? 0 : baseType.hashCode());
 			this.hashCode = prime * this.hashCode + (this.taintSubFields ? 1 : 0);
 			return this.hashCode;
 		}
@@ -246,11 +248,20 @@ public class AccessPath implements Cloneable {
 		AccessPath other = (AccessPath) obj;
 		if (!Arrays.equals(fields, other.fields))
 			return false;
+		if (!Arrays.equals(fieldTypes, other.fieldTypes))
+			return false;
+		
 		if (value == null) {
 			if (other.value != null)
 				return false;
 		} else if (!value.equals(other.value))
 			return false;
+		if (baseType == null) {
+			if (other.baseType != null)
+				return false;
+		} else if (!baseType.equals(other.baseType))
+			return false;
+		
 		if (this.taintSubFields != other.taintSubFields)
 			return false;
 		

@@ -174,5 +174,28 @@ public class TypeTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(a.data);
 	}
+	
+	public void callTypeTest() {
+		String[] x = new String[1];
+		x[0] = TelephonyManager.getDeviceId();
+		objArgFunction(x);
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(x[0]);
+	}
+	
+	private void objArgFunction(Object[] x) {
+		System.out.println(x);
+	}
+
+	public void callTypeTest2() {
+		String[] x = new String[1];
+		objArgFunction2(x);
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(x[0]);
+	}
+	
+	private void objArgFunction2(Object[] x) {
+		x[0] = TelephonyManager.getDeviceId();
+	}
 
 }
