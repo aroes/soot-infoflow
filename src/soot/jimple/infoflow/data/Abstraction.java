@@ -14,6 +14,7 @@ package soot.jimple.infoflow.data;
 import heros.solver.LinkedNode;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -118,6 +119,8 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 
 		@Override
 		public String toString() {
+			if (symbolic != null)
+				return "SYMBOLIC: " + symbolic;
 			return value.toString();
 		}
 	}
@@ -143,6 +146,12 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 			return scap;
 		}
 		
+		public SourceContextAndPath extendPath(Collection<Stmt> s) {
+			SourceContextAndPath scap = clone();
+			scap.path.addAll(s);
+			return scap;
+		}
+
 		@Override
 		public boolean equals(Object other) {
 			if (this == other)
@@ -162,7 +171,11 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		
 		@Override
 		public SourceContextAndPath clone() {
-			SourceContextAndPath scap = new SourceContextAndPath(getValue(), getStmt());
+			final SourceContextAndPath scap;
+			if (getSymbolic() == null)
+				scap = new SourceContextAndPath(getValue(), getStmt());
+			else
+				scap = new SourceContextAndPath(getSymbolic());
 			scap.path.addAll(this.path);
 			assert scap.equals(this);
 			return scap;
@@ -431,29 +444,34 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	 * @return The path from the source to the current statement
 	 */
 	private Set<SourceContextAndPath> getPaths(boolean reconstructPaths, Abstraction flagAbs) {
-		if (pathCache != null) {
-			// Base case: We have a full path for this flag abstraction
-			if (sinkAbs == flagAbs)
+		// If we run into a loop, we symbolically save where to continue on the
+		// next run and abort for now
+		if (sinkAbs == flagAbs)
+			if (pathCache == null)
+				return Collections.singleton(new SourceContextAndPath(this));
+			else
 				return Collections.unmodifiableSet(pathCache);
+		sinkAbs = flagAbs;
 
-			// Resolve symbolic entries
+		// If we have a partial path from a previous run, we extend it instead
+		// of computing it all anew.
+		if (sinkAbs != flagAbs && pathCache != null) {
 			sinkAbs = flagAbs;
 			
-			SourceContextAndPath scap = null;
-			for (Iterator<SourceContextAndPath> scapIt = this.pathCache.iterator();
-					scapIt.hasNext(); scap = scapIt.next()) {
-				if (scap != null && scap.getSymbolic() != null) {
-					pathCache.addAll(scap.getSymbolic().getPaths(reconstructPaths, flagAbs));
+			Set<SourceContextAndPath> newScaps = new HashSet<SourceContextAndPath>();
+			Iterator<SourceContextAndPath> scapIt = this.pathCache.iterator();
+			while (scapIt.hasNext()) {
+				SourceContextAndPath scap = scapIt.next();
+				if (scap.getSymbolic() != null) {
+					for (SourceContextAndPath symbolicScap : scap.getSymbolic().getPaths(reconstructPaths, flagAbs))
+						newScaps.add(symbolicScap.extendPath(scap.getPath()));
 					scapIt.remove();
 				}
 			}
+			pathCache.addAll(newScaps);
 			
 			return Collections.unmodifiableSet(pathCache);
 		}
-
-		if (sinkAbs == flagAbs)
-			return Collections.singleton(new SourceContextAndPath(this));
-		sinkAbs = flagAbs;
 		
 		if (sourceContext != null) {
 			// Construct the path root
@@ -472,12 +490,12 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 			for (SourceContextAndPath curScap : predecessor.getPaths(reconstructPaths, flagAbs)) {
 				SourceContextAndPath extendedPath = (currentStmt == null || !reconstructPaths)
 						? curScap : curScap.extendPath(currentStmt);
-				pathCache.add(extendedPath);
+				this.pathCache.add(extendedPath);
 			}
 			
 			if (neighbors != null)
 				for (Abstraction nb : neighbors)
-					pathCache.addAll(nb.getPaths(reconstructPaths, flagAbs));
+					this.pathCache.addAll(nb.getPaths(reconstructPaths, flagAbs));
 		}
 		
 		assert pathCache != null;

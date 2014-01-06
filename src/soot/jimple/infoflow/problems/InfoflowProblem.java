@@ -1370,9 +1370,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
     		logger.info("Building path " + ++curResIdx);
     		for (SourceContextAndPath context : computePaths ? abs.getAbstraction().getPaths()
     				: abs.getAbstraction().getSources())
-				results.addResult(abs.getSinkValue(), abs.getSinkStmt(),
-						context.getValue(), context.getStmt(),
-						context.getPath(), abs.getSinkStmt());
+    			if (context.getSymbolic() == null)
+					results.addResult(abs.getSinkValue(), abs.getSinkStmt(),
+							context.getValue(), context.getStmt(),
+							context.getPath(), abs.getSinkStmt());
     	}
     	logger.debug("Path reconstruction done.");
     	

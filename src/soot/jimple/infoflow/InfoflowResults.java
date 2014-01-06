@@ -219,6 +219,9 @@ public class InfoflowResults {
 	}
 
 	public synchronized void addResult(SinkInfo sink, SourceInfo source) {
+		assert sink != null;
+		assert source != null;
+		
 		Set<SourceInfo> sourceInfo = this.results.get(sink);
 		if (sourceInfo == null) {
 			sourceInfo = new HashSet<SourceInfo>();
