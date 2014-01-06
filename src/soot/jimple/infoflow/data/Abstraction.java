@@ -16,6 +16,7 @@ import heros.solver.LinkedNode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -47,10 +48,18 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	public class SourceContext implements Cloneable {
 		private final Value value;
 		private final Stmt stmt;
+		private final Abstraction symbolic;
 		
 		public SourceContext(Value value, Stmt stmt) {
 			this.value = value;
 			this.stmt = stmt;
+			this.symbolic = null;
+		}
+		
+		public SourceContext(Abstraction symbolic) {
+			this.value = null;
+			this.stmt = null;
+			this.symbolic = symbolic;
 		}
 		
 		public Value getValue() {
@@ -60,6 +69,10 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		public Stmt getStmt() {
 			return this.stmt;
 		}
+		
+		public Abstraction getSymbolic() {
+			return this.symbolic;
+		}
 
 		@Override
 		public int hashCode() {
@@ -67,6 +80,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 			int result = 1;
 			result = prime * result + ((stmt == null) ? 0 : stmt.hashCode());
 			result = prime * result + ((value == null) ? 0 : value.hashCode());
+			result = prime * result + ((symbolic == null) ? 0 : symbolic.hashCode());
 			return result;
 		}
 
@@ -86,6 +100,11 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 				if (other.value != null)
 					return false;
 			} else if (!value.equals(other.value))
+				return false;
+			if (symbolic == null) {
+				if (other.symbolic != null)
+					return false;
+			} else if (!symbolic.equals(other.symbolic))
 				return false;
 			return true;
 		}
@@ -110,6 +129,10 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 			super(value, stmt);
 		}
 		
+		public SourceContextAndPath(Abstraction symbolic) {
+			super(symbolic);
+		}
+
 		public List<Stmt> getPath() {
 			return Collections.unmodifiableList(this.path);
 		}
@@ -409,11 +432,28 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	 * @return The path from the source to the current statement
 	 */
 	private Set<SourceContextAndPath> getPaths(boolean reconstructPaths, Abstraction flagAbs) {
-		if (pathCache != null && sinkAbs == flagAbs)
+		if (pathCache != null) {
+			// Base case: We have a full path for this flag abstraction
+			if (sinkAbs == flagAbs)
+				return Collections.unmodifiableSet(pathCache);
+
+			// Resolve symbolic entries
+			sinkAbs = flagAbs;
+			
+			SourceContextAndPath scap = null;
+			for (Iterator<SourceContextAndPath> scapIt = this.pathCache.iterator();
+					scapIt.hasNext(); scap = scapIt.next()) {
+				if (scap != null && scap.getSymbolic() != null) {
+					pathCache.addAll(scap.getSymbolic().getPaths(reconstructPaths, flagAbs));
+					scapIt.remove();
+				}
+			}
+			
 			return Collections.unmodifiableSet(pathCache);
+		}
 
 		if (sinkAbs == flagAbs)
-			return Collections.emptySet();
+			return Collections.singleton(new SourceContextAndPath(this));
 		sinkAbs = flagAbs;
 		
 		if (sourceContext != null) {
