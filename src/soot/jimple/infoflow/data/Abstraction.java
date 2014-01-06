@@ -408,7 +408,6 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	 * @return The path from the source to the current statement
 	 */
 	public Set<SourceContextAndPath> getPaths() {
-		Runtime.getRuntime().gc();
 		return getPaths(true, this);
 	}
 	
