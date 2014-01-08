@@ -30,6 +30,7 @@ public class DummyServletContext implements ServletContext {
 		return null;
 	}
 
+	@SuppressWarnings("rawtypes")
 	@Override
 	public Enumeration getAttributeNames() {
 		// TODO Auto-generated method stub
@@ -47,6 +48,7 @@ public class DummyServletContext implements ServletContext {
 		return arg0;
 	}
 
+	@SuppressWarnings("rawtypes")
 	@Override
 	public Enumeration getInitParameterNames() {
 		return new StringTokenizer("one two three");
@@ -100,6 +102,7 @@ public class DummyServletContext implements ServletContext {
 		return null;
 	}
 
+	@SuppressWarnings("rawtypes")
 	@Override
 	public Set getResourcePaths(String arg0) {
 		// TODO Auto-generated method stub
@@ -124,12 +127,14 @@ public class DummyServletContext implements ServletContext {
 		return null;
 	}
 
+	@SuppressWarnings("rawtypes")
 	@Override
 	public Enumeration getServletNames() {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
+	@SuppressWarnings("rawtypes")
 	@Override
 	public Enumeration getServlets() {
 		// TODO Auto-generated method stub
