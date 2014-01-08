@@ -343,8 +343,10 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						if (!inspectSinks && isSink)
 							return Collections.emptySet();
 
-						// taint is propagated in CallToReturnFunction, so we do not need any taint here if it is exclusive:
-						if(taintWrapper != null && taintWrapper.isExclusive(stmt, source.getAccessPath()))
+						// taint is propagated in CallToReturnFunction, so we do not
+						// need any taint here if the taint wrapper is exclusive:
+						if(taintWrapper != null && taintWrapper.isExclusive(stmt, source.getAccessPath(),
+								interproceduralCFG()))
 							return Collections.emptySet();
 						
 						Set<Abstraction> res = new HashSet<Abstraction>();

@@ -148,7 +148,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				return Collections.emptySet();
 		}
 		
-		Set<AccessPath> vals = taintWrapper.getTaintsForMethod(iStmt, source.getAccessPath());
+		Set<AccessPath> vals = taintWrapper.getTaintsForMethod(iStmt, source.getAccessPath(),
+				interproceduralCFG());
 		if(vals != null) {
 			for (AccessPath val : vals) {
 				// The new abstraction gets activated where it was generated
@@ -843,7 +844,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						
 						// If we have an exclusive taint wrapper for the target
 						// method, we do not perform an own taint propagation. 
-						if(taintWrapper != null && taintWrapper.isExclusive(stmt, source.getAccessPath())) {
+						if(taintWrapper != null && taintWrapper.isExclusive(stmt, source.getAccessPath(),
+								interproceduralCFG())) {
 							//taint is propagated in CallToReturnFunction, so we do not need any taint here:
 							return Collections.emptySet();
 						}
@@ -1242,7 +1244,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							if (passOn && newSource.getAccessPath().isInstanceFieldRef())
 								if (inspectSinks || !isSink)
 									if(hasValidCallees(call) || (taintWrapper != null
-											&& taintWrapper.isExclusive(iStmt, newSource.getAccessPath()))) {
+											&& taintWrapper.isExclusive(iStmt, newSource.getAccessPath(),
+													interproceduralCFG()))) {
 										if (iStmt.getInvokeExpr() instanceof InstanceInvokeExpr)
 											if (mayAlias(((InstanceInvokeExpr) iStmt.getInvokeExpr()).getBase(),
 													newSource.getAccessPath().getPlainLocal())) {
