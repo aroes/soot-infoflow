@@ -23,7 +23,7 @@ public abstract class AbstractTaintWrapper implements ITaintPropagationWrapper {
 	 * @param taintedPath The tainted field or value to propagate 
 	 * @return True if this taint wrapper is exclusive, otherwise false. 
 	 */
-	public abstract boolean isExclusiveInternal(Stmt stmt, AccessPath taintedPath);
+	protected abstract boolean isExclusiveInternal(Stmt stmt, AccessPath taintedPath);
 
 	@Override
 	public boolean isExclusive(Stmt stmt, AccessPath taintedPath) {
