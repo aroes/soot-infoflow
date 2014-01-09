@@ -15,13 +15,15 @@ import heros.solver.IDESolver;
 import java.util.List;
 import java.util.Set;
 
+import soot.Body;
 import soot.Scene;
 import soot.SootField;
 import soot.SootMethod;
 import soot.Unit;
+import soot.Value;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.util.ConcurrentHashSet;
-import soot.jimple.toolkits.ide.icfg.AbstractJimpleBasedICFG;
+import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import soot.jimple.toolkits.pointer.RWSet;
 import soot.jimple.toolkits.pointer.SideEffectAnalysis;
@@ -39,7 +41,7 @@ import com.google.common.cache.LoadingCache;
  */
 public class InfoflowCFG implements IInfoflowCFG {
 
-	protected final AbstractJimpleBasedICFG delegate; 
+	protected final BiDiInterproceduralCFG<Unit, SootMethod> delegate; 
 	
 	protected final LoadingCache<Unit,UnitContainer> unitToPostdominator =
 			IDESolver.DEFAULT_CACHE_BUILDER.build( new CacheLoader<Unit,UnitContainer>() {
@@ -62,7 +64,7 @@ public class InfoflowCFG implements IInfoflowCFG {
 		this(new JimpleBasedInterproceduralCFG());
 	}
 	
-	protected InfoflowCFG(AbstractJimpleBasedICFG delegate) {
+	protected InfoflowCFG(BiDiInterproceduralCFG<Unit,SootMethod> delegate) {
 		this.delegate = delegate;
 		this.sideEffectAnalysis = new SideEffectAnalysis
 				(Scene.v().getPointsToAnalysis(), Scene.v().getCallGraph());
@@ -165,6 +167,30 @@ public class InfoflowCFG implements IInfoflowCFG {
 
 	public List<Unit> getPredsOf(Unit u) {
 		return delegate.getPredsOf(u);
+	}
+
+	public Set<Unit> getEndPointsOf(SootMethod m) {
+		return delegate.getEndPointsOf(m);
+	}
+
+	@Override
+	public List<Unit> getPredsOfCallAt(Unit u) {
+		return delegate.getPredsOf(u);
+	}
+
+	@Override
+	public Set<Unit> allNonCallEndNodes() {
+		return delegate.allNonCallEndNodes();
+	}
+
+	@Override
+	public DirectedGraph<Unit> getOrCreateUnitGraph(Body body) {
+		return delegate.getOrCreateUnitGraph(body);
+	}
+
+	@Override
+	public List<Value> getParameterRefs(SootMethod m) {
+		return delegate.getParameterRefs(m);
 	}
 
 }
