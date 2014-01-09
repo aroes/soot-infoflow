@@ -56,9 +56,9 @@ import soot.jimple.infoflow.InfoflowResults;
 import soot.jimple.infoflow.aliasing.IAliasingStrategy;
 import soot.jimple.infoflow.aliasing.ImplicitFlowAliasStrategy;
 import soot.jimple.infoflow.data.Abstraction;
-import soot.jimple.infoflow.data.Abstraction.SourceContextAndPath;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.data.SourceContextAndPath;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler.FlowFunctionType;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
@@ -377,7 +377,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							// This may also be a parameter access we regard as a source
 							Set<Abstraction> res = new HashSet<Abstraction>();
 							if (source == zeroValue && sourceInfo != null) {
-								Abstraction abs = new Abstraction(is.getLeftOp(), sourceInfo.getTaintSubFields(),
+								Abstraction abs = new Abstraction(is.getLeftOp(), sourceInfo,
 										is.getRightOp(), is, false, flowSensitiveAliasing, false);
 								res.add(abs);
 								
@@ -445,7 +445,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							// Fields can be sources in some cases
                             if (source.equals(zeroValue) && sourceInfo != null) {
                                 final Abstraction abs = new Abstraction(assignStmt.getLeftOp(),
-                                		sourceInfo.getTaintSubFields(), assignStmt.getRightOp(), assignStmt,
+                                		sourceInfo, assignStmt.getRightOp(), assignStmt,
                                 		false, flowSensitiveAliasing, false);
                                 res.add(abs);
                                 
@@ -1202,7 +1202,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								else
 									target = ((InstanceInvokeExpr) invExpr).getBase();
 									
-								final Abstraction abs = new Abstraction(target, sourceInfo.getTaintSubFields(),
+								final Abstraction abs = new Abstraction(target, sourceInfo,
 										iStmt.getInvokeExpr(), iStmt, false, flowSensitiveAliasing, false);
 								res.add(abs);
 								
@@ -1375,7 +1375,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
     				: abs.getAbstraction().getSources())
     			if (context.getSymbolic() == null)
 					results.addResult(abs.getSinkValue(), abs.getSinkStmt(),
-							context.getValue(), context.getStmt(),
+							context.getValue(), context.getStmt(), context.getUserData(),
 							context.getPath(), abs.getSinkStmt());
     	}
     	logger.debug("Path reconstruction done.");
