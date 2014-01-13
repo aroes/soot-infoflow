@@ -35,6 +35,7 @@ import soot.jimple.internal.JEqExpr;
 import soot.jimple.internal.JGotoStmt;
 import soot.jimple.internal.JIfStmt;
 import soot.jimple.internal.JNopStmt;
+import soot.jimple.toolkits.scalar.NopEliminator;
 
 public class DefaultEntryPointCreator extends BaseEntryPointCreator {
 
@@ -106,6 +107,7 @@ public class DefaultEntryPointCreator extends BaseEntryPointCreator {
 		body.getUnits().add(gotoStart);
 		
 		body.getUnits().add(Jimple.v().newReturnVoidStmt());
+		NopEliminator.v().transform(body);
 		return mainMethod;
 	}
 

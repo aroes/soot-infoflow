@@ -14,6 +14,7 @@ import heros.FlowFunction;
 import heros.FlowFunctions;
 import heros.InterproceduralCFG;
 import heros.flowfunc.Identity;
+import heros.flowfunc.KillAll;
 import heros.solver.PathEdge;
 
 import java.util.ArrayList;
@@ -139,7 +140,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					// be performed on primitive objects.
 					if (rightValue instanceof BinopExpr)
 						return res;
-
+					
 					// If the tainted value 'b' is assigned to variable 'a' and 'a'
 					// is a heap object, we must also look for aliases of 'a' upwards
 					// from the current statement.
@@ -174,6 +175,16 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							assert source.getAccessPath().getType() instanceof ArrayType;
 							newType = IntType.v();
 						}
+						
+						// If this is an unrealizable typecast, drop the abstraction
+						/*
+						if (defStmt.getRightOp() instanceof CastExpr) {
+							CastExpr ce = (CastExpr) defStmt.getRightOp();
+							if (!source.getAccessPath().isStaticFieldRef()
+									&& !canCastType(ce.getCastType(), source.getAccessPath().getType()))
+								return Collections.emptySet();
+						}
+						*/
 								
 						Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
 								(leftValue, newType), defStmt);
@@ -313,19 +324,22 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 
 			@Override
 			public FlowFunction<Abstraction> getCallFlowFunction(final Unit src, final SootMethod dest) {
+				if (!dest.isConcrete())
+					return KillAll.v();
+				
 				final Stmt stmt = (Stmt) src;
 				final InvokeExpr ie = stmt.getInvokeExpr();
 
-				final List<Value> callArgs = ie.getArgs();				
-				final List<Value> paramLocals = new ArrayList<Value>(dest.getParameterCount());
+				final List<Value> callArgs = ie.getArgs();
+				final List<Value> paramLocals = new ArrayList<Value>(dest.getParameterCount()); 
 				for (int i = 0; i < dest.getParameterCount(); i++)
 					paramLocals.add(dest.getActiveBody().getParameterLocal(i));
-
+				
 				final SourceInfo sourceInfo = sourceSinkManager != null
 						? sourceSinkManager.getSourceInfo((Stmt) src, interproceduralCFG()) : null;
 				final boolean isSink = sourceSinkManager != null
 						? sourceSinkManager.isSink(stmt, interproceduralCFG()) : false;
-
+				
 				return new FlowFunction<Abstraction>() {
 
 					public Set<Abstraction> computeTargets(Abstraction source) {
@@ -337,7 +351,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							return Collections.emptySet();
 						if (!inspectSinks && isSink)
 							return Collections.emptySet();
-
+						
 						// taint is propagated in CallToReturnFunction, so we do not
 						// need any taint here if the taint wrapper is exclusive:
 						if(taintWrapper != null && taintWrapper.isExclusive(stmt, source.getAccessPath(),
@@ -345,7 +359,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							return Collections.emptySet();
 						
 						Set<Abstraction> res = new HashSet<Abstraction>();
-												
+						
 						// if the returned value is tainted - taint values from return statements
 						if (src instanceof DefinitionStmt) {
 							DefinitionStmt defnStmt = (DefinitionStmt) src;

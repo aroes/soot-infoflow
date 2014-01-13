@@ -64,10 +64,13 @@ public class InfoflowCFG implements IInfoflowCFG {
 		this(new JimpleBasedInterproceduralCFG());
 	}
 	
-	protected InfoflowCFG(BiDiInterproceduralCFG<Unit,SootMethod> delegate) {
+	public InfoflowCFG(BiDiInterproceduralCFG<Unit,SootMethod> delegate) {
 		this.delegate = delegate;
-		this.sideEffectAnalysis = new SideEffectAnalysis
-				(Scene.v().getPointsToAnalysis(), Scene.v().getCallGraph());
+		if (Scene.v().hasCallGraph())
+			this.sideEffectAnalysis = new SideEffectAnalysis
+					(Scene.v().getPointsToAnalysis(), Scene.v().getCallGraph());
+		else
+			this.sideEffectAnalysis = null;
 	}
 	
 	@Override
@@ -77,6 +80,9 @@ public class InfoflowCFG implements IInfoflowCFG {
 	
 	@Override
 	public Set<SootField> getReadVariables(SootMethod caller, Stmt inv) {
+		if (sideEffectAnalysis == null)
+			return null;
+		
 		final RWSet rwSet;
 		synchronized (sideEffectAnalysis) {
 			rwSet = sideEffectAnalysis.readSet(caller, inv);
@@ -95,6 +101,9 @@ public class InfoflowCFG implements IInfoflowCFG {
 	
 	@Override
 	public Set<SootField> getWriteVariables(SootMethod caller, Stmt inv) {
+		if (sideEffectAnalysis == null)
+			return null;
+
 		final RWSet rwSet;
 		synchronized (sideEffectAnalysis) {
 			rwSet = sideEffectAnalysis.writeSet(caller, inv);

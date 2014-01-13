@@ -121,8 +121,8 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 		if (apBase.getType() instanceof ArrayType)
 			return dest.getName().equals("java.lang.Object");
 		
-		return Scene.v().getFastHierarchy().canStoreType(apBase.getType(), dest.getType())
-				|| Scene.v().getFastHierarchy().canStoreType(dest.getType(), apBase.getType());
+		return Scene.v().getOrMakeFastHierarchy().canStoreType(apBase.getType(), dest.getType())
+				|| Scene.v().getOrMakeFastHierarchy().canStoreType(dest.getType(), apBase.getType());
 	}
 
 	public void setSolver(IInfoflowSolver solver) {
