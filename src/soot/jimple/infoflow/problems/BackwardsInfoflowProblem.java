@@ -177,15 +177,13 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						}
 						
 						// If this is an unrealizable typecast, drop the abstraction
-						/*
 						if (defStmt.getRightOp() instanceof CastExpr) {
 							CastExpr ce = (CastExpr) defStmt.getRightOp();
 							if (!source.getAccessPath().isStaticFieldRef()
 									&& !canCastType(ce.getCastType(), source.getAccessPath().getType()))
 								return Collections.emptySet();
 						}
-						*/
-								
+						
 						Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
 								(leftValue, newType), defStmt);
 						res.add(abs);
