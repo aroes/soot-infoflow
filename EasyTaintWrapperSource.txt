@@ -8,6 +8,7 @@
 <java.util.Map: java.lang.Object put(java.lang.Object,java.lang.Object)>
 -<java.util.Map: void clear()>
 
+<java.util.TreeMap: void <init>(java.util.Map)>
 <java.util.HashMap: void <init>(java.util.Map)>
 <java.util.WeakHashMap: void <init>(java.util.Map)>
 <java.util.ConcurrentHashMap: void <init>(java.util.Map)>
@@ -295,3 +296,7 @@
 <android.text.Editable: java.lang.String toString()>
 
 <javax.servlet.ServletResponse: java.io.PrintWriter getWriter()>
+
+# Exclude the ServerSocket stuff
+# ~<java.net.ServerSocket: java.net.Socket accept()>
+# ~<java.net.Socket: java.io.InputStream getInputStream()>
