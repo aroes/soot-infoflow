@@ -155,10 +155,12 @@ public class Infoflow extends AbstractInfoflow {
 			Options.v().set_output_format(Options.output_format_none);
 		Options.v().set_soot_classpath(libPath);
 		
-		List<String> processDirs = new LinkedList<String>();
-		for (String ap : appPath.split(File.pathSeparator))
-			processDirs.add(ap);
-		Options.v().set_process_dir(processDirs);
+		if (appPath != null) {
+			List<String> processDirs = new LinkedList<String>();
+			for (String ap : appPath.split(File.pathSeparator))
+				processDirs.add(ap);
+			Options.v().set_process_dir(processDirs);
+		}
 		
 		// Configure the callgraph algorithm
 		switch (callgraphAlgorithm) {
