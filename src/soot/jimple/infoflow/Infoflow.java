@@ -11,6 +11,7 @@ package soot.jimple.infoflow;
 
 import heros.solver.CountingThreadPoolExecutor;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -61,7 +62,7 @@ public class Infoflow extends AbstractInfoflow {
 	
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
-	private static boolean debug = false;
+    private static boolean debug = false;
 	private static int accessPathLength = 5;
 	
 	private InfoflowResults results;
@@ -153,7 +154,11 @@ public class Infoflow extends AbstractInfoflow {
 		else
 			Options.v().set_output_format(Options.output_format_none);
 		Options.v().set_soot_classpath(libPath);
-		Options.v().set_process_dir(Collections.<String>singletonList(appPath));
+		
+		List<String> processDirs = new LinkedList<String>();
+		for (String ap : appPath.split(File.pathSeparator))
+			processDirs.add(ap);
+		Options.v().set_process_dir(processDirs);
 		
 		// Configure the callgraph algorithm
 		switch (callgraphAlgorithm) {
@@ -205,6 +210,7 @@ public class Infoflow extends AbstractInfoflow {
 		
 		// load all entryPoint classes with their bodies
 		Scene.v().loadNecessaryClasses();
+		logger.info("Basic class loading done.");
 		boolean hasClasses = false;
 		for (String className : classes) {
 			SootClass c = Scene.v().forceResolve(className, SootClass.BODIES);
@@ -282,8 +288,10 @@ public class Infoflow extends AbstractInfoflow {
 			seeds = Collections.singleton(entryPoint);
 
 		// We explicitly select the packs we want to run for performance reasons
-        PackManager.v().getPack("wjpp").apply();
-        PackManager.v().getPack("cg").apply();
+		if (callgraphAlgorithm != CallgraphAlgorithm.OnDemand) {
+	        PackManager.v().getPack("wjpp").apply();
+	        PackManager.v().getPack("cg").apply();
+		}
         runAnalysis(sourcesSinks, seeds);
 		if (debug)
 			PackManager.v().writeOutput();
@@ -330,7 +338,7 @@ public class Infoflow extends AbstractInfoflow {
 		int sinkCount = 0;
         logger.info("Looking for sources and sinks...");
         
-        for (SootMethod sm : getMethodsForSeeds())
+        for (SootMethod sm : getMethodsForSeeds(iCfg))
 			sinkCount += scanMethodForSourcesSinks(sourcesSinks, forwardProblem, sm);
         
 		// We optionally also allow additional seeds to be specified
@@ -447,7 +455,7 @@ public class Infoflow extends AbstractInfoflow {
 			handler.onResultsAvailable(iCfg, results);
 	}
 	
-	private Collection<SootMethod> getMethodsForSeeds() {
+	private Collection<SootMethod> getMethodsForSeeds(IInfoflowCFG icfg) {
 		List<SootMethod> seeds = new LinkedList<SootMethod>();
 		// If we have a callgraph, we retrieve the reachable methods. Otherwise,
 		// we have no choice but take all application methods as an approximation
@@ -458,12 +466,28 @@ public class Infoflow extends AbstractInfoflow {
 			for (Iterator<MethodOrMethodContext> iter = reachableMethods.listener(); iter.hasNext();)
 				seeds.add(iter.next().method());
 		}
-		else for (SootClass sc : Scene.v().getApplicationClasses())
-			for (SootMethod sm : sc.getMethods()) {
-				sm.retrieveActiveBody();
-				seeds.add(sm);
-			}
+		else {
+			long beforeSeedMethods = System.nanoTime();
+			Set<SootMethod> doneSet = new HashSet<SootMethod>();
+			for (SootMethod sm : Scene.v().getEntryPoints())
+				getMethodsForSeedsIncremental(sm, doneSet, seeds, icfg);
+			logger.info("Collecting seed methods took {} seconds", (System.nanoTime() - beforeSeedMethods) / 1E9);
+		}
 		return seeds;
+	}
+
+	private void getMethodsForSeedsIncremental(SootMethod sm,
+			Set<SootMethod> doneSet, List<SootMethod> seeds, IInfoflowCFG icfg) {
+		assert Scene.v().hasFastHierarchy();
+		if (!sm.isConcrete() || !sm.getDeclaringClass().isApplicationClass() || !doneSet.add(sm))
+			return;
+		seeds.add(sm);
+		for (Unit u : sm.retrieveActiveBody().getUnits()) {
+			Stmt stmt = (Stmt) u;
+			if (stmt.containsInvokeExpr())
+				for (SootMethod callee : icfg.getCalleesOfCallAt(stmt))
+					getMethodsForSeedsIncremental(callee, doneSet, seeds, icfg);
+		}
 	}
 
 	/**
