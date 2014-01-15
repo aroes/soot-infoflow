@@ -290,6 +290,14 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 	public FlowFunctions<Unit, Abstraction, SootMethod> createFlowFunctionsFactory() {
 		return new FlowFunctions<Unit, Abstraction, SootMethod>() {
 
+			private Set<Abstraction> notifyOutFlowHandlers(Unit stmt, Set<Abstraction> res,
+					FlowFunctionType functionType) {
+				if (res != null && !res.isEmpty())
+					for (TaintPropagationHandler tp : taintPropagationHandlers)
+						tp.notifyFlowOut(stmt, res, interproceduralCFG(), functionType);
+				return res;
+			}
+			
 			/**
 			 * Creates a new taint abstraction for the given value
 			 * @param src The source statement from which the taint originated
@@ -358,6 +366,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 
 						@Override
 						public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
+							Set<Abstraction> res = computeTargetsInternal(d1, source);
+							return notifyOutFlowHandlers(is, res, FlowFunctionType.NormalFlowFunction);
+						}
+						
+						private Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
 							if (stopAfterFirstFlow && !results.isEmpty())
 								return Collections.emptySet();
 														
@@ -384,7 +397,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								// Compute the aliases
 								if (triggerInaktiveTaintOrReverseFlow(is, is.getLeftOp(), abs))
 									computeAliasTaints(d1, is, is.getLeftOp(), res, interproceduralCFG().getMethodOf(is), abs);
-								
 								return res;
 							}
 
@@ -398,7 +410,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 
 							if (addOriginal)
 								res.add(source);
-							
 							return res;
 						}
 					};
@@ -422,6 +433,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						
 						@Override
 						public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
+							Set<Abstraction> res = computeTargetsInternal(d1, source);
+							return notifyOutFlowHandlers(assignStmt, res, FlowFunctionType.NormalFlowFunction);
+						}
+						
+						private Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
 							if (stopAfterFirstFlow && !results.isEmpty())
 								return Collections.emptySet();
 							
@@ -453,7 +469,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								if (triggerInaktiveTaintOrReverseFlow(assignStmt, assignStmt.getLeftOp(), abs))
 									computeAliasTaints(d1, assignStmt, assignStmt.getLeftOp(), res,
 											interproceduralCFG().getMethodOf(assignStmt), abs);
-								
                                 return res;
                             }
 
@@ -677,6 +692,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 
 						@Override
 						public Set<Abstraction> computeTargets(Abstraction source) {
+							Set<Abstraction> res = computeTargetsInternal(source);
+							return notifyOutFlowHandlers(returnStmt, res, FlowFunctionType.NormalFlowFunction);
+						}
+						
+						private Set<Abstraction> computeTargetsInternal (Abstraction source) {
 							if (stopAfterFirstFlow && !results.isEmpty())
 								return Collections.emptySet();
 
@@ -710,6 +730,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 
 						@Override
 						public Set<Abstraction> computeTargets(Abstraction source) {
+							Set<Abstraction> res = computeTargetsInternal(source);
+							return notifyOutFlowHandlers(throwStmt, res, FlowFunctionType.NormalFlowFunction);
+						}
+						
+						private Set<Abstraction> computeTargetsInternal(Abstraction source) {
 							if (stopAfterFirstFlow && !results.isEmpty())
 								return Collections.emptySet();
 							
@@ -728,6 +753,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 
 							if (mayAlias(throwStmt.getOp(), source.getAccessPath().getPlainLocal()))
 								return Collections.singleton(source.deriveNewAbstractionOnThrow(throwStmt));
+
 							return Collections.singleton(source);
 						}
 					};
@@ -742,6 +768,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 
 						@Override
 						public Set<Abstraction> computeTargets(Abstraction source) {
+							Set<Abstraction> res = computeTargetsInternal(source);
+							return notifyOutFlowHandlers(src, res, FlowFunctionType.NormalFlowFunction);
+						}
+						
+						private Set<Abstraction> computeTargetsInternal(Abstraction source) {
 							if (stopAfterFirstFlow && !results.isEmpty())
 								return Collections.emptySet();
 							if (!source.isAbstractionActive())
@@ -790,6 +821,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										break;
 									}
 								}
+
 							return res;
 						}
 					};
@@ -824,6 +856,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 
 					@Override
 					public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
+						Set<Abstraction> res = computeTargetsInternal(d1, source);
+						return notifyOutFlowHandlers(stmt, res, FlowFunctionType.CallFlowFunction);
+					}
+					
+					private Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
 						if (stopAfterFirstFlow && !results.isEmpty())
 							return Collections.emptySet();
 						
@@ -922,7 +959,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						
 						for (Abstraction abs : res)
 							aliasingStrategy.injectCallingContext(abs, solver, dest, src, source, d1);
-						return res;
+						return notifyOutFlowHandlers(stmt, res, FlowFunctionType.CallFlowFunction);
 					}
 				};
 			}
@@ -938,6 +975,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 
 					@Override
 					public Set<Abstraction> computeTargets(Abstraction source, Set<Abstraction> callerD1s) {
+						Set<Abstraction> res = computeTargetsInternal(source, callerD1s);
+						return notifyOutFlowHandlers(exitStmt, res, FlowFunctionType.ReturnFlowFunction);
+					}
+					
+					private Set<Abstraction> computeTargetsInternal(Abstraction source, Set<Abstraction> callerD1s) {
 						if (stopAfterFirstFlow && !results.isEmpty())
 							return Collections.emptySet();
 						if (source.equals(zeroValue))
@@ -947,7 +989,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						for (TaintPropagationHandler tp : taintPropagationHandlers)
 							tp.notifyFlowIn(exitStmt, Collections.singleton(source),
 									interproceduralCFG(), FlowFunctionType.ReturnFlowFunction);
-						
+
+
 						boolean callerD1sConditional = false;
 						for (Abstraction d1 : callerD1s)
 							if (d1.getAccessPath().isEmpty()) {
@@ -982,6 +1025,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 											computeAliasTaints(d1, (Stmt) callSite, def.getLeftOp(), res,
 													interproceduralCFG().getMethodOf(callSite), abs);
 									
+									// Notify the handler if we have one
+									for (TaintPropagationHandler tp : taintPropagationHandlers)
+										tp.notifyFlowOut(exitStmt, res, interproceduralCFG(), FlowFunctionType.ReturnFlowFunction);
 									return res;
 								}
 							
@@ -1143,6 +1189,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							}
 							}
 						}
+
+						for (TaintPropagationHandler tp : taintPropagationHandlers)
+							tp.notifyFlowOut(exitStmt, res, interproceduralCFG(), FlowFunctionType.ReturnFlowFunction);
 						return res;
 					}
 
@@ -1171,6 +1220,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 
 						@Override
 						public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
+							Set<Abstraction> res = computeTargetsInternal(d1, source);
+							return notifyOutFlowHandlers(call, res, FlowFunctionType.CallToReturnFlowFunction);
+						}
+						
+						private Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
 							if (stopAfterFirstFlow && !results.isEmpty())
 								return Collections.emptySet();
 							
@@ -1210,6 +1264,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								if (triggerInaktiveTaintOrReverseFlow(iStmt, target, abs))
 									computeAliasTaints(d1, iStmt, target, res, interproceduralCFG().getMethodOf(call), abs);
 								
+								for (TaintPropagationHandler tp : taintPropagationHandlers)
+									tp.notifyFlowOut(iStmt, res, interproceduralCFG(), FlowFunctionType.CallToReturnFlowFunction);
 								return res;
 							}
 
@@ -1323,6 +1379,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										results.add(new AbstractionAtSink(newSource, iStmt.getInvokeExpr(), iStmt));
 								}
 							}
+
+							for (TaintPropagationHandler tp : taintPropagationHandlers)
+								tp.notifyFlowOut(iStmt, res, interproceduralCFG(), FlowFunctionType.CallToReturnFlowFunction);
 							return res;
 						}
 
