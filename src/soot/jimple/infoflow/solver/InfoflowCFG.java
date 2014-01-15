@@ -64,7 +64,7 @@ public class InfoflowCFG implements IInfoflowCFG {
 		this(new JimpleBasedInterproceduralCFG());
 	}
 	
-	protected InfoflowCFG(BiDiInterproceduralCFG<Unit,SootMethod> delegate) {
+	public InfoflowCFG(BiDiInterproceduralCFG<Unit,SootMethod> delegate) {
 		this.delegate = delegate;
 		this.sideEffectAnalysis = new SideEffectAnalysis
 				(Scene.v().getPointsToAnalysis(), Scene.v().getCallGraph());
