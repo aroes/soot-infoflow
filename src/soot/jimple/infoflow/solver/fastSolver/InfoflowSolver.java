@@ -15,6 +15,7 @@ import heros.InterproceduralCFG;
 import heros.solver.CountingThreadPoolExecutor;
 import heros.solver.PathEdge;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -64,8 +65,7 @@ public class InfoflowSolver extends PathTrackingIFDSSolver<Unit, Abstraction, So
 		if (!(otherSolver instanceof InfoflowSolver))
 			throw new RuntimeException("Other solver must be of same type");
 
-		for (Unit sP : icfg.getStartPointsOf(callee))
-			addIncoming(sP, d3, callSite, d2);
+		addIncoming(callee, d3, callSite, d2);
 		
 		// First, get a list of the other solver's jump functions.
 		// Then release the lock on otherSolver.jumpFn before doing
@@ -82,17 +82,17 @@ public class InfoflowSolver extends PathTrackingIFDSSolver<Unit, Abstraction, So
 	
 	@Override
 	protected Set<Abstraction> computeReturnFlowFunction
-			(FlowFunction<Abstraction> retFunction, Abstraction d2, Unit callSite, Set<Abstraction> callerSideDs) {
+			(FlowFunction<Abstraction> retFunction, Abstraction d2, Unit callSite, Collection<Abstraction> callerSideDs) {
 		if (retFunction instanceof SolverReturnFlowFunction) {
 			// Get the d1s at the start points of the caller
 			Set<Abstraction> d1s = new HashSet<Abstraction>(callerSideDs.size() * 5);
-			for (Abstraction d4 : callerSideDs)
-				if (d4 == zeroValue)
-					d1s.add(d4);
-				else
-					synchronized (jumpFn) {
+			synchronized (jumpFn) {
+				for (Abstraction d4 : callerSideDs)
+					if (d4 == zeroValue)
+						d1s.add(d4);
+					else
 						d1s.addAll(jumpFn.reverseLookup(callSite, d4));
-					}
+			}
 			
 			return ((SolverReturnFlowFunction) retFunction).computeTargets(d2, d1s);
 		}

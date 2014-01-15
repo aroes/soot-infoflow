@@ -989,8 +989,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						for (TaintPropagationHandler tp : taintPropagationHandlers)
 							tp.notifyFlowIn(exitStmt, Collections.singleton(source),
 									interproceduralCFG(), FlowFunctionType.ReturnFlowFunction);
-
-
+						
 						boolean callerD1sConditional = false;
 						for (Abstraction d1 : callerD1s)
 							if (d1.getAccessPath().isEmpty()) {
@@ -1050,14 +1049,14 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									&& newSource.getTopPostdominator() == null)
 								return Collections.emptySet();
 						}
-
+						
 						//if abstraction is not active and activeStmt was in this method, it will not get activated = it can be removed:
 						if(!newSource.isAbstractionActive() && newSource.getActivationUnit() != null)
 							if (interproceduralCFG().getMethodOf(newSource.getActivationUnit()).equals(callee))
 								return Collections.emptySet();
 						
 						Set<Abstraction> res = new HashSet<Abstraction>();
-
+						
 						// Check whether this return is treated as a sink
 						if (returnStmt != null) {
 							assert returnStmt.getOp() == null

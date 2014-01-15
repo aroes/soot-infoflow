@@ -24,12 +24,12 @@ import heros.ZeroedFlowFunctions;
 import heros.solver.CountingThreadPoolExecutor;
 import heros.solver.PathEdge;
 
+import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -80,12 +80,12 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 	//stores summaries that were queried before they were computed
 	//see CC 2010 paper by Naeem, Lhotak and Rodriguez
 	@SynchronizedBy("consistent lock on 'incoming'")
-	protected final Table<N,D,Map<N,Set<D>>> endSummary = HashBasedTable.create();
+	protected final Table<M,D,Map<N,Set<D>>> endSummary = HashBasedTable.create();
 
 	//edges going along calls
 	//see CC 2010 paper by Naeem, Lhotak and Rodriguez
 	@SynchronizedBy("consistent lock on field")
-	protected final Table<N,D,Map<N,Set<D>>> incoming = HashBasedTable.create();
+	protected final Table<M,D,Map<N,Set<D>>> incoming = HashBasedTable.create();
 	
 	@DontSynchronize("stateless")
 	protected final FlowFunctions<N, D, M> flowFunctions;
@@ -248,29 +248,30 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 					Map<N, Set<D>> endSumm;
 					synchronized (incoming) {
 						//line 15.1 of Naeem/Lhotak/Rodriguez
-						addIncoming(sP,d3,n,d2);
+						addIncoming(sCalledProcN,d3,n,d2);
 						//line 15.2, copy to avoid concurrent modification exceptions by other threads
-						endSumm = endSummary(sP, d3);
+						endSumm = endSummary(sCalledProcN, d3);
 					}
 					
 					//still line 15.2 of Naeem/Lhotak/Rodriguez
 					//for each already-queried exit value <eP,d4> reachable from <sP,d3>,
 					//create new caller-side jump functions to the return sites
 					//because we have observed a potentially new incoming edge into <sP,d3>
-					for(Entry<N, Set<D>> entry: endSumm.entrySet()) {
-						N eP = entry.getKey();
-						for (D d4 : entry.getValue()) {
-							//for each return site
-							for(N retSiteN: returnSiteNs) {
-								//compute return-flow function
-								FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
-								//for each target value of the function
-								for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d2)))
-									propagate(d1, retSiteN, d5, n, false);
+					if (endSumm != null)
+						for(Entry<N, Set<D>> entry: endSumm.entrySet()) {
+							N eP = entry.getKey();
+							for (D d4 : entry.getValue()) {
+								//for each return site
+								for(N retSiteN: returnSiteNs) {
+									//compute return-flow function
+									FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
+									//for each target value of the function
+									for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d2)))
+										propagate(d1, retSiteN, d5, n, false);
+								}
 							}
 						}
-					}
-				}		
+				}
 			}
 		}
 		//line 17-19 of Naeem/Lhotak/Rodriguez		
@@ -325,15 +326,13 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 		final D d2 = edge.factAtTarget();
 		
 		//for each of the method's start points, determine incoming calls
-		Map<N,Set<D>> inc = new HashMap<N, Set<D>>();
-		Set<N> startPointsOf = icfg.getStartPointsOf(methodThatNeedsSummary);
-		for(N sP: startPointsOf) {
-			//line 21.1 of Naeem/Lhotak/Rodriguez
-			//register end-summary
-			synchronized (incoming) {
-				addEndSummary(sP, d1, n, d2);
-				inc.putAll(incoming(d1, sP));
-			}
+		Map<N,Set<D>> inc = null;
+		
+		//line 21.1 of Naeem/Lhotak/Rodriguez
+		//register end-summary
+		synchronized (incoming) {
+			addEndSummary(methodThatNeedsSummary, d1, n, d2);
+			inc = incoming(d1, methodThatNeedsSummary);
 		}
 		
 		//for each incoming call edge already processed
@@ -366,7 +365,6 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 		//note: we propagate that way only values that originate from ZERO, as conditionally generated values should only
 		//be propagated into callers that have an incoming edge for this condition
 		if(followReturnsPastSeeds && (inc == null || inc.isEmpty()) && d1.equals(zeroValue)) {
-			// only propagate up if we 
 				Set<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
 				for(N c: callers) {
 					for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
@@ -396,7 +394,7 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 	 * @return The set of caller-side abstractions at the return site
 	 */
 	protected Set<D> computeReturnFlowFunction
-			(FlowFunction<D> retFunction, D d2, N callSite, Set<D> callerSideDs) {
+			(FlowFunction<D> retFunction, D d2, N callSite, Collection<D> callerSideDs) {
 		return retFunction.computeTargets(d2);
 	}
 
@@ -454,18 +452,17 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 			logger.trace("EDGE: <{},{}> -> <{},{}>", icfg.getMethodOf(target), sourceVal, target, targetVal);
 	}
 	
-	private Map<N, Set<D>> endSummary(N sP, D d3) {
-		Map<N, Set<D>> map = endSummary.get(sP, d3);
-		if(map==null) return Collections.emptyMap();
+	private Map<N, Set<D>> endSummary(M m, D d3) {
+		Map<N, Set<D>> map = endSummary.get(m, d3);
 		return map;
 	}
 
-	private void addEndSummary(N sP, D d1, N eP, D d2) {
+	private void addEndSummary(M m, D d1, N eP, D d2) {
 		synchronized (endSummary) {
-			Map<N, Set<D>> summaries = endSummary.get(sP, d1);
+			Map<N, Set<D>> summaries = endSummary.get(m, d1);
 			if(summaries==null) {
 				summaries = new ConcurrentHashMap<N, Set<D>>();
-				endSummary.put(sP, d1, summaries);
+				endSummary.put(m, d1, summaries);
 			}
 			Set<D> d2s = summaries.get(eP);
 			if (d2s == null) {
@@ -476,20 +473,19 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 		}
 	}	
 	
-	private Map<N, Set<D>> incoming(D d1, N sP) {
+	private Map<N, Set<D>> incoming(D d1, M m) {
 		synchronized (incoming) {
-			Map<N, Set<D>> map = incoming.get(sP, d1);
-			if(map==null) return Collections.emptyMap();
+			Map<N, Set<D>> map = incoming.get(m, d1);
 			return map;
 		}
 	}
 	
-	protected void addIncoming(N sP, D d3, N n, D d2) {
+	protected void addIncoming(M m, D d3, N n, D d2) {
 		synchronized (incoming) {
-			Map<N, Set<D>> summaries = incoming.get(sP, d3);
+			Map<N, Set<D>> summaries = incoming.get(m, d3);
 			if(summaries==null) {
 				summaries = new ConcurrentHashMap<N, Set<D>>();
-				incoming.put(sP, d3, summaries);
+				incoming.put(m, d3, summaries);
 			}
 			Set<D> set = summaries.get(n);
 			if(set==null) {
