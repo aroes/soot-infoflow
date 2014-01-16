@@ -19,8 +19,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Table;
+import com.google.common.collect.Maps;
 
 
 /**
@@ -31,11 +30,54 @@ import com.google.common.collect.Table;
 @ThreadSafe
 public class JumpFunctions<N,D> {
 	
+	private class ReverseEntry {
+		private final N n;
+		private final D d;
+		private final int hashCode;
+		
+		public ReverseEntry(N n, D d) {
+			this.n = n;
+			this.d = d;
+
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((d == null) ? 0 : d.hashCode());
+			result = prime * result + ((n == null) ? 0 : n.hashCode());
+			this.hashCode = result;
+		}
+		
+		@Override
+		public int hashCode() {
+			return this.hashCode;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null || !(obj instanceof JumpFunctions.ReverseEntry))
+				return false;
+			ReverseEntry other = (ReverseEntry) obj;
+			if (d == null) {
+				if (other.d != null)
+					return false;
+			} else if (!d.equals(other.d))
+				return false;
+			if (n == null) {
+				if (other.n != null)
+					return false;
+			} else if (!n.equals(other.n))
+				return false;
+			return true;
+		}
+	}
+	
 	//mapping from target node and value to a list of all source values and associated functions
 	//where the list is implemented as a mapping from the source value to the function
 	//we exclude empty default functions
 	@SynchronizedBy("consistent lock on this")
-	protected Table<N,D,Map<D,D>> nonEmptyReverseLookup = HashBasedTable.create();
+	protected Map<ReverseEntry,Map<D,D>> nonEmptyReverseLookup = Maps.newHashMap();
 	
 	public JumpFunctions() {
 	}
@@ -51,10 +93,11 @@ public class JumpFunctions<N,D> {
 		
 		Map<D, D> sourceValToFunc = null;
 		synchronized (this) {
-			sourceValToFunc = nonEmptyReverseLookup.get(target, targetVal);
+			ReverseEntry entry = new ReverseEntry(target, targetVal);
+			sourceValToFunc = nonEmptyReverseLookup.get(entry);
 			if(sourceValToFunc==null) {
 				sourceValToFunc = new ConcurrentHashMap<D, D>();
-				nonEmptyReverseLookup.put(target,targetVal,sourceValToFunc);
+				nonEmptyReverseLookup.put(entry, sourceValToFunc);
 			}
 			
 			D existingVal = sourceValToFunc.get(sourceVal);
@@ -73,7 +116,7 @@ public class JumpFunctions<N,D> {
 	public Set<D> reverseLookup(N target, D targetVal) {
 		assert target!=null;
 		assert targetVal!=null;
-		Map<D, D> res = nonEmptyReverseLookup.get(target,targetVal);
+		Map<D, D> res = nonEmptyReverseLookup.get(new ReverseEntry(target,targetVal));
 		if (res ==null)
 			return Collections.emptySet();
 		return res.keySet();
@@ -90,26 +133,18 @@ public class JumpFunctions<N,D> {
 		assert target!=null;
 		assert targetVal!=null;
 		
-		Map<D, D> sourceValToFunc = nonEmptyReverseLookup.get(target, targetVal);
+		ReverseEntry entry = new ReverseEntry(target, targetVal);
+		Map<D, D> sourceValToFunc = nonEmptyReverseLookup.get(entry);
 		if (sourceValToFunc == null)
 			return false;
 		if (sourceValToFunc.remove(sourceVal) == null)
 			return false;
 		if (sourceValToFunc.isEmpty())
-			nonEmptyReverseLookup.remove(targetVal, targetVal);
+			nonEmptyReverseLookup.remove(entry);
 		
 		return true;
 	}
 	
-	/**
-	 * Checks whether the given fact is already in the jump function table
-	 * @return True if the edge is in the table, otherwise false
-	 */
-	public synchronized boolean containsFact(D sourceVal, N target, D targetVal) {
-		Map<D, D> res = nonEmptyReverseLookup.get(target, targetVal);
-		return res == null ? false : res.containsKey(sourceVal);
-	}
-
 	/**
 	 * Removes all jump functions
 	 */

@@ -49,14 +49,8 @@ public class InfoflowSolver extends IFDSSolver<Unit, Abstraction, SootMethod, In
 
 	@Override
 	public boolean processEdge(PathEdge<Unit, Abstraction> edge){
-		// We are generating a fact out of thin air here. If we have an
-		// edge <d1,n,d2>, there need not necessarily be a jump function
-		// to <n,d2>.
- 		if (!jumpFn.containsFact(edge.factAtSource(), edge.getTarget(), edge.factAtTarget())) {
-			propagate(edge.factAtSource(), edge.getTarget(), edge.factAtTarget(), null, false);
-			return true;
-		}
-		return false;
+		propagate(edge.factAtSource(), edge.getTarget(), edge.factAtTarget(), null, false);
+		return true;
 	}
 	
 	@Override

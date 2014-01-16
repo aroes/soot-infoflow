@@ -343,6 +343,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					public Set<Abstraction> computeTargets(Abstraction source) {
 						if (source.equals(zeroValue))
 							return Collections.emptySet();
+						assert !source.isAbstractionActive() || !flowSensitiveAliasing;
 						
 						//if we do not have to look into sources or sinks:
 						if (!inspectSources && sourceInfo != null)
@@ -435,6 +436,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							Set<Abstraction> callerD1s) {
 						if (source.equals(zeroValue))
 							return Collections.emptySet();
+						assert !source.isAbstractionActive() || !flowSensitiveAliasing;
 						
 						// If we have no caller, we have nowhere to propagate. This
 						// can happen when leaving the main method.
@@ -529,6 +531,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
 							if (source.equals(zeroValue))
 								return Collections.emptySet();
+							assert !source.isAbstractionActive() || !flowSensitiveAliasing;
 
 							// only pass source if the source is not created by this method call
 							if (iStmt instanceof DefinitionStmt && ((DefinitionStmt) iStmt).getLeftOp().equals
