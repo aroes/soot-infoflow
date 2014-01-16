@@ -153,14 +153,20 @@ public class Infoflow extends AbstractInfoflow {
 			Options.v().set_output_format(Options.output_format_jimple);
 		else
 			Options.v().set_output_format(Options.output_format_none);
-		Options.v().set_soot_classpath(libPath);
 		
-		if (appPath != null) {
-			List<String> processDirs = new LinkedList<String>();
-			for (String ap : appPath.split(File.pathSeparator))
-				processDirs.add(ap);
-			Options.v().set_process_dir(processDirs);
+		// We only need to distinguish between application and library classes
+		// if we use the OnTheFly ICFG
+		if (callgraphAlgorithm == CallgraphAlgorithm.OnDemand) {
+			Options.v().set_soot_classpath(libPath);
+			if (appPath != null) {
+				List<String> processDirs = new LinkedList<String>();
+				for (String ap : appPath.split(File.pathSeparator))
+					processDirs.add(ap);
+				Options.v().set_process_dir(processDirs);
+			}
 		}
+		else
+			Options.v().set_soot_classpath(appPath + File.pathSeparator + libPath);
 		
 		// Configure the callgraph algorithm
 		switch (callgraphAlgorithm) {
@@ -226,7 +232,6 @@ public class Infoflow extends AbstractInfoflow {
 			logger.error("Only phantom classes loaded, skipping analysis...");
 			return;
 		}
-
 	}
 
 	@Override
@@ -314,7 +319,7 @@ public class Infoflow extends AbstractInfoflow {
 				(maxThreadNum == -1 ? numThreads : Math.min(maxThreadNum, numThreads),
 				Integer.MAX_VALUE, 30, TimeUnit.SECONDS,
 				new LinkedBlockingQueue<Runnable>());
-
+		
 		BackwardsInfoflowProblem backProblem;
 		InfoflowSolver backSolver;
 		final IAliasingStrategy aliasingStrategy;
@@ -332,7 +337,7 @@ public class Infoflow extends AbstractInfoflow {
 			default:
 				throw new RuntimeException("Unsupported aliasing algorithm");
 		}
-
+		
 		InfoflowProblem forwardProblem  = new InfoflowProblem(iCfg, sourcesSinks, aliasingStrategy);
 		
 		// We have to look through the complete program to find sources

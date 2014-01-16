@@ -42,6 +42,7 @@ import com.google.common.collect.Sets;
 public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 
 	private static Abstraction zeroValue = null;
+	private static boolean flowSensitiveAliasing;
 		
 	/**
 	 * the access path contains the currently tainted variable or field
@@ -79,33 +80,28 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	 * has been cut during alias analysis.
 	 */
 	private boolean dependsOnCutAP = false;
-	
-	private final boolean flowSensitiveAliasing;
-	
+		
 	public Abstraction(Value taint, SourceInfo sourceInfo,
 			Value sourceVal, Stmt sourceStmt,
 			boolean exceptionThrown,
-			boolean flowSensitiveAliasing,
-			boolean isImplicit){
+			boolean isImplicit) {
 		this(taint, sourceInfo.getTaintSubFields(),
 				sourceVal, sourceStmt, sourceInfo.getUserData(),
-				exceptionThrown, flowSensitiveAliasing, isImplicit);
+				exceptionThrown, isImplicit);
 	}
 
 	public Abstraction(Value taint, boolean taintSubFields,
 			Value sourceVal, Stmt sourceStmt, Object userData,
 			boolean exceptionThrown,
-			boolean flowSensitiveAliasing,
 			boolean isImplicit){
 		this(taint, taintSubFields, new SourceContext(sourceVal, sourceStmt, userData),
-				exceptionThrown, null, flowSensitiveAliasing, isImplicit);
+				exceptionThrown, null, isImplicit);
 	}
 
 	protected Abstraction(Value taint, boolean taintSubFields,
 			SourceContext sourceContext,
 			boolean exceptionThrown,
 			Unit activationUnit,
-			boolean flowSensitiveAliasing,
 			boolean isImplicit){
 		this.sourceContext = sourceContext;
 		this.accessPath = new AccessPath(taint, taintSubFields);
@@ -117,7 +113,6 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		
 		this.exceptionThrown = exceptionThrown;
 		
-		this.flowSensitiveAliasing = flowSensitiveAliasing;
 		this.neighbors = null;
 		this.isImplicit = isImplicit;
 	}
@@ -143,9 +138,6 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 			
 			postdominators = original.postdominators == null ? null
 					: new ArrayList<UnitContainer>(original.postdominators);
-			
-			flowSensitiveAliasing = original.flowSensitiveAliasing;
-			assert flowSensitiveAliasing || this.activationUnit == null;
 			
 			dependsOnCutAP = original.dependsOnCutAP;
 			isImplicit = original.isImplicit;
@@ -503,8 +495,6 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 				return false;
 		} else if (!postdominators.equals(other.postdominators))
 			return false;
-		if(this.flowSensitiveAliasing != other.flowSensitiveAliasing)
-			return false;
 		if(this.dependsOnCutAP != other.dependsOnCutAP)
 			return false;
 		if(this.isImplicit != other.isImplicit)
@@ -527,7 +517,6 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 			this.hashCode = prime * this.hashCode + ((activationUnit == null) ? 0 : activationUnit.hashCode());
 			this.hashCode = prime * this.hashCode + (exceptionThrown ? 1231 : 1237);
 			this.hashCode = prime * this.hashCode + ((postdominators == null) ? 0 : postdominators.hashCode());
-			this.hashCode = prime * this.hashCode + (flowSensitiveAliasing ? 1231 : 1237);
 			this.hashCode = prime * this.hashCode + (dependsOnCutAP ? 1231 : 1237);
 			this.hashCode = prime * this.hashCode + (isImplicit ? 1231 : 1237);
 			return hashCode;
@@ -592,9 +581,11 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	}
 		
 	public static Abstraction getZeroAbstraction(boolean flowSensitiveAliasing) {
-		if (zeroValue == null)
+		if (zeroValue == null) {
 			zeroValue = new Abstraction(new JimpleLocal("zero", NullType.v()), new SourceInfo(false), null,
-					null, false, flowSensitiveAliasing, false);
+					null, false, false);
+			Abstraction.flowSensitiveAliasing = flowSensitiveAliasing;
+		}
 		return zeroValue;
 	}
 	

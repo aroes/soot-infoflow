@@ -33,7 +33,7 @@ import soot.jimple.infoflow.solver.functions.SolverReturnFlowFunction;
  * Also we need to be able to insert edges containing new taint information
  * 
  */
-public class InfoflowSolver extends PathTrackingIFDSSolver<Unit, Abstraction, SootMethod, InterproceduralCFG<Unit, SootMethod>>
+public class InfoflowSolver extends IFDSSolver<Unit, Abstraction, SootMethod, InterproceduralCFG<Unit, SootMethod>>
 		implements IInfoflowSolver {
 
 	public InfoflowSolver(AbstractInfoflowProblem problem, CountingThreadPoolExecutor executor) {
@@ -154,7 +154,6 @@ public class InfoflowSolver extends PathTrackingIFDSSolver<Unit, Abstraction, So
 		this.jumpFn.clear();
 		this.incoming.clear();
 		this.endSummary.clear();
-		this.cache.clear();
 	}
 		
 }

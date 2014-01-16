@@ -22,6 +22,7 @@ import heros.InterproceduralCFG;
 import heros.SynchronizedBy;
 import heros.ZeroedFlowFunctions;
 import heros.solver.CountingThreadPoolExecutor;
+import heros.solver.LinkedNode;
 import heros.solver.PathEdge;
 
 import java.util.Collection;
@@ -56,7 +57,7 @@ import com.google.common.collect.Table;
  * @param <I> The type of inter-procedural control-flow graph being used.
  * @see IFDSTabulationProblem
  */
-public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
+public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG<N, M>> {
 	
 	public static CacheBuilder<Object, Object> DEFAULT_CACHE_BUILDER = CacheBuilder.newBuilder().concurrencyLevel
 			(Runtime.getRuntime().availableProcessors()).initialCapacity(10000).softValues();
@@ -249,7 +250,7 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 					synchronized (incoming) {
 						//line 15.1 of Naeem/Lhotak/Rodriguez
 						addIncoming(sCalledProcN,d3,n,d2);
-						//line 15.2, copy to avoid concurrent modification exceptions by other threads
+						//line 15.2
 						endSumm = endSummary(sCalledProcN, d3);
 					}
 					
@@ -442,14 +443,19 @@ public class IFDSSolver<N,D,M,I extends InterproceduralCFG<N, M>> {
 	protected void propagate(D sourceVal, N target, D targetVal,
 		/* deliberately exposed to clients */ N relatedCallSite,
 		/* deliberately exposed to clients */ boolean isUnbalancedReturn) {
-		if (!jumpFn.addFunction(sourceVal, target, targetVal))
-			return;
-		
-		PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
-		scheduleEdgeProcessing(edge);
+		D existingVal = jumpFn.addFunction(sourceVal, target, targetVal);
+		if (existingVal != null) {
+			if (existingVal != targetVal) {
+				assert existingVal.equals(targetVal);
+				existingVal.addNeighbor(targetVal);
+			}
+		} else {
+			PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
+			scheduleEdgeProcessing(edge);
 
-		if(targetVal!=zeroValue)
-			logger.trace("EDGE: <{},{}> -> <{},{}>", icfg.getMethodOf(target), sourceVal, target, targetVal);
+			if(targetVal!=zeroValue)
+				logger.trace("EDGE: <{},{}> -> <{},{}>", icfg.getMethodOf(target), sourceVal, target, targetVal);
+		}
 	}
 	
 	private Map<N, Set<D>> endSummary(M m, D d3) {

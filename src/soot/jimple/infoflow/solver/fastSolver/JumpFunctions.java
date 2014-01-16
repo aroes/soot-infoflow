@@ -15,8 +15,9 @@ import heros.ThreadSafe;
 import heros.solver.PathEdge;
 
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
@@ -34,7 +35,7 @@ public class JumpFunctions<N,D> {
 	//where the list is implemented as a mapping from the source value to the function
 	//we exclude empty default functions
 	@SynchronizedBy("consistent lock on this")
-	protected Table<N,D,Set<D>> nonEmptyReverseLookup = HashBasedTable.create();
+	protected Table<N,D,Map<D,D>> nonEmptyReverseLookup = HashBasedTable.create();
 	
 	public JumpFunctions() {
 	}
@@ -43,17 +44,25 @@ public class JumpFunctions<N,D> {
 	 * Records a jump function. The source statement is implicit.
 	 * @see PathEdge
 	 */
-	public synchronized boolean addFunction(D sourceVal, N target, D targetVal) {
+	public D addFunction(D sourceVal, N target, D targetVal) {
 		assert sourceVal!=null;
 		assert target!=null;
 		assert targetVal!=null;
 		
-		Set<D> sourceValToFunc = nonEmptyReverseLookup.get(target, targetVal);
-		if(sourceValToFunc==null) {
-			sourceValToFunc = new HashSet<D>();
-			nonEmptyReverseLookup.put(target,targetVal,sourceValToFunc);
+		Map<D, D> sourceValToFunc = null;
+		synchronized (this) {
+			sourceValToFunc = nonEmptyReverseLookup.get(target, targetVal);
+			if(sourceValToFunc==null) {
+				sourceValToFunc = new ConcurrentHashMap<D, D>();
+				nonEmptyReverseLookup.put(target,targetVal,sourceValToFunc);
+			}
+			
+			D existingVal = sourceValToFunc.get(sourceVal);
+			if (existingVal != null)
+				return existingVal;
+			sourceValToFunc.put(sourceVal, targetVal);
+			return null;
 		}
-		return sourceValToFunc.add(sourceVal);
 	}
 	
 	/**
@@ -61,12 +70,13 @@ public class JumpFunctions<N,D> {
      * source values, and for each the associated edge function.
      * The return value is a mapping from source value to function.
 	 */
-	public synchronized Set<D> reverseLookup(N target, D targetVal) {
+	public Set<D> reverseLookup(N target, D targetVal) {
 		assert target!=null;
 		assert targetVal!=null;
-		Set<D> res = nonEmptyReverseLookup.get(target,targetVal);
-		if(res==null) return Collections.emptySet();
-		return res;
+		Map<D, D> res = nonEmptyReverseLookup.get(target,targetVal);
+		if (res ==null)
+			return Collections.emptySet();
+		return res.keySet();
 	}
 	
 	/**
@@ -80,10 +90,10 @@ public class JumpFunctions<N,D> {
 		assert target!=null;
 		assert targetVal!=null;
 		
-		Set<D> sourceValToFunc = nonEmptyReverseLookup.get(target, targetVal);
+		Map<D, D> sourceValToFunc = nonEmptyReverseLookup.get(target, targetVal);
 		if (sourceValToFunc == null)
 			return false;
-		if (!sourceValToFunc.remove(sourceVal))
+		if (sourceValToFunc.remove(sourceVal) == null)
 			return false;
 		if (sourceValToFunc.isEmpty())
 			nonEmptyReverseLookup.remove(targetVal, targetVal);
@@ -96,8 +106,8 @@ public class JumpFunctions<N,D> {
 	 * @return True if the edge is in the table, otherwise false
 	 */
 	public synchronized boolean containsFact(D sourceVal, N target, D targetVal) {
-		Set<D> res = nonEmptyReverseLookup.get(target, targetVal);
-		return res == null ? false : res.contains(sourceVal);
+		Map<D, D> res = nonEmptyReverseLookup.get(target, targetVal);
+		return res == null ? false : res.containsKey(sourceVal);
 	}
 
 	/**

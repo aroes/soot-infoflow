@@ -391,7 +391,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							Set<Abstraction> res = new HashSet<Abstraction>();
 							if (source == zeroValue && sourceInfo != null) {
 								Abstraction abs = new Abstraction(is.getLeftOp(), sourceInfo,
-										is.getRightOp(), is, false, flowSensitiveAliasing, false);
+										is.getRightOp(), is, false, false);
 								res.add(abs);
 								
 								// Compute the aliases
@@ -462,7 +462,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
                             if (source.equals(zeroValue) && sourceInfo != null) {
                                 final Abstraction abs = new Abstraction(assignStmt.getLeftOp(),
                                 		sourceInfo, assignStmt.getRightOp(), assignStmt,
-                                		false, flowSensitiveAliasing, false);
+                                		false, false);
                                 res.add(abs);
                                 
                                 // Compute the aliases
@@ -1256,7 +1256,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									target = ((InstanceInvokeExpr) invExpr).getBase();
 									
 								final Abstraction abs = new Abstraction(target, sourceInfo,
-										iStmt.getInvokeExpr(), iStmt, false, flowSensitiveAliasing, false);
+										iStmt.getInvokeExpr(), iStmt, false, false);
 								res.add(abs);
 								
 								// Compute the aliases
