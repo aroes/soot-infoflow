@@ -27,6 +27,7 @@ import heros.solver.PathEdge;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -227,6 +228,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
         logger.trace("Processing call to {}", n);
 
 		final D d2 = edge.factAtTarget();
+		assert d2 != null;
 		List<N> returnSiteNs = icfg.getReturnSitesOfCallAt(n);
 		
 		//for each possible callee
@@ -249,7 +251,8 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 					Map<N, Set<D>> endSumm;
 					synchronized (incoming) {
 						//line 15.1 of Naeem/Lhotak/Rodriguez
-						addIncoming(sCalledProcN,d3,n,d2);
+						addIncoming(sCalledProcN,d3,n,d1);
+						
 						//line 15.2
 						endSumm = endSummary(sCalledProcN, d3);
 					}
@@ -348,17 +351,9 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
 					Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, entry.getValue());
 					//for each incoming-call value
-					for(D d4: entry.getValue()) {
-						synchronized (jumpFn) { // some other thread might change jumpFn on the way
-							//for each jump function coming into the call, propagate to return site using the composed function
-							for(D d3: jumpFn.reverseLookup(c,d4))
-								//for each target value at the return site
-								//line 23
-								for(D d5: targets) {
-									propagate(d3, retSiteC, d5, c, false);
-							}
-						}
-					}
+					for(D d4: entry.getValue())
+						for(D d5: targets)
+							propagate(d4, retSiteC, d5, c, false);
 				}
 			}
 		
@@ -479,7 +474,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 		}
 	}	
 	
-	private Map<N, Set<D>> incoming(D d1, M m) {
+	protected Map<N, Set<D>> incoming(D d1, M m) {
 		synchronized (incoming) {
 			Map<N, Set<D>> map = incoming.get(m, d1);
 			return map;

@@ -18,6 +18,7 @@ import heros.flowfunc.KillAll;
 import heros.solver.PathEdge;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -48,6 +49,7 @@ import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
+import soot.jimple.infoflow.solver.functions.SolverCallFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverCallToReturnFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverNormalFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverReturnFlowFunction;
@@ -338,9 +340,10 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				final boolean isSink = sourceSinkManager != null
 						? sourceSinkManager.isSink(stmt, interproceduralCFG()) : false;
 				
-				return new FlowFunction<Abstraction>() {
+				return new SolverCallFlowFunction() {
 
-					public Set<Abstraction> computeTargets(Abstraction source) {
+					@Override
+					public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
 						if (source.equals(zeroValue))
 							return Collections.emptySet();
 						assert !source.isAbstractionActive() || !flowSensitiveAliasing;
@@ -419,6 +422,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								}
 							}
 						}
+						
 						return res;
 					}
 				};
@@ -433,7 +437,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					
 					@Override
 					public Set<Abstraction> computeTargets(Abstraction source,
-							Set<Abstraction> callerD1s) {
+							Collection<Abstraction> callerD1s) {
 						if (source.equals(zeroValue))
 							return Collections.emptySet();
 						assert !source.isAbstractionActive() || !flowSensitiveAliasing;

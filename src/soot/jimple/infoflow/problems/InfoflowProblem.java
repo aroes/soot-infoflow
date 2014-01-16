@@ -16,6 +16,7 @@ import heros.flowfunc.Identity;
 import heros.flowfunc.KillAll;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -857,6 +858,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					@Override
 					public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
 						Set<Abstraction> res = computeTargetsInternal(d1, source);
+						for (Abstraction abs : res)
+							aliasingStrategy.injectCallingContext(abs, solver, dest, src, source, d1);
 						return notifyOutFlowHandlers(stmt, res, FlowFunctionType.CallFlowFunction);
 					}
 					
@@ -911,7 +914,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							}
 							
 							Abstraction abs = source.deriveConditionalAbstractionCall(src);
-							aliasingStrategy.injectCallingContext(abs, solver, dest, src, source, d1);
 							return Collections.singleton(abs);
 						}
 						else if (source.getTopPostdominator() != null)
@@ -957,9 +959,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (enableStaticFields && source.getAccessPath().isStaticFieldRef())
 							res.add(source);
 						
-						for (Abstraction abs : res)
-							aliasingStrategy.injectCallingContext(abs, solver, dest, src, source, d1);
-						return notifyOutFlowHandlers(stmt, res, FlowFunctionType.CallFlowFunction);
+						return res;
 					}
 				};
 			}
@@ -974,12 +974,12 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				return new SolverReturnFlowFunction() {
 
 					@Override
-					public Set<Abstraction> computeTargets(Abstraction source, Set<Abstraction> callerD1s) {
+					public Set<Abstraction> computeTargets(Abstraction source, Collection<Abstraction> callerD1s) {
 						Set<Abstraction> res = computeTargetsInternal(source, callerD1s);
 						return notifyOutFlowHandlers(exitStmt, res, FlowFunctionType.ReturnFlowFunction);
 					}
 					
-					private Set<Abstraction> computeTargetsInternal(Abstraction source, Set<Abstraction> callerD1s) {
+					private Set<Abstraction> computeTargetsInternal(Abstraction source, Collection<Abstraction> callerD1s) {
 						if (stopAfterFirstFlow && !results.isEmpty())
 							return Collections.emptySet();
 						if (source.equals(zeroValue))

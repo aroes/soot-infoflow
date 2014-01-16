@@ -2,6 +2,7 @@ package soot.jimple.infoflow.solver.functions;
 
 import heros.FlowFunction;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 
@@ -29,6 +30,6 @@ public abstract class SolverReturnFlowFunction implements FlowFunction<Abstracti
 	 * applied).
 	 * @return The set of abstractions at the return site.
 	 */
-	public abstract Set<Abstraction> computeTargets(Abstraction source, Set<Abstraction> callerD1s);
+	public abstract Set<Abstraction> computeTargets(Abstraction source, Collection<Abstraction> callerD1s);
 	
 }
