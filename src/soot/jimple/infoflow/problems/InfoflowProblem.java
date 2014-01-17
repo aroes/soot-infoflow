@@ -852,6 +852,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				
 				final Set<SootField> fieldsReadByCallee = enableStaticFields ? interproceduralCFG().getReadVariables
 						(interproceduralCFG().getMethodOf(stmt), stmt) : null;
+				
+				// This is not cached by Soot, so accesses are more expensive
+				// than one might think
+				final Local thisLocal = dest.isStatic() ? null : dest.getActiveBody().getThisLocal();	
 
 				return new SolverCallFlowFunction() {
 
@@ -937,7 +941,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							if (mayAlias(vie.getBase(), source.getAccessPath().getPlainValue()))
 								if (hasCompatibleTypesForCall(source.getAccessPath(), dest.getDeclaringClass())) {
 									Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
-											(dest.getActiveBody().getThisLocal()), stmt);
+											(thisLocal), stmt);
 									res.add(abs);
 								}
 						}
@@ -970,6 +974,14 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				final ReturnStmt returnStmt = (exitStmt instanceof ReturnStmt) ? (ReturnStmt) exitStmt : null;
 				final boolean isSink = (returnStmt != null && sourceSinkManager != null)
 						? sourceSinkManager.isSink(returnStmt, interproceduralCFG()) : false;
+
+				final List<Value> paramLocals = new ArrayList<Value>(callee.getParameterCount());
+				for (int i = 0; i < callee.getParameterCount(); i++)
+					paramLocals.add(callee.getActiveBody().getParameterLocal(i));
+
+				// This is not cached by Soot, so accesses are more expensive
+				// than one might think
+				final Local thisLocal = callee.isStatic() ? null : callee.getActiveBody().getThisLocal();	
 
 				return new SolverReturnFlowFunction() {
 
@@ -1124,7 +1136,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						{
 						Value originalCallArg = null;
 						for (int i = 0; i < callee.getParameterCount(); i++) {
-							if (mayAlias(callee.getActiveBody().getParameterLocal(i), sourceBase)) {
+							if (mayAlias(paramLocals.get(i), sourceBase)) {
 								if (callSite instanceof Stmt) {
 									Stmt iStmt = (Stmt) callSite;
 									originalCallArg = iStmt.getInvokeExpr().getArg(i);
@@ -1154,12 +1166,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						
 						{
 						if (!callee.isStatic()) {
-							Local thisL = callee.getActiveBody().getThisLocal();
-							if (mayAlias(thisL, sourceBase)) {
+							if (mayAlias(thisLocal, sourceBase)) {
 								boolean param = false;
 								// check if it is not one of the params (then we have already fixed it)
 								for (int i = 0; i < callee.getParameterCount(); i++) {
-									if (mayAlias(callee.getActiveBody().getParameterLocal(i), sourceBase)) {
+									if (mayAlias(paramLocals.get(i), sourceBase)) {
 										param = true;
 										break;
 									}

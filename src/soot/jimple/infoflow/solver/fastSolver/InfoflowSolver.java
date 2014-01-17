@@ -56,7 +56,6 @@ public class InfoflowSolver extends IFDSSolver<Unit, Abstraction, SootMethod, In
 	public void injectContext(IInfoflowSolver otherSolver, SootMethod callee,
 			Abstraction d3, Unit callSite, Abstraction d2, Abstraction d1) {
 		addIncoming(callee, d3, callSite, d1);
-		jumpFn.addFunction(new PathEdge<Unit, Abstraction>(d1, callSite, d2));
 	}
 	
 	@Override

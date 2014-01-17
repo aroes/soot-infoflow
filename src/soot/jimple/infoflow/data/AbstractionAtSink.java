@@ -72,7 +72,7 @@ public class AbstractionAtSink {
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
-		if (obj == null || !(obj instanceof AbstractionAtSink))
+		if (obj == null || getClass() != obj.getClass())
 			return false;
 		AbstractionAtSink other = (AbstractionAtSink) obj;
 		/*

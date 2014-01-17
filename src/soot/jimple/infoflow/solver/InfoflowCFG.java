@@ -12,6 +12,7 @@ package soot.jimple.infoflow.solver;
 
 import heros.solver.IDESolver;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -146,7 +147,7 @@ public class InfoflowCFG implements IInfoflowCFG {
 		return delegate.isBranchTarget(u, succ);
 	}
 
-	public Set<Unit> getStartPointsOf(SootMethod m) {
+	public Collection<Unit> getStartPointsOf(SootMethod m) {
 		return delegate.getStartPointsOf(m);
 	}
 
@@ -166,7 +167,7 @@ public class InfoflowCFG implements IInfoflowCFG {
 		return delegate.getCallersOf(m);
 	}
 
-	public List<Unit> getReturnSitesOfCallAt(Unit u) {
+	public Collection<Unit> getReturnSitesOfCallAt(Unit u) {
 		return delegate.getReturnSitesOfCallAt(u);
 	}
 
@@ -178,7 +179,7 @@ public class InfoflowCFG implements IInfoflowCFG {
 		return delegate.getPredsOf(u);
 	}
 
-	public Set<Unit> getEndPointsOf(SootMethod m) {
+	public Collection<Unit> getEndPointsOf(SootMethod m) {
 		return delegate.getEndPointsOf(m);
 	}
 

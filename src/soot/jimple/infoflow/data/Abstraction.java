@@ -457,7 +457,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	public boolean equals(Object obj) {
 		if (super.equals(obj))
 			return true;
-		if (obj == null || !(obj instanceof Abstraction))
+		if (obj == null || getClass() != obj.getClass())
 			return false;
 		Abstraction other = (Abstraction) obj;
 		if (accessPath == null) {
@@ -508,19 +508,19 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 			return hashCode;
 
 		final int prime = 31;
-		synchronized (this) { 
-			this.hashCode = 1;
+		int result = 1;
 	
-			// deliberately ignore prevAbs
-			this.hashCode = prime * this.hashCode + ((sourceContext == null) ? 0 : sourceContext.hashCode());
-			this.hashCode = prime * this.hashCode + ((accessPath == null) ? 0 : accessPath.hashCode());
-			this.hashCode = prime * this.hashCode + ((activationUnit == null) ? 0 : activationUnit.hashCode());
-			this.hashCode = prime * this.hashCode + (exceptionThrown ? 1231 : 1237);
-			this.hashCode = prime * this.hashCode + ((postdominators == null) ? 0 : postdominators.hashCode());
-			this.hashCode = prime * this.hashCode + (dependsOnCutAP ? 1231 : 1237);
-			this.hashCode = prime * this.hashCode + (isImplicit ? 1231 : 1237);
-			return hashCode;
-		}
+		// deliberately ignore prevAbs
+		result = prime * result + ((sourceContext == null) ? 0 : sourceContext.hashCode());
+		result = prime * result + ((accessPath == null) ? 0 : accessPath.hashCode());
+		result = prime * result + ((activationUnit == null) ? 0 : activationUnit.hashCode());
+		result = prime * result + (exceptionThrown ? 1231 : 1237);
+		result = prime * result + ((postdominators == null) ? 0 : postdominators.hashCode());
+		result = prime * result + (dependsOnCutAP ? 1231 : 1237);
+		result = prime * result + (isImplicit ? 1231 : 1237);
+		this.hashCode = result;
+		
+		return this.hashCode;
 	}
 	
 	/**
@@ -560,6 +560,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		if (originalAbstraction == this)
 			return;
 		
+		/*
 		Set<Abstraction> orgNeighbors = null;
 		synchronized (originalAbstraction) {
 			if (originalAbstraction.neighbors != null) {
@@ -567,12 +568,13 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 				originalAbstraction.neighbors = null;
 			}
 		}
+		*/
 
 		synchronized (this) {
 			if (neighbors == null)
 				neighbors = Sets.newIdentityHashSet();
-			if (orgNeighbors != null)
-				neighbors.addAll(orgNeighbors);
+//			if (orgNeighbors != null)
+//				neighbors.addAll(orgNeighbors);
 			
 			if (this.predecessor != originalAbstraction.predecessor
 					|| this.currentStmt != originalAbstraction.currentStmt)

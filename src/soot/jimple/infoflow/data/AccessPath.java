@@ -226,23 +226,23 @@ public class AccessPath implements Cloneable {
 		if (hashCode != 0)
 			return hashCode;
 		
-		synchronized (this) {
-			final int prime = 31;
-			this.hashCode = 1;
-			this.hashCode = prime * this.hashCode + ((fields == null) ? 0 : Arrays.hashCode(fields));
-			this.hashCode = prime * this.hashCode + ((fieldTypes == null) ? 0 : Arrays.hashCode(fieldTypes));
-			this.hashCode = prime * this.hashCode + ((value == null) ? 0 : value.hashCode());
-			this.hashCode = prime * this.hashCode + ((baseType == null) ? 0 : baseType.hashCode());
-			this.hashCode = prime * this.hashCode + (this.taintSubFields ? 1 : 0);
-			return this.hashCode;
-		}
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((fields == null) ? 0 : Arrays.hashCode(fields));
+		result = prime * result + ((fieldTypes == null) ? 0 : Arrays.hashCode(fieldTypes));
+		result = prime * result + ((value == null) ? 0 : value.hashCode());
+		result = prime * result + ((baseType == null) ? 0 : baseType.hashCode());
+		result = prime * result + (this.taintSubFields ? 1 : 0);
+		this.hashCode = result;
+		
+		return this.hashCode;
 	}
 
 	@Override
 	public boolean equals(Object obj) {
 		if (obj == this || super.equals(obj))
 			return true;
-		if (obj == null || !(obj instanceof AccessPath))
+		if (obj == null || getClass() != obj.getClass())
 			return false;
 		
 		AccessPath other = (AccessPath) obj;

@@ -27,7 +27,6 @@ import heros.solver.PathEdge;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -228,7 +227,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 
 		final D d2 = edge.factAtTarget();
 		assert d2 != null;
-		List<N> returnSiteNs = icfg.getReturnSitesOfCallAt(n);
+		Collection<N> returnSiteNs = icfg.getReturnSitesOfCallAt(n);
 		
 		//for each possible callee
 		Set<M> callees = icfg.getCalleesOfCallAt(n);
@@ -239,7 +238,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 			Set<D> res = computeCallFlowFunction(function, d1, d2);
 			
 			//for each callee's start point(s)
-			Set<N> startPointsOf = icfg.getStartPointsOf(sCalledProcN);
+			Collection<N> startPointsOf = icfg.getStartPointsOf(sCalledProcN);
 			for(N sP: startPointsOf) {
 				//for each result node of the call-flow function
 				for(D d3: res) {
@@ -440,10 +439,8 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 		final PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
 		final D existingVal = jumpFn.addFunction(edge);
 		if (existingVal != null) {
-			if (existingVal != targetVal) {
-				assert existingVal.equals(targetVal);
+			if (existingVal != targetVal)
 				existingVal.addNeighbor(targetVal);
-			}
 		} else {
 			scheduleEdgeProcessing(edge);
 			if(targetVal!=zeroValue)
