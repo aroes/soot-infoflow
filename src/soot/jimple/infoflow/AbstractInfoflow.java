@@ -30,7 +30,7 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	protected boolean inspectSinks = false;
 	
 	protected final BiDirICFGFactory icfgFactory;
-	protected int maxThreadNum = 1;//-1;
+	protected int maxThreadNum = -1;
 
 	protected CallgraphAlgorithm callgraphAlgorithm = /*CallgraphAlgorithm.OnDemand;*/ CallgraphAlgorithm.AutomaticSelection;
 	protected AliasingAlgorithm aliasingAlgorithm = AliasingAlgorithm.FlowSensitive;

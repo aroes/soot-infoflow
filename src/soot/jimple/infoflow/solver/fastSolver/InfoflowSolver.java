@@ -16,7 +16,6 @@ import heros.solver.CountingThreadPoolExecutor;
 import heros.solver.PathEdge;
 
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Set;
 
 import soot.SootMethod;
@@ -57,7 +56,7 @@ public class InfoflowSolver extends IFDSSolver<Unit, Abstraction, SootMethod, In
 	public void injectContext(IInfoflowSolver otherSolver, SootMethod callee,
 			Abstraction d3, Unit callSite, Abstraction d2, Abstraction d1) {
 		addIncoming(callee, d3, callSite, d1);
-		jumpFn.addFunction(d1, callSite, d2);
+		jumpFn.addFunction(new PathEdge<Unit, Abstraction>(d1, callSite, d2));
 	}
 	
 	@Override
@@ -65,7 +64,6 @@ public class InfoflowSolver extends IFDSSolver<Unit, Abstraction, SootMethod, In
 			(FlowFunction<Abstraction> retFunction, Abstraction d2, Unit callSite, Collection<Abstraction> callerSideDs) {
 		if (retFunction instanceof SolverReturnFlowFunction) {
 			// Get the d1s at the start points of the caller
-			Set<Abstraction> d1s = new HashSet<Abstraction>(callerSideDs.size() * 5);
 			return ((SolverReturnFlowFunction) retFunction).computeTargets(d2, callerSideDs);
 		}
 		else

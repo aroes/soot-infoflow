@@ -27,7 +27,6 @@ import heros.solver.PathEdge;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -160,7 +159,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 			N startPoint = seed.getKey();
 			for(D val: seed.getValue())
 				propagate(zeroValue, startPoint, val, null, false);
-			jumpFn.addFunction(zeroValue, startPoint, zeroValue);
+			jumpFn.addFunction(new PathEdge<N, D>(zeroValue, startPoint, zeroValue));
 		}
 	}
 
@@ -438,16 +437,15 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 	protected void propagate(D sourceVal, N target, D targetVal,
 		/* deliberately exposed to clients */ N relatedCallSite,
 		/* deliberately exposed to clients */ boolean isUnbalancedReturn) {
-		D existingVal = jumpFn.addFunction(sourceVal, target, targetVal);
+		final PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
+		final D existingVal = jumpFn.addFunction(edge);
 		if (existingVal != null) {
 			if (existingVal != targetVal) {
 				assert existingVal.equals(targetVal);
 				existingVal.addNeighbor(targetVal);
 			}
 		} else {
-			PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
 			scheduleEdgeProcessing(edge);
-
 			if(targetVal!=zeroValue)
 				logger.trace("EDGE: <{},{}> -> <{},{}>", icfg.getMethodOf(target), sourceVal, target, targetVal);
 		}
