@@ -1188,9 +1188,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							}
 							}
 						}
-
-						for (TaintPropagationHandler tp : taintPropagationHandlers)
-							tp.notifyFlowOut(exitStmt, res, interproceduralCFG(), FlowFunctionType.ReturnFlowFunction);
 						return res;
 					}
 
@@ -1262,9 +1259,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								// Compute the aliases
 								if (triggerInaktiveTaintOrReverseFlow(iStmt, target, abs))
 									computeAliasTaints(d1, iStmt, target, res, interproceduralCFG().getMethodOf(call), abs);
-								
-								for (TaintPropagationHandler tp : taintPropagationHandlers)
-									tp.notifyFlowOut(iStmt, res, interproceduralCFG(), FlowFunctionType.CallToReturnFlowFunction);
 								return res;
 							}
 
@@ -1378,9 +1372,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										results.add(new AbstractionAtSink(newSource, iStmt.getInvokeExpr(), iStmt));
 								}
 							}
-
-							for (TaintPropagationHandler tp : taintPropagationHandlers)
-								tp.notifyFlowOut(iStmt, res, interproceduralCFG(), FlowFunctionType.CallToReturnFlowFunction);
+							
 							return res;
 						}
 
