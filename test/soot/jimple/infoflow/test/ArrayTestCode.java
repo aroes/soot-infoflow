@@ -27,6 +27,18 @@ public class ArrayTestCode {
 	static String[] staticTainted;
 	transient String[] transTainted;
 	String[] globalTainted;
+	int[] globalIntTainted = new int[30];
+	
+	
+	public void concreteWriteReadSamePosIntArrayTest(){
+		int tainted = TelephonyManager.getIMEI();
+		globalIntTainted[3] = tainted; 
+		int taintedElement = globalIntTainted[3];
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(taintedElement);
+	}
+	
 	
 	public void concreteWriteReadSamePosTest(){
 		String tainted = TelephonyManager.getDeviceId();
