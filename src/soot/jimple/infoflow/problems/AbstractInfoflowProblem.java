@@ -32,6 +32,7 @@ import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
 import soot.Value;
+import soot.jimple.ArrayRef;
 import soot.jimple.Constant;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.InstanceFieldRef;
@@ -274,8 +275,12 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 			if (defStmt.getLeftOp() instanceof Local
 					&& defStmt.getLeftOp() == source.getAccessPath().getPlainValue())
 				return false;
-		}
 
+			// Arrays are heap objects
+			if (defStmt.getLeftOp() instanceof ArrayRef)
+				return true;
+		}
+		
 		// Primitive types or constants do not have aliases
 		if (val.getType() instanceof PrimType)
 			return false;

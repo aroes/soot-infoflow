@@ -577,7 +577,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									// generic case, is true for Locals, ArrayRefs that are equal etc..
 									//y = x && x tainted --> y, x tainted
 									else if (mayAlias(rightValue, newSource.getAccessPath().getPlainValue())) {
-										addLeftValue = true;										
+										addLeftValue = true;
 										targetType = newSource.getAccessPath().getType();
 									}
 								}
