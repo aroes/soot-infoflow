@@ -236,6 +236,10 @@
 <java.util.Collections: java.util.List unmodifiableSortedMap(java.util.SortedMap)>
 <java.util.Collections: java.util.List unmodifiableSortedSet(java.util.SortedSet)>
 
+<java.util.Collections: java.util.Set singleton(java.lang.Object)>
+<java.util.Collections: java.util.List singletonList(java.lang.Object)>
+<java.util.Collections: java.util.Map singletonMap(java.lang.Object,java.lang.Object)>
+
 <android.content.ContentValues: void put(java.lang.String,java.lang.Integer)>
 
 <android.content.Intent: void <init>(android.content.Context,java.lang.Class)>
