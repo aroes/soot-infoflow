@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -22,7 +23,9 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import soot.ArrayType;
+import soot.Body;
 import soot.BooleanType;
 import soot.ByteType;
 import soot.CharType;
@@ -34,6 +37,7 @@ import soot.ShortType;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Type;
+import soot.Unit;
 import soot.Value;
 import soot.VoidType;
 import soot.dava.internal.javaRep.DIntConstant;
@@ -41,6 +45,7 @@ import soot.javaToJimple.LocalGenerator;
 import soot.jimple.AssignStmt;
 import soot.jimple.DoubleConstant;
 import soot.jimple.FloatConstant;
+import soot.jimple.IfStmt;
 import soot.jimple.IntConstant;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Jimple;
@@ -528,6 +533,22 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 			if (!act.hasSuperclass())
 				return false;
 			act = act.getSuperclass();
+		}
+	}
+	
+	/**
+	 * Eliminates all loops of length 0 (if a goto <if a>)
+	 * @param body The body from which to eliminate the self-loops
+	 */
+	protected void eliminateSelfLoops(Body body) {
+		// Get rid of self-loops
+		for (Iterator<Unit> unitIt = body.getUnits().iterator(); unitIt.hasNext(); ) {
+			Unit u = unitIt.next();
+			if (u instanceof IfStmt) {
+				IfStmt ifStmt = (IfStmt) u;
+				if (ifStmt.getTarget() == ifStmt)
+					unitIt.remove();
+			}
 		}
 	}
 

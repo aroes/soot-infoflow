@@ -108,6 +108,7 @@ public class DefaultEntryPointCreator extends BaseEntryPointCreator {
 		
 		body.getUnits().add(Jimple.v().newReturnVoidStmt());
 		NopEliminator.v().transform(body);
+		eliminateSelfLoops(body);
 		return mainMethod;
 	}
 

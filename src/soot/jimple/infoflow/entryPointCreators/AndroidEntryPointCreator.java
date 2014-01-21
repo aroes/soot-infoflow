@@ -263,8 +263,8 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		
 		for(Entry<String, Set<String>> entry : classMap.entrySet()){
 			//no execution order given for all apps:
-//			JNopStmt entryExitStmt = new JNopStmt();
-//			createIfStmt(entryExitStmt);
+			JNopStmt entryExitStmt = new JNopStmt();
+			createIfStmt(entryExitStmt);
 			
 			SootClass currentClass = Scene.v().getSootClass(entry.getKey());
 			currentClass.setApplicationClass();
@@ -364,7 +364,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 			}
 			finally {
 				body.getUnits().add(endClassStmt);
-//				body.getUnits().add(entryExitStmt);
+				body.getUnits().add(entryExitStmt);
 			}
 		}
 		
@@ -387,6 +387,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		
 		// Optimize and check the generated main method
 		NopEliminator.v().transform(body);
+		eliminateSelfLoops(body);
 		if (DEBUG || Options.v().validate())
 			mainMethod.getActiveBody().validate();
 		
@@ -714,12 +715,10 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 			createIfStmt(onSaveInstance);
 
 		//goTo Stop, Resume or Create:
-		JNopStmt pauseToStopStmt = new JNopStmt();
-		createIfStmt(pauseToStopStmt);
+		// (to stop is fall-through, no need to add)
 		createIfStmt(onResumeStmt);
 		createIfStmt(onCreateStmt);
 		
-		body.getUnits().add(pauseToStopStmt);
 		//5. onStop:
 		Stmt onStop = searchAndBuildMethod(AndroidEntryPointConstants.ACTIVITY_ONSTOP, currentClass, entryPoints, classLocal);
 		boolean hasAppOnStop = addCallbackMethods(applicationClass, referenceClasses,
@@ -728,14 +727,12 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 			createIfStmt(onStop);
 
 		//goTo onDestroy, onRestart or onCreate:
+		// (to restart is fall-through, no need to add)
 		JNopStmt stopToDestroyStmt = new JNopStmt();
-		JNopStmt stopToRestartStmt = new JNopStmt();
 		createIfStmt(stopToDestroyStmt);
-		createIfStmt(stopToRestartStmt);
 		createIfStmt(onCreateStmt);
 		
 		//6. onRestart:
-		body.getUnits().add(stopToRestartStmt);
 		searchAndBuildMethod(AndroidEntryPointConstants.ACTIVITY_ONRESTART, currentClass, entryPoints, classLocal);
 		createIfStmt(onStartStmt);	// jump to onStart(), fall through to onDestroy()
 		
