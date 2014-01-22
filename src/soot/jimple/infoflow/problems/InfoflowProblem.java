@@ -82,7 +82,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
     
     private final Map<Unit, Set<Abstraction>> implicitTargets = new ConcurrentHashMap<Unit, Set<Abstraction>>();
     
-	protected final Set<AbstractionAtSink> results = new ConcurrentHashSet<AbstractionAtSink>();
+	protected final Map<AbstractionAtSink, Abstraction> results = new ConcurrentHashMap<AbstractionAtSink, Abstraction>();
 	protected InfoflowResults infoflowResults = null;
 
 	public InfoflowProblem(ISourceSinkManager sourceSinkManager,
@@ -1421,7 +1421,13 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 	 * @param resultAbs The abstraction at the sink instruction
 	 */
 	private void addResult(AbstractionAtSink resultAbs) {
-		results.add(resultAbs);
+		synchronized (results) {
+			Abstraction oldAbs = results.get(resultAbs);
+			if (oldAbs == null)
+				results.put(resultAbs, resultAbs.getAbstraction());
+			else
+				oldAbs.addNeighbor(resultAbs.getAbstraction());
+		}
 	}
 
 	/**
@@ -1439,14 +1445,18 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
     	InfoflowResults results = new InfoflowResults();
     	logger.info("Obtainted {} connections between sources and sinks", this.results.size());
     	int curResIdx = 0;
-    	for (AbstractionAtSink abs : this.results) {
+    	for (AbstractionAtSink abs : this.results.keySet()) {
     		logger.info("Building path " + ++curResIdx);
     		for (SourceContextAndPath context : computePaths ? abs.getAbstraction().getPaths()
     				: abs.getAbstraction().getSources())
-    			if (context.getSymbolic() == null)
+    			if (context.getSymbolic() == null) {
 					results.addResult(abs.getSinkValue(), abs.getSinkStmt(),
 							context.getValue(), context.getStmt(), context.getUserData(),
 							context.getPath(), abs.getSinkStmt());
+					System.out.println("\n\n\n\n\n");
+					System.out.println(context.getPath());
+					System.out.println("\n\n\n\n\n");
+    			}
     	}
     	logger.debug("Path reconstruction done.");
     	

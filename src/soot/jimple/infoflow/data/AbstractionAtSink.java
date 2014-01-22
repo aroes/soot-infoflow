@@ -62,9 +62,6 @@ public class AbstractionAtSink {
 		result = prime * result
 				+ ((abstraction == null) ? 0 : abstraction.hashCode());
 		result = prime * result
-				+ ((abstraction == null || abstraction.getPredecessor() == null) ? 0
-						: abstraction.getPredecessor().hashCode());
-		result = prime * result
 				+ ((sinkStmt == null) ? 0 : sinkStmt.hashCode());
 		result = prime * result
 				+ ((sinkValue == null) ? 0 : sinkValue.hashCode());
@@ -83,8 +80,6 @@ public class AbstractionAtSink {
 				return false;
 		} else {
 			if (!abstraction.equals(other.abstraction))
-				return false;
-			if (abstraction.getPredecessor() != other.abstraction.getPredecessor())
 				return false;
 		}
 		if (sinkStmt == null) {
