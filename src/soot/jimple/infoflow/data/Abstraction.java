@@ -174,8 +174,11 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	}
 	
 	private Abstraction deriveNewAbstractionMutable(AccessPath p, Stmt currentStmt){
-		if (this.accessPath.equals(p) && this.currentStmt == currentStmt)
-			return clone();
+		if (this.accessPath.equals(p) && this.currentStmt == currentStmt) {
+			Abstraction abs = clone();
+			abs.currentStmt = currentStmt;
+			return abs;
+		}
 		
 		Abstraction abs = new Abstraction(p, this);
 		abs.predecessor = this;
@@ -233,8 +236,9 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	 */
 	public final Abstraction deriveNewAbstractionOnThrow(Stmt throwStmt){
 		assert !this.exceptionThrown;
-		Abstraction abs = cloneWithPredecessor(throwStmt);
+		Abstraction abs = clone();
 		
+		abs.currentStmt = throwStmt;
 		abs.sourceContext = null;
 		abs.exceptionThrown = true;
 		return abs;
@@ -363,7 +367,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	public Abstraction getActiveCopy(){
 		assert !this.isAbstractionActive();
 		
-		Abstraction a = cloneWithPredecessor(null);
+		Abstraction a = clone();
 		a.sourceContext = null;
 		a.activationUnit = null;
 		return a;
@@ -440,14 +444,10 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	
 	@Override
 	public Abstraction clone() {
-		return cloneWithPredecessor(null);
-	}
-	
-	private Abstraction cloneWithPredecessor(Stmt predStmt) {
 		Abstraction abs = new Abstraction(accessPath, this);
 		abs.predecessor = this;
-		abs.currentStmt = predStmt;
 		abs.neighbors = null;
+		abs.currentStmt = null;
 		
 		assert abs.equals(this);
 		return abs;
