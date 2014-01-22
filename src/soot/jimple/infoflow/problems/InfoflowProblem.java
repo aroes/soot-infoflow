@@ -626,7 +626,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									assert targetType == null;
 																
 								if (isSink && newSource.isAbstractionActive() && newSource.getAccessPath().isEmpty())
-									results.add(new AbstractionAtSink(newSource, leftValue, assignStmt));
+									addResult(new AbstractionAtSink(newSource, leftValue, assignStmt));
 								if (triggerInaktiveTaintOrReverseFlow(assignStmt, leftValue, newSource) || newSource.isAbstractionActive())
 									addTaintViaStmt(d1, (Stmt) src, leftValue, newSource, res, cutFirstField,
 											interproceduralCFG().getMethodOf(src), targetType);
@@ -719,7 +719,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									&& source.isAbstractionActive()
 									&& sourceSinkManager.isSink(returnStmt, interproceduralCFG())
 									&& source.getAccessPath().isEmpty())
-								results.add(new AbstractionAtSink(source, returnStmt.getOp(), returnStmt));
+								addResult(new AbstractionAtSink(source, returnStmt.getOp(), returnStmt));
 
 							return Collections.singleton(source);
 						}
@@ -1082,7 +1082,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									&& mayAlias(newSource.getAccessPath().getPlainValue(), returnStmt.getOp());
 							if (mustTaintSink && isSink
 									&& newSource.isAbstractionActive())
-								results.add(new AbstractionAtSink(newSource, returnStmt.getOp(), returnStmt));
+								addResult(new AbstractionAtSink(newSource, returnStmt.getOp(), returnStmt));
 						}
 						
 						// If we have no caller, we have nowhere to propagate. This
@@ -1375,13 +1375,13 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								}
 								
 								if (newSource.isAbstractionActive() && taintedParam)
-									results.add(new AbstractionAtSink(newSource, iStmt.getInvokeExpr(), iStmt));
+									addResult(new AbstractionAtSink(newSource, iStmt.getInvokeExpr(), iStmt));
 								// if the base object which executes the method is tainted the sink is reached, too.
 								if (iStmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
 									InstanceInvokeExpr vie = (InstanceInvokeExpr) iStmt.getInvokeExpr();
 									if (newSource.isAbstractionActive()
 											&& mayAlias(vie.getBase(), newSource.getAccessPath().getPlainValue()))
-										results.add(new AbstractionAtSink(newSource, iStmt.getInvokeExpr(), iStmt));
+										addResult(new AbstractionAtSink(newSource, iStmt.getInvokeExpr(), iStmt));
 								}
 							}
 							
@@ -1414,6 +1414,14 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 	@Override
 	public boolean autoAddZero() {
 		return false;
+	}
+	
+	/**
+	 * Adds a new result of the data flow analysis to the collection
+	 * @param resultAbs The abstraction at the sink instruction
+	 */
+	private void addResult(AbstractionAtSink resultAbs) {
+		results.add(resultAbs);
 	}
 
 	/**
