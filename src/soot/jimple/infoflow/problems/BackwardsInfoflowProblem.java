@@ -379,7 +379,6 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 												|| rStmt.getOp() instanceof FieldRef) {
 											Abstraction abs = source.deriveNewAbstraction
 													(source.getAccessPath().copyWithNewValue(rStmt.getOp(), null), (Stmt) src);
-											assert abs != source;		// our source abstraction must be immutable
 											res.add(abs);
 										}
 									}

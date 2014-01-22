@@ -932,7 +932,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (enableStaticFields && source.getAccessPath().isStaticFieldRef())
 							if (fieldsReadByCallee != null && !isFieldReadByCallee(fieldsReadByCallee, source))
 								return Collections.emptySet();
-												
+						
 						Set<Abstraction> res = new HashSet<Abstraction>();
 						// check if whole object is tainted (happens with strings, for example:)
 						if (!dest.isStatic() && ie instanceof InstanceInvokeExpr) {
