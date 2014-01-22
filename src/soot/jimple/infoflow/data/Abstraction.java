@@ -166,8 +166,12 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	
 	public Abstraction deriveNewAbstraction(AccessPath p, Stmt currentStmt,
 			boolean isImplicit){
-		if (this.accessPath.equals(p) && this.currentStmt == currentStmt)
+		// If the new abstraction looks exactly like the current one, there is
+		// no need to create a new object
+		if (this.accessPath.equals(p) && this.currentStmt == currentStmt
+				&& this.isImplicit == isImplicit)
 			return this;
+		
 		Abstraction abs = deriveNewAbstractionMutable(p, currentStmt);
 		abs.isImplicit = isImplicit;
 		return abs;

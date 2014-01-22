@@ -94,7 +94,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					(final DefinitionStmt defStmt, Abstraction d1, Abstraction source) {
 				assert !source.getAccessPath().isEmpty();
 				
-				final Set<Abstraction> res = new HashSet<Abstraction>();
+				final Set<Abstraction> res = new MutableTwoElementSet<Abstraction>();
 				final Value leftValue = BaseSelector.selectBase(defStmt.getLeftOp(), true);
 				
 				// A backward analysis looks for aliases of existing taints and thus

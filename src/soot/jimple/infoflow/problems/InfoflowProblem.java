@@ -934,8 +934,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								return Collections.emptySet();
 						
 						Set<Abstraction> res = new HashSet<Abstraction>();
+						
 						// check if whole object is tainted (happens with strings, for example:)
-						if (!dest.isStatic() && ie instanceof InstanceInvokeExpr) {
+						if (!source.getAccessPath().isStaticFieldRef() && !dest.isStatic()) {
+							assert ie instanceof InstanceInvokeExpr;
 							InstanceInvokeExpr vie = (InstanceInvokeExpr) ie;
 							// this might be enough because every call must happen with a local variable which is tainted itself:
 							if (mayAlias(vie.getBase(), source.getAccessPath().getPlainValue()))
@@ -945,6 +947,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									res.add(abs);
 								}
 						}
+						// staticfieldRefs must be analyzed even if they are not part of the params:
+						else if (enableStaticFields && source.getAccessPath().isStaticFieldRef())
+							res.add(source);
 						
 						//special treatment for clinit methods - no param mapping possible
 						if(!dest.getName().equals("<clinit>")) {
@@ -958,10 +963,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								}
 							}
 						}
-
-						// staticfieldRefs must be analyzed even if they are not part of the params:
-						if (enableStaticFields && source.getAccessPath().isStaticFieldRef())
-							res.add(source);
 						
 						return res;
 					}
@@ -974,15 +975,15 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				final ReturnStmt returnStmt = (exitStmt instanceof ReturnStmt) ? (ReturnStmt) exitStmt : null;
 				final boolean isSink = (returnStmt != null && sourceSinkManager != null)
 						? sourceSinkManager.isSink(returnStmt, interproceduralCFG()) : false;
-
+				
 				final List<Value> paramLocals = new ArrayList<Value>(callee.getParameterCount());
 				for (int i = 0; i < callee.getParameterCount(); i++)
 					paramLocals.add(callee.getActiveBody().getParameterLocal(i));
-
+				
 				// This is not cached by Soot, so accesses are more expensive
 				// than one might think
 				final Local thisLocal = callee.isStatic() ? null : callee.getActiveBody().getThisLocal();	
-
+				
 				return new SolverReturnFlowFunction() {
 
 					@Override
