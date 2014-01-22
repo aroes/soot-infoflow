@@ -555,6 +555,10 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		return dependsOnCutAP;
 	}
 	
+	Abstraction getPredecessor() {
+		return this.predecessor;
+	}
+	
 	@Override
 	public void addNeighbor(Abstraction originalAbstraction) {
 		assert this != zeroValue;
