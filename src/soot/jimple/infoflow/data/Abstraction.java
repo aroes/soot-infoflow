@@ -294,8 +294,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 				return Collections.singleton(new SourceContextAndPath(this));
 			else
 				return Collections.unmodifiableSet(pathCache);
-		sinkAbs = flagAbs;
-
+		
 		// If we have a partial path from a previous run, we extend it instead
 		// of computing it all anew.
 		if (sinkAbs != flagAbs && pathCache != null) {
@@ -316,6 +315,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 			return Collections.unmodifiableSet(pathCache);
 		}
 		
+		this.sinkAbs = flagAbs;
 		this.pathCache = Sets.newHashSet();
 		if (sourceContext != null) {
 			// Construct the path root
@@ -560,21 +560,9 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		if (originalAbstraction == this)
 			return;
 		
-		/*
-		Set<Abstraction> orgNeighbors = null;
-		synchronized (originalAbstraction) {
-			if (originalAbstraction.neighbors != null) {
-				orgNeighbors = new HashSet<Abstraction>(originalAbstraction.neighbors);
-				originalAbstraction.neighbors = null;
-			}
-		}
-		*/
-
 		synchronized (this) {
 			if (neighbors == null)
 				neighbors = Sets.newIdentityHashSet();
-//			if (orgNeighbors != null)
-//				neighbors.addAll(orgNeighbors);
 			
 			if (this.predecessor != originalAbstraction.predecessor
 					|| this.currentStmt != originalAbstraction.currentStmt)
