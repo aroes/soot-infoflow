@@ -12,7 +12,6 @@ package soot.jimple.infoflow.problems;
 
 import heros.FlowFunction;
 import heros.FlowFunctions;
-import heros.InterproceduralCFG;
 import heros.flowfunc.Identity;
 import heros.flowfunc.KillAll;
 import heros.solver.PathEdge;
@@ -57,6 +56,7 @@ import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
 import soot.jimple.infoflow.util.BaseSelector;
+import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 /**
  * class which contains the flow functions for the backwards solver. This is required for on-demand alias analysis.
@@ -68,7 +68,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 		taintWrapper = wrapper;
 	}
 	
-	public BackwardsInfoflowProblem(InterproceduralCFG<Unit, SootMethod> icfg,
+	public BackwardsInfoflowProblem(BiDiInterproceduralCFG<Unit, SootMethod> icfg,
 			ISourceSinkManager sourceSinkManager) {
 		super(icfg, sourceSinkManager);
 	}

@@ -12,7 +12,6 @@ package soot.jimple.infoflow.solver.heros;
 
 import heros.EdgeFunction;
 import heros.FlowFunction;
-import heros.InterproceduralCFG;
 import heros.edgefunc.EdgeIdentity;
 import heros.solver.CountingThreadPoolExecutor;
 import heros.solver.IFDSSolver;
@@ -31,12 +30,13 @@ import soot.jimple.infoflow.solver.functions.SolverCallFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverCallToReturnFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverNormalFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverReturnFlowFunction;
+import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 /**
  * We are subclassing the JimpleIFDSSolver because we need the same executor for both the forward and the backward analysis
  * Also we need to be able to insert edges containing new taint information
  * 
  */
-public class InfoflowSolver extends PathTrackingIFDSSolver<Unit, Abstraction, SootMethod, InterproceduralCFG<Unit, SootMethod>>
+public class InfoflowSolver extends PathTrackingIFDSSolver<Unit, Abstraction, SootMethod, BiDiInterproceduralCFG<Unit, SootMethod>>
 		implements IInfoflowSolver {
 
 	public InfoflowSolver(AbstractInfoflowProblem problem, CountingThreadPoolExecutor executor) {

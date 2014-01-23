@@ -16,7 +16,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
-import soot.Body;
 import soot.Scene;
 import soot.SootField;
 import soot.SootMethod;
@@ -49,7 +48,7 @@ public class InfoflowCFG implements IInfoflowCFG {
 				@Override
 				public UnitContainer load(Unit unit) throws Exception {
 					SootMethod method = getMethodOf(unit);
-					DirectedGraph<Unit> graph = delegate.getOrCreateUnitGraph(method.getActiveBody());
+					DirectedGraph<Unit> graph = delegate.getOrCreateUnitGraph(method);
 					MHGPostDominatorsFinder<Unit> postdominatorFinder = new MHGPostDominatorsFinder<Unit>(graph);
 					Unit postdom = postdominatorFinder.getImmediateDominator(unit);
 					if (postdom == null)
@@ -194,8 +193,8 @@ public class InfoflowCFG implements IInfoflowCFG {
 	}
 
 	@Override
-	public DirectedGraph<Unit> getOrCreateUnitGraph(Body body) {
-		return delegate.getOrCreateUnitGraph(body);
+	public DirectedGraph<Unit> getOrCreateUnitGraph(SootMethod m) {
+		return delegate.getOrCreateUnitGraph(m);
 	}
 
 	@Override

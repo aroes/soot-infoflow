@@ -18,7 +18,6 @@ import heros.FlowFunction;
 import heros.FlowFunctionCache;
 import heros.FlowFunctions;
 import heros.IFDSTabulationProblem;
-import heros.InterproceduralCFG;
 import heros.SynchronizedBy;
 import heros.ZeroedFlowFunctions;
 import heros.solver.CountingThreadPoolExecutor;
@@ -40,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.infoflow.util.ConcurrentHashSet;
+import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.HashBasedTable;
@@ -56,7 +56,7 @@ import com.google.common.collect.Table;
  * @param <I> The type of inter-procedural control-flow graph being used.
  * @see IFDSTabulationProblem
  */
-public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG<N, M>> {
+public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterproceduralCFG<N, M>> {
 	
 	public static CacheBuilder<Object, Object> DEFAULT_CACHE_BUILDER = CacheBuilder.newBuilder().concurrencyLevel
 			(Runtime.getRuntime().availableProcessors()).initialCapacity(10000).softValues();
@@ -436,6 +436,9 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 	protected void propagate(D sourceVal, N target, D targetVal,
 		/* deliberately exposed to clients */ N relatedCallSite,
 		/* deliberately exposed to clients */ boolean isUnbalancedReturn) {
+//		final boolean canHaveNeighbors = icfg.isStartPoint(target)
+//				|| icfg.getPredsOf(target).size() > 1;
+		
 		final PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
 		final D existingVal = jumpFn.addFunction(edge);
 		if (existingVal != null) {

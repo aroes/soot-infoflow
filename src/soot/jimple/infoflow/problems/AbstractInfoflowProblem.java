@@ -10,8 +10,6 @@
  ******************************************************************************/
 package soot.jimple.infoflow.problems;
 
-import heros.InterproceduralCFG;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -50,13 +48,15 @@ import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
 import soot.jimple.infoflow.util.ConcurrentHashSet;
 import soot.jimple.infoflow.util.DataTypeHandler;
 import soot.jimple.toolkits.ide.DefaultJimpleIFDSTabulationProblem;
+import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 /**
  * abstract super class which 
  * 	- concentrates functionality used by InfoflowProblem and BackwardsInfoflowProblem
  *  - contains helper functions which should not pollute the naturally large InfofflowProblems
  *
  */
-public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulationProblem<Abstraction, InterproceduralCFG<Unit, SootMethod>> {
+public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulationProblem<Abstraction,
+			BiDiInterproceduralCFG<Unit, SootMethod>> {
 
 	protected final Map<Unit, Set<Abstraction>> initialSeeds = new HashMap<Unit, Set<Abstraction>>();
 	protected ITaintPropagationWrapper taintWrapper;
@@ -85,7 +85,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 
 	private Map<Unit, Set<Unit>> activationUnitsToCallSites = new ConcurrentHashMap<Unit, Set<Unit>>();
 	
-	public AbstractInfoflowProblem(InterproceduralCFG<Unit, SootMethod> icfg,
+	public AbstractInfoflowProblem(BiDiInterproceduralCFG<Unit, SootMethod> icfg,
 			ISourceSinkManager sourceSinkManager) {
 		super(icfg);
 		this.sourceSinkManager = sourceSinkManager;
