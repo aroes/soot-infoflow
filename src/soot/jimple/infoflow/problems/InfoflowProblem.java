@@ -1453,9 +1453,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					results.addResult(abs.getSinkValue(), abs.getSinkStmt(),
 							context.getValue(), context.getStmt(), context.getUserData(),
 							context.getPath(), abs.getSinkStmt());
-					System.out.println("\n\n\n\n\n");
-					System.out.println(context.getPath());
-					System.out.println("\n\n\n\n\n");
+//					System.out.println("\n\n\n\n\n");
+//					System.out.println(context.getPath());
+//					System.out.println("\n\n\n\n\n");
     			}
     	}
     	logger.debug("Path reconstruction done.");

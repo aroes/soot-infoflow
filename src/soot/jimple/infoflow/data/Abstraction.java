@@ -229,6 +229,8 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		AccessPath newAP = new AccessPath(taint, fields, baseType, types,
 				accessPath.getTaintSubFields());
 		
+		if (this.getAccessPath().equals(newAP) && this.currentStmt == currentStmt)
+			return this;
 		return deriveNewAbstractionMutable(newAP, currentStmt);
 	}
 
