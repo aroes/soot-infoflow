@@ -202,4 +202,9 @@ public class InfoflowCFG implements IInfoflowCFG {
 		return delegate.getParameterRefs(m);
 	}
 
+	@Override
+	public boolean isReturnSite(Unit n) {
+		return delegate.isReturnSite(n);
+	}
+
 }
