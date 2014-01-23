@@ -204,8 +204,7 @@ public class InfoflowCFG implements IInfoflowCFG {
 
 	@Override
 	public boolean isReturnSite(Unit n) {
-		// TODO Auto-generated method stub
-		return false;
+		return delegate.isReturnSite(n);
 	}
 
 }
