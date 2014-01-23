@@ -13,6 +13,7 @@ package soot.jimple.infoflow.test.junit;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import soot.jimple.infoflow.Infoflow;
@@ -24,6 +25,7 @@ import soot.jimple.infoflow.Infoflow;
 public class ArrayTests extends JUnitTests {
 	
 	@Test(timeout = 300000)
+	@Ignore
 	public void arrayIntReadWriteTest() { //TODO check
 		Infoflow infoflow = initInfoflow();
 		List<String> epoints = new ArrayList<String>();
