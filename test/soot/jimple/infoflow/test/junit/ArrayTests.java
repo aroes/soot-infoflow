@@ -24,7 +24,6 @@ import soot.jimple.infoflow.Infoflow;
  */
 public class ArrayTests extends JUnitTests {
 	
-	@Test(timeout = 300000)
 	@Ignore
 	public void arrayIntReadWriteTest() { //TODO check
 		Infoflow infoflow = initInfoflow();
