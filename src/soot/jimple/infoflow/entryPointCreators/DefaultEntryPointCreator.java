@@ -112,4 +112,17 @@ public class DefaultEntryPointCreator extends BaseEntryPointCreator {
 		return mainMethod;
 	}
 
+	@Override
+	public SootMethod createDummyMain(List<String> methods, SootMethod dummyMainMethod) 
+	{
+		
+		return null;
+	}
+
+	@Override
+	protected SootMethod createDummyMainInternal(List<String> methods,
+			SootMethod emptySootMethod) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
