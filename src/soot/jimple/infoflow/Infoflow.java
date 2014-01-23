@@ -45,6 +45,7 @@ import soot.jimple.infoflow.config.IInfoflowConfig;
 import soot.jimple.infoflow.entryPointCreators.IEntryPointCreator;
 import soot.jimple.infoflow.handlers.ResultsAvailableHandler;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler;
+import soot.jimple.infoflow.ipc.DefaultIPCManager;
 import soot.jimple.infoflow.ipc.IIPCManager;
 import soot.jimple.infoflow.problems.BackwardsInfoflowProblem;
 import soot.jimple.infoflow.problems.InfoflowProblem;
@@ -72,7 +73,7 @@ public class Infoflow extends AbstractInfoflow {
 	private final boolean forceAndroidJar;
 	private IInfoflowConfig sootConfig;
 	
-	private IIPCManager ipcManager = null;
+	private IIPCManager ipcManager = new DefaultIPCManager(new ArrayList<String>());
 	
     private IInfoflowCFG iCfg;
     
