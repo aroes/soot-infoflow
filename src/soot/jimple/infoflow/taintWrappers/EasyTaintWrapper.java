@@ -184,7 +184,8 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 					DefinitionStmt def = (DefinitionStmt) stmt;
 
 					// Check for exclusions
-					Set<String> excludedMethods = this.excludeList.get(def.getInvokeExpr().getMethod().getDeclaringClass().getName());
+					Set<String> excludedMethods = this.excludeList.get
+							(def.getInvokeExpr().getMethod().getDeclaringClass().getName());
 					if (excludedMethods == null || !excludedMethods.contains(subSig))
 						taints.add(new AccessPath(def.getLeftOp(), true));
 				}
@@ -195,7 +196,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		}
 				
 		//if param is tainted && classList contains classname && if list. contains signature of method -> add propagation
-		if ((isSupported || taintEqualsHashCode) && isMethodRegistered(method, true))
+		if ((isSupported || taintEqualsHashCode) && isMethodRegistered(subSig, method.getDeclaringClass(), true))
 			for (Value param : stmt.getInvokeExpr().getArgs()) {
 				if (param.equals(taintedPath.getPlainValue())) {
 					// If we call a method on an instance with a tainted parameter, this
@@ -221,27 +222,27 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 	 * Checks whether the taint wrapper has been configured for the given
 	 * method in its direct class, one of its superclasses, one of its
 	 * interfaces, or a (super)interface of one of its superclasses.
-	 * @param m The method to look for
+	 * @param subSig The subsignature of the method to look for
+	 * @param parentClass The parent class in which to start looking
 	 * @param newTaintsOnly Only return true if the method has been
 	 * registered for creating new taints
 	 * @return True if the given method has been configured somewhere
 	 * up in the hierarchy, otherwise false
 	 */
-	private boolean isMethodRegistered(SootMethod m, boolean newTaintsOnly) {
-		if (classList.containsKey(m.getDeclaringClass().getName()))
+	private boolean isMethodRegistered(String subSig, SootClass parentClass, boolean newTaintsOnly) {
+		if (classList.containsKey(parentClass.getName()))
 			return true;
 		if (!newTaintsOnly)
-			if (excludeList.containsKey(m.getDeclaringClass().getName())
-					|| killList.containsKey(m.getDeclaringClass().getName()))
+			if (excludeList.containsKey(parentClass.getName())
+					|| killList.containsKey(parentClass.getName()))
 				return true;
 		
-		String subSig = m.getSubSignature();
-		if (m.getDeclaringClass().isInterface())
-			return hasMethodForInterface(subSig, m.getDeclaringClass(), newTaintsOnly);
+		if (parentClass.isInterface())
+			return hasMethodForInterface(subSig, parentClass, newTaintsOnly);
 		else {
 			// We have to walk up the hierarchy to also include all methods
 			// registered for superclasses
-			List<SootClass> superclasses = Scene.v().getActiveHierarchy().getSuperclassesOfIncluding(m.getDeclaringClass());
+			List<SootClass> superclasses = Scene.v().getActiveHierarchy().getSuperclassesOfIncluding(parentClass);
 			for(SootClass sclass : superclasses) {
 				if (hasEntriesForMethod(sclass.getName(), subSig, newTaintsOnly))
 					return true;
@@ -323,7 +324,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 				&& (methodSubSig.equals("boolean equals(java.lang.Object)") || methodSubSig.equals("int hashCode()")))
 			return true;
 		
-		return isMethodRegistered(method, false);
+		return isMethodRegistered(methodSubSig, method.getDeclaringClass(), false);
 	}
 	
 	/**

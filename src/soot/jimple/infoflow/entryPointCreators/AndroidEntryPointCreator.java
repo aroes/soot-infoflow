@@ -169,7 +169,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 
 		// Resolve all requested classes
 		for (Entry<String, Set<String>> entry : classMap.entrySet())
-			Scene.v().forceResolve(entry.getKey(), SootClass.BODIES);
+			Scene.v().forceResolve(entry.getKey(), SootClass.SIGNATURES);
 		
 		// For some weird reason unknown to anyone except the flying spaghetti
 		// monster, the onCreate() methods of content providers run even before
