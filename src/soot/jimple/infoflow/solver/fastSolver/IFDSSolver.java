@@ -23,6 +23,7 @@ import heros.SynchronizedBy;
 import heros.ZeroedFlowFunctions;
 import heros.solver.CountingThreadPoolExecutor;
 import heros.solver.LinkedNode;
+import heros.solver.Pair;
 import heros.solver.PathEdge;
 
 import java.util.Collection;
@@ -80,8 +81,8 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 	//stores summaries that were queried before they were computed
 	//see CC 2010 paper by Naeem, Lhotak and Rodriguez
 	@SynchronizedBy("consistent lock on 'incoming'")
-	protected final Table<M,D,Map<N,Set<D>>> endSummary = HashBasedTable.create();
-
+	protected final Table<M,D,Set<Pair<N,D>>> endSummary = HashBasedTable.create();
+	
 	//edges going along calls
 	//see CC 2010 paper by Naeem, Lhotak and Rodriguez
 	@SynchronizedBy("consistent lock on field")
@@ -232,7 +233,6 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 		//for each possible callee
 		Set<M> callees = icfg.getCalleesOfCallAt(n);
 		for(M sCalledProcN: callees) { //still line 14
-			
 			//compute the call-flow function
 			FlowFunction<D> function = flowFunctions.getCallFlowFunction(n, sCalledProcN);
 			Set<D> res = computeCallFlowFunction(function, d1, d2);
@@ -246,7 +246,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 					propagate(d3, sP, d3, n, false); //line 15
 	
 					//register the fact that <sp,d3> has an incoming edge from <n,d2>
-					Map<N, Set<D>> endSumm;
+					Set<Pair<N, D>> endSumm;
 					synchronized (incoming) {
 						//line 15.1 of Naeem/Lhotak/Rodriguez
 						addIncoming(sCalledProcN,d3,n,d1);
@@ -260,17 +260,16 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 					//create new caller-side jump functions to the return sites
 					//because we have observed a potentially new incoming edge into <sP,d3>
 					if (endSumm != null)
-						for(Entry<N, Set<D>> entry: endSumm.entrySet()) {
-							N eP = entry.getKey();
-							for (D d4 : entry.getValue()) {
-								//for each return site
-								for(N retSiteN: returnSiteNs) {
-									//compute return-flow function
-									FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
-									//for each target value of the function
-									for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d2)))
-										propagate(d1, retSiteN, d5, n, false);
-								}
+						for(Pair<N, D> entry: endSumm) {
+							N eP = entry.getO1();
+							D d4 = entry.getO2();
+							//for each return site
+							for(N retSiteN: returnSiteNs) {
+								//compute return-flow function
+								FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
+								//for each target value of the function
+								for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d2)))
+									propagate(d1, retSiteN, d5, n, false);
 							}
 						}
 				}
@@ -448,24 +447,19 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 		}
 	}
 	
-	private Map<N, Set<D>> endSummary(M m, D d3) {
-		Map<N, Set<D>> map = endSummary.get(m, d3);
+	private Set<Pair<N, D>> endSummary(M m, D d3) {
+		Set<Pair<N, D>> map = endSummary.get(m, d3);
 		return map;
 	}
 
 	private void addEndSummary(M m, D d1, N eP, D d2) {
 		synchronized (endSummary) {
-			Map<N, Set<D>> summaries = endSummary.get(m, d1);
+			Set<Pair<N, D>> summaries = endSummary.get(m, d1);
 			if(summaries==null) {
-				summaries = new ConcurrentHashMap<N, Set<D>>();
+				summaries = new ConcurrentHashSet<Pair<N, D>>();
 				endSummary.put(m, d1, summaries);
 			}
-			Set<D> d2s = summaries.get(eP);
-			if (d2s == null) {
-				d2s = new ConcurrentHashSet<D>();
-				summaries.put(eP,d2s);
-			}
-			d2s.add(d2);
+			summaries.add(new Pair<N, D>(eP, d2));
 		}
 	}	
 	
