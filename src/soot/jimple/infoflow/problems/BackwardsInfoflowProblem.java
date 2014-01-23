@@ -168,10 +168,10 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					else if (rightValue.equals(source.getAccessPath().getPlainValue())) {
 						Type newType = source.getAccessPath().getType();
 						if (leftValue instanceof ArrayRef)
-							newType = ArrayType.v(newType, 1);
+							newType = buildArrayOrAddDimension(newType);
 						else if (assignStmt.getRightOp() instanceof ArrayRef)
-							newType = ((ArrayType) newType).getArrayElementType();
-	
+							newType = ((ArrayType) newType).getElementType();
+						
 						// Special type handling for certain operations
 						if (assignStmt.getRightOp() instanceof LengthExpr) {
 							assert source.getAccessPath().getType() instanceof ArrayType;
@@ -235,18 +235,20 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							if (targetType != null) {
 								// Special handling for some operations
 								if (assignStmt.getRightOp() instanceof ArrayRef)
-									targetType = ArrayType.v(targetType, 1);
+									targetType = buildArrayOrAddDimension(targetType);
 								else if (leftValue instanceof ArrayRef) {
 									assert source.getAccessPath().getType() instanceof ArrayType;
-									targetType = ((ArrayType) targetType).getArrayElementType();
+									targetType = ((ArrayType) targetType).getElementType();
 								}
 							}
 							
 							// Special type handling for certain operations
 							if (assignStmt.getRightOp() instanceof LengthExpr)
 								targetType = null;
-							else if (assignStmt.getRightOp() instanceof CastExpr)
-								targetType = null;
+							// We do not need to handle casts. Casts only make
+							// types more imprecise when going backwards.							
+							//		else if (assignStmt.getRightOp() instanceof CastExpr)
+							//			targetType = null;
 							
 							Abstraction newAbs = source.deriveNewAbstraction(rightValue, cutFirstField,
 									targetType);

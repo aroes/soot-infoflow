@@ -617,9 +617,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									// Special handling for array (de)construction
 									if (targetType != null) {
 										if (leftValue instanceof ArrayRef)
-											targetType = ArrayType.v(targetType, 1);
+											targetType = buildArrayOrAddDimension(targetType);
 										else if (assignStmt.getRightOp() instanceof ArrayRef)
-											targetType = ((ArrayType) targetType).getArrayElementType();
+											targetType = ((ArrayType) targetType).getElementType();
 									}
 								}
 								else

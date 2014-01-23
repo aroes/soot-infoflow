@@ -432,4 +432,19 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 		this.taintPropagationHandlers.add(handler);
 	}
 	
+	/**
+	 * Builds a new array of the given type if it is a base type or increments
+	 * the dimensions of the given array by 1 otherwise.
+	 * @param type The base type or incoming array
+	 * @return The resulting array
+	 */
+	public Type buildArrayOrAddDimension(Type type) {
+		if (type instanceof ArrayType) {
+			ArrayType array = (ArrayType) type;
+			return array.makeArrayType();
+		}
+		else
+			return ArrayType.v(type, 1);
+	}
+	
 }

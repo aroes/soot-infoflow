@@ -80,7 +80,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	 * has been cut during alias analysis.
 	 */
 	private boolean dependsOnCutAP = false;
-		
+	
 	public Abstraction(Value taint, SourceInfo sourceInfo,
 			Value sourceVal, Stmt sourceStmt,
 			boolean exceptionThrown,
@@ -90,7 +90,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 				exceptionThrown, isImplicit);
 	}
 
-	public Abstraction(Value taint, boolean taintSubFields,
+	protected Abstraction(Value taint, boolean taintSubFields,
 			Value sourceVal, Stmt sourceStmt, Object userData,
 			boolean exceptionThrown,
 			boolean isImplicit){

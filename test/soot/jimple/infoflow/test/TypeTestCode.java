@@ -197,5 +197,27 @@ public class TypeTestCode {
 	private void objArgFunction2(Object[] x) {
 		x[0] = TelephonyManager.getDeviceId();
 	}
+	
+	public void arrayCastAndAliasTest() {
+		String[] x = new String[1];
+		Object y = x;
+		x[0] = TelephonyManager.getDeviceId();
+		Object obj = y;
+		String[] out = (String[]) obj;
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(out[0]);
+	}
+	
+	public void twoDimensionArrayTest() {
+		String[] x = new String[1];
+		Object y = x;
+		x[0] = TelephonyManager.getDeviceId();
+		Object[] foo = new Object[1];
+		foo[0] = y;
+		Object bar = foo;
+		String[][] out = (String[][]) bar;
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(out[0][0]);
+	}
 
 }
