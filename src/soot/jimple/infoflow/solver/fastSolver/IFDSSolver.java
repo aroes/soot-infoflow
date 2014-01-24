@@ -159,7 +159,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 			N startPoint = seed.getKey();
 			for(D val: seed.getValue())
 				propagate(zeroValue, startPoint, val, null, false);
-			jumpFn.addFunction(new PathEdge<N, D>(zeroValue, startPoint, zeroValue));
+			jumpFn.addFunction(new WeakPathEdge<N, D>(zeroValue, startPoint, zeroValue));
 		}
 	}
 
@@ -249,7 +249,8 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 					Set<Pair<N, D>> endSumm;
 					synchronized (incoming) {
 						//line 15.1 of Naeem/Lhotak/Rodriguez
-						addIncoming(sCalledProcN,d3,n,d1);
+						if (!addIncoming(sCalledProcN,d3,n,d1))
+							continue;
 						
 						//line 15.2
 						endSumm = endSummary(sCalledProcN, d3);
@@ -332,7 +333,8 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 		//line 21.1 of Naeem/Lhotak/Rodriguez
 		//register end-summary
 		synchronized (incoming) {
-			addEndSummary(methodThatNeedsSummary, d1, n, d2);
+			if (!addEndSummary(methodThatNeedsSummary, d1, n, d2))
+				return;
 			inc = incoming(d1, methodThatNeedsSummary);
 		}
 		
@@ -436,7 +438,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 		/* deliberately exposed to clients */ N relatedCallSite,
 		/* deliberately exposed to clients */ boolean isUnbalancedReturn) {
 		final PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
-		final D existingVal = jumpFn.addFunction(edge);
+		final D existingVal = jumpFn.addFunction(new WeakPathEdge<N, D>(sourceVal, target, targetVal));
 		if (existingVal != null) {
 			if (existingVal != targetVal)
 				existingVal.addNeighbor(targetVal);
@@ -452,14 +454,14 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 		return map;
 	}
 
-	private void addEndSummary(M m, D d1, N eP, D d2) {
+	private boolean addEndSummary(M m, D d1, N eP, D d2) {
 		synchronized (endSummary) {
 			Set<Pair<N, D>> summaries = endSummary.get(m, d1);
 			if(summaries==null) {
 				summaries = new ConcurrentHashSet<Pair<N, D>>();
 				endSummary.put(m, d1, summaries);
 			}
-			summaries.add(new Pair<N, D>(eP, d2));
+			return summaries.add(new Pair<N, D>(eP, d2));
 		}
 	}	
 	
@@ -470,7 +472,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 		}
 	}
 	
-	protected void addIncoming(M m, D d3, N n, D d2) {
+	protected boolean addIncoming(M m, D d3, N n, D d2) {
 		synchronized (incoming) {
 			Map<N, Set<D>> summaries = incoming.get(m, d3);
 			if(summaries==null) {
@@ -482,7 +484,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 				set = new ConcurrentHashSet<D>();
 				summaries.put(n,set);
 			}
-			set.add(d2);
+			return set.add(d2);
 		}
 	}
 	
