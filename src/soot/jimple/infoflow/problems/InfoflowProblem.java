@@ -300,8 +300,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			}
 			
 			/**
-			 * Creates a new taint abstraction for the given value
-			 * @param src The source statement from which the taint originated
+			 * Taints the left side of the given assignment
+			 * @param assignStmt The source statement from which the taint originated
 			 * @param targetValue The target value that shall now be tainted
 			 * @param source The incoming taint abstraction from the source
 			 * @param taintSet The taint set to which to add all newly produced
@@ -309,40 +309,70 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			 */
 			private void addTaintViaStmt
 					(final Abstraction d1,
-					final Stmt src,
-					final Value targetValue,
+					final AssignStmt assignStmt,
+					final Value leftValue,
 					Abstraction source,
 					Set<Abstraction> taintSet,
 					boolean cutFirstField,
 					SootMethod method,
 					Type targetType) {
-				// Keep the original taint
+				// We always keep the original taint
 				taintSet.add(source);
 				
 				// Do not taint static fields unless the option is enabled
-				if (!enableStaticFields && targetValue instanceof StaticFieldRef)
+				if (!enableStaticFields && leftValue instanceof StaticFieldRef)
 					return;
-				
-				// Strip array references to their respective base
-				Value baseTarget = targetValue;
-				if (targetValue instanceof ArrayRef)
-					baseTarget = ((ArrayRef) targetValue).getBase();
 
-				// also taint the target of the assignment
-				Abstraction newAbs;
-				if (source.getAccessPath().isEmpty())
-					newAbs = source.deriveNewAbstraction(new AccessPath(targetValue, true), src, true);
+				if (!source.getAccessPath().isEmpty()) {
+					// Special type handling for certain operations
+					if (assignStmt.getRightOp() instanceof LengthExpr) {
+						assert source.getAccessPath().getType() instanceof ArrayType;
+						assert leftValue instanceof Local;
+						
+						Abstraction lenAbs = source.deriveNewAbstraction(new AccessPath
+								(leftValue, null, IntType.v(), (Type[]) null, true), assignStmt);
+						taintSet.add(lenAbs);
+						return;		// no aliasing possible
+					}
+					else if (assignStmt.getRightOp() instanceof CastExpr) {
+						// If we cast java.lang.Object to an array type,
+						// we must update our typing information
+						CastExpr cast = (CastExpr) assignStmt.getRightOp();
+						if (cast.getType() instanceof ArrayType && !(targetType instanceof ArrayType)) {
+							assert targetType instanceof RefType;
+							assert ((RefType) targetType).getSootClass()
+									.getName().equals("java.lang.Object");
+							targetType = cast.getType();
+						}
+					}
+					
+					// Special handling for array (de)construction
+					if (targetType != null) {
+						if (assignStmt.getLeftOp() instanceof ArrayRef)
+							targetType = buildArrayOrAddDimension(targetType);
+						else if (assignStmt.getRightOp() instanceof ArrayRef)
+							targetType = ((ArrayType) targetType).getElementType();
+					}
+				}
 				else
-					newAbs = source.deriveNewAbstraction(baseTarget, cutFirstField, src, targetType);
+					// For implicit taints, we have no type information
+					assert targetType == null;
+				
+				// also taint the target of the assignment
+				final Abstraction newAbs;
+				if (source.getAccessPath().isEmpty())
+					newAbs = source.deriveNewAbstraction(new AccessPath(leftValue, true), assignStmt, true);
+				else
+					newAbs = source.deriveNewAbstraction(leftValue, cutFirstField, assignStmt, targetType);
 				taintSet.add(newAbs);
 				
-				if (triggerInaktiveTaintOrReverseFlow(src, targetValue, newAbs)
+				if (triggerInaktiveTaintOrReverseFlow(assignStmt, leftValue, newAbs)
 						&& newAbs.isAbstractionActive()) {
 					// If we overwrite the complete local, there is no need for
 					// a backwards analysis
-					if (!(mustAlias(targetValue, newAbs.getAccessPath().getPlainValue())
+					if (!(mustAlias(leftValue, newAbs.getAccessPath().getPlainValue())
 							&& newAbs.getAccessPath().isLocal()))
-						computeAliasTaints(d1, src, targetValue, taintSet, method, newAbs);
+						computeAliasTaints(d1, assignStmt, leftValue, taintSet, method, newAbs);
 				}
 			}
 			
@@ -607,41 +637,12 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 											newSource.getAccessPath().getType()))
 										return Collections.emptySet();
 								}
-								
-								if (!newSource.getAccessPath().isEmpty()) {
-									// Special type handling for certain operations
-									if (assignStmt.getRightOp() instanceof LengthExpr) {
-										assert newSource.getAccessPath().getType() instanceof ArrayType;
-										targetType = IntType.v();
-									}
-									else if (assignStmt.getRightOp() instanceof CastExpr) {
-										// If we cast java.lang.Object to an array type,
-										// we must update our typing information
-										CastExpr cast = (CastExpr) assignStmt.getRightOp();
-										if (cast.getType() instanceof ArrayType && !(targetType instanceof ArrayType)) {
-											assert targetType instanceof RefType;
-											assert ((RefType) targetType).getSootClass()
-													.getName().equals("java.lang.Object");
-											targetType = cast.getType();
-										}
-									}
-									
-									// Special handling for array (de)construction
-									if (targetType != null) {
-										if (leftValue instanceof ArrayRef)
-											targetType = buildArrayOrAddDimension(targetType);
-										else if (assignStmt.getRightOp() instanceof ArrayRef)
-											targetType = ((ArrayType) targetType).getElementType();
-									}
-								}
-								else
-									assert targetType == null;
-								
+																
 								// If this is a sink, we need to report the finding
 								if (isSink && newSource.isAbstractionActive() && newSource.getAccessPath().isEmpty())
 									addResult(new AbstractionAtSink(newSource, leftValue, assignStmt));
 								
-								addTaintViaStmt(d1, (Stmt) src, leftValue, newSource, res, cutFirstField,
+								addTaintViaStmt(d1, assignStmt, leftValue, newSource, res, cutFirstField,
 										interproceduralCFG().getMethodOf(src), targetType);
 								
 								res.add(newSource);
@@ -983,7 +984,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			}
 
 			@Override
-			public FlowFunction<Abstraction> getReturnFlowFunction(final Unit callSite, final SootMethod callee, final Unit exitStmt, final Unit retSite) {
+			public FlowFunction<Abstraction> getReturnFlowFunction(final Unit callSite,
+					final SootMethod callee, final Unit exitStmt, final Unit retSite) {
 				
 				final ReturnStmt returnStmt = (exitStmt instanceof ReturnStmt) ? (ReturnStmt) exitStmt : null;
 				final boolean isSink = (returnStmt != null && sourceSinkManager != null)
@@ -1119,7 +1121,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								// into the caller's context on return when we leave the last
 								// implicitly-called method
 								if ((abs.isImplicit()
-										&& triggerInaktiveTaintOrReverseFlow(defnStmt, leftOp, abs)
+										&& (abs.getAccessPath().isInstanceFieldRef() || abs.getAccessPath().isStaticFieldRef())
 										&& !callerD1sConditional) || aliasingStrategy.requiresAnalysisOnReturn())
 									for (Abstraction d1 : callerD1s)
 										computeAliasTaints(d1, (Stmt) callSite, leftOp, res,
@@ -1166,12 +1168,15 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									// Aliases of implicitly tainted variables must be mapped back
 									// into the caller's context on return when we leave the last
 									// implicitly-called method
-									if ((abs.isImplicit()
-											&& triggerInaktiveTaintOrReverseFlow((Stmt) callSite, originalCallArg, newSource)
-											&& !callerD1sConditional) || aliasingStrategy.requiresAnalysisOnReturn())
-										for (Abstraction d1 : callerD1s)
-											computeAliasTaints(d1, (Stmt) callSite, originalCallArg, res,
-												interproceduralCFG().getMethodOf(callSite), abs);											
+									if (originalCallArg.getType() instanceof RefType || originalCallArg.getType() instanceof ArrayType)
+										if ((abs.isImplicit() && implicitFlowAliasingStrategy.hasProcessedMethod(callee)
+												&& !callerD1sConditional) || aliasingStrategy.requiresAnalysisOnReturn()) {
+											assert originalCallArg.getType() instanceof ArrayType
+													|| originalCallArg.getType() instanceof RefType;
+											for (Abstraction d1 : callerD1s)
+												computeAliasTaints(d1, (Stmt) callSite, originalCallArg, res,
+													interproceduralCFG().getMethodOf(callSite), abs);
+										}
 								}
 							}
 						}

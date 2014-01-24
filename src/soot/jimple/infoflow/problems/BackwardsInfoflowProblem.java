@@ -172,12 +172,6 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						else if (assignStmt.getRightOp() instanceof ArrayRef)
 							newType = ((ArrayType) newType).getElementType();
 						
-						// Special type handling for certain operations
-						if (assignStmt.getRightOp() instanceof LengthExpr) {
-							assert source.getAccessPath().getType() instanceof ArrayType;
-							newType = IntType.v();
-						}
-						
 						// If this is an unrealizable typecast, drop the abstraction
 						if (defStmt.getRightOp() instanceof CastExpr) {
 							CastExpr ce = (CastExpr) defStmt.getRightOp();
@@ -185,12 +179,22 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 									&& !canCastType(ce.getCastType(), source.getAccessPath().getType()))
 								return Collections.emptySet();
 						}
-						
-						Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
-								(leftValue, newType), defStmt);
-						res.add(abs);
+						// Special type handling for certain operations
+						else if (assignStmt.getRightOp() instanceof LengthExpr) {
+							assert source.getAccessPath().getType() instanceof ArrayType;
+							newType = IntType.v();
+							
+							Abstraction abs = source.deriveNewAbstraction(new AccessPath(leftValue, null,
+									IntType.v(), (Type[]) null, true), defStmt);
+							res.add(abs);
+						}
+						else {
+							Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
+									(leftValue, newType), defStmt);
+							res.add(abs);
+						}
 					}
-
+					
 					// If we have the tainted value on the left side of the assignment,
 					// we also have to look or aliases of the value on the right side of
 					// the assignment.

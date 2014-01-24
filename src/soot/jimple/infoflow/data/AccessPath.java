@@ -105,7 +105,12 @@ public class AccessPath implements Cloneable {
 		else {
 			this.value = val;
 			this.baseType = baseType == null ? (this.value == null ? null : this.value.getType()) : baseType;
-			bFieldType = null;			
+			bFieldType = null;
+			
+			// Make sure that only heap objects may have fields
+			assert val.getType() instanceof RefType 
+					|| val.getType() instanceof ArrayType
+					|| appendingFields == null || appendingFields.length == 0;
 		}
 
 		// Cut the fields at the maximum access path length. If this happens,

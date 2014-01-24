@@ -489,7 +489,19 @@ public class ImplicitFlowTests extends JUnitTests {
 		negativeCheckInfoflow(infoflow);	
 	}
 
-    @Test(timeout=300000) 
+	@Test(timeout=300000)
+	public void conditionalAliasingTest3(){
+		Infoflow infoflow = initInfoflow();
+		infoflow.setInspectSinks(false);
+		infoflow.setEnableImplicitFlows(true);
+
+		List<String> epoints = new ArrayList<String>();
+	    epoints.add("<soot.jimple.infoflow.test.ImplicitFlowTestCode: void conditionalAliasingTest3()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);	
+	}
+
+	@Test(timeout=300000) 
     public void testStringConvert(){
 		Infoflow infoflow = initInfoflow();
 		infoflow.setEnableImplicitFlows(true);

@@ -552,9 +552,18 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 			if (neighbors == null)
 				neighbors = Sets.newIdentityHashSet();
 			
+			if (this.predecessor == originalAbstraction.predecessor) {
+				if (originalAbstraction.neighbors != null)
+					this.neighbors.addAll(originalAbstraction.neighbors);
+			}
+			else
+				this.neighbors.add(originalAbstraction);
+				
+			/*
 			if (this.predecessor != originalAbstraction.predecessor
 					|| this.currentStmt != originalAbstraction.currentStmt)
 				this.neighbors.add(originalAbstraction);
+			*/
 		}
 	}
 		

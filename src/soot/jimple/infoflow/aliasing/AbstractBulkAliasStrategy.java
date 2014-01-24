@@ -1,5 +1,6 @@
 package soot.jimple.infoflow.aliasing;
 
+import soot.SootMethod;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 
@@ -18,5 +19,5 @@ public abstract class AbstractBulkAliasStrategy extends AbstractAliasStrategy {
 	public boolean mayAlias(AccessPath ap1, AccessPath ap2) {
 		return false;
 	}
-
+	
 }

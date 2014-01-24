@@ -56,5 +56,5 @@ public class FlowSensitiveAliasStrategy extends AbstractBulkAliasStrategy {
 	public boolean requiresAnalysisOnReturn() {
 		return false;
 	}
-
+	
 }
