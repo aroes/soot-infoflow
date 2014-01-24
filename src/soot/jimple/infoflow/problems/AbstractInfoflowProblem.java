@@ -33,6 +33,7 @@ import soot.Value;
 import soot.jimple.ArrayRef;
 import soot.jimple.Constant;
 import soot.jimple.DefinitionStmt;
+import soot.jimple.FieldRef;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
@@ -46,9 +47,9 @@ import soot.jimple.infoflow.solver.IInfoflowSolver;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
 import soot.jimple.infoflow.util.ConcurrentHashSet;
-import soot.jimple.infoflow.util.DataTypeHandler;
 import soot.jimple.toolkits.ide.DefaultJimpleIFDSTabulationProblem;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
+
 /**
  * abstract super class which 
  * 	- concentrates functionality used by InfoflowProblem and BackwardsInfoflowProblem
@@ -286,13 +287,10 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 			return false;
 		if (val instanceof Constant)
 			return false;
-			
-		// If the left side is a field or array reference (which is not
-		// overwritten completely), we must look for aliases.
-		if (DataTypeHandler.isFieldRefOrArrayRef(val))
-			return true;
 		
-		return source.getAccessPath().isInstanceFieldRef()
+		return val instanceof FieldRef
+				|| (val instanceof Local && ((Local)val).getType() instanceof ArrayType)
+				|| source.getAccessPath().isInstanceFieldRef()
 				|| source.getAccessPath().isStaticFieldRef();
 	}
 	

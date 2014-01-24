@@ -353,6 +353,21 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				return fieldsReadByCallee.contains(source.getAccessPath().getFirstField());
 			}
 			
+			/**
+			 * Checks whether the given call has at least one valid target,
+			 * i.e. a callee with a body.
+			 * @param call The call site to check
+			 * @return True if there is at least one callee implementation
+			 * for the given call, otherwise false
+			 */
+			private boolean hasValidCallees(Unit call) {
+				Set<SootMethod> callees = interproceduralCFG().getCalleesOfCallAt(call);
+				for (SootMethod callee : callees)
+					if (callee.isConcrete())
+						return true;
+				return false;
+			}
+
 			@Override
 			public FlowFunction<Abstraction> getNormalFlowFunction(final Unit src, final Unit dest) {
 				final SourceInfo sourceInfo = sourceSinkManager != null
@@ -1223,6 +1238,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							(interproceduralCFG().getMethodOf(call), iStmt) : null;
 					final Set<SootField> fieldsWrittenByCallee = enableStaticFields ? interproceduralCFG().getWriteVariables
 							(interproceduralCFG().getMethodOf(call), iStmt) : null;
+							
+					final boolean hasValidCallees = hasValidCallees(call);
 
 					return new SolverCallToReturnFlowFunction() {
 
@@ -1304,7 +1321,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							//otherwise we will loose taint - see ArrayTests/arrayCopyTest
 							if (passOn && newSource.getAccessPath().isInstanceFieldRef())
 								if (inspectSinks || !isSink)
-									if(hasValidCallees(call) || (taintWrapper != null
+									if(hasValidCallees || (taintWrapper != null
 											&& taintWrapper.isExclusive(iStmt, newSource.getAccessPath(),
 													interproceduralCFG()))) {
 										if (iStmt.getInvokeExpr() instanceof InstanceInvokeExpr)
@@ -1387,22 +1404,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							
 							return res;
 						}
-
-						/**
-						 * Checks whether the given call has at least one valid target,
-						 * i.e. a callee with a body.
-						 * @param call The call site to check
-						 * @return True if there is at least one callee implementation
-						 * for the given call, otherwise false
-						 */
-						private boolean hasValidCallees(Unit call) {
-							Set<SootMethod> callees = interproceduralCFG().getCalleesOfCallAt(call);
-							for (SootMethod callee : callees)
-								if (callee.isConcrete())
-										return true;
-							return false;
-						}
-
 
 					};
 				}

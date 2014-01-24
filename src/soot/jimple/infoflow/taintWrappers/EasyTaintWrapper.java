@@ -34,7 +34,9 @@ import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
+import soot.jimple.infoflow.util.EnumTag;
 import soot.jimple.infoflow.util.SootMethodRepresentationParser;
+import soot.tagkit.Tag;
 
 /**
  * A list of methods is passed which contains signatures of instance methods
@@ -47,7 +49,9 @@ import soot.jimple.infoflow.util.SootMethodRepresentationParser;
  *
  */
 public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable {
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final static String TAG_TWEXCLUSIVE = "easyTaintWrapper_isExclusive";
+	
+	private final Logger logger = LoggerFactory.getLogger(getClass());
 	private final Map<String, Set<String>> classList;
 	private final Map<String, Set<String>> excludeList;
 	private final Map<String, Set<String>> killList;
@@ -55,6 +59,13 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 	
 	private boolean aggressiveMode = false;
 	private boolean alwaysModelEqualsHashCode = true;
+	
+	private enum MethodWrapType {
+		CreateTaint,
+		KillTaint,
+		Exclude,
+		NotRegistered
+	}
 	
 	public EasyTaintWrapper(Map<String, Set<String>> classList){
 		this(classList, new HashMap<String, Set<String>>(),
@@ -125,6 +136,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		this(taintWrapper.classList, taintWrapper.excludeList, taintWrapper.killList, taintWrapper.includeList);
 	}
 	
+	@SuppressWarnings("unchecked")
 	@Override
 	public Set<AccessPath> getTaintsForMethod(Stmt stmt, AccessPath taintedPath,
 			IInfoflowCFG icfg) {
@@ -170,23 +182,31 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		if (!isSupported && !aggressiveMode && !taintEqualsHashCode)
 			return taints;
 		
+		// Check for a cached wrap type
+		final MethodWrapType wrapType;
+		Tag tagExclusive = method.getTag(TAG_TWEXCLUSIVE);
+		if (tagExclusive != null)
+			wrapType = MethodWrapType.values()[((EnumTag<MethodWrapType>) tagExclusive).getValue()[0]];
+		else {
+			wrapType = getMethodWrapType(subSig, method.getDeclaringClass());			
+			tagExclusive = new EnumTag<MethodWrapType>(TAG_TWEXCLUSIVE, wrapType);
+			method.addTag(tagExclusive);
+		}
+		
 		if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
 			InstanceInvokeExpr iiExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();			
 			if (iiExpr.getBase().equals(taintedPath.getPlainValue())) {
 				// If the base object is tainted, we have to check whether we must kill the taint
-				Set<String> killMethods = this.killList.get(method.getDeclaringClass().getName());
-				if (killMethods != null && killMethods.contains(subSig))
+				if (wrapType == MethodWrapType.KillTaint)
 					return Collections.emptySet();
-
+				
 				// If the base object is tainted, all calls to its methods always return
 				// tainted values
 				if (stmt instanceof DefinitionStmt) {
 					DefinitionStmt def = (DefinitionStmt) stmt;
 
 					// Check for exclusions
-					Set<String> excludedMethods = this.excludeList.get
-							(def.getInvokeExpr().getMethod().getDeclaringClass().getName());
-					if (excludedMethods == null || !excludedMethods.contains(subSig))
+					if (wrapType != MethodWrapType.Exclude)
 						taints.add(new AccessPath(def.getLeftOp(), true));
 				}
 
@@ -196,7 +216,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		}
 				
 		//if param is tainted && classList contains classname && if list. contains signature of method -> add propagation
-		if ((isSupported || taintEqualsHashCode) && isMethodRegistered(subSig, method.getDeclaringClass(), true))
+		if (isSupported && wrapType == MethodWrapType.CreateTaint)
 			for (Value param : stmt.getInvokeExpr().getArgs()) {
 				if (param.equals(taintedPath.getPlainValue())) {
 					// If we call a method on an instance with a tainted parameter, this
@@ -219,65 +239,53 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 	}
 	
 	/**
-	 * Checks whether the taint wrapper has been configured for the given
-	 * method in its direct class, one of its superclasses, one of its
-	 * interfaces, or a (super)interface of one of its superclasses.
+	 * Checks whether at least one method in the given class is registered in
+	 * the taint wrapper
+	 * @param parentClass The class to check
+	 * @param newTaints Check the list for creating new taints
+	 * @param killTaints Check the list for killing taints
+	 * @param excludeTaints Check the list for excluding taints
+	 * @return True if at least one method of the given class has been registered
+	 * with the taint wrapper, otherwise
+	 */
+	private boolean hasWrappedMethodsForClass(SootClass parentClass,
+			boolean newTaints, boolean killTaints, boolean excludeTaints) {
+		if (newTaints && classList.containsKey(parentClass.getName()))
+			return true;
+		if (excludeTaints && excludeList.containsKey(parentClass.getName()))
+			return true;
+		if (killTaints && killList.containsKey(parentClass.getName()))
+			return true;
+		return false;
+	}
+	
+	/**
+	 * Gets the type of action the taint wrapper shall perform on a given method
 	 * @param subSig The subsignature of the method to look for
 	 * @param parentClass The parent class in which to start looking
-	 * @param newTaintsOnly Only return true if the method has been
-	 * registered for creating new taints
-	 * @return True if the given method has been configured somewhere
-	 * up in the hierarchy, otherwise false
+	 * @return The type of action to be performed on the given method
 	 */
-	private boolean isMethodRegistered(String subSig, SootClass parentClass, boolean newTaintsOnly) {
-		if (classList.containsKey(parentClass.getName()))
-			return true;
-		if (!newTaintsOnly)
-			if (excludeList.containsKey(parentClass.getName())
-					|| killList.containsKey(parentClass.getName()))
-				return true;
-		
+	private MethodWrapType getMethodWrapType(String subSig, SootClass parentClass) {
 		if (parentClass.isInterface())
-			return hasMethodForInterface(subSig, parentClass, newTaintsOnly);
+			return getInterfaceWrapType(subSig, parentClass);
 		else {
 			// We have to walk up the hierarchy to also include all methods
 			// registered for superclasses
 			List<SootClass> superclasses = Scene.v().getActiveHierarchy().getSuperclassesOfIncluding(parentClass);
 			for(SootClass sclass : superclasses) {
-				if (hasEntriesForMethod(sclass.getName(), subSig, newTaintsOnly))
-					return true;
-
+				MethodWrapType wtClass = getMethodWrapTypeDirect(sclass.getName(), subSig);
+				if (wtClass != MethodWrapType.NotRegistered)
+					return wtClass;
+				
 				for (SootClass ifc : sclass.getInterfaces()) {
-					if (hasMethodForInterface(subSig, ifc, newTaintsOnly))
-						return true;
+					MethodWrapType wtIface = getInterfaceWrapType(subSig, ifc);
+					if (wtIface != MethodWrapType.NotRegistered)
+						return wtIface;
 				}
 			}
 		}
 		
-		return false;
-	}
-	
-	/**
-	 * Checks whether the taint wrapper has been configured for the given method
-	 * in the given interface or one of its parent interfaces. 
-	 * @param subSig The method subsignature to look for
-	 * @param ifc The interface where to start the search
-	 * @param newTaintsOnly Only return true if the method has been
-	 * registered for creating new taints
-	 * @return True if the given method is implemented in the given interface or
-	 * one of its super interfaces, otherwise false
-	 */
-	private boolean hasMethodForInterface(String subSig, SootClass ifc,
-			boolean newTaintsOnly) {
-		if (ifc.isPhantom())
-			return hasEntriesForMethod(ifc.getName(), subSig, newTaintsOnly);
-				
-		assert ifc.isInterface() : "Class " + ifc.getName() + " is not an interface, though returned "
-				+ "by getInterfaces().";
-		for (SootClass pifc : Scene.v().getActiveHierarchy().getSuperinterfacesOfIncluding(ifc))
-			if (hasEntriesForMethod(pifc.getName(), subSig, newTaintsOnly))
-				return true;
-		return false;
+		return MethodWrapType.NotRegistered;
 	}
 	
 	/**
@@ -286,30 +294,60 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 	 * hierarchy into account.
 	 * @param className The name of the class to look for
 	 * @param subSignature The method subsignature to look for
-	 * @param newTaintsOnly Only return true if the method has been
-	 * registered for creating new taints
-	 * @return True if the taint wrapper has been configured with the given class
-	 * or interface name and method subsignature, otherwise false
+	 * @return The type of wrapping if the taint wrapper has been configured
+	 * with the given class or interface name and method subsignature, otherwise
+	 * NotRegistered.
 	 */
-	private boolean hasEntriesForMethod(String className, String subSignature,
-			boolean newTaintsOnly) {
+	private MethodWrapType getMethodWrapTypeDirect(String className, String subSignature) {
+		if (alwaysModelEqualsHashCode
+				&& (subSignature.equals("boolean equals(java.lang.Object)") || subSignature.equals("int hashCode()")))
+			return MethodWrapType.CreateTaint;
+
 		Set<String> cEntries = classList.get(className);
 		Set<String> eEntries = excludeList.get(className);
 		Set<String> kEntries = killList.get(className);
 		
 		if (cEntries != null && cEntries.contains(subSignature))
-			return true;
-		if (!newTaintsOnly)
-			if ((eEntries != null && eEntries.contains(subSignature))
-					|| (kEntries != null && kEntries.contains(subSignature)))
-				return true;
-		return false;
+			return MethodWrapType.CreateTaint;
+		if (eEntries != null && eEntries.contains(subSignature))
+			return MethodWrapType.Exclude;
+		if (kEntries != null && kEntries.contains(subSignature))
+			return MethodWrapType.KillTaint;
+		return MethodWrapType.NotRegistered;
 	}
 
+	/**
+	 * Checks whether the taint wrapper has been configured for the given method
+	 * in the given interface or one of its parent interfaces. 
+	 * @param subSig The method subsignature to look for
+	 * @param ifc The interface where to start the search
+	 * @return The configured type of wrapping if the given method is implemented
+	 * in the given interface or one of its super interfaces, otherwise
+	 * NotRegistered
+	 */
+	private MethodWrapType getInterfaceWrapType(String subSig, SootClass ifc) {
+		if (ifc.isPhantom())
+			return getMethodWrapTypeDirect(ifc.getName(), subSig);
+				
+		assert ifc.isInterface() : "Class " + ifc.getName() + " is not an interface, though returned "
+				+ "by getInterfaces().";
+		for (SootClass pifc : Scene.v().getActiveHierarchy().getSuperinterfacesOfIncluding(ifc)) {
+			MethodWrapType wt = getMethodWrapTypeDirect(pifc.getName(), subSig);
+			if (wt != MethodWrapType.NotRegistered)
+				return wt;
+		}
+		return MethodWrapType.NotRegistered;
+	}
+	
+	@SuppressWarnings("unchecked")
 	@Override
 	public boolean isExclusiveInternal(Stmt stmt, AccessPath taintedPath, IInfoflowCFG icfg) {
 		SootMethod method = stmt.getInvokeExpr().getMethod();
 		
+		// Do we have an entry for at least one entry in the given class?
+		if (hasWrappedMethodsForClass(method.getDeclaringClass(), true, true, true))
+			return true;
+
 		// In aggressive mode, we always taint the return value if the base
 		// object is tainted.
 		if (aggressiveMode && stmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
@@ -318,13 +356,34 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 				return true;
 		}
 		
-		// Do we always model equals() and hashCode()?
-		final String methodSubSig = stmt.getInvokeExpr().getMethod().getSubSignature();
-		if (alwaysModelEqualsHashCode
-				&& (methodSubSig.equals("boolean equals(java.lang.Object)") || methodSubSig.equals("int hashCode()")))
-			return true;
+		// Check whether this method has been registered with the taint wrapper
+		Tag tagExclusive = method.getTag(TAG_TWEXCLUSIVE);
+		if (tagExclusive != null)
+			return ((EnumTag<MethodWrapType>) tagExclusive).getValue()[0] != MethodWrapType.NotRegistered.ordinal();
+
+		// If this is not one of the supported classes, we skip it
+		boolean isSupported = false;
+		for (String supportedClass : this.includeList)
+			if (method.getDeclaringClass().getName().startsWith(supportedClass)) {
+				isSupported = true;
+				break;
+			}
 		
-		return isMethodRegistered(methodSubSig, method.getDeclaringClass(), false);
+		// Do we always model equals() and hashCode()?
+		final String methodSubSig = method.getSubSignature();
+		if (alwaysModelEqualsHashCode
+				&& (methodSubSig.equals("boolean equals(java.lang.Object)") || methodSubSig.equals("int hashCode()"))) {
+			method.addTag(new EnumTag<MethodWrapType>(TAG_TWEXCLUSIVE, MethodWrapType.CreateTaint));
+			return true;
+		}
+		
+		// Do not process unsupported classes
+		if (!isSupported)
+			return false;
+		
+		MethodWrapType wrapType = getMethodWrapType(methodSubSig, method.getDeclaringClass());
+		method.addTag(new EnumTag<MethodWrapType>(TAG_TWEXCLUSIVE, wrapType));
+		return wrapType != MethodWrapType.NotRegistered;
 	}
 	
 	/**
