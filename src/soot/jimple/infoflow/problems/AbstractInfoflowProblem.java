@@ -266,7 +266,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	 * @return true if a reverseFlow should be triggered or an inactive taint should be propagated (= resulting object is stored in heap = alias)
 	 */
 	protected boolean triggerInaktiveTaintOrReverseFlow(Stmt stmt, Value val, Abstraction source){
-		if (stmt == null || source.getAccessPath().isEmpty())
+		if (stmt == null || source.getAccessPath().isEmpty() || val == null)
 			return false;
 		
 		if (stmt instanceof DefinitionStmt) {

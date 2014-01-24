@@ -184,13 +184,13 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		
 		// Check for a cached wrap type
 		final MethodWrapType wrapType;
-		Tag tagExclusive = method.getTag(TAG_TWEXCLUSIVE);
+		Tag tagExclusive = null; //method.getTag(TAG_TWEXCLUSIVE);
 		if (tagExclusive != null)
 			wrapType = MethodWrapType.values()[((EnumTag<MethodWrapType>) tagExclusive).getValue()[0]];
 		else {
 			wrapType = getMethodWrapType(subSig, method.getDeclaringClass());			
 			tagExclusive = new EnumTag<MethodWrapType>(TAG_TWEXCLUSIVE, wrapType);
-			method.addTag(tagExclusive);
+//			method.addTag(tagExclusive);
 		}
 		
 		if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
@@ -357,9 +357,11 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		}
 		
 		// Check whether this method has been registered with the taint wrapper
+		/*
 		Tag tagExclusive = method.getTag(TAG_TWEXCLUSIVE);
 		if (tagExclusive != null)
 			return ((EnumTag<MethodWrapType>) tagExclusive).getValue()[0] != MethodWrapType.NotRegistered.ordinal();
+		*/
 
 		// If this is not one of the supported classes, we skip it
 		boolean isSupported = false;
@@ -373,7 +375,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		final String methodSubSig = method.getSubSignature();
 		if (alwaysModelEqualsHashCode
 				&& (methodSubSig.equals("boolean equals(java.lang.Object)") || methodSubSig.equals("int hashCode()"))) {
-			method.addTag(new EnumTag<MethodWrapType>(TAG_TWEXCLUSIVE, MethodWrapType.CreateTaint));
+//			method.addTag(new EnumTag<MethodWrapType>(TAG_TWEXCLUSIVE, MethodWrapType.CreateTaint));
 			return true;
 		}
 		
@@ -382,7 +384,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 			return false;
 		
 		MethodWrapType wrapType = getMethodWrapType(methodSubSig, method.getDeclaringClass());
-		method.addTag(new EnumTag<MethodWrapType>(TAG_TWEXCLUSIVE, wrapType));
+//		method.addTag(new EnumTag<MethodWrapType>(TAG_TWEXCLUSIVE, wrapType));
 		return wrapType != MethodWrapType.NotRegistered;
 	}
 	

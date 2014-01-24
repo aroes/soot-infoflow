@@ -43,11 +43,8 @@ public class JumpFunctions<N,D> {
 	public D addFunction(WeakPathEdge<N, D> edge) {
 		synchronized (this) {
 			WeakPathEdge<N, D> existingVal = nonEmptyReverseLookup.get(edge);
-			if (existingVal != null) {
-				if (existingVal.isDead())
-					nonEmptyReverseLookup.remove(existingVal);
+			if (existingVal != null)
 				return existingVal.factAtTarget();
-			}
 			nonEmptyReverseLookup.put(edge, edge);
 			return null;
 		}
