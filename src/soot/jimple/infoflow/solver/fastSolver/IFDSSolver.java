@@ -159,7 +159,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 			N startPoint = seed.getKey();
 			for(D val: seed.getValue())
 				propagate(zeroValue, startPoint, val, null, false);
-			jumpFn.addFunction(new PathEdge<N, D>(zeroValue, startPoint, zeroValue));
+			jumpFn.addFunction(new WeakPathEdge<N, D>(zeroValue, startPoint, zeroValue));
 		}
 	}
 
@@ -438,7 +438,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 		/* deliberately exposed to clients */ N relatedCallSite,
 		/* deliberately exposed to clients */ boolean isUnbalancedReturn) {
 		final PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
-		final D existingVal = jumpFn.addFunction(edge);
+		final D existingVal = jumpFn.addFunction(new WeakPathEdge<N, D>(sourceVal, target, targetVal));
 		if (existingVal != null) {
 			if (existingVal != targetVal)
 				existingVal.addNeighbor(targetVal);
