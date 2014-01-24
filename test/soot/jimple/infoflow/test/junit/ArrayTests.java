@@ -13,7 +13,6 @@ package soot.jimple.infoflow.test.junit;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import soot.jimple.infoflow.Infoflow;
@@ -24,8 +23,8 @@ import soot.jimple.infoflow.Infoflow;
  */
 public class ArrayTests extends JUnitTests {
 	
-	@Ignore
-	public void arrayIntReadWriteTest() { //TODO check
+	@Test
+	public void arrayIntReadWriteTest() {
 		Infoflow infoflow = initInfoflow();
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.ArrayTestCode: void concreteWriteReadSamePosIntArrayTest()>");
@@ -112,6 +111,15 @@ public class ArrayTests extends JUnitTests {
 		epoints.add("<soot.jimple.infoflow.test.ArrayTestCode: void concreteWriteReadNegativeTest()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		negativeCheckInfoflow(infoflow);
+	}
+
+	@Test(timeout = 300000)
+	public void arrayOverwriteTest() {
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.ArrayTestCode: void arrayOverwriteTest()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
 	}
 
 }

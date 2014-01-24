@@ -365,15 +365,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				else
 					newAbs = source.deriveNewAbstraction(leftValue, cutFirstField, assignStmt, targetType);
 				taintSet.add(newAbs);
-				
+
 				if (triggerInaktiveTaintOrReverseFlow(assignStmt, leftValue, newAbs)
-						&& newAbs.isAbstractionActive()) {
-					// If we overwrite the complete local, there is no need for
-					// a backwards analysis
-					if (!(mustAlias(leftValue, newAbs.getAccessPath().getPlainValue())
-							&& newAbs.getAccessPath().isLocal()))
-						computeAliasTaints(d1, assignStmt, leftValue, taintSet, method, newAbs);
-				}
+						&& newAbs.isAbstractionActive())
+					computeAliasTaints(d1, assignStmt, leftValue, taintSet, method, newAbs);
 			}
 			
 			private boolean isFieldReadByCallee(
@@ -502,10 +497,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							
 							boolean addLeftValue = false;
 							boolean cutFirstField = false;
-							Set<Abstraction> res = new HashSet<Abstraction>();
 							
 							// Fields can be sources in some cases
                             if (source.equals(zeroValue) && sourceInfo != null) {
+    							Set<Abstraction> res = new HashSet<Abstraction>();
                                 final Abstraction abs = new Abstraction(assignStmt.getLeftOp(),
                                 		sourceInfo, assignStmt.getRightOp(), assignStmt,
                                 		false, false);
@@ -521,7 +516,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
                             // on NormalFlow taint cannot be created
 							if (source.equals(zeroValue))
 								return Collections.emptySet();
-
+							
 							// Check whether we must leave a conditional branch
 							if (source.isTopPostdominator(assignStmt)) {
 								source = source.dropTopPostdominator();
@@ -530,6 +525,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									return Collections.emptySet();
 							}
 							
+							// Check whether we must activate a tsaint
 							final Abstraction newSource;
 							if (!source.isAbstractionActive() && src.equals(source.getActivationUnit()))
 								newSource = source.getActiveCopy();
@@ -625,6 +621,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										addLeftValue = true;
 										targetType = newSource.getAccessPath().getType();
 									}
+									
+									// One reason to taint the left side is enough
+									if (addLeftValue)
+										break;
 								}
 							}
 
@@ -634,10 +634,12 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								// or this path is not realizable
 								if (assignStmt.getRightOp() instanceof CastExpr) {
 									if (!canCastType(((CastExpr) assignStmt.getRightOp()).getCastType(),
-											newSource.getAccessPath().getType()))
+											source.getAccessPath().getType()))
 										return Collections.emptySet();
 								}
-																
+
+								Set<Abstraction> res = new HashSet<Abstraction>();
+
 								// If this is a sink, we need to report the finding
 								if (isSink && newSource.isAbstractionActive() && newSource.getAccessPath().isEmpty())
 									addResult(new AbstractionAtSink(newSource, leftValue, assignStmt));
@@ -693,8 +695,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							}
 														
 							//nothing applies: z = y && x tainted -> taint is preserved
-							res.add(newSource);
-							return res;
+							return Collections.singleton(newSource);
 						}
 					};
 				}

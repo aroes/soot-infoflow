@@ -76,7 +76,7 @@ public class AccessPath implements Cloneable {
 			Type[] appendingFieldTypes, boolean taintSubFields){
 		assert (val == null && appendingFields != null && appendingFields.length > 0)
 		 	|| canContainValue(val);
-
+		
 		SootField baseField = null;
 		Type bFieldType = null;
 		if(val instanceof StaticFieldRef){
@@ -108,7 +108,8 @@ public class AccessPath implements Cloneable {
 			bFieldType = null;
 			
 			// Make sure that only heap objects may have fields
-			assert val.getType() instanceof RefType 
+			assert val == null
+					|| val.getType() instanceof RefType 
 					|| val.getType() instanceof ArrayType
 					|| appendingFields == null || appendingFields.length == 0;
 		}

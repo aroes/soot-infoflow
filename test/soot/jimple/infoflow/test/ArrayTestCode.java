@@ -164,4 +164,15 @@ public class ArrayTestCode {
 		cm.publish(untaintedElement);
 	}
 
+	public void arrayOverwriteTest(){
+		String tainted = TelephonyManager.getDeviceId();
+		
+		String[] array = new String[2];
+		array[0] = tainted;
+		array[1] = "neutral";
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(array[0]);
+	}
+
 }

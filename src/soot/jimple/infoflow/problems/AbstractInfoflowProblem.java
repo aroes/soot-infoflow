@@ -266,9 +266,6 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	 * @return true if a reverseFlow should be triggered or an inactive taint should be propagated (= resulting object is stored in heap = alias)
 	 */
 	protected boolean triggerInaktiveTaintOrReverseFlow(Stmt stmt, Value val, Abstraction source){
-		if (stmt == null || source.getAccessPath().isEmpty() || val == null)
-			return false;
-		
 		if (stmt instanceof DefinitionStmt) {
 			DefinitionStmt defStmt = (DefinitionStmt) stmt;
 			// If the left side is overwritten completely, we do not need to
@@ -278,7 +275,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 				return false;
 
 			// Arrays are heap objects
-			if (defStmt.getLeftOp() instanceof ArrayRef)
+			if (val instanceof ArrayRef)
 				return true;
 		}
 		
