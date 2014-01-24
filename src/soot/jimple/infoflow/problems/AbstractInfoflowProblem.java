@@ -289,9 +289,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 			return false;
 		
 		return val instanceof FieldRef
-				|| (val instanceof Local && ((Local)val).getType() instanceof ArrayType)
-				|| source.getAccessPath().isInstanceFieldRef()
-				|| source.getAccessPath().isStaticFieldRef();
+				|| (val instanceof Local && ((Local)val).getType() instanceof ArrayType);
 	}
 	
 	/**

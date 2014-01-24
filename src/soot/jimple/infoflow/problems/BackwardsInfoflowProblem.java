@@ -562,8 +562,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								// that the first statement of a method never ends up in "src".
 								if (returnSite instanceof DefinitionStmt) {
 									DefinitionStmt defStmt = (DefinitionStmt) returnSite;
-									if (baseMatches(defStmt.getLeftOp(), source)
-											/*&& triggerInaktiveTaintOrReverseFlow(defStmt.getLeftOp(), source)*/) {
+									if (baseMatches(defStmt.getLeftOp(), source)) {
 										Abstraction fabs = getForwardAbstraction(source);
 										for (Unit u : interproceduralCFG().getPredsOf(defStmt))
 											fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, fabs));

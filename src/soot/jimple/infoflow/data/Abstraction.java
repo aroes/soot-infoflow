@@ -15,8 +15,6 @@ import heros.solver.LinkedNode;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -295,29 +293,9 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	private Set<SourceContextAndPath> getPaths(boolean reconstructPaths, Abstraction flagAbs) {
 		// If we run into a loop, we symbolically save where to continue on the
 		// next run and abort for now
-		if (sinkAbs == flagAbs)
+		if (sinkAbs == flagAbs) {
 			if (pathCache == null)
-				return Collections.singleton(new SourceContextAndPath(this));
-			else
-				return Collections.unmodifiableSet(pathCache);
-		
-		// If we have a partial path from a previous run, we extend it instead
-		// of computing it all anew.
-		if (sinkAbs != flagAbs && pathCache != null) {
-			sinkAbs = flagAbs;
-			
-			Set<SourceContextAndPath> newScaps = new HashSet<SourceContextAndPath>();
-			Iterator<SourceContextAndPath> scapIt = this.pathCache.iterator();
-			while (scapIt.hasNext()) {
-				SourceContextAndPath scap = scapIt.next();
-				if (scap.getSymbolic() != null) {
-					for (SourceContextAndPath symbolicScap : scap.getSymbolic().getPaths(reconstructPaths, flagAbs))
-						newScaps.add(symbolicScap.extendPath(scap.getPath()));
-					scapIt.remove();
-				}
-			}
-			pathCache.addAll(newScaps);
-			
+				return Collections.emptySet();
 			return Collections.unmodifiableSet(pathCache);
 		}
 		

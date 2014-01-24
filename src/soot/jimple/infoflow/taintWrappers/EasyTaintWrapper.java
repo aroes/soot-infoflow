@@ -34,9 +34,11 @@ import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
-import soot.jimple.infoflow.util.EnumTag;
 import soot.jimple.infoflow.util.SootMethodRepresentationParser;
-import soot.tagkit.Tag;
+
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 
 /**
  * A list of methods is passed which contains signatures of instance methods
@@ -49,13 +51,21 @@ import soot.tagkit.Tag;
  *
  */
 public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable {
-    private final static String TAG_TWEXCLUSIVE = "easyTaintWrapper_isExclusive";
-	
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 	private final Map<String, Set<String>> classList;
 	private final Map<String, Set<String>> excludeList;
 	private final Map<String, Set<String>> killList;
 	private final Set<String> includeList;
+	
+	private LoadingCache<SootMethod, MethodWrapType> methodWrapCache = CacheBuilder.newBuilder().build
+			(new CacheLoader<SootMethod, MethodWrapType>() {
+
+				@Override
+				public MethodWrapType load(SootMethod arg0) throws Exception {
+					return getMethodWrapType(arg0.getSubSignature(), arg0.getDeclaringClass());
+				}
+				
+			});
 	
 	private boolean aggressiveMode = false;
 	private boolean alwaysModelEqualsHashCode = true;
@@ -136,7 +146,6 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		this(taintWrapper.classList, taintWrapper.excludeList, taintWrapper.killList, taintWrapper.includeList);
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
 	public Set<AccessPath> getTaintsForMethod(Stmt stmt, AccessPath taintedPath,
 			IInfoflowCFG icfg) {
@@ -183,15 +192,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 			return taints;
 		
 		// Check for a cached wrap type
-		final MethodWrapType wrapType;
-		Tag tagExclusive = null; //method.getTag(TAG_TWEXCLUSIVE);
-		if (tagExclusive != null)
-			wrapType = MethodWrapType.values()[((EnumTag<MethodWrapType>) tagExclusive).getValue()[0]];
-		else {
-			wrapType = getMethodWrapType(subSig, method.getDeclaringClass());			
-			tagExclusive = new EnumTag<MethodWrapType>(TAG_TWEXCLUSIVE, wrapType);
-//			method.addTag(tagExclusive);
-		}
+		final MethodWrapType wrapType = methodWrapCache.getUnchecked(method);
 		
 		if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
 			InstanceInvokeExpr iiExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();			
@@ -230,7 +231,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 					if (stmt instanceof DefinitionStmt)
 						taints.add(new AccessPath(((DefinitionStmt) stmt).getLeftOp(), true));
 				}
-					
+				
 				// The parameter as such stays tainted
 				taints.add(taintedPath);
 			}
@@ -339,7 +340,6 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		return MethodWrapType.NotRegistered;
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
 	public boolean isExclusiveInternal(Stmt stmt, AccessPath taintedPath, IInfoflowCFG icfg) {
 		SootMethod method = stmt.getInvokeExpr().getMethod();
@@ -356,13 +356,6 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 				return true;
 		}
 		
-		// Check whether this method has been registered with the taint wrapper
-		/*
-		Tag tagExclusive = method.getTag(TAG_TWEXCLUSIVE);
-		if (tagExclusive != null)
-			return ((EnumTag<MethodWrapType>) tagExclusive).getValue()[0] != MethodWrapType.NotRegistered.ordinal();
-		*/
-
 		// If this is not one of the supported classes, we skip it
 		boolean isSupported = false;
 		for (String supportedClass : this.includeList)
@@ -374,17 +367,14 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		// Do we always model equals() and hashCode()?
 		final String methodSubSig = method.getSubSignature();
 		if (alwaysModelEqualsHashCode
-				&& (methodSubSig.equals("boolean equals(java.lang.Object)") || methodSubSig.equals("int hashCode()"))) {
-//			method.addTag(new EnumTag<MethodWrapType>(TAG_TWEXCLUSIVE, MethodWrapType.CreateTaint));
+				&& (methodSubSig.equals("boolean equals(java.lang.Object)") || methodSubSig.equals("int hashCode()")))
 			return true;
-		}
 		
 		// Do not process unsupported classes
 		if (!isSupported)
 			return false;
 		
-		MethodWrapType wrapType = getMethodWrapType(methodSubSig, method.getDeclaringClass());
-//		method.addTag(new EnumTag<MethodWrapType>(TAG_TWEXCLUSIVE, wrapType));
+		final MethodWrapType wrapType = methodWrapCache.getUnchecked(method);
 		return wrapType != MethodWrapType.NotRegistered;
 	}
 	

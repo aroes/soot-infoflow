@@ -626,9 +626,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										}
 									}
 									
-									// TODO: other direction. test case?
-
-									
 									// Special handling for array (de)construction
 									if (targetType != null) {
 										if (leftValue instanceof ArrayRef)
@@ -639,12 +636,13 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								}
 								else
 									assert targetType == null;
-																
+								
+								// If this is a sink, we need to report the finding
 								if (isSink && newSource.isAbstractionActive() && newSource.getAccessPath().isEmpty())
 									addResult(new AbstractionAtSink(newSource, leftValue, assignStmt));
-								if (triggerInaktiveTaintOrReverseFlow(assignStmt, leftValue, newSource) || newSource.isAbstractionActive())
-									addTaintViaStmt(d1, (Stmt) src, leftValue, newSource, res, cutFirstField,
-											interproceduralCFG().getMethodOf(src), targetType);
+								
+								addTaintViaStmt(d1, (Stmt) src, leftValue, newSource, res, cutFirstField,
+										interproceduralCFG().getMethodOf(src), targetType);
 								
 								res.add(newSource);
 								return res;
