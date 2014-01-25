@@ -31,7 +31,7 @@ public class JumpFunctions<N,D> {
 	//where the list is implemented as a mapping from the source value to the function
 	//we exclude empty default functions
 	@SynchronizedBy("consistent lock on this")
-	protected Map<WeakPathEdge<N, D>,D> nonEmptyReverseLookup = Maps.newHashMap();
+	protected Map<WeakPathEdge<N, D>,D> nonEmptyReverseLookup = Maps.newConcurrentMap();
 	
 	public JumpFunctions() {
 	}
@@ -41,13 +41,7 @@ public class JumpFunctions<N,D> {
 	 * @see PathEdge
 	 */
 	public D addFunction(WeakPathEdge<N, D> edge) {
-		synchronized (this) {
-			D existingVal = nonEmptyReverseLookup.get(edge);
-			if (existingVal != null)
-				return existingVal;
-			nonEmptyReverseLookup.put(edge, edge.factAtTarget());
-			return null;
-		}
+		return nonEmptyReverseLookup.put(edge, edge.factAtTarget());
 	}
 	
 	/**
