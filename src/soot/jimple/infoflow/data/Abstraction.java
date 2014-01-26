@@ -551,11 +551,11 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		synchronized (this) {
 			if (neighbors == null)
 				neighbors = Sets.newIdentityHashSet();
+			
+			if (this.predecessor != originalAbstraction.predecessor
+					|| this.currentStmt != originalAbstraction.currentStmt)
+				this.neighbors.add(originalAbstraction);
 		}
-
-		if (this.predecessor != originalAbstraction.predecessor
-				|| this.currentStmt != originalAbstraction.currentStmt)
-			this.neighbors.add(originalAbstraction);
 	}
 		
 	public static Abstraction getZeroAbstraction(boolean flowSensitiveAliasing) {
