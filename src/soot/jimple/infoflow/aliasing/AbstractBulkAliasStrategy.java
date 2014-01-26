@@ -1,6 +1,5 @@
 package soot.jimple.infoflow.aliasing;
 
-import soot.SootMethod;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 
