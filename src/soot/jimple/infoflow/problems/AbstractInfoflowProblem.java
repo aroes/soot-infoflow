@@ -277,6 +277,8 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 			// Arrays are heap objects
 			if (val instanceof ArrayRef)
 				return true;
+			if (val instanceof FieldRef)
+				return true;
 		}
 		
 		// Primitive types or constants do not have aliases
