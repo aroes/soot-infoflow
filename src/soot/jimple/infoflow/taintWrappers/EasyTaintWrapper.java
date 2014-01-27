@@ -267,6 +267,23 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 	 * @return The type of action to be performed on the given method
 	 */
 	private MethodWrapType getMethodWrapType(String subSig, SootClass parentClass) {
+		// If this is not one of the supported classes, we skip it
+		boolean isSupported = false;
+		for (String supportedClass : this.includeList)
+			if (parentClass.getName().startsWith(supportedClass)) {
+				isSupported = true;
+				break;
+			}
+		
+		// Do we always model equals() and hashCode()?
+		if (alwaysModelEqualsHashCode
+				&& (subSig.equals("boolean equals(java.lang.Object)") || subSig.equals("int hashCode()")))
+			return MethodWrapType.CreateTaint;
+		
+		// Do not process unsupported classes
+		if (!isSupported)
+			return MethodWrapType.NotRegistered;
+		
 		if (parentClass.isInterface())
 			return getInterfaceWrapType(subSig, parentClass);
 		else {
@@ -355,24 +372,6 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 			if (iiExpr.getBase().equals(taintedPath.getPlainValue()))
 				return true;
 		}
-		
-		// If this is not one of the supported classes, we skip it
-		boolean isSupported = false;
-		for (String supportedClass : this.includeList)
-			if (method.getDeclaringClass().getName().startsWith(supportedClass)) {
-				isSupported = true;
-				break;
-			}
-		
-		// Do we always model equals() and hashCode()?
-		final String methodSubSig = method.getSubSignature();
-		if (alwaysModelEqualsHashCode
-				&& (methodSubSig.equals("boolean equals(java.lang.Object)") || methodSubSig.equals("int hashCode()")))
-			return true;
-		
-		// Do not process unsupported classes
-		if (!isSupported)
-			return false;
 		
 		final MethodWrapType wrapType = methodWrapCache.getUnchecked(method);
 		return wrapType != MethodWrapType.NotRegistered;
