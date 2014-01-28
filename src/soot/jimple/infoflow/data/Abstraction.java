@@ -15,8 +15,11 @@ import heros.solver.LinkedNode;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.WeakHashMap;
 
 import soot.NullType;
 import soot.SootField;
@@ -54,7 +57,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	private SourceContext sourceContext = null;
 
 	// only used in path generation
-	private Set<SourceContextAndPath> pathCache = null;
+	private Map<Object, Set<SourceContextAndPath>> pathCache = null;
 	
 	/**
 	 * Unit/Stmt which activates the taint when the abstraction passes it
@@ -268,7 +271,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	 * @return The path from the source to the current statement
 	 */
 	public Set<SourceContextAndPath> getPaths() {
-		return getPaths(true, this);
+		return getPaths(true, new Object());
 	}
 	
 	/**
@@ -279,10 +282,8 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	 */
 	public Set<SourceContextAndPath> getSources() {
 		Runtime.getRuntime().gc();
-		return getPaths(false, this);
+		return getPaths(false, new Object());
 	}
-	
-	private Abstraction sinkAbs = null;
 	
 	/**
 	 * Gets the path of statements from the source to the current statement
@@ -290,23 +291,31 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	 * a single path is selected randomly.
 	 * @return The path from the source to the current statement
 	 */
-	private Set<SourceContextAndPath> getPaths(boolean reconstructPaths, Abstraction flagAbs) {
+	private Set<SourceContextAndPath> getPaths(boolean reconstructPaths, Object flagAbs) {
+		if (this.pathCache == null)
+			this.pathCache = new WeakHashMap<Object, Set<SourceContextAndPath>>();
+
 		// If we run into a loop, we symbolically save where to continue on the
 		// next run and abort for now
-		if (sinkAbs == flagAbs) {
-			if (pathCache == null)
-				return Collections.emptySet();
-			return Collections.unmodifiableSet(pathCache);
-		}
+		Set<SourceContextAndPath> cacheData = pathCache.get(flagAbs);
+		if (cacheData != null)
+			return Collections.unmodifiableSet(cacheData);
 		
-		this.sinkAbs = flagAbs;
-		this.pathCache = Sets.newHashSet();
+		// Create a cache entry
+		synchronized (this.pathCache) {
+			cacheData = pathCache.get(flagAbs);
+			if (cacheData == null) {
+				cacheData = new HashSet<SourceContextAndPath>();
+				this.pathCache.put(flagAbs, cacheData);
+			}
+		}			
+		
 		if (sourceContext != null) {
 			// Construct the path root
 			SourceContextAndPath sourceAndPath = new SourceContextAndPath
 					(sourceContext.getValue(), sourceContext.getStmt(),
 							sourceContext.getUserData()).extendPath(sourceContext.getStmt());
-			pathCache.add(sourceAndPath);
+			cacheData.add(sourceAndPath);
 			
 			// Sources may not have predecessors
 			assert predecessor == null;
@@ -315,16 +324,16 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 			for (SourceContextAndPath curScap : predecessor.getPaths(reconstructPaths, flagAbs)) {
 				SourceContextAndPath extendedPath = (currentStmt == null || !reconstructPaths)
 						? curScap : curScap.extendPath(currentStmt);
-				this.pathCache.add(extendedPath);
+				cacheData.add(extendedPath);
 			}
 		}
 			
 		if (neighbors != null)
 			for (Abstraction nb : neighbors)
-				this.pathCache.addAll(nb.getPaths(reconstructPaths, flagAbs));
+				cacheData.addAll(nb.getPaths(reconstructPaths, flagAbs));
 		
 		assert pathCache != null;
-		return Collections.unmodifiableSet(pathCache);
+		return Collections.unmodifiableSet(cacheData);
 	}
 	
 	public boolean isAbstractionActive(){

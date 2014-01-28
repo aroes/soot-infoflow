@@ -59,7 +59,6 @@ import soot.jimple.infoflow.aliasing.ImplicitFlowAliasStrategy;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.AccessPath;
-import soot.jimple.infoflow.data.SourceContextAndPath;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler.FlowFunctionType;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
@@ -1437,36 +1436,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 
 	/**
 	 * Gets the results of the data flow analysis
-	 * @param computePaths True if the paths between sources and sinks shall
-	 * also be computed instead of just reporting that such a path exists
-	 * @return The paths between sources and sinks found by the data flow
-	 * analysis
 	 */
-    public InfoflowResults getResults(boolean computePaths){
-    	if (this.infoflowResults != null)
-    		return this.infoflowResults;
-    	
-    	logger.debug("Running path reconstruction");
-    	InfoflowResults results = new InfoflowResults();
-    	logger.info("Obtainted {} connections between sources and sinks", this.results.size());
-    	int curResIdx = 0;
-    	for (AbstractionAtSink abs : this.results.keySet()) {
-    		logger.info("Building path " + ++curResIdx);
-    		for (SourceContextAndPath context : computePaths ? abs.getAbstraction().getPaths()
-    				: abs.getAbstraction().getSources())
-    			if (context.getSymbolic() == null) {
-					results.addResult(abs.getSinkValue(), abs.getSinkStmt(),
-							context.getValue(), context.getStmt(), context.getUserData(),
-							context.getPath(), abs.getSinkStmt());
-//					System.out.println("\n\n\n\n\n");
-//					System.out.println(context.getPath());
-//					System.out.println("\n\n\n\n\n");
-    			}
-    	}
-    	logger.debug("Path reconstruction done.");
-    	
-    	this.infoflowResults = results;
-	    return results;
+    public Set<AbstractionAtSink> getResults(){
+   		return this.results.keySet();
 	}
 
 }

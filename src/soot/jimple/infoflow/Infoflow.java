@@ -42,6 +42,8 @@ import soot.jimple.infoflow.aliasing.FlowSensitiveAliasStrategy;
 import soot.jimple.infoflow.aliasing.IAliasingStrategy;
 import soot.jimple.infoflow.aliasing.PtsBasedAliasStrategy;
 import soot.jimple.infoflow.config.IInfoflowConfig;
+import soot.jimple.infoflow.data.AbstractionAtSink;
+import soot.jimple.infoflow.data.SourceContextAndPath;
 import soot.jimple.infoflow.entryPointCreators.IEntryPointCreator;
 import soot.jimple.infoflow.handlers.ResultsAvailableHandler;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler;
@@ -65,7 +67,7 @@ public class Infoflow extends AbstractInfoflow {
     private static boolean debug = false;
 	private static int accessPathLength = 5;
 	
-	private InfoflowResults results;
+	private final InfoflowResults results = new InfoflowResults();
 
 	private final String androidPath;
 	private final boolean forceAndroidJar;
@@ -112,7 +114,7 @@ public class Infoflow extends AbstractInfoflow {
 		this.androidPath = androidPath;
 		this.forceAndroidJar = forceAndroidJar;
 	}
-
+	
 	public static void setDebug(boolean debugflag) {
 		debug = debugflag;
 	}
@@ -238,7 +240,7 @@ public class Infoflow extends AbstractInfoflow {
 	public void computeInfoflow(String appPath, String libPath,
 			IEntryPointCreator entryPointCreator,
 			List<String> entryPoints, ISourceSinkManager sourcesSinks) {
-		results = null;
+		results.clear();
 		if (sourcesSinks == null) {
 			logger.error("Sources are empty!");
 			return;
@@ -265,7 +267,7 @@ public class Infoflow extends AbstractInfoflow {
 	@Override
 	public void computeInfoflow(String appPath, String libPath, String entryPoint,
 			ISourceSinkManager sourcesSinks) {
-		results = null;
+		results.clear();
 		if (sourcesSinks == null) {
 			logger.error("Sources are empty!");
 			return;
@@ -314,11 +316,7 @@ public class Infoflow extends AbstractInfoflow {
         iCfg = icfgFactory.buildBiDirICFG(callgraphAlgorithm);
         
         int numThreads = Runtime.getRuntime().availableProcessors();
-
-		CountingThreadPoolExecutor executor = new CountingThreadPoolExecutor
-				(maxThreadNum == -1 ? numThreads : Math.min(maxThreadNum, numThreads),
-				Integer.MAX_VALUE, 30, TimeUnit.SECONDS,
-				new LinkedBlockingQueue<Runnable>());
+		CountingThreadPoolExecutor executor = createExecutor(numThreads);
 		
 		BackwardsInfoflowProblem backProblem;
 		InfoflowSolver backSolver;
@@ -440,7 +438,8 @@ public class Infoflow extends AbstractInfoflow {
 		forwardSolver = null;
 		Runtime.getRuntime().gc();
 		
-		results = forwardProblem.getResults(computeResultPaths);
+		Set<AbstractionAtSink> res = forwardProblem.getResults();
+		computeTaintPaths(res);
 		
 		if (results.getResults().isEmpty())
 			logger.warn("No results found.");
@@ -462,6 +461,61 @@ public class Infoflow extends AbstractInfoflow {
 			handler.onResultsAvailable(iCfg, results);
 	}
 	
+	/**
+	 * Creates a new executor object for spawning worker threads
+	 * @param numThreads
+	 * @return
+	 */
+	private CountingThreadPoolExecutor createExecutor(int numThreads) {
+		return new CountingThreadPoolExecutor
+				(maxThreadNum == -1 ? numThreads : Math.min(maxThreadNum, numThreads),
+				Integer.MAX_VALUE, 30, TimeUnit.SECONDS,
+				new LinkedBlockingQueue<Runnable>());
+	}
+	
+	/**
+	 * Computes the path of tainted data between the source and the sink
+	 * @param res The data flow tracker results
+	 */
+	private void computeTaintPaths(final Set<AbstractionAtSink> res) {
+        int numThreads = Runtime.getRuntime().availableProcessors();
+		CountingThreadPoolExecutor executor = createExecutor(numThreads);
+    	
+		logger.debug("Running path reconstruction");
+    	logger.info("Obtainted {} connections between sources and sinks", res.size());
+    	int curResIdx = 0;
+    	for (final AbstractionAtSink abs : res) {
+    		logger.info("Building path " + ++curResIdx);
+    		executor.execute(new Runnable() {
+				
+				@Override
+				public void run() {
+		    		for (SourceContextAndPath context : computeResultPaths ? abs.getAbstraction().getPaths()
+		    				: abs.getAbstraction().getSources())
+		    			if (context.getSymbolic() == null) {
+							results.addResult(abs.getSinkValue(), abs.getSinkStmt(),
+									context.getValue(), context.getStmt(), context.getUserData(),
+									context.getPath(), abs.getSinkStmt());
+//							System.out.println("\n\n\n\n\n");
+//							System.out.println(context.getPath());
+//							System.out.println("\n\n\n\n\n");
+		    			}
+				}
+				
+			});
+    		
+    	}
+    	
+    	try {
+			executor.awaitCompletion();
+		} catch (InterruptedException ex) {
+			logger.error("Could not wait for path executor completion: {0}", ex.getMessage());
+			ex.printStackTrace();
+		}
+    	executor.shutdown();
+    	logger.debug("Path reconstruction done.");
+	}
+
 	private Collection<SootMethod> getMethodsForSeeds(IInfoflowCFG icfg) {
 		List<SootMethod> seeds = new LinkedList<SootMethod>();
 		// If we have a callgraph, we retrieve the reachable methods. Otherwise,

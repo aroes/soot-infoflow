@@ -13,7 +13,6 @@ package soot.jimple.infoflow;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import soot.Value;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.util.ConcurrentHashSet;
 import soot.tagkit.LineNumberTag;
 
 /**
@@ -225,14 +225,17 @@ public class InfoflowResults {
 				new SourceInfo(source, sourceStmt, userData, newPropPath));
 	}
 
-	public synchronized void addResult(SinkInfo sink, SourceInfo source) {
+	public void addResult(SinkInfo sink, SourceInfo source) {
 		assert sink != null;
 		assert source != null;
 		
-		Set<SourceInfo> sourceInfo = this.results.get(sink);
-		if (sourceInfo == null) {
-			sourceInfo = new HashSet<SourceInfo>();
-			this.results.put(sink, sourceInfo);
+		Set<SourceInfo> sourceInfo = null;
+		synchronized (results) {
+			sourceInfo = this.results.get(sink);
+			if (sourceInfo == null) {
+				sourceInfo = new ConcurrentHashSet<SourceInfo>();
+				this.results.put(sink, sourceInfo);
+			}
 		}
 		sourceInfo.add(source);
 	}
@@ -355,6 +358,13 @@ public class InfoflowResults {
 					wr.write("\t\ton Path " + source.getPath() + "\n");
 			}
 		}
+	}
+	
+	/**
+	 * Removes all results from the data structure
+	 */
+	public void clear() {
+		this.results.clear();
 	}
 	
 	@Override
