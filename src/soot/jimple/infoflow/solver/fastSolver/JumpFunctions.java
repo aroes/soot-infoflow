@@ -13,10 +13,7 @@ package soot.jimple.infoflow.solver.fastSolver;
 import heros.SynchronizedBy;
 import heros.ThreadSafe;
 import heros.solver.PathEdge;
-
-import java.util.Map;
-
-import com.google.common.collect.Maps;
+import soot.jimple.infoflow.util.MyConcurrentHashMap;
 
 
 /**
@@ -31,7 +28,8 @@ public class JumpFunctions<N,D> {
 	//where the list is implemented as a mapping from the source value to the function
 	//we exclude empty default functions
 	@SynchronizedBy("consistent lock on this")
-	protected Map<WeakPathEdge<N, D>,D> nonEmptyReverseLookup = Maps.newConcurrentMap();
+	protected MyConcurrentHashMap<WeakPathEdge<N, D>,D> nonEmptyReverseLookup =
+			new MyConcurrentHashMap<WeakPathEdge<N,D>, D>();
 	
 	public JumpFunctions() {
 	}
@@ -41,7 +39,7 @@ public class JumpFunctions<N,D> {
 	 * @see PathEdge
 	 */
 	public D addFunction(WeakPathEdge<N, D> edge) {
-		return nonEmptyReverseLookup.put(edge, edge.factAtTarget());
+		return nonEmptyReverseLookup.putIfAbsent(edge, edge.factAtTarget());
 	}
 	
 	/**

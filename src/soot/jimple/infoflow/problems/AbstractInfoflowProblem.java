@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +46,7 @@ import soot.jimple.infoflow.solver.IInfoflowSolver;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
 import soot.jimple.infoflow.util.ConcurrentHashSet;
+import soot.jimple.infoflow.util.MyConcurrentHashMap;
 import soot.jimple.toolkits.ide.DefaultJimpleIFDSTabulationProblem;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
@@ -84,7 +84,8 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	
 	protected Set<TaintPropagationHandler> taintPropagationHandlers = new HashSet<TaintPropagationHandler>();
 
-	private Map<Unit, Set<Unit>> activationUnitsToCallSites = new ConcurrentHashMap<Unit, Set<Unit>>();
+	private MyConcurrentHashMap<Unit, Set<Unit>> activationUnitsToCallSites =
+			new MyConcurrentHashMap<Unit, Set<Unit>>();
 	
 	public AbstractInfoflowProblem(BiDiInterproceduralCFG<Unit, SootMethod> icfg,
 			ISourceSinkManager sourceSinkManager) {
@@ -355,12 +356,9 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 		Unit activationUnit = activationAbs.getActivationUnit();
 		if (activationUnit == null)
 			return false;
-		
-		synchronized (activationUnitsToCallSites) {
-			if (!activationUnitsToCallSites.containsKey(activationUnit))
-				activationUnitsToCallSites.put(activationUnit, new ConcurrentHashSet<Unit>());
-		}
-		Set<Unit> callSites = activationUnitsToCallSites.get(activationUnit);
+
+		Set<Unit> callSites = activationUnitsToCallSites.putIfAbsentElseGet
+				(activationUnit, new ConcurrentHashSet<Unit>());
 		if (callSites.contains(callSite))
 			return false;
 		

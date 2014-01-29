@@ -29,9 +29,8 @@ import heros.solver.PathEdge;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -41,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.infoflow.util.ConcurrentHashSet;
+import soot.jimple.infoflow.util.MyConcurrentHashMap;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.HashBasedTable;
@@ -86,7 +86,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 	//edges going along calls
 	//see CC 2010 paper by Naeem, Lhotak and Rodriguez
 	@SynchronizedBy("consistent lock on field")
-	protected final Table<M,D,Map<N,Set<D>>> incoming = HashBasedTable.create();
+	protected final Table<M,D,MyConcurrentHashMap<N,Set<D>>> incoming = HashBasedTable.create();
 	
 	@DontSynchronize("stateless")
 	protected final FlowFunctions<N, D, M> flowFunctions;
@@ -247,14 +247,14 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 	
 					//register the fact that <sp,d3> has an incoming edge from <n,d2>
 					Set<Pair<N, D>> endSumm;
-					synchronized (incoming) {
+//					synchronized (incoming) {
 						//line 15.1 of Naeem/Lhotak/Rodriguez
 						if (!addIncoming(sCalledProcN,d3,n,d1))
 							continue;
 						
 						//line 15.2
 						endSumm = endSummary(sCalledProcN, d3);
-					}
+//					}
 					
 					//still line 15.2 of Naeem/Lhotak/Rodriguez
 					//for each already-queried exit value <eP,d4> reachable from <sP,d3>,
@@ -332,11 +332,11 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 		
 		//line 21.1 of Naeem/Lhotak/Rodriguez
 		//register end-summary
-		synchronized (incoming) {
+//		synchronized (incoming) {
 			if (!addEndSummary(methodThatNeedsSummary, d1, n, d2))
 				return;
 			inc = incoming(d1, methodThatNeedsSummary);
-		}
+//		}
 		
 		//for each incoming call edge already processed
 		//(see processCall(..))
@@ -442,7 +442,8 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 		if (existingVal != null) {
 			if (existingVal != targetVal)
 				existingVal.addNeighbor(targetVal);
-		} else {
+		}
+		else {
 			scheduleEdgeProcessing(edge);
 			if(targetVal!=zeroValue)
 				logger.trace("EDGE: <{},{}> -> <{},{}>", icfg.getMethodOf(target), sourceVal, target, targetVal);
@@ -455,37 +456,34 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 	}
 
 	private boolean addEndSummary(M m, D d1, N eP, D d2) {
+		Set<Pair<N, D>> summaries = null;
 		synchronized (endSummary) {
-			Set<Pair<N, D>> summaries = endSummary.get(m, d1);
+			summaries = endSummary.get(m, d1);
 			if(summaries==null) {
 				summaries = new ConcurrentHashSet<Pair<N, D>>();
 				endSummary.put(m, d1, summaries);
 			}
-			return summaries.add(new Pair<N, D>(eP, d2));
 		}
+		return summaries.add(new Pair<N, D>(eP, d2));
 	}	
 	
 	protected Map<N, Set<D>> incoming(D d1, M m) {
-		synchronized (incoming) {
-			Map<N, Set<D>> map = incoming.get(m, d1);
-			return map;
-		}
+		Map<N, Set<D>> map = incoming.get(m, d1);
+		return map;
 	}
 	
 	protected boolean addIncoming(M m, D d3, N n, D d2) {
+		MyConcurrentHashMap<N, Set<D>> summaries = null;
 		synchronized (incoming) {
-			Map<N, Set<D>> summaries = incoming.get(m, d3);
+			summaries = incoming.get(m, d3);
 			if(summaries==null) {
-				summaries = new ConcurrentHashMap<N, Set<D>>();
+				summaries = new MyConcurrentHashMap<N, Set<D>>();
 				incoming.put(m, d3, summaries);
 			}
-			Set<D> set = summaries.get(n);
-			if(set==null) {
-				set = new ConcurrentHashSet<D>();
-				summaries.put(n,set);
-			}
-			return set.add(d2);
 		}
+		
+		Set<D> set = summaries.putIfAbsentElseGet(n, new ConcurrentHashSet<D>());
+		return set.add(d2);
 	}
 	
 	/**

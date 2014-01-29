@@ -19,7 +19,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.WeakHashMap;
 
 import soot.NullType;
 import soot.SootField;
@@ -32,6 +31,7 @@ import soot.jimple.infoflow.solver.IInfoflowCFG.UnitContainer;
 import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.internal.JimpleLocal;
 
+import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
 
 /**
@@ -293,22 +293,21 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	 */
 	private Set<SourceContextAndPath> getPaths(boolean reconstructPaths, Object flagAbs) {
 		if (this.pathCache == null)
-			this.pathCache = new WeakHashMap<Object, Set<SourceContextAndPath>>();
+			this.pathCache = new MapMaker().weakKeys().concurrencyLevel
+					(Runtime.getRuntime().availableProcessors()).makeMap();
 
 		// If we run into a loop, we symbolically save where to continue on the
 		// next run and abort for now
-		Set<SourceContextAndPath> cacheData = pathCache.get(flagAbs);
-		if (cacheData != null)
-			return Collections.unmodifiableSet(cacheData);
-		
-		// Create a cache entry
-		synchronized (this.pathCache) {
+		Set<SourceContextAndPath> cacheData = null;
+		synchronized (pathCache) {
 			cacheData = pathCache.get(flagAbs);
-			if (cacheData == null) {
-				cacheData = new HashSet<SourceContextAndPath>();
-				this.pathCache.put(flagAbs, cacheData);
-			}
-		}			
+			if (cacheData != null)
+				return Collections.unmodifiableSet(cacheData);
+			
+			// Create a cache entry
+			cacheData = new HashSet<SourceContextAndPath>();
+			this.pathCache.put(flagAbs, cacheData);
+		}
 		
 		if (sourceContext != null) {
 			// Construct the path root

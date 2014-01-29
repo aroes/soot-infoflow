@@ -20,9 +20,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 import soot.ArrayType;
 import soot.IntType;
@@ -53,7 +51,6 @@ import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.TableSwitchStmt;
 import soot.jimple.ThrowStmt;
-import soot.jimple.infoflow.InfoflowResults;
 import soot.jimple.infoflow.aliasing.IAliasingStrategy;
 import soot.jimple.infoflow.aliasing.ImplicitFlowAliasStrategy;
 import soot.jimple.infoflow.data.Abstraction;
@@ -73,17 +70,19 @@ import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.infoflow.util.BaseSelector;
 import soot.jimple.infoflow.util.ConcurrentHashSet;
+import soot.jimple.infoflow.util.MyConcurrentHashMap;
 
 public class InfoflowProblem extends AbstractInfoflowProblem {
 
 	private final IAliasingStrategy aliasingStrategy;
 	private final IAliasingStrategy implicitFlowAliasingStrategy;
     
-    private final Map<Unit, Set<Abstraction>> implicitTargets = new ConcurrentHashMap<Unit, Set<Abstraction>>();
+    private final MyConcurrentHashMap<Unit, Set<Abstraction>> implicitTargets =
+    		new MyConcurrentHashMap<Unit, Set<Abstraction>>();
     
-	protected final Map<AbstractionAtSink, Abstraction> results = new ConcurrentHashMap<AbstractionAtSink, Abstraction>();
-	protected InfoflowResults infoflowResults = null;
-
+	protected final MyConcurrentHashMap<AbstractionAtSink, Abstraction> results =
+			new MyConcurrentHashMap<AbstractionAtSink, Abstraction>();
+	
 	public InfoflowProblem(ISourceSinkManager sourceSinkManager,
 			IAliasingStrategy aliasingStrategy) {
 		this(new InfoflowCFG(), sourceSinkManager, aliasingStrategy);
@@ -924,11 +923,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							
 							// Block the call site for further explicit tracking
 							if (d1 != null) {
-								synchronized (implicitTargets) {
-									if (!implicitTargets.containsKey(src))
-										implicitTargets.put(src, new ConcurrentHashSet<Abstraction>());
-								}
-								implicitTargets.get(src).add(d1);
+								Set<Abstraction> callSites = implicitTargets.putIfAbsentElseGet
+										(src, new ConcurrentHashSet<Abstraction>());
+								callSites.add(d1);
 							}
 							
 							Abstraction abs = source.deriveConditionalAbstractionCall(src);
@@ -1425,13 +1422,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 	 * @param resultAbs The abstraction at the sink instruction
 	 */
 	private void addResult(AbstractionAtSink resultAbs) {
-		synchronized (results) {
-			Abstraction oldAbs = results.get(resultAbs);
-			if (oldAbs == null)
-				results.put(resultAbs, resultAbs.getAbstraction());
-			else
-				oldAbs.addNeighbor(resultAbs.getAbstraction());
-		}
+		Abstraction newAbs = this.results.putIfAbsentElseGet
+				(resultAbs, resultAbs.getAbstraction());
+		if (newAbs != resultAbs.getAbstraction())
+			newAbs.addNeighbor(resultAbs.getAbstraction());
 	}
 
 	/**
