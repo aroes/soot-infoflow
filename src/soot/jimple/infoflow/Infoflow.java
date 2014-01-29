@@ -47,6 +47,8 @@ import soot.jimple.infoflow.data.SourceContextAndPath;
 import soot.jimple.infoflow.entryPointCreators.IEntryPointCreator;
 import soot.jimple.infoflow.handlers.ResultsAvailableHandler;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler;
+import soot.jimple.infoflow.ipc.DefaultIPCManager;
+import soot.jimple.infoflow.ipc.IIPCManager;
 import soot.jimple.infoflow.problems.BackwardsInfoflowProblem;
 import soot.jimple.infoflow.problems.InfoflowProblem;
 import soot.jimple.infoflow.solver.BackwardsInfoflowCFG;
@@ -72,6 +74,8 @@ public class Infoflow extends AbstractInfoflow {
 	private final String androidPath;
 	private final boolean forceAndroidJar;
 	private IInfoflowConfig sootConfig;
+	
+	private IIPCManager ipcManager = new DefaultIPCManager(new ArrayList<String>());
 	
     private IInfoflowCFG iCfg;
     
@@ -252,6 +256,7 @@ public class Infoflow extends AbstractInfoflow {
 		// entryPoints are the entryPoints required by Soot to calculate Graph - if there is no main method,
 		// we have to create a new main method and use it as entryPoint and store our real entryPoints
 		Scene.v().setEntryPoints(Collections.singletonList(entryPointCreator.createDummyMain(entryPoints)));
+		ipcManager.updateJimpleForICC();
 		
 		// We explicitly select the packs we want to run for performance reasons
 		if (callgraphAlgorithm != CallgraphAlgorithm.OnDemand) {
@@ -296,6 +301,7 @@ public class Infoflow extends AbstractInfoflow {
 		if (entryPoint != null && !entryPoint.isEmpty())
 			seeds = Collections.singleton(entryPoint);
 
+		ipcManager.updateJimpleForICC();
 		// We explicitly select the packs we want to run for performance reasons
 		if (callgraphAlgorithm != CallgraphAlgorithm.OnDemand) {
 	        PackManager.v().getPack("wjpp").apply();
@@ -641,4 +647,8 @@ public class Infoflow extends AbstractInfoflow {
 		onResultsAvailable.remove(handler);
 	}
 	
+	@Override
+	public void setIPCManager(IIPCManager ipcManager) {
+	    this.ipcManager = ipcManager;
+	}
 }

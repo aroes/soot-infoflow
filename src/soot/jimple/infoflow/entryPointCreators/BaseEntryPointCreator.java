@@ -87,14 +87,31 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 		
 		return this.createDummyMainInternal(methods);
 	}
+	
+	@Override
+	public SootMethod createDummyMain(List<String> methods,
+			SootMethod dummyMainMethod) {
+		// Load the substitution classes
+		if (substituteCallParams)
+			for (String className : substituteClasses)
+				Scene.v().forceResolve(className, SootClass.BODIES).setApplicationClass();
+		
+		return this.createDummyMainInternal(methods, dummyMainMethod);
+	}
 
+	protected SootMethod createDummyMainInternal(List<String> methods) 
+	{
+		SootMethod emptySootMethod = createEmptyMainMethod(Jimple.v().newBody());
+		return createDummyMainInternal(methods, emptySootMethod);
+	}
+	
 	/**
 	 * Implementors need to overwrite this method for providing the actual dummy
 	 * main method
 	 * @param methods The methods to be called inside the dummy main method
 	 * @return The generated dummy main method
 	 */
-	protected abstract SootMethod createDummyMainInternal(List<String> methods);
+	protected abstract SootMethod createDummyMainInternal(List<String> methods, SootMethod emptySootMethod);
 	
 	protected SootMethod createEmptyMainMethod(JimpleBody body){
 		SootMethod mainMethod = new SootMethod("dummyMainMethod", new ArrayList<Type>(), VoidType.v());
@@ -551,5 +568,7 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 			}
 		}
 	}
+
+	
 
 }
