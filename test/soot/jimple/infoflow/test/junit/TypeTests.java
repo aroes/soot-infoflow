@@ -124,6 +124,33 @@ public class TypeTests extends JUnitTests {
 	}
 
 	@Test(timeout=300000)
+	public void arrayCastAndAliasTest2(){
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.TypeTestCode: void arrayCastAndAliasTest2()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);	
+	}
+
+	@Test(timeout=300000)
+	public void arrayIncompatibleCastAndAliasTest(){
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.TypeTestCode: void arrayIncompatibleCastAndAliasTest()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);		// doesn't really matter since the code cannot be executed anyway	
+	}
+
+	@Test(timeout=300000)
+	public void fieldIncompatibleCastAndAliasTest(){
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.TypeTestCode: void fieldIncompatibleCastAndAliasTest()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		negativeCheckInfoflow(infoflow);	
+	}
+
+	@Test(timeout=300000)
 	public void twoDimensionArrayTest(){
 		Infoflow infoflow = initInfoflow();
 		List<String> epoints = new ArrayList<String>();

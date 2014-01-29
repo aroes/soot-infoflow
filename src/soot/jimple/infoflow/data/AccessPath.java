@@ -419,7 +419,7 @@ public class AccessPath implements Cloneable {
 		return new AccessPath(value, newFields, baseType, newTypes, taintSubFields);
 	}
 
-	public Type getType() {
+	public Type getBaseType() {
 		return this.baseType;
 	}
 	

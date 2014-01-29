@@ -162,9 +162,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					// backwards as there might be aliases for the base object
 					// Note that we don't only need to check for heap writes such as a.x = y,
 					// but also for base object taints ("a" in this case).
-					boolean taintsBaseValue = val.getType() instanceof RefType
-							&& !((RefType) val.getType()).getSootClass().getName().equals("java.lang.String")
-							&& newAbs.getAccessPath().getType() instanceof RefType
+					boolean taintsBaseValue = val.getBaseType() instanceof RefType
+							&& !((RefType) val.getBaseType()).getSootClass().getName().equals("java.lang.String")
+							&& newAbs.getAccessPath().getBaseType() instanceof RefType
 							&& iStmt.getInvokeExpr() instanceof InstanceInvokeExpr
 							&& ((InstanceInvokeExpr) iStmt.getInvokeExpr()).getBase() == val.getPlainValue();
 					boolean taintsStaticField = enableStaticFields && newAbs.getAccessPath().isStaticFieldRef();
@@ -324,7 +324,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				if (!source.getAccessPath().isEmpty()) {
 					// Special type handling for certain operations
 					if (assignStmt.getRightOp() instanceof LengthExpr) {
-						assert source.getAccessPath().getType() instanceof ArrayType;
+						assert source.getAccessPath().getBaseType() instanceof ArrayType;
 						assert leftValue instanceof Local;
 						
 						Abstraction lenAbs = source.deriveNewAbstraction(new AccessPath
@@ -600,7 +600,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										Local base = newSource.getAccessPath().getPlainLocal();
 										if (mayAlias(rightValue, base)) {
 											addLeftValue = true;
-											targetType = newSource.getAccessPath().getType();
+											targetType = newSource.getAccessPath().getBaseType();
 										}
 									}
 									//y = x[i] && x tainted -> x, y tainted
@@ -609,7 +609,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										if (mayAlias(rightBase, newSource.getAccessPath().getPlainValue())) {
 											addLeftValue = true;
 											
-											targetType = newSource.getAccessPath().getType();
+											targetType = newSource.getAccessPath().getBaseType();
 											assert targetType instanceof ArrayType;
 										}
 									}
@@ -617,7 +617,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									//y = x && x tainted --> y, x tainted
 									else if (mayAlias(rightValue, newSource.getAccessPath().getPlainValue())) {
 										addLeftValue = true;
-										targetType = newSource.getAccessPath().getType();
+										targetType = newSource.getAccessPath().getBaseType();
 									}
 									
 									// One reason to taint the left side is enough
@@ -632,7 +632,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								// or this path is not realizable
 								if (assignStmt.getRightOp() instanceof CastExpr) {
 									if (!canCastType(((CastExpr) assignStmt.getRightOp()).getCastType(),
-											source.getAccessPath().getType()))
+											source.getAccessPath().getBaseType()))
 										return Collections.emptySet();
 								}
 

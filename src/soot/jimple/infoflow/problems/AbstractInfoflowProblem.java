@@ -118,14 +118,14 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 			return true;
 
 		// Cannot invoke a method on a primitive type
-		if (apBase.getType() instanceof PrimType)
+		if (apBase.getBaseType() instanceof PrimType)
 			return false;
 		// Cannot invoke a method on an array
-		if (apBase.getType() instanceof ArrayType)
+		if (apBase.getBaseType() instanceof ArrayType)
 			return dest.getName().equals("java.lang.Object");
 		
-		return Scene.v().getOrMakeFastHierarchy().canStoreType(apBase.getType(), dest.getType())
-				|| Scene.v().getOrMakeFastHierarchy().canStoreType(dest.getType(), apBase.getType());
+		return Scene.v().getOrMakeFastHierarchy().canStoreType(apBase.getBaseType(), dest.getType())
+				|| Scene.v().getOrMakeFastHierarchy().canStoreType(dest.getType(), apBase.getBaseType());
 	}
 
 	public void setSolver(IInfoflowSolver solver) {

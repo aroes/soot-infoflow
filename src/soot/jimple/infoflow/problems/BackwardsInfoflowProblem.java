@@ -143,7 +143,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					if (rightValue instanceof BinopExpr)
 						return res;
 					
-					// If the tainted value 'b' is assigned to variable 'a' and 'a'
+					// If the tainted value 'b' is assigned to variable 'a' and 'b'
 					// is a heap object, we must also look for aliases of 'a' upwards
 					// from the current statement.
 					if (rightValue instanceof InstanceFieldRef) {
@@ -152,7 +152,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								&& ref.getBase().equals(source.getAccessPath().getPlainValue())
 								&& ref.getField().equals(source.getAccessPath().getFirstField())) {
 							Abstraction abs = source.deriveNewAbstraction(leftValue, true,
-									source.getAccessPath().getType());
+									source.getAccessPath().getBaseType());
 							res.add(abs);
 						}
 					}
@@ -161,12 +161,12 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						if (source.getAccessPath().isStaticFieldRef()
 								&& ref.getField().equals(source.getAccessPath().getFirstField())) {
 							Abstraction abs = source.deriveNewAbstraction(leftValue, true,
-									source.getAccessPath().getType());
+									source.getAccessPath().getBaseType());
 							res.add(abs);
 						}
 					}
 					else if (rightValue.equals(source.getAccessPath().getPlainValue())) {
-						Type newType = source.getAccessPath().getType();
+						Type newType = source.getAccessPath().getBaseType();
 						if (leftValue instanceof ArrayRef)
 							newType = buildArrayOrAddDimension(newType);
 						else if (assignStmt.getRightOp() instanceof ArrayRef)
@@ -176,12 +176,12 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						if (defStmt.getRightOp() instanceof CastExpr) {
 							CastExpr ce = (CastExpr) defStmt.getRightOp();
 							if (!source.getAccessPath().isStaticFieldRef()
-									&& !canCastType(ce.getCastType(), source.getAccessPath().getType()))
+									&& !canCastType(ce.getCastType(), source.getAccessPath().getBaseType()))
 								return Collections.emptySet();
 						}
 						// Special type handling for certain operations
 						else if (assignStmt.getRightOp() instanceof LengthExpr) {
-							assert source.getAccessPath().getType() instanceof ArrayType;
+							assert source.getAccessPath().getBaseType() instanceof ArrayType;
 							newType = IntType.v();
 							
 							Abstraction abs = source.deriveNewAbstraction(new AccessPath(leftValue, null,
@@ -205,7 +205,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						Type targetType = null;
 						
 						// if both are fields, we have to compare their fieldName via equals and their bases via PTS
-						targetType = source.getAccessPath().getType();
+						targetType = source.getAccessPath().getBaseType();
 						if (leftValue instanceof InstanceFieldRef) {
 							InstanceFieldRef leftRef = (InstanceFieldRef) leftValue;
 							if (leftRef.getBase().equals(source.getAccessPath().getPlainLocal())) {
@@ -227,11 +227,19 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							Local leftBase = (Local) ((ArrayRef) leftValue).getBase();
 							if (leftBase.equals(source.getAccessPath().getPlainValue())) {
 								addRightValue = true;
-								assert source.getAccessPath().getType() instanceof ArrayType;
+								assert source.getAccessPath().getBaseType() instanceof ArrayType;
 							}
 							// generic case, is true for Locals, ArrayRefs that are equal etc..
 						} else if (leftValue.equals(source.getAccessPath().getPlainValue())) {
 							addRightValue = true;
+
+							// Check for unrealizable casts
+							if (assignStmt.getRightOp() instanceof CastExpr) {
+								CastExpr ce = (CastExpr) defStmt.getRightOp();
+								if (!source.getAccessPath().isStaticFieldRef()
+										&& !canCastType(ce.getOp().getType(), source.getAccessPath().getBaseType()))
+									return Collections.emptySet();
+							}
 						}
 						
 						// if one of them is true -> add rightValue
@@ -241,7 +249,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								if (assignStmt.getRightOp() instanceof ArrayRef)
 									targetType = buildArrayOrAddDimension(targetType);
 								else if (leftValue instanceof ArrayRef) {
-									assert source.getAccessPath().getType() instanceof ArrayType;
+									assert source.getAccessPath().getBaseType() instanceof ArrayType;
 									targetType = ((ArrayType) targetType).getElementType();
 								}
 							}
