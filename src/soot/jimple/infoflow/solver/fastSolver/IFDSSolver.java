@@ -43,8 +43,6 @@ import soot.jimple.infoflow.util.ConcurrentHashSet;
 import soot.jimple.infoflow.util.MyConcurrentHashMap;
 
 import com.google.common.cache.CacheBuilder;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Table;
 
 
 /**
@@ -81,12 +79,14 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 	//stores summaries that were queried before they were computed
 	//see CC 2010 paper by Naeem, Lhotak and Rodriguez
 	@SynchronizedBy("consistent lock on 'incoming'")
-	protected final Table<M,D,Set<Pair<N,D>>> endSummary = HashBasedTable.create();
+	protected final MyConcurrentHashMap<Pair<M,D>,Set<Pair<N,D>>> endSummary =
+			new MyConcurrentHashMap<Pair<M,D>, Set<Pair<N,D>>>();
 	
 	//edges going along calls
 	//see CC 2010 paper by Naeem, Lhotak and Rodriguez
 	@SynchronizedBy("consistent lock on field")
-	protected final Table<M,D,MyConcurrentHashMap<N,Set<D>>> incoming = HashBasedTable.create();
+	protected final MyConcurrentHashMap<Pair<M,D>,MyConcurrentHashMap<N,Set<D>>> incoming =
+			new MyConcurrentHashMap<Pair<M,D>,MyConcurrentHashMap<N,Set<D>>>();
 	
 	@DontSynchronize("stateless")
 	protected final FlowFunctions<N, D, M> flowFunctions;
@@ -246,15 +246,12 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 					propagate(d3, sP, d3, n, false); //line 15
 	
 					//register the fact that <sp,d3> has an incoming edge from <n,d2>
-					Set<Pair<N, D>> endSumm;
-//					synchronized (incoming) {
-						//line 15.1 of Naeem/Lhotak/Rodriguez
-						if (!addIncoming(sCalledProcN,d3,n,d1))
-							continue;
+					//line 15.1 of Naeem/Lhotak/Rodriguez
+					if (!addIncoming(sCalledProcN,d3,n,d1))
+						continue;
 						
-						//line 15.2
-						endSumm = endSummary(sCalledProcN, d3);
-//					}
+					//line 15.2
+					Set<Pair<N, D>> endSumm = endSummary(sCalledProcN, d3);
 					
 					//still line 15.2 of Naeem/Lhotak/Rodriguez
 					//for each already-queried exit value <eP,d4> reachable from <sP,d3>,
@@ -328,15 +325,12 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 		final D d2 = edge.factAtTarget();
 		
 		//for each of the method's start points, determine incoming calls
-		Map<N,Set<D>> inc = null;
 		
 		//line 21.1 of Naeem/Lhotak/Rodriguez
 		//register end-summary
-//		synchronized (incoming) {
-			if (!addEndSummary(methodThatNeedsSummary, d1, n, d2))
-				return;
-			inc = incoming(d1, methodThatNeedsSummary);
-//		}
+		if (!addEndSummary(methodThatNeedsSummary, d1, n, d2))
+			return;
+		Map<N,Set<D>> inc = incoming(d1, methodThatNeedsSummary);
 		
 		//for each incoming call edge already processed
 		//(see processCall(..))
@@ -451,37 +445,24 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 	}
 	
 	private Set<Pair<N, D>> endSummary(M m, D d3) {
-		Set<Pair<N, D>> map = endSummary.get(m, d3);
+		Set<Pair<N, D>> map = endSummary.get(new Pair<M, D>(m, d3));
 		return map;
 	}
 
 	private boolean addEndSummary(M m, D d1, N eP, D d2) {
-		Set<Pair<N, D>> summaries = null;
-		synchronized (endSummary) {
-			summaries = endSummary.get(m, d1);
-			if(summaries==null) {
-				summaries = new ConcurrentHashSet<Pair<N, D>>();
-				endSummary.put(m, d1, summaries);
-			}
-		}
+		Set<Pair<N, D>> summaries = endSummary.putIfAbsentElseGet
+				(new Pair<M, D>(m, d1), new ConcurrentHashSet<Pair<N, D>>());
 		return summaries.add(new Pair<N, D>(eP, d2));
 	}	
 	
 	protected Map<N, Set<D>> incoming(D d1, M m) {
-		Map<N, Set<D>> map = incoming.get(m, d1);
+		Map<N, Set<D>> map = incoming.get(new Pair<M, D>(m, d1));
 		return map;
 	}
 	
 	protected boolean addIncoming(M m, D d3, N n, D d2) {
-		MyConcurrentHashMap<N, Set<D>> summaries = null;
-		synchronized (incoming) {
-			summaries = incoming.get(m, d3);
-			if(summaries==null) {
-				summaries = new MyConcurrentHashMap<N, Set<D>>();
-				incoming.put(m, d3, summaries);
-			}
-		}
-		
+		MyConcurrentHashMap<N, Set<D>> summaries = incoming.putIfAbsentElseGet
+				(new Pair<M, D>(m, d3), new MyConcurrentHashMap<N, Set<D>>());
 		Set<D> set = summaries.putIfAbsentElseGet(n, new ConcurrentHashSet<D>());
 		return set.add(d2);
 	}
