@@ -261,6 +261,7 @@ public class TypeTestCode {
 	private class X {
 		private B b;
 		private Object o;
+		private Object[] arr;
 		
 		public X() {
 			this.b = new B();
@@ -360,4 +361,53 @@ public class TypeTestCode {
 		cm.publish(((String[]) c.o)[1]);
 	}
 	
+	public void objectArrayBackPropTest() {
+		X b = new X();
+		X c = b;
+		b.arr = new Object[] { TelephonyManager.getDeviceId(), "foo" };
+		b.arr[0] = TelephonyManager.getDeviceId();
+		b.arr[1] = new String[] { TelephonyManager.getDeviceId() };
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(((String[]) c.arr)[0]);
+	}
+
+	public void aliasTypeTest() {
+		X b = new X();
+		b.arr = new Object[2];
+		X c = new X();
+		
+		doAlias(b, c);
+		b.arr[0] = TelephonyManager.getDeviceId();
+		
+		X d = new X();
+		doAlias(c, d);
+		b.arr[1] = new String[] { TelephonyManager.getDeviceId() };
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(((String[]) d.arr)[0]);
+	}
+
+	private void doAlias(X b, X c) {
+		c.arr = b.arr;
+	}
+
+	public void aliasReturnTest() {
+		X b = new X();
+		b.arr = new Object[2];
+		Object[] x = b.arr;
+		
+		Object[] c = id(x);
+		c[0] = TelephonyManager.getDeviceId();
+		
+		Object[] d = id(x);
+		b.arr[1] = new String[] { TelephonyManager.getDeviceId() };
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(((String[]) d)[0]);
+	}
+	
+	private <T> T id(T x) {
+		return x;
+	}
+
 }

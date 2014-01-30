@@ -222,4 +222,31 @@ public class TypeTests extends JUnitTests {
 		checkInfoflow(infoflow, 1);	
 	}
 
+	@Test(timeout=300000)
+	public void objectArrayBackPropTest(){
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.TypeTestCode: void objectArrayBackPropTest()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);	
+	}
+
+	@Test(timeout=300000)
+	public void aliasTypeTest(){
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.TypeTestCode: void aliasTypeTest()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);	
+	}
+
+	@Test(timeout=300000)
+	public void aliasReturnTest(){
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.TypeTestCode: void aliasReturnTest()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+	}
+
 }

@@ -1157,6 +1157,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									// If this is a constant parameter, we can safely ignore it
 									if (!AccessPath.canContainValue(originalCallArg))
 										continue;
+									if (!checkCast(source.getAccessPath(), originalCallArg.getType()))
+										continue;
 									
 									Abstraction abs = newSource.deriveNewAbstraction
 											(newSource.getAccessPath().copyWithNewValue(originalCallArg), (Stmt) exitStmt);

@@ -432,7 +432,8 @@ public class Infoflow extends AbstractInfoflow {
 			logger.info("Taint wrapper misses: " + taintWrapper.getWrapperMisses());
 		}
 		
-		logger.info("IFDS problem solved, processing results...");
+		logger.info("IFDS problem with {} forward and {} backward edges solved, "
+				+ "processing results...", forwardSolver.propagationCount, backSolver.propagationCount);
 		
 		// Force a cleanup. Everything we need is reachable through the
 		// results set, the other abstractions can be killed now.
