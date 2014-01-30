@@ -237,40 +237,40 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 			FlowFunction<D> function = flowFunctions.getCallFlowFunction(n, sCalledProcN);
 			Set<D> res = computeCallFlowFunction(function, d1, d2);
 			
-			//for each callee's start point(s)
 			Collection<N> startPointsOf = icfg.getStartPointsOf(sCalledProcN);
-			for(N sP: startPointsOf) {
-				//for each result node of the call-flow function
-				for(D d3: res) {
+			//for each result node of the call-flow function
+			for(D d3: res) {
+				//for each callee's start point(s)
+				for(N sP: startPointsOf) {
 					//create initial self-loop
 					propagate(d3, sP, d3, n, false); //line 15
-	
-					//register the fact that <sp,d3> has an incoming edge from <n,d2>
-					//line 15.1 of Naeem/Lhotak/Rodriguez
-					if (!addIncoming(sCalledProcN,d3,n,d1))
-						continue;
-						
-					//line 15.2
-					Set<Pair<N, D>> endSumm = endSummary(sCalledProcN, d3);
-					
-					//still line 15.2 of Naeem/Lhotak/Rodriguez
-					//for each already-queried exit value <eP,d4> reachable from <sP,d3>,
-					//create new caller-side jump functions to the return sites
-					//because we have observed a potentially new incoming edge into <sP,d3>
-					if (endSumm != null)
-						for(Pair<N, D> entry: endSumm) {
-							N eP = entry.getO1();
-							D d4 = entry.getO2();
-							//for each return site
-							for(N retSiteN: returnSiteNs) {
-								//compute return-flow function
-								FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
-								//for each target value of the function
-								for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d2)))
-									propagate(d1, retSiteN, d5, n, false);
-							}
-						}
 				}
+				
+				//register the fact that <sp,d3> has an incoming edge from <n,d2>
+				//line 15.1 of Naeem/Lhotak/Rodriguez
+				if (!addIncoming(sCalledProcN,d3,n,d1))
+					continue;
+						
+				//line 15.2
+				Set<Pair<N, D>> endSumm = endSummary(sCalledProcN, d3);
+					
+				//still line 15.2 of Naeem/Lhotak/Rodriguez
+				//for each already-queried exit value <eP,d4> reachable from <sP,d3>,
+				//create new caller-side jump functions to the return sites
+				//because we have observed a potentially new incoming edge into <sP,d3>
+				if (endSumm != null)
+					for(Pair<N, D> entry: endSumm) {
+						N eP = entry.getO1();
+						D d4 = entry.getO2();
+						//for each return site
+						for(N retSiteN: returnSiteNs) {
+							//compute return-flow function
+							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
+							//for each target value of the function
+							for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d2)))
+								propagate(d1, retSiteN, d5, n, false);
+						}
+					}
 			}
 		}
 		//line 17-19 of Naeem/Lhotak/Rodriguez		
