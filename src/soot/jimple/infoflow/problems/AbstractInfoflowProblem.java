@@ -440,4 +440,18 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 			return ArrayType.v(type, 1);
 	}
 	
+	/**
+	 * Checks whether the type of the given taint can be cast to the given
+	 * target type
+	 * @param accessPath The access path of the taint to be cast
+	 * @param type The target type to which to cast the taint
+	 * @return True if the cast is possible, otherwise false
+	 */
+	protected boolean checkCast(AccessPath accessPath, Type type) {
+		if (accessPath.isStaticFieldRef())
+			return canCastType(type, accessPath.getFirstFieldType());
+		else
+			return canCastType(type, accessPath.getBaseType());
+	}
+	
 }

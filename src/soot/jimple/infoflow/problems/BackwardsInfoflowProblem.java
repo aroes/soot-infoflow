@@ -107,9 +107,9 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				final boolean leftSideMatches = baseMatches(leftValue, source);
 				if (!leftSideMatches)
 					res.add(source);
-				
-				// Is the left side overwritten completely?
-				if (leftSideMatches) {
+				else {
+					// The left side is overwritten completely
+					
 					// If we have an assignment to the base local of the current taint,
 					// all taint propagations must be below that point, so this is the
 					// right point to turn around.
@@ -175,8 +175,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						// If this is an unrealizable typecast, drop the abstraction
 						if (defStmt.getRightOp() instanceof CastExpr) {
 							CastExpr ce = (CastExpr) defStmt.getRightOp();
-							if (!source.getAccessPath().isStaticFieldRef()
-									&& !canCastType(ce.getCastType(), source.getAccessPath().getBaseType()))
+							if (!checkCast(source.getAccessPath(), ce.getCastType()))
 								return Collections.emptySet();
 						}
 						// Special type handling for certain operations
@@ -233,11 +232,11 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						} else if (leftValue.equals(source.getAccessPath().getPlainValue())) {
 							addRightValue = true;
 
-							// Check for unrealizable casts
+							// Check for unrealizable casts. If a = (O) b and a is tainted,
+							// but incompatible to the type of b, this cast is impossible
 							if (assignStmt.getRightOp() instanceof CastExpr) {
 								CastExpr ce = (CastExpr) defStmt.getRightOp();
-								if (!source.getAccessPath().isStaticFieldRef()
-										&& !canCastType(ce.getOp().getType(), source.getAccessPath().getBaseType()))
+								if (!checkCast(source.getAccessPath(), ce.getOp().getType()))
 									return Collections.emptySet();
 							}
 						}
@@ -251,6 +250,10 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								else if (leftValue instanceof ArrayRef) {
 									assert source.getAccessPath().getBaseType() instanceof ArrayType;
 									targetType = ((ArrayType) targetType).getElementType();
+									
+									// If the types do not match, the right side cannot be an alias
+									if (!canCastType(rightValue.getType(), targetType))
+										addRightValue = false;
 								}
 							}
 							
@@ -258,13 +261,12 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							if (assignStmt.getRightOp() instanceof LengthExpr)
 								targetType = null;
 							// We do not need to handle casts. Casts only make
-							// types more imprecise when going backwards.							
-							//		else if (assignStmt.getRightOp() instanceof CastExpr)
-							//			targetType = null;
-							
-							Abstraction newAbs = source.deriveNewAbstraction(rightValue, cutFirstField,
-									targetType);
-							res.add(newAbs);
+							// types more imprecise when going backwards.
+							if (addRightValue) {
+								Abstraction newAbs = source.deriveNewAbstraction(rightValue, cutFirstField,
+										targetType);
+								res.add(newAbs);
+							}
 						}
 					}
 				}

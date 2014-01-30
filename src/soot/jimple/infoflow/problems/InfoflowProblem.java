@@ -631,8 +631,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								// If the right side is a typecast, it must be compatible,
 								// or this path is not realizable
 								if (assignStmt.getRightOp() instanceof CastExpr) {
-									if (!canCastType(((CastExpr) assignStmt.getRightOp()).getCastType(),
-											source.getAccessPath().getBaseType()))
+									CastExpr ce = (CastExpr) assignStmt.getRightOp();
+									if (!checkCast(source.getAccessPath(), ce.getCastType()))
 										return Collections.emptySet();
 								}
 
