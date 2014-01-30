@@ -433,7 +433,8 @@ public class Infoflow extends AbstractInfoflow {
 		}
 		
 		logger.info("IFDS problem with {} forward and {} backward edges solved, "
-				+ "processing results...", forwardSolver.propagationCount, backSolver.propagationCount);
+				+ "processing results...", forwardSolver.propagationCount,
+				backSolver == null ? 0 : backSolver.propagationCount);
 		
 		// Force a cleanup. Everything we need is reachable through the
 		// results set, the other abstractions can be killed now.
