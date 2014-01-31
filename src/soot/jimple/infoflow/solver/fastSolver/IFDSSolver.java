@@ -432,8 +432,28 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 	protected void propagate(D sourceVal, N target, D targetVal,
 		/* deliberately exposed to clients */ N relatedCallSite,
 		/* deliberately exposed to clients */ boolean isUnbalancedReturn) {
+		propagate(sourceVal, target, targetVal, relatedCallSite, isUnbalancedReturn, false);
+	}
+	
+	/**
+	 * Propagates the flow further down the exploded super graph. 
+	 * @param sourceVal the source value of the propagated summary edge
+	 * @param target the target statement
+	 * @param targetVal the target value at the target statement
+	 * @param relatedCallSite for call and return flows the related call statement, <code>null</code> otherwise
+	 *        (this value is not used within this implementation but may be useful for subclasses of {@link IFDSSolver}) 
+	 * @param isUnbalancedReturn <code>true</code> if this edge is propagating an unbalanced return
+	 *        (this value is not used within this implementation but may be useful for subclasses of {@link IFDSSolver})
+	 * @param forceRegister True if the jump function must always be registered with jumpFn .
+	 * 		  This can happen when externally injecting edges that don't come out of this
+	 * 		  solver.
+	 */
+	protected void propagate(D sourceVal, N target, D targetVal,
+		/* deliberately exposed to clients */ N relatedCallSite,
+		/* deliberately exposed to clients */ boolean isUnbalancedReturn,
+		boolean forceRegister) {
 		final PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
-		final D existingVal = isMergePoint(target) ?
+		final D existingVal = (forceRegister || isMergePoint(target)) ?
 				jumpFn.addFunction(new WeakPathEdge<N, D>(sourceVal, target, targetVal)) : null;
 		if (existingVal != null) {
 			if (existingVal != targetVal)

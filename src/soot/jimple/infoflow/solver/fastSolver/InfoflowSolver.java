@@ -48,7 +48,7 @@ public class InfoflowSolver extends IFDSSolver<Unit, Abstraction, SootMethod, Bi
 
 	@Override
 	public boolean processEdge(PathEdge<Unit, Abstraction> edge){
-		propagate(edge.factAtSource(), edge.getTarget(), edge.factAtTarget(), null, false);
+		propagate(edge.factAtSource(), edge.getTarget(), edge.factAtTarget(), null, false, true);
 		return true;
 	}
 	
