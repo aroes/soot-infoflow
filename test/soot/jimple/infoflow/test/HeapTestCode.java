@@ -753,6 +753,14 @@ public class HeapTestCode {
 		cm.publish(staticB2.attr.b);
 	}
 	
+	public void staticAliasTest2() {
+		staticB1 = new B();
+		staticB2 = staticB1;
+		staticB1.attr.b = TelephonyManager.getDeviceId();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(staticB2.attr.b);
+	}
+
 	public void unAliasParameterTest() {
 		B b1 = new B();
 		B b2 = new B();

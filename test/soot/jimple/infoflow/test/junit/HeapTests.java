@@ -641,6 +641,20 @@ public class HeapTests extends JUnitTests {
 	}
 
 	@Test(timeout = 300000)
+	public void staticAliasTest2() {
+		Infoflow infoflow = initInfoflow();
+		infoflow.setInspectSources(false);
+		infoflow.setInspectSinks(false);
+		infoflow.setEnableImplicitFlows(false);
+
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void staticAliasTest2()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+		Assert.assertEquals(1, infoflow.getResults().size());
+	}
+
+	@Test(timeout = 300000)
 	public void unAliasParameterTest() {
 		Infoflow infoflow = initInfoflow();
 		infoflow.setInspectSources(false);
