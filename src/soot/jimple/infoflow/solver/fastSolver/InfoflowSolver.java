@@ -118,11 +118,12 @@ public class InfoflowSolver extends IFDSSolver<Unit, Abstraction, SootMethod, Bi
 		if (!noProp)
 			super.propagate(sourceVal, target, targetVal, relatedCallSite, isUnbalancedReturn);
 	}
-	
+
+	@Override
 	public void cleanup() {
 		this.jumpFn.clear();
 		this.incoming.clear();
 		this.endSummary.clear();
 	}
-		
+	
 }

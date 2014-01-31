@@ -29,13 +29,8 @@ import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
 import soot.Value;
-import soot.jimple.ArrayRef;
-import soot.jimple.Constant;
-import soot.jimple.DefinitionStmt;
-import soot.jimple.FieldRef;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.StaticFieldRef;
-import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler;
@@ -259,39 +254,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	public void setInspectSinks(boolean inspect){
 		inspectSinks = inspect;
 	}
-	
-	/**
-	 * we cannot rely just on "real" heap objects, but must also inspect locals because of Jimple's representation ($r0 =... )
-	 * @param val the value which gets tainted
-	 * @param source the source from which the taints comes from. Important if not the value, but a field is tainted
-	 * @return true if a reverseFlow should be triggered or an inactive taint should be propagated (= resulting object is stored in heap = alias)
-	 */
-	protected boolean triggerInaktiveTaintOrReverseFlow(Stmt stmt, Value val, Abstraction source){
-		if (stmt instanceof DefinitionStmt) {
-			DefinitionStmt defStmt = (DefinitionStmt) stmt;
-			// If the left side is overwritten completely, we do not need to
-			// look for aliases. This also covers strings.
-			if (defStmt.getLeftOp() instanceof Local
-					&& defStmt.getLeftOp() == source.getAccessPath().getPlainValue())
-				return false;
-
-			// Arrays are heap objects
-			if (val instanceof ArrayRef)
-				return true;
-			if (val instanceof FieldRef)
-				return true;
-		}
 		
-		// Primitive types or constants do not have aliases
-		if (val.getType() instanceof PrimType)
-			return false;
-		if (val instanceof Constant)
-			return false;
-		
-		return val instanceof FieldRef
-				|| (val instanceof Local && ((Local)val).getType() instanceof ArrayType);
-	}
-	
 	/**
 	 * Checks whether the given base value matches the base of the given
 	 * taint abstraction

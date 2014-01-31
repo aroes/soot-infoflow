@@ -35,8 +35,7 @@ public class HeapTestCode {
 		a.set(taint);
 		b.set("notaint");
 		ConnectionManager cm = new ConnectionManager();
-		cm.publish(b.f);
-		
+		cm.publish(b.f);	
 	}
 	
 	public void argumentTest(){
@@ -44,7 +43,6 @@ public class HeapTestCode {
 		run(x);
 		x.listField = new ArrayList<String>();
 		x.listField.add(TelephonyManager.getDeviceId());
-		
 	}
 	
 	public static void run(ClassWithField o){
@@ -53,7 +51,6 @@ public class HeapTestCode {
 		o.listField.add("empty");
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(o.field);
-		
 	}
 	
 	public void negativeTest(){
@@ -66,7 +63,6 @@ public class HeapTestCode {
 		
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(list.get());
-		
 	}
 	
 	class MyArrayList{
@@ -122,7 +118,6 @@ public class HeapTestCode {
 		}
 	}
 	
-	
 	//########################################################################
 
 	public void methodTest1(){
@@ -169,9 +164,6 @@ public class HeapTestCode {
 		}
 	}
 	
-	
-	//next test:
-	
 	public void testForWrapper(){
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish("");
@@ -186,17 +178,14 @@ public class HeapTestCode {
 		ClassWithStatic.staticString = TelephonyManager.getDeviceId();
 	}
 	
-	
 	public void testForLoop(){
 		while(true){
 			WrapperClass f = new WrapperClass();
 			f.sink();
 			
 			WrapperClass w = new WrapperClass();
-			w.callIt();
-			
-		}
-		
+			w.callIt();	
+		}	
 	}
 	
 	public void testForEarlyTermination(){
@@ -207,9 +196,7 @@ public class HeapTestCode {
 		ClassWithStatic c1 = new ClassWithStatic();
 		
 		WrapperClass w1 = new WrapperClass();
-		
 		w1.callIt();
-		
 	}
 	
 	class WrapperClass{
@@ -242,13 +229,16 @@ public class HeapTestCode {
 		public B() {
 			attr = new A();
 		}
+		
+		public void setAttr(A attr) {
+			this.attr = attr;
+		}
 	}
 	
 	public A m(){
 		A a = new A();
 		a.b = TelephonyManager.getDeviceId();
 		return a;
-		
 	}
 	
 	public void twoLevelTest(){
@@ -274,6 +264,7 @@ public class HeapTestCode {
 		public String id(String i){
 			return i;
 		}
+		
 	}
 	
 	private class DataClass {
@@ -704,6 +695,33 @@ public class HeapTestCode {
 		cm.publish(c.b);
 	}
 	
+	private A alias2(A a) {
+		A a2 = a;
+		return a2;
+	}
+
+	public void doubleAliasTest2() {
+		A a = new A();
+		A b = alias2(a);
+		A c = alias2(a);
+		a.b = TelephonyManager.getDeviceId();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(b.b);
+		cm.publish(c.b);
+	}
+	
+	public void tripleAliasTest() {
+		A a = new A();
+		A b = alias(a);
+		A c = alias(a);
+		A d = alias(a);
+		a.b = TelephonyManager.getDeviceId();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(b.b);
+		cm.publish(c.b);
+		cm.publish(d.b);
+	}
+
 	private int intData;
 	
 	private void setIntData() {
@@ -715,5 +733,71 @@ public class HeapTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(intData);
 	}
+	
+	private static B staticB1;
+	private static B staticB2;
+	
+	private void aliasStatic() {
+		staticB2.attr = staticB1.attr;
+	}
+	
+	public void staticAliasTest() {
+		staticB1 = new B();
+		staticB2 = new B();
+
+		aliasStatic();
+		
+		staticB1.attr.b = TelephonyManager.getDeviceId();
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(staticB2.attr.b);
+	}
+	
+	public void unAliasParameterTest() {
+		B b1 = new B();
+		B b2 = new B();
+		
+		b2.attr = b1.attr;
+		doUnalias(b2);
+		b1.attr.b = TelephonyManager.getDeviceId();
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(b2.attr.b);
+	}
+
+	private void doUnalias(B b2) {
+		b2.attr = new A();
+	}
+
+	public void overwriteParameterTest() {
+		B b = new B();
+		b.attr.b = TelephonyManager.getDeviceId();
+		
+		overwriteParameter(b);
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(b.attr.b);		
+	}
+
+	private void overwriteParameter(B b) {
+		System.out.println(b);
+		b = new B();
+	}
+	
+	public void multiAliasBaseTest() {
+		A a = new A();
+		B b1 = new B();
+		B b2 = new B();
+		
+		b1.setAttr(a);
+		b2.setAttr(a);
+		
+		a.b = TelephonyManager.getDeviceId();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(b1.attr.b);		
+		cm.publish(b2.attr.b);		
+	}
+	
+	// TODO: Static multi test
 
 }

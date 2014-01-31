@@ -25,6 +25,7 @@ import java.util.Set;
 import soot.ArrayType;
 import soot.IntType;
 import soot.Local;
+import soot.PrimType;
 import soot.RefType;
 import soot.SootField;
 import soot.SootMethod;
@@ -284,7 +285,39 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 	private boolean mustAlias(Value val1, Value val2) {
 		return val1.equals(val2);
 	}
-			
+	
+	/**
+	 * we cannot rely just on "real" heap objects, but must also inspect locals because of Jimple's representation ($r0 =... )
+	 * @param val the value which gets tainted
+	 * @param source the source from which the taints comes from. Important if not the value, but a field is tainted
+	 * @return true if a reverseFlow should be triggered or an inactive taint should be propagated (= resulting object is stored in heap = alias)
+	 */
+	private boolean triggerInaktiveTaintOrReverseFlow(Stmt stmt, Value val, Abstraction source){
+		if (stmt instanceof DefinitionStmt) {
+			DefinitionStmt defStmt = (DefinitionStmt) stmt;
+			// If the left side is overwritten completely, we do not need to
+			// look for aliases. This also covers strings.
+			if (defStmt.getLeftOp() instanceof Local
+					&& defStmt.getLeftOp() == source.getAccessPath().getPlainValue())
+				return false;
+
+			// Arrays are heap objects
+			if (val instanceof ArrayRef)
+				return true;
+			if (val instanceof FieldRef)
+				return true;
+		}
+		
+		// Primitive types or constants do not have aliases
+		if (val.getType() instanceof PrimType)
+			return false;
+		if (val instanceof Constant)
+			return false;
+		
+		return val instanceof FieldRef
+				|| (val instanceof Local && ((Local)val).getType() instanceof ArrayType);
+	}
+
 	@Override
 	public FlowFunctions<Unit, Abstraction, SootMethod> createFlowFunctionsFactory() {
 		return new FlowFunctions<Unit, Abstraction, SootMethod>() {
@@ -364,8 +397,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					newAbs = source.deriveNewAbstraction(leftValue, cutFirstField, assignStmt, targetType);
 				taintSet.add(newAbs);
 
-				if (triggerInaktiveTaintOrReverseFlow(assignStmt, leftValue, newAbs)
-						&& newAbs.isAbstractionActive())
+				if (triggerInaktiveTaintOrReverseFlow(assignStmt, leftValue, newAbs))
 					computeAliasTaints(d1, assignStmt, leftValue, taintSet, method, newAbs);
 			}
 			
@@ -1009,6 +1041,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							return Collections.emptySet();
 						if (source.equals(zeroValue))
 							return Collections.emptySet();
+						
+						if (source.toString().equals("_a2(soot.jimple.infoflow.test.HeapTestCode$A) <soot.jimple.infoflow.test.HeapTestCode$A: java.lang.String b> * | a.<soot.jimple.infoflow.test.HeapTestCode$A: java.lang.String b> = $r1>>"))
+							System.out.println("x");
 						
 						// Notify the handler if we have one
 						for (TaintPropagationHandler tp : taintPropagationHandlers)
