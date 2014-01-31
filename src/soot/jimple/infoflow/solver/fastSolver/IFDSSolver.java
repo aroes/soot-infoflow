@@ -18,7 +18,6 @@ import heros.FlowFunction;
 import heros.FlowFunctionCache;
 import heros.FlowFunctions;
 import heros.IFDSTabulationProblem;
-import heros.InterproceduralCFG;
 import heros.SynchronizedBy;
 import heros.ZeroedFlowFunctions;
 import heros.solver.CountingThreadPoolExecutor;
@@ -41,6 +40,7 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.infoflow.util.ConcurrentHashSet;
 import soot.jimple.infoflow.util.MyConcurrentHashMap;
+import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 import com.google.common.cache.CacheBuilder;
 
@@ -55,7 +55,7 @@ import com.google.common.cache.CacheBuilder;
  * @param <I> The type of inter-procedural control-flow graph being used.
  * @see IFDSTabulationProblem
  */
-public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG<N, M>> {
+public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterproceduralCFG<N, M>> {
 	
 	public static CacheBuilder<Object, Object> DEFAULT_CACHE_BUILDER = CacheBuilder.newBuilder().concurrencyLevel
 			(Runtime.getRuntime().availableProcessors()).initialCapacity(10000).softValues();
@@ -432,7 +432,8 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 		/* deliberately exposed to clients */ N relatedCallSite,
 		/* deliberately exposed to clients */ boolean isUnbalancedReturn) {
 		final PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
-		final D existingVal = jumpFn.addFunction(new WeakPathEdge<N, D>(sourceVal, target, targetVal));
+		final D existingVal = isMergePoint(target) ?
+				jumpFn.addFunction(new WeakPathEdge<N, D>(sourceVal, target, targetVal)) : null;
 		if (existingVal != null) {
 			if (existingVal != targetVal)
 				existingVal.addNeighbor(targetVal);
@@ -444,6 +445,21 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends InterproceduralCFG
 		}
 	}
 	
+	/**
+	 * Gets whether the given unit is a merge point in the ICFG
+	 * @param target The unit to check
+	 * @return True if the given unit is a merge point in the ICFG, otherwise
+	 * false
+	 */
+	private boolean isMergePoint(N target) {
+		if (icfg.isStartPoint(target))
+			return true;
+		if (icfg.getPredsOf(target).size() > 1)
+			return true;
+		
+		return false;
+	}
+
 	private Set<Pair<N, D>> endSummary(M m, D d3) {
 		Set<Pair<N, D>> map = endSummary.get(new Pair<M, D>(m, d3));
 		return map;
