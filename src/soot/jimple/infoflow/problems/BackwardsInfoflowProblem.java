@@ -197,8 +197,13 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 										(leftValue, newType), defStmt);
 							}
 						}
-						if (newLeftAbs != null)
+						if (newLeftAbs != null) {
 							res.add(newLeftAbs);
+							
+							// Inject the new alias into the forward solver
+							for (Unit u : interproceduralCFG().getPredsOf(defStmt))
+								fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, newLeftAbs));
+						}
 					}
 					
 					// If we have the tainted value on the left side of the assignment,
@@ -273,6 +278,10 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								Abstraction newAbs = source.deriveNewAbstraction(rightValue, cutFirstField,
 										targetType);
 								res.add(newAbs);
+	
+								// Inject the new alias into the forward solver
+								for (Unit u : interproceduralCFG().getPredsOf(defStmt))
+									fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, newAbs));
 							}
 						}
 					}

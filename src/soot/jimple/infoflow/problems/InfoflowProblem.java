@@ -907,8 +907,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					@Override
 					public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
 						Set<Abstraction> res = computeTargetsInternal(d1, source);
-						for (Abstraction abs : res)
-							aliasingStrategy.injectCallingContext(abs, solver, dest, src, source, d1);
+						if (!res.isEmpty())
+							for (Abstraction abs : res)
+								aliasingStrategy.injectCallingContext(abs, solver, dest, src, source, d1);
 						return notifyOutFlowHandlers(stmt, res, FlowFunctionType.CallFlowFunction);
 					}
 					
