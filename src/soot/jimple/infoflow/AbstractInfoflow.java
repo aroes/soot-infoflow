@@ -25,6 +25,7 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	protected boolean enableExceptions = true;
 	protected boolean computeResultPaths = true;
 	protected boolean flowSensitiveAliasing = true;
+	protected boolean pruneThis0AccessPaths = false;
 
 	protected boolean inspectSources = false;
 	protected boolean inspectSinks = false;
@@ -122,6 +123,11 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	@Override
 	public void setFlowSensitiveAliasing(boolean flowSensitiveAliasing) {
 		this.flowSensitiveAliasing = flowSensitiveAliasing;
+	}
+
+	@Override
+	public void setPruneThis0AccessPaths(boolean pruneThis0AccessPaths) {
+		this.pruneThis0AccessPaths = pruneThis0AccessPaths;
 	}
 
 	@Override

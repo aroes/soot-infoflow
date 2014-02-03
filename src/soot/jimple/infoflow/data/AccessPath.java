@@ -19,6 +19,7 @@ import soot.SootField;
 import soot.Type;
 import soot.Value;
 import soot.jimple.ArrayRef;
+import soot.jimple.FieldRef;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.infoflow.Infoflow;
@@ -74,8 +75,12 @@ public class AccessPath implements Cloneable {
 	
 	public AccessPath(Value val, SootField[] appendingFields, Type baseType,
 			Type[] appendingFieldTypes, boolean taintSubFields){
+		// Make sure that the base object is valid 
 		assert (val == null && appendingFields != null && appendingFields.length > 0)
 		 	|| canContainValue(val);
+		// Only fields can have further fields deeper down
+		assert val instanceof FieldRef || appendingFields == null
+				|| appendingFields.length == 0;
 		
 		SootField baseField = null;
 		Type bFieldType = null;
@@ -113,7 +118,7 @@ public class AccessPath implements Cloneable {
 					|| val.getType() instanceof ArrayType
 					|| appendingFields == null || appendingFields.length == 0;
 		}
-
+		
 		// Cut the fields at the maximum access path length. If this happens,
 		// we must always add a star
 		int fNum = (baseField == null ? 0 : 1)

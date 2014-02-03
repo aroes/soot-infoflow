@@ -806,6 +806,94 @@ public class HeapTestCode {
 		cm.publish(b2.attr.b);		
 	}
 	
-	// TODO: Static multi test
+	private class Inner1 {
+		
+		private class Inner2 {
+			private String data;
+			
+			public void set() {
+				data = TelephonyManager.getDeviceId();
+			}
+		}
+		
+		private Inner2 obj;
+		
+		public String get() {
+			return obj.data;
+		}
+	}
+	
+	public void innerClassTest() {
+		Inner1 a = new Inner1();
+		Inner1 b = new Inner1();
+		
+		a.obj = a.new Inner2();
+		b.obj = a.new Inner2();
+		
+		a.obj.set();
+		String untainted = b.get();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(untainted);		
+	}
+
+	private class Inner1b {
+		
+		private class Inner2b {
+			private String data;
+			
+			public void set() {
+				obj.data = TelephonyManager.getDeviceId();
+			}
+
+			public String get() {
+				return obj.data;
+			}
+		}
+		
+		private Inner2b obj;
+		
+		public String get() {
+			return obj.data;
+		}
+	}
+
+	public void innerClassTest2() {
+		Inner1b a = new Inner1b();
+		Inner1b b = new Inner1b();
+		
+		a.obj = a.new Inner2b();
+		b.obj = a.new Inner2b();
+		
+		a.obj.set();
+		String untainted = b.get();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(untainted);		
+	}
+
+	public void innerClassTest3() {
+		Inner1b a = new Inner1b();
+		Inner1b b = new Inner1b();
+		
+		a.obj = a.new Inner2b();
+		b.obj = a.new Inner2b();
+		
+		b.obj.set();
+		String untainted = a.get();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(untainted);		
+	}
+
+	public void innerClassTest4() {
+		Inner1b a = new Inner1b();
+		Inner1b b = new Inner1b();
+		
+		a.obj = a.new Inner2b();
+		b.obj = b.new Inner2b();
+				
+		a.obj.set();
+		String untainted = b.obj.get();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(untainted);		
+	}
 
 }

@@ -42,6 +42,7 @@ import soot.jimple.infoflow.aliasing.FlowSensitiveAliasStrategy;
 import soot.jimple.infoflow.aliasing.IAliasingStrategy;
 import soot.jimple.infoflow.aliasing.PtsBasedAliasStrategy;
 import soot.jimple.infoflow.config.IInfoflowConfig;
+import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.SourceContextAndPath;
 import soot.jimple.infoflow.entryPointCreators.IEntryPointCreator;
@@ -385,6 +386,8 @@ public class Infoflow extends AbstractInfoflow {
 		forwardProblem.setFlowSensitiveAliasing(flowSensitiveAliasing);
 		forwardProblem.setTaintWrapper(taintWrapper);
 		forwardProblem.setStopAfterFirstFlow(stopAfterFirstFlow);
+		
+		Abstraction.setPruneThis0AccessPaths(pruneThis0AccessPaths);
 		
 		if (backProblem != null) {
 			backProblem.setForwardSolver((InfoflowSolver) forwardSolver);
