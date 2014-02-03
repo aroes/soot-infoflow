@@ -120,8 +120,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				
 				if (defStmt instanceof AssignStmt) {
 					// Get the right side of the assignment
-					final AssignStmt assignStmt = (AssignStmt) defStmt;
-					final Value rightValue = BaseSelector.selectBase(assignStmt.getRightOp(), false);
+					final Value rightValue = BaseSelector.selectBase(defStmt.getRightOp(), false);
 	
 					// Is the left side overwritten completely?
 					if (leftSideMatches) {
@@ -175,7 +174,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							Type newType = source.getAccessPath().getBaseType();
 							if (leftValue instanceof ArrayRef)
 								newType = buildArrayOrAddDimension(newType);
-							else if (assignStmt.getRightOp() instanceof ArrayRef)
+							else if (defStmt.getRightOp() instanceof ArrayRef)
 								newType = ((ArrayType) newType).getElementType();
 							
 							// If this is an unrealizable typecast, drop the abstraction
@@ -185,7 +184,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 									return Collections.emptySet();
 							}
 							// Special type handling for certain operations
-							else if (assignStmt.getRightOp() instanceof LengthExpr) {
+							else if (defStmt.getRightOp() instanceof LengthExpr) {
 								assert source.getAccessPath().getBaseType() instanceof ArrayType;
 								newType = IntType.v();
 								
@@ -246,7 +245,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 	
 							// Check for unrealizable casts. If a = (O) b and a is tainted,
 							// but incompatible to the type of b, this cast is impossible
-							if (assignStmt.getRightOp() instanceof CastExpr) {
+							if (defStmt.getRightOp() instanceof CastExpr) {
 								CastExpr ce = (CastExpr) defStmt.getRightOp();
 								if (!checkCast(source.getAccessPath(), ce.getOp().getType()))
 									return Collections.emptySet();
@@ -257,7 +256,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						if (addRightValue) {
 							if (targetType != null) {
 								// Special handling for some operations
-								if (assignStmt.getRightOp() instanceof ArrayRef)
+								if (defStmt.getRightOp() instanceof ArrayRef)
 									targetType = buildArrayOrAddDimension(targetType);
 								else if (leftValue instanceof ArrayRef) {
 									assert source.getAccessPath().getBaseType() instanceof ArrayType;
@@ -270,7 +269,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							}
 							
 							// Special type handling for certain operations
-							if (assignStmt.getRightOp() instanceof LengthExpr)
+							if (defStmt.getRightOp() instanceof LengthExpr)
 								targetType = null;
 							// We do not need to handle casts. Casts only make
 							// types more imprecise when going backwards.
@@ -278,7 +277,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								Abstraction newAbs = source.deriveNewAbstraction(rightValue, cutFirstField,
 										targetType);
 								res.add(newAbs);
-	
+								
 								// Inject the new alias into the forward solver
 								for (Unit u : interproceduralCFG().getPredsOf(defStmt))
 									fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, newAbs));
@@ -415,7 +414,24 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								}
 							}
 						}
-												
+						
+						// Check whether we need to directly map back any of
+						// the parameters
+						if (stmt instanceof DefinitionStmt) {
+							Value leftVal = ((DefinitionStmt) stmt).getLeftOp();
+							for (Unit sP : interproceduralCFG().getStartPointsOf(dest))
+								if (sP instanceof ReturnStmt) {
+									Value retVal = ((ReturnStmt) sP).getOp();
+									for (Abstraction abs : res)
+										if (abs.getAccessPath().getPlainValue() == retVal) {
+											Abstraction retAbs = abs.deriveNewAbstraction
+													(source.getAccessPath().copyWithNewValue(leftVal), stmt);
+											for (Unit u : interproceduralCFG().getPredsOf(stmt))
+												fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, retAbs));
+										}
+								}
+						}
+						
 						return res;
 					}
 				};

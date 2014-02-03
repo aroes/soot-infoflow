@@ -1179,7 +1179,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						}
 						
 						// checks: this/params/fields
-
+						
 						// check one of the call params are tainted (not if simple type)
 						Value sourceBase = newSource.getAccessPath().getPlainLocal();
 						{
@@ -1253,6 +1253,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							}
 							}
 						}
+						
 						return res;
 					}
 

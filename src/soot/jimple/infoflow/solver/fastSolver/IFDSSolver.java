@@ -27,6 +27,7 @@ import heros.solver.PathEdge;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -472,8 +473,6 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 	 * false
 	 */
 	private boolean isMergePoint(N target) {
-		return true;
-		/*
 		if (icfg.isStartPoint(target))
 			return true;
 		
@@ -487,7 +486,6 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 					return true;
 		
 		return false;
-		*/
 	}
 
 	protected Set<Pair<N, D>> endSummary(M m, D d3) {
