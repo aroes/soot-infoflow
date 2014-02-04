@@ -77,10 +77,8 @@ public class AccessPath implements Cloneable {
 		// Make sure that the base object is valid 
 		assert (val == null && appendingFields != null && appendingFields.length > 0)
 		 	|| canContainValue(val);
-		// Only fields can have further fields deeper down
-		assert val == null || val.getType() instanceof RefType || appendingFields == null
-				|| appendingFields.length == 0;
 		
+		// Get the base object, field and type
 		SootField baseField = null;
 		Type bFieldType = null;
 		if(val instanceof StaticFieldRef){
