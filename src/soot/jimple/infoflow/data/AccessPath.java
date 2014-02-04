@@ -19,7 +19,6 @@ import soot.SootField;
 import soot.Type;
 import soot.Value;
 import soot.jimple.ArrayRef;
-import soot.jimple.FieldRef;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.infoflow.Infoflow;
@@ -79,7 +78,7 @@ public class AccessPath implements Cloneable {
 		assert (val == null && appendingFields != null && appendingFields.length > 0)
 		 	|| canContainValue(val);
 		// Only fields can have further fields deeper down
-		assert val instanceof FieldRef || appendingFields == null
+		assert val == null || val.getType() instanceof RefType || appendingFields == null
 				|| appendingFields.length == 0;
 		
 		SootField baseField = null;
