@@ -229,10 +229,11 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		if (cutFirstField)
 			baseType = accessPath.getFirstFieldType();
 		
-		if (pruneThis0AccessPaths && taint instanceof FieldRef && fields != null) {
+		if (pruneThis0AccessPaths && taint instanceof FieldRef) {
 			// Filter this$0 backwards references.
 			// 1) f.this$0.f -> f
-			while (fields.length >= 2
+			while (fields != null
+					&& fields.length >= 2
 					&& fields[0].getName().startsWith("this$")
 					&& fields[1] == ((FieldRef) taint).getField()) {
 				// If we have f.this$0.f, this gets reduced to f
