@@ -71,7 +71,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	protected boolean inspectSources = false;
 	protected boolean inspectSinks = false;
 
-	Abstraction zeroValue = null;
+	private Abstraction zeroValue = null;
 	
 	protected IInfoflowSolver solver = null;
 	
@@ -190,6 +190,10 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	 */
 	public void setFlowSensitiveAliasing(boolean flowSensitiveAliasing) {
 		this.flowSensitiveAliasing = flowSensitiveAliasing;
+		
+		// We need to reset the zero value since it depends on the flow
+		// sensitivity setting
+		this.zeroValue = null;
 	}
 	
 	/**
@@ -200,14 +204,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	public void setEnableTypeChecking(boolean enableTypeChecking) {
 		this.enableTypeChecking = enableTypeChecking;
 	}
-
-	@Override
-	public Abstraction createZeroValue() {
-		if (zeroValue == null)
-			zeroValue = Abstraction.getZeroAbstraction(flowSensitiveAliasing);
-		return zeroValue;
-	}
-
+	
 	/**
 	 * Gets whether the given method is an entry point, i.e. one of the initial
 	 * seeds belongs to the given method
@@ -271,12 +268,12 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 		else if (baseValue instanceof InstanceFieldRef) {
 			InstanceFieldRef ifr = (InstanceFieldRef) baseValue;
 			if (ifr.getBase().equals(source.getAccessPath().getPlainValue())
-					&& ifr.getField().equals(source.getAccessPath().getFirstField()))
+					&& source.getAccessPath().firstFieldMatches(ifr.getField()))
 				return true;
 		}
 		else if (baseValue instanceof StaticFieldRef) {
 			StaticFieldRef sfr = (StaticFieldRef) baseValue;
-			if (sfr.getField().equals(source.getAccessPath().getFirstField()))
+			if (source.getAccessPath().firstFieldMatches(sfr.getField()))
 				return true;
 		}
 		return false;
@@ -417,4 +414,15 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 			return canCastType(type, accessPath.getBaseType());
 	}
 	
+	@Override
+	public Abstraction createZeroValue() {
+		if (zeroValue == null)
+			zeroValue = Abstraction.getZeroAbstraction(flowSensitiveAliasing);
+		return zeroValue;
+	}
+	
+	protected Abstraction getZeroValue() {
+		return zeroValue;
+	}
+
 }

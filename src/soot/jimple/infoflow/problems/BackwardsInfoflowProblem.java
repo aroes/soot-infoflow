@@ -64,7 +64,7 @@ import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
  */
 public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 	private IInfoflowSolver fSolver;
-
+	
 	public void setTaintWrapper(ITaintPropagationWrapper wrapper) {
 		taintWrapper = wrapper;
 	}
@@ -100,7 +100,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				
 				// A backward analysis looks for aliases of existing taints and thus
 				// cannot create new taints out of thin air
-				if (source.equals(zeroValue))
+				if (source == getZeroValue())
 					return Collections.emptySet();
 				
 				// Check whether the left side of the assignment matches our
@@ -157,7 +157,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							InstanceFieldRef ref = (InstanceFieldRef) rightValue;
 							if (source.getAccessPath().isInstanceFieldRef()
 									&& ref.getBase().equals(source.getAccessPath().getPlainValue())
-									&& ref.getField().equals(source.getAccessPath().getFirstField())) {
+									&& source.getAccessPath().firstFieldMatches(ref.getField())) {
 								newLeftAbs = source.deriveNewAbstraction(leftValue, true,
 										source.getAccessPath().getBaseType());
 							}
@@ -165,7 +165,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						else if (enableStaticFields && rightValue instanceof StaticFieldRef) {
 							StaticFieldRef ref = (StaticFieldRef) rightValue;
 							if (source.getAccessPath().isStaticFieldRef()
-									&& ref.getField().equals(source.getAccessPath().getFirstField())) {
+									&& source.getAccessPath().firstFieldMatches(ref.getField())) {
 								newLeftAbs = source.deriveNewAbstraction(leftValue, true,
 										source.getAccessPath().getBaseType());
 							}
@@ -220,7 +220,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							InstanceFieldRef leftRef = (InstanceFieldRef) leftValue;
 							if (leftRef.getBase().equals(source.getAccessPath().getPlainLocal())) {
 								if (source.getAccessPath().isInstanceFieldRef()) {
-									if (leftRef.getField().equals(source.getAccessPath().getFirstField())) {
+									if (source.getAccessPath().firstFieldMatches(leftRef.getField())) {
 										addRightValue = true;
 										cutFirstField = true;
 									}
@@ -301,10 +301,17 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 
 						@Override
 						public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
-							if (source.equals(zeroValue))
+							if (source == getZeroValue())
 								return Collections.emptySet();
-							assert !source.isAbstractionActive() || !flowSensitiveAliasing;
-							return computeAliases(defStmt, d1, source);
+							assert source.isAbstractionActive() || flowSensitiveAliasing;
+							
+							Set<Abstraction> res = computeAliases(defStmt, d1, source);
+							
+							if (dest instanceof DefinitionStmt && interproceduralCFG().isExitStmt(dest))
+								for (Abstraction abs : res)
+									computeAliases((DefinitionStmt) dest, d1, abs);
+							
+							return res;
 						}
 
 					};
@@ -338,9 +345,9 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 
 					@Override
 					public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
-						if (source.equals(zeroValue))
+						if (source == getZeroValue())
 							return Collections.emptySet();
-						assert !source.isAbstractionActive() || !flowSensitiveAliasing;
+						assert source.isAbstractionActive() || flowSensitiveAliasing;
 						
 						//if we do not have to look into sources or sinks:
 						if (!inspectSources && sourceInfo != null)
@@ -455,9 +462,9 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					@Override
 					public Set<Abstraction> computeTargets(Abstraction source,
 							Collection<Abstraction> callerD1s) {
-						if (source.equals(zeroValue))
+						if (source == getZeroValue())
 							return Collections.emptySet();
-						assert !source.isAbstractionActive() || !flowSensitiveAliasing;
+						assert source.isAbstractionActive() || flowSensitiveAliasing;
 						
 						// If we have no caller, we have nowhere to propagate. This
 						// can happen when leaving the main method.
@@ -552,9 +559,9 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					return new SolverCallToReturnFlowFunction() {
 						@Override
 						public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
-							if (source.equals(zeroValue))
+							if (source == getZeroValue())
 								return Collections.emptySet();
-							assert !source.isAbstractionActive() || !flowSensitiveAliasing;
+							assert source.isAbstractionActive() || flowSensitiveAliasing;
 							
 							// We never pass static taints over the call-to-return edge
 							if (source.getAccessPath().isStaticFieldRef())
@@ -586,5 +593,5 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 			}
 		};
 	}
-
+	
 }

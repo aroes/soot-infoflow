@@ -15,9 +15,7 @@ import heros.solver.LinkedNode;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import soot.NullType;
@@ -30,9 +28,9 @@ import soot.jimple.FieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.solver.IInfoflowCFG.UnitContainer;
 import soot.jimple.infoflow.source.SourceInfo;
+import soot.jimple.infoflow.util.ConcurrentHashSet;
 import soot.jimple.internal.JimpleLocal;
 
-import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
 
 /**
@@ -42,8 +40,7 @@ import com.google.common.collect.Sets;
  * @author Christian Fritz
  */
 public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
-
-	private static Abstraction zeroValue = null;
+	
 	private static boolean flowSensitiveAliasing = true;
 	private static boolean pruneThis0AccessPaths = false;
 		
@@ -59,7 +56,8 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	private SourceContext sourceContext = null;
 
 	// only used in path generation
-	private Map<Object, Set<SourceContextAndPath>> pathCache = null;
+	private Set<SourceContextAndPath> pathCache = null;
+	private Set<Object> pathFlags = null;
 	
 	/**
 	 * Unit/Stmt which activates the taint when the abstraction passes it
@@ -138,6 +136,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 			sourceContext = original.sourceContext;
 			exceptionThrown = original.exceptionThrown;
 			activationUnit = original.activationUnit;
+			assert activationUnit == null || flowSensitiveAliasing;
 			
 			postdominators = original.postdominators == null ? null
 					: new ArrayList<UnitContainer>(original.postdominators);
@@ -150,8 +149,10 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	}
 	
 	public final Abstraction deriveInactiveAbstraction(Unit activationUnit){
-		if (!flowSensitiveAliasing)
+		if (!flowSensitiveAliasing) {
+			assert this.isAbstractionActive();
 			return this;
+		}
 		
 		// If this abstraction is already inactive, we keep it
 		if (!this.isAbstractionActive())
@@ -296,70 +297,25 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	 * @return The path from the source to the current statement
 	 */
 	public Set<SourceContextAndPath> getPaths() {
-		return getPaths(true, new Object());
+		return pathCache;
 	}
 	
-	/**
-	 * Gets the path of statements from the source to the current statement
-	 * with which this abstraction is associated. If this path is ambiguous,
-	 * a single path is selected randomly.
-	 * @return The path from the source to the current statement
-	 */
-	public Set<SourceContextAndPath> getSources() {
-		Runtime.getRuntime().gc();
-		return getPaths(false, new Object());
+	public Set<SourceContextAndPath> getOrMakePathCache() {
+		synchronized (this) {
+			if (this.pathCache == null)
+				this.pathCache = new ConcurrentHashSet<SourceContextAndPath>();
+		}
+		return pathCache;
 	}
 	
-	/**
-	 * Gets the path of statements from the source to the current statement
-	 * with which this abstraction is associated. If this path is ambiguous,
-	 * a single path is selected randomly.
-	 * @return The path from the source to the current statement
-	 */
-	private Set<SourceContextAndPath> getPaths(boolean reconstructPaths, Object flagAbs) {
-		if (this.pathCache == null)
-			this.pathCache = new MapMaker().weakKeys().concurrencyLevel
-					(Runtime.getRuntime().availableProcessors()).makeMap();
+	public boolean registerPathFlag(Object flag) {
+		synchronized (this) {
+			if (pathFlags == null)
+				pathFlags = new ConcurrentHashSet<Object>();
+		}
+		return pathFlags.add(flag);
+	}
 
-		// If we run into a loop, we symbolically save where to continue on the
-		// next run and abort for now
-		Set<SourceContextAndPath> cacheData = null;
-		synchronized (pathCache) {
-			cacheData = pathCache.get(flagAbs);
-			if (cacheData != null)
-				return Collections.unmodifiableSet(cacheData);
-			
-			// Create a cache entry
-			cacheData = new HashSet<SourceContextAndPath>();
-			this.pathCache.put(flagAbs, cacheData);
-		}
-		
-		if (sourceContext != null) {
-			// Construct the path root
-			SourceContextAndPath sourceAndPath = new SourceContextAndPath
-					(sourceContext.getValue(), sourceContext.getStmt(),
-							sourceContext.getUserData()).extendPath(sourceContext.getStmt());
-			cacheData.add(sourceAndPath);
-			
-			// Sources may not have predecessors
-			assert predecessor == null;
-		}
-		else {
-			for (SourceContextAndPath curScap : predecessor.getPaths(reconstructPaths, flagAbs)) {
-				SourceContextAndPath extendedPath = (currentStmt == null || !reconstructPaths)
-						? curScap : curScap.extendPath(currentStmt);
-				cacheData.add(extendedPath);
-			}
-		}
-			
-		if (neighbors != null)
-			for (Abstraction nb : neighbors)
-				cacheData.addAll(nb.getPaths(reconstructPaths, flagAbs));
-		
-		assert pathCache != null;
-		return Collections.unmodifiableSet(cacheData);
-	}
-	
 	public boolean isAbstractionActive(){
 		return activationUnit == null;
 	}
@@ -568,13 +524,20 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		return dependsOnCutAP;
 	}
 	
-	Abstraction getPredecessor() {
+	public Abstraction getPredecessor() {
 		return this.predecessor;
 	}
 	
+	public Set<Abstraction> getNeighbors() {
+		return this.neighbors;
+	}
+	
+	public Stmt getCurrentStmt() {
+		return this.currentStmt;
+	}
+		
 	@Override
 	public void addNeighbor(Abstraction originalAbstraction) {
-		assert this != zeroValue;
 		assert originalAbstraction.equals(this);
 		
 		// We should not register ourselves as a neighbor
@@ -592,11 +555,9 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	}
 		
 	public static Abstraction getZeroAbstraction(boolean flowSensitiveAliasing) {
-		if (zeroValue == null) {
-			zeroValue = new Abstraction(new JimpleLocal("zero", NullType.v()), new SourceInfo(false), null,
-					null, false, false);
-			Abstraction.flowSensitiveAliasing = flowSensitiveAliasing;
-		}
+		Abstraction zeroValue = new Abstraction(new JimpleLocal("zero", NullType.v()), new SourceInfo(false), null,
+				null, false, false);
+		Abstraction.flowSensitiveAliasing = flowSensitiveAliasing;
 		return zeroValue;
 	}
 	

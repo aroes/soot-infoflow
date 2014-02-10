@@ -839,7 +839,7 @@ public class HeapTestCode {
 	private class Inner1b {
 		
 		private class Inner2b {
-			private String data;
+			public String data;
 			
 			public void set() {
 				obj.data = TelephonyManager.getDeviceId();
@@ -850,7 +850,7 @@ public class HeapTestCode {
 			}
 		}
 		
-		private Inner2b obj;
+		public Inner2b obj;
 		
 		public String get() {
 			return obj.data;
@@ -880,7 +880,7 @@ public class HeapTestCode {
 		b.obj.set();
 		String untainted = a.get();
 		ConnectionManager cm = new ConnectionManager();
-		cm.publish(untainted);		
+		cm.publish(untainted);
 	}
 
 	public void innerClassTest4() {
@@ -894,6 +894,32 @@ public class HeapTestCode {
 		String untainted = b.obj.get();
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(untainted);		
+	}
+	
+	private class SimpleTree {
+		private String data = "";
+		private SimpleTree left;
+		private SimpleTree right;
+	}
+	
+	public void datastructureTest() {
+		SimpleTree root = new SimpleTree();
+		root.left = new SimpleTree();
+		root.right = new SimpleTree();
+		root.left.data = TelephonyManager.getDeviceId();
+		root.right.data = "foo";
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(root.left.data);
+	}
+
+	public void datastructureTest2() {
+		SimpleTree root = new SimpleTree();
+		root.left = new SimpleTree();
+		root.right = new SimpleTree();
+		root.left.data = TelephonyManager.getDeviceId();
+		root.right.data = "foo";
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(root.right.data);
 	}
 
 }

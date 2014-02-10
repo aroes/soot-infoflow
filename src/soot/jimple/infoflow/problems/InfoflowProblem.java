@@ -98,7 +98,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			IAliasingStrategy aliasingStrategy) {
 	    this(new InfoflowCFG(), mySourceSinkManager, aliasingStrategy);
 	    for (Unit u : analysisSeeds)
-	    	this.initialSeeds.put(u, Collections.singleton(zeroValue));
+	    	this.initialSeeds.put(u, Collections.singleton(getZeroValue()));
     }
 	
 	public InfoflowProblem(IInfoflowCFG icfg, ISourceSinkManager sourceSinkManager,
@@ -120,7 +120,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			(Abstraction d1,
 			final Stmt iStmt,
 			Abstraction source) {
-		assert inspectSources || source != zeroValue;
+		assert inspectSources || source != getZeroValue();
 		
 		Set<Abstraction> res = new HashSet<Abstraction>();
 		if(taintWrapper == null)
@@ -460,7 +460,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 
 							// This may also be a parameter access we regard as a source
 							Set<Abstraction> res = new HashSet<Abstraction>();
-							if (source == zeroValue && sourceInfo != null) {
+							if (source == getZeroValue() && sourceInfo != null) {
 								Abstraction abs = new Abstraction(is.getLeftOp(), sourceInfo,
 										is.getRightOp(), is, false, false);
 								res.add(abs);
@@ -529,7 +529,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							boolean cutFirstField = false;
 							
 							// Fields can be sources in some cases
-                            if (source.equals(zeroValue) && sourceInfo != null) {
+                            if (source == getZeroValue() && sourceInfo != null) {
     							Set<Abstraction> res = new HashSet<Abstraction>();
                                 final Abstraction abs = new Abstraction(assignStmt.getLeftOp(),
                                 		sourceInfo, assignStmt.getRightOp(), assignStmt,
@@ -544,7 +544,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
                             }
 
                             // on NormalFlow taint cannot be created
-							if (source.equals(zeroValue))
+							if (source == getZeroValue())
 								return Collections.emptySet();
 							
 							// Check whether we must leave a conditional branch
@@ -922,11 +922,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							return Collections.emptySet();
 						if (!inspectSinks && isSink)
 							return Collections.emptySet();
-						if (source == zeroValue) {
+						if (source == getZeroValue()) {
 							assert sourceInfo != null;
 							return Collections.singleton(source);
 						}
-
+						
 						// Notify the handler if we have one
 						for (TaintPropagationHandler tp : taintPropagationHandlers)
 							tp.notifyFlowIn(stmt, Collections.singleton(source),
@@ -1040,11 +1040,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					private Set<Abstraction> computeTargetsInternal(Abstraction source, Collection<Abstraction> callerD1s) {
 						if (stopAfterFirstFlow && !results.isEmpty())
 							return Collections.emptySet();
-						if (source.equals(zeroValue))
+						if (source == getZeroValue())
 							return Collections.emptySet();
-						
-						if (source.toString().equals("_a2(soot.jimple.infoflow.test.HeapTestCode$A) <soot.jimple.infoflow.test.HeapTestCode$A: java.lang.String b> * | a.<soot.jimple.infoflow.test.HeapTestCode$A: java.lang.String b> = $r1>>"))
-							System.out.println("x");
 						
 						// Notify the handler if we have one
 						for (TaintPropagationHandler tp : taintPropagationHandlers)
@@ -1253,7 +1250,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							}
 							}
 						}
-						
 						return res;
 					}
 
@@ -1309,7 +1305,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 
 							// Sources can either be assignments like x = getSecret() or
 							// instance method calls like constructor invocations
-							if (source == zeroValue && sourceInfo != null) {
+							if (source == getZeroValue() && sourceInfo != null) {
 								// If we have nothing to taint, we can skip this source
 								if (!(iStmt instanceof AssignStmt || invExpr instanceof InstanceInvokeExpr))
 									return Collections.emptySet();
@@ -1390,7 +1386,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							// Implicit taints are always passed over conditionally called methods
 							passOn |= source.getTopPostdominator() != null || source.getAccessPath().isEmpty();
 							if (passOn)
-								if (newSource != zeroValue)
+								if (newSource != getZeroValue())
 									res.add(newSource);
 							
 							if (iStmt.getInvokeExpr().getMethod().isNative())
@@ -1473,6 +1469,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
     public Set<AbstractionAtSink> getResults(){
    		return this.results.keySet();
 	}
-
+    
 }
 

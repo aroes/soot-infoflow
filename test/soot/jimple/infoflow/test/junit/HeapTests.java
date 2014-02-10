@@ -259,11 +259,11 @@ public class HeapTests extends JUnitTests {
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void threeLevelTest()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
-		checkInfoflow(infoflow, 1);
 		
 		infoflow.setAccessPathLength(oldAPLength); // this is a global setting!
 													// Restore it when we're
 													// done
+		checkInfoflow(infoflow, 1);
 		Assert.assertEquals(1, infoflow.getResults().size());
 	}
 
@@ -511,6 +511,7 @@ public class HeapTests extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void aliasPerformanceTestFIS() {
+		for (int i = 0; i < 100; i++) {
 		Infoflow infoflow = initInfoflow();
 		int oldLength = Infoflow.getAccessPathLength();
 		infoflow.setAccessPathLength(3);
@@ -527,6 +528,7 @@ public class HeapTests extends JUnitTests {
 		Assert.assertEquals(3, infoflow.getResults().size());
 
 		infoflow.setAccessPathLength(oldLength);
+		}
 	}
 
 	@Test(timeout = 300000)
@@ -745,6 +747,33 @@ public class HeapTests extends JUnitTests {
 
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void innerClassTest4()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		negativeCheckInfoflow(infoflow);
+	}
+
+	@Test(timeout = 300000)
+	public void datastructureTest() {
+		Infoflow infoflow = initInfoflow();
+		infoflow.setInspectSources(false);
+		infoflow.setInspectSinks(false);
+		infoflow.setEnableImplicitFlows(false);
+
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void datastructureTest()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+		Assert.assertEquals(1, infoflow.getResults().size());
+	}
+
+	@Test(timeout = 300000)
+	public void datastructureTest2() {
+		Infoflow infoflow = initInfoflow();
+		infoflow.setInspectSources(false);
+		infoflow.setInspectSinks(false);
+		infoflow.setEnableImplicitFlows(false);
+
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void datastructureTest2()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		negativeCheckInfoflow(infoflow);
 	}
