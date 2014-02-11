@@ -301,6 +301,11 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	}
 	
 	public Set<SourceContextAndPath> getOrMakePathCache() {
+		// We're optimistic about having a path cache. If we definitely have one,
+		// we return it. Otherwise, we need to lock and create one.
+		if (this.pathCache != null)
+			return pathCache;
+		
 		synchronized (this) {
 			if (this.pathCache == null)
 				this.pathCache = new ConcurrentHashSet<SourceContextAndPath>();
@@ -543,14 +548,14 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		// We should not register ourselves as a neighbor
 		if (originalAbstraction == this)
 			return;
+		if (this.predecessor == originalAbstraction.predecessor
+				&& this.currentStmt == originalAbstraction.currentStmt)
+			return;
 		
 		synchronized (this) {
 			if (neighbors == null)
 				neighbors = Sets.newIdentityHashSet();
-			
-			if (this.predecessor != originalAbstraction.predecessor
-					|| this.currentStmt != originalAbstraction.currentStmt)
-				this.neighbors.add(originalAbstraction);
+			this.neighbors.add(originalAbstraction);
 		}
 	}
 		
