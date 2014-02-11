@@ -44,7 +44,10 @@ import soot.jimple.infoflow.aliasing.PtsBasedAliasStrategy;
 import soot.jimple.infoflow.config.IInfoflowConfig;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
+import soot.jimple.infoflow.data.pathBuilders.DefaultPathBuilderFactory;
+import soot.jimple.infoflow.data.pathBuilders.DefaultPathBuilderFactory.PathBuilder;
 import soot.jimple.infoflow.data.pathBuilders.IAbstractionPathBuilder;
+import soot.jimple.infoflow.data.pathBuilders.IPathBuilderFactory;
 import soot.jimple.infoflow.data.pathBuilders.RecursivePathBuilder;
 import soot.jimple.infoflow.data.pathBuilders.ThreadedPathBuilder;
 import soot.jimple.infoflow.entryPointCreators.IEntryPointCreator;
@@ -72,7 +75,8 @@ public class Infoflow extends AbstractInfoflow {
     private static boolean debug = false;
 	private static int accessPathLength = 5;
 	
-	private final InfoflowResults results = new InfoflowResults();
+	private InfoflowResults results = null;
+	private final IPathBuilderFactory pathBuilderFactory;
 
 	private final String androidPath;
 	private final boolean forceAndroidJar;
@@ -91,6 +95,7 @@ public class Infoflow extends AbstractInfoflow {
 	public Infoflow() {
 		this.androidPath = "";
 		this.forceAndroidJar = false;
+		this.pathBuilderFactory = new DefaultPathBuilderFactory();
 	}
 
 	/**
@@ -105,6 +110,7 @@ public class Infoflow extends AbstractInfoflow {
 		super();
 		this.androidPath = androidPath;
 		this.forceAndroidJar = forceAndroidJar;
+		this.pathBuilderFactory = new DefaultPathBuilderFactory();
 	}
 
 	/**
@@ -114,12 +120,16 @@ public class Infoflow extends AbstractInfoflow {
 	 * is the full path of a single android.jar file.
 	 * @param forceAndroidJar True if a single platform JAR file shall be forced,
 	 * false if Soot shall pick the appropriate platform version
-	 * @param icfgFactory The interprocedural CFG to be used by the InfoFlowProblem 
+	 * @param icfgFactory The interprocedural CFG to be used by the InfoFlowProblem
+	 * @param pathBuilderFactory The factory class for constructing a path builder
+	 * algorithm 
 	 */
-	public Infoflow(String androidPath, boolean forceAndroidJar, BiDirICFGFactory icfgFactory) {
+	public Infoflow(String androidPath, boolean forceAndroidJar, BiDirICFGFactory icfgFactory,
+			IPathBuilderFactory pathBuilderFactory) {
 		super(icfgFactory);
 		this.androidPath = androidPath;
 		this.forceAndroidJar = forceAndroidJar;
+		this.pathBuilderFactory = pathBuilderFactory;
 	}
 	
 	public static void setDebug(boolean debugflag) {
@@ -247,7 +257,6 @@ public class Infoflow extends AbstractInfoflow {
 	public void computeInfoflow(String appPath, String libPath,
 			IEntryPointCreator entryPointCreator,
 			List<String> entryPoints, ISourceSinkManager sourcesSinks) {
-		results.clear();
 		if (sourcesSinks == null) {
 			logger.error("Sources are empty!");
 			return;
@@ -275,7 +284,6 @@ public class Infoflow extends AbstractInfoflow {
 	@Override
 	public void computeInfoflow(String appPath, String libPath, String entryPoint,
 			ISourceSinkManager sourcesSinks) {
-		results.clear();
 		if (sourcesSinks == null) {
 			logger.error("Sources are empty!");
 			return;
@@ -496,13 +504,13 @@ public class Infoflow extends AbstractInfoflow {
 	 * @param res The data flow tracker results
 	 */
 	private void computeTaintPaths(final Set<AbstractionAtSink> res) {
-//    	ThreadedPathBuilder builder = new ThreadedPathBuilder(results, maxThreadNum);x
-    	IAbstractionPathBuilder builder = new RecursivePathBuilder(results, maxThreadNum);
+		IAbstractionPathBuilder builder = this.pathBuilderFactory.createPathBuilder(maxThreadNum);
     	if (computeResultPaths)
     		builder.computeTaintPaths(res);
     	else
     		builder.computeTaintSources(res);
-//    	builder.shutdown();
+    	this.results = builder.getResults();
+    	builder.shutdown();
 	}
 
 	private Collection<SootMethod> getMethodsForSeeds(IInfoflowCFG icfg) {

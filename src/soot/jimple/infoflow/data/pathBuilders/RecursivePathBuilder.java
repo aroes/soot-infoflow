@@ -3,6 +3,7 @@ package soot.jimple.infoflow.data.pathBuilders;
 import heros.solver.CountingThreadPoolExecutor;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -24,17 +25,14 @@ public class RecursivePathBuilder implements IAbstractionPathBuilder {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
-    private final InfoflowResults results;
+    private final InfoflowResults results = new InfoflowResults();
 	private final CountingThreadPoolExecutor executor;
     
     /**
      * Creates a new instanceof the {@link RecursivePathBuilder} class
-     * @param results The object in which to store the results
 	 * @param maxThreadNum The maximum number of threads to use
      */
-    public RecursivePathBuilder(InfoflowResults results, int maxThreadNum) {
-    	this.results = results;
-
+    public RecursivePathBuilder(int maxThreadNum) {
     	int numThreads = Runtime.getRuntime().availableProcessors();
 		this.executor = createExecutor(maxThreadNum == -1 ? numThreads
 				: Math.min(maxThreadNum, numThreads));
@@ -66,11 +64,7 @@ public class RecursivePathBuilder implements IAbstractionPathBuilder {
 		if (!curAbs.registerPathFlag(flagAbs))
 			return Collections.emptySet();
 		
-		Set<SourceContextAndPath> cacheData = curAbs.getPaths();
-//		if (cacheData != null)
-//			return Collections.unmodifiableSet(cacheData);
-		cacheData = curAbs.getOrMakePathCache();
-		
+		Set<SourceContextAndPath> cacheData = new HashSet<SourceContextAndPath>();
 		if (curAbs.getSourceContext() != null) {
 			// Construct the path root
 			SourceContextAndPath sourceAndPath = new SourceContextAndPath
@@ -151,6 +145,10 @@ public class RecursivePathBuilder implements IAbstractionPathBuilder {
 	@Override
 	public InfoflowResults getResults() {
 		return this.results;
+	}
+
+	@Override
+	public void shutdown() {
 	}
 	
 }

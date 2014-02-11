@@ -511,7 +511,6 @@ public class HeapTests extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void aliasPerformanceTestFIS() {
-		for (int i = 0; i < 100; i++) {
 		Infoflow infoflow = initInfoflow();
 		int oldLength = Infoflow.getAccessPathLength();
 		infoflow.setAccessPathLength(3);
@@ -528,7 +527,6 @@ public class HeapTests extends JUnitTests {
 		Assert.assertEquals(3, infoflow.getResults().size());
 
 		infoflow.setAccessPathLength(oldLength);
-		}
 	}
 
 	@Test(timeout = 300000)

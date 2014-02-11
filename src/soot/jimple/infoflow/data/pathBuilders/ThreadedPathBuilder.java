@@ -3,6 +3,7 @@ package soot.jimple.infoflow.data.pathBuilders;
 import heros.solver.CountingThreadPoolExecutor;
 
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -15,7 +16,7 @@ import soot.jimple.infoflow.InfoflowResults;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.SourceContextAndPath;
-import soot.jimple.infoflow.util.MyConcurrentHashMap;
+import soot.jimple.infoflow.util.ConcurrentHashSet;
 import soot.util.IdentityHashSet;
 
 /**
@@ -27,21 +28,18 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 	
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
-    private final InfoflowResults results;
+    private final InfoflowResults results = new InfoflowResults();
 	private final CountingThreadPoolExecutor executor;
 	
-	private final MyConcurrentHashMap<Object, Set<Abstraction>> roots =
-			new MyConcurrentHashMap<Object, Set<Abstraction>>();
-	private MyConcurrentHashMap<Abstraction, Set<Abstraction>> successors = null;
+	private final Set<Abstraction> roots = new ConcurrentHashSet<Abstraction>();
+	private IdentityHashMap<Abstraction, Set<Abstraction>> successors = null;
+	private IdentityHashMap<Abstraction, Set<Abstraction>> neighbors = null;
 	
 	/**
 	 * Creates a new instance of the {@link ThreadedPathBuilder} class
-	 * @param results The result object in which to store the generated paths
 	 * @param maxThreadNum The maximum number of threads to use
 	 */
-	public ThreadedPathBuilder(InfoflowResults results, int maxThreadNum) {
-		this.results = results;
-		
+	public ThreadedPathBuilder(int maxThreadNum) {
         int numThreads = Runtime.getRuntime().availableProcessors();
 		this.executor = createExecutor(maxThreadNum == -1 ? numThreads
 				: Math.min(maxThreadNum, numThreads));
@@ -74,33 +72,49 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 		
 		private boolean addSuccessor(Abstraction parent, Abstraction child) {
 			if (successors != null) {
-				Set<Abstraction> succs = successors.putIfAbsentElseGet
-						(parent, new IdentityHashSet<Abstraction>());
-				return succs.add(child);
+				synchronized (successors) {
+					Set<Abstraction> succs = successors.get(parent);
+					if (succs == null) {
+						succs = new IdentityHashSet<Abstraction>();
+						successors.put(parent, succs);
+					}
+					return succs.add(child);
+				}
 			}
 			return false;
 		}
 		
-		private void addRoot(Abstraction root) {
-			if (roots != null) {
-				Set<Abstraction> rootSet = roots.putIfAbsentElseGet
-						(flagAbs, new IdentityHashSet<Abstraction>());
-				rootSet.add(root);
+		private boolean addNeighbor(Abstraction abs, Abstraction neighbor) {
+			if (neighbors != null) {
+				synchronized (neighbors) {
+					Set<Abstraction> succs = neighbors.get(abs);
+					if (succs == null) {
+						succs = new IdentityHashSet<Abstraction>();
+						neighbors.put(abs, succs);
+					}
+					return succs.add(neighbor);
+				}
 			}
+			return false;
+		}
+
+		private void addRoot(Abstraction root) {
+			if (roots != null)
+				roots.add(root);
 		}
 
 		@Override
 		public void run() {
+			if (!abstraction.registerPathFlag(flagAbs))
+				return;
+
 			if (abstraction.getPredecessor() != null)
 				addSuccessor(abstraction.getPredecessor(), abstraction);
 			if (abstraction.getNeighbors() != null)
-				for (Abstraction nb : abstraction.getNeighbors())
-					addSuccessor(nb, abstraction);
-			
-			Set<SourceContextAndPath> scap = abstraction.getPaths();
-			if (scap != null)
-				return;
-			scap = abstraction.getOrMakePathCache();
+				for (Abstraction nb : abstraction.getNeighbors()) {
+					addNeighbor(nb, abstraction);
+					addNeighbor(abstraction, nb);
+				}
 			
 			if (abstraction.getSourceContext() != null) {
 				// Register the result
@@ -111,12 +125,14 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 							abstraction.getSourceContext().getStmt(),
 							abstraction.getSourceContext().getUserData(),
 							Collections.<Stmt>emptyList());
-				else
-					scap.add(new SourceContextAndPath
-							(abstraction.getSourceContext().getValue(),
-							abstraction.getSourceContext().getStmt(),
-							abstraction.getSourceContext().getUserData()).extendPath
-									(abstraction.getSourceContext().getStmt()));
+
+				SourceContextAndPath rootScap = new SourceContextAndPath
+						(abstraction.getSourceContext().getValue(),
+						abstraction.getSourceContext().getStmt(),
+						abstraction.getSourceContext().getUserData()).extendPath
+								(abstraction.getSourceContext().getStmt());
+				abstraction.getOrMakePathCache().add(rootScap);
+				
 				addRoot(abstraction);
 				
 				// Sources may not have predecessors
@@ -150,76 +166,48 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 		
 		@Override
 		public void run() {
-			Set<Abstraction> children = successors.get(parent);
-			if (children == null)
+			// Check the paths of the parent. If we have none, we can abort
+			Set<SourceContextAndPath> parentPaths = parent.getPaths();
+			if (parentPaths == null || parentPaths.isEmpty())
 				return;
-
-			boolean added = false;
+			
+			// Copy over the paths of our neighbors
+			Set<Abstraction> nbs = neighbors.get(parent);
+			if (nbs != null)
+				for (Abstraction nb : nbs) {
+					Set<SourceContextAndPath> nbPaths = nb.getPaths();
+					if (nbPaths != null)
+						parentPaths.addAll(nbPaths);
+				}
+			
+			// Get the children. If we have none, we can abort
+			Set<Abstraction> children = successors.get(parent);
+			if (children == null || children.isEmpty())
+				return;
+			
 			for (Abstraction child : children) {
-				Set<SourceContextAndPath> childScaps = child.getPaths();
-				if (childScaps == null)
-					continue;
-				for (SourceContextAndPath scap : parent.getPaths())
+				boolean added = false;
+				Set<SourceContextAndPath> childScaps = child.getOrMakePathCache();
+				for (SourceContextAndPath scap : parentPaths) {
 					if (extendPath && child.getCurrentStmt() != null) {
-						if (childScaps.add(scap.extendPath(child.getCurrentStmt()))) {
+						if (childScaps.add(scap.extendPath(child.getCurrentStmt())))
 							added = true;
-//							if (child.getCurrentStmt().toString().contains("iterator()"))
-//								System.out.println(System.identityHashCode(flagAbs));
-						}
 					}
 					else if (childScaps.add(scap))
 						added = true;
-
-				if (added)
-					executor.execute(new ExtendPathTask(flagAbs, child, true/*!child.equals(parent)*/));
+				}
+				
+				// If we have added a new path, we schedule it to be propagated
+				// down to the child's children
+				if (added) {
+					executor.execute(new ExtendPathTask(flagAbs, child, true));
+					Set<Abstraction> childNbs = neighbors.get(child);
+					if (childNbs != null)
+						for (Abstraction nb : childNbs)
+							executor.execute(new ExtendPathTask(flagAbs, nb, true));
+				}
 			}
-			
-//			if (childScaps == null)
-//				childScaps = child.getOrMakePathCache(flagAbs);
-			
 		}
-
-		/*
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + ((flagAbs == null) ? 0 : flagAbs.hashCode());
-			result = prime * result + ((child == null) ? 0 : child.hashCode());
-			result = prime * result + (extendPath ? 1231 : 1237);
-			result = prime * result + ((parent == null) ? 0 : parent.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (!(obj instanceof ExtendPathTask))
-				return false;
-			ExtendPathTask other = (ExtendPathTask) obj;
-			if (flagAbs == null) {
-				if (other.flagAbs != null)
-					return false;
-			} else if (!flagAbs.equals(other.flagAbs))
-				return false;
-			if (child == null) {
-				if (other.child != null)
-					return false;
-			} else if (!child.equals(other.child))
-				return false;
-			if (extendPath != other.extendPath)
-				return false;
-			if (parent == null) {
-				if (other.parent != null)
-					return false;
-			} else if (!parent.equals(other.parent))
-				return false;
-			return true;
-		}
-		*/		
 		
 	}
 
@@ -254,14 +242,14 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 			return;
 		
 		long beforePathTracking = System.nanoTime();
-		successors = new MyConcurrentHashMap<Abstraction, Set<Abstraction>>();
+		successors = new IdentityHashMap<Abstraction, Set<Abstraction>>();
+		neighbors = new IdentityHashMap<Abstraction, Set<Abstraction>>();
 		computeTaintSources(res);
 		
     	// Start the path extensions tasks
 		logger.info("Running path extension on {} roots", roots.size());
-    	for (Object flagAbs : roots.keySet())
-	    	for (Abstraction root : roots.get(flagAbs))
-    			executor.execute(new ExtendPathTask(flagAbs, root, true));
+    	for (Abstraction root : roots)
+   			executor.execute(new ExtendPathTask(new Object(), root, true));
     	
     	try {
 			executor.awaitCompletion();
@@ -270,11 +258,10 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 			ex.printStackTrace();
 		}
     	
-    	logger.debug("Path extension done.");
+    	logger.info("Path extension done.");
     	
     	// Collect the results
     	for (final AbstractionAtSink abs : res) {
-    		System.out.println(" - " + System.identityHashCode(abs));
     		for (SourceContextAndPath context : abs.getAbstraction().getPaths())
     			if (context.getSymbolic() == null) {
 					results.addResult(abs.getSinkValue(), abs.getSinkStmt(),
@@ -287,9 +274,7 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
     	logger.info("Path proecssing took {} seconds", (System.nanoTime() - beforePathTracking) / 1E9);
 	}
 	
-	/**
-	 * Shuts down the path processing
-	 */
+	@Override
 	public void shutdown() {
     	executor.shutdown();		
 	}

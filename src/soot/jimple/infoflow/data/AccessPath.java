@@ -142,7 +142,6 @@ public class AccessPath implements Cloneable {
 					|| appendingFields == null || appendingFields.length == 0;
 		}
 		
-		/*
 		// Check for recursive data structures. If a last field maps back to something we
 		// already know, we build a repeatable component from it
 		if (fields != null) {
@@ -185,7 +184,6 @@ public class AccessPath implements Cloneable {
 				ei++;
 			}
 		}
-		*/
 		
 		// Cut the fields at the maximum access path length. If this happens,
 		// we must always add a star

@@ -31,4 +31,9 @@ public interface IAbstractionPathBuilder {
 	 */
 	public InfoflowResults getResults();
 
+	/**
+	 * Shuts down the path processing
+	 */
+	public void shutdown();
+	
 }
