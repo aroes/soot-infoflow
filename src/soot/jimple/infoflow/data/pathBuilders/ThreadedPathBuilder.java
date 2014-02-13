@@ -3,6 +3,7 @@ package soot.jimple.infoflow.data.pathBuilders;
 import heros.solver.CountingThreadPoolExecutor;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -262,7 +263,15 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
     	
     	// Collect the results
     	for (final AbstractionAtSink abs : res) {
-    		for (SourceContextAndPath context : abs.getAbstraction().getPaths())
+    		Set<SourceContextAndPath> allScaps = new HashSet<SourceContextAndPath>();
+    		if (abs.getAbstraction().getPaths() != null)
+    			allScaps.addAll(abs.getAbstraction().getPaths());
+    		if (abs.getAbstraction().getNeighbors() != null)
+    			for (Abstraction nb : abs.getAbstraction().getNeighbors())
+    				if (nb.getPaths() != null)
+    					allScaps.addAll(nb.getPaths());
+    		
+    		for (SourceContextAndPath context : allScaps)
     			if (context.getSymbolic() == null) {
 					results.addResult(abs.getSinkValue(), abs.getSinkStmt(),
 							context.getValue(), context.getStmt(), context.getUserData(),
