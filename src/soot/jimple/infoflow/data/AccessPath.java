@@ -13,7 +13,7 @@ package soot.jimple.infoflow.data;
 import heros.solver.Pair;
 
 import java.util.Collection;
-import java.util.LinkedList;
+import java.util.Set;
 
 import soot.ArrayType;
 import soot.Local;
@@ -26,9 +26,8 @@ import soot.jimple.FieldRef;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.infoflow.Infoflow;
-
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
+import soot.jimple.infoflow.util.ConcurrentHashSet;
+import soot.jimple.infoflow.util.MyConcurrentHashMap;
 
 /**
  * This class represents the taint, containing a base value and a list of fields
@@ -54,7 +53,8 @@ public class AccessPath implements Cloneable {
 	
 	private int hashCode = 0;
 	
-	private static Multimap<Type, Pair<SootField[], Type[]>> baseRegister = HashMultimap.create();
+	private static MyConcurrentHashMap<Type, Set<Pair<SootField[], Type[]>>> baseRegister
+			= new MyConcurrentHashMap<Type, Set<Pair<SootField[],Type[]>>>();
 
 	/**
 	 * The empty access path denotes a code region depending on a tainted
@@ -272,15 +272,13 @@ public class AccessPath implements Cloneable {
 				break;
 			}
 		
-		synchronized (baseRegister) {
-			baseRegister.put(eiType, new Pair<SootField[], Type[]>(base, baseTypes));
-		}
+		Set<Pair<SootField[], Type[]>> bases = baseRegister.putIfAbsentElseGet
+				(eiType, new ConcurrentHashSet<Pair<SootField[], Type[]>>());
+		bases.add(new Pair<SootField[], Type[]>(base, baseTypes));
 	}
 	
 	public static Collection<Pair<SootField[], Type[]>> getBaseForType(Type tp) {
-		synchronized (baseRegister) {
-			return new LinkedList<Pair<SootField[], Type[]>>(baseRegister.get(tp));
-		}
+		return baseRegister.get(tp);
 	}
 
 	/**

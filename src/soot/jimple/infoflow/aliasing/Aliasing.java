@@ -81,7 +81,7 @@ public class Aliasing {
 				// If the referenced field is a base, we add it in. Note that
 				// the first field in a static reference is the base, so this
 				// must be excluded from base matching.
-				if (!(taintedAP.isStaticFieldRef() && fieldIdx == 0)) {
+				if (bases != null && !(taintedAP.isStaticFieldRef() && fieldIdx == 0)) {
 					// Check the base. Handles A.y (taint) ~ A.[x].y (ref)
 					for (Pair<SootField[], Type[]> base : bases) {
 						if (base.getO1()[0].equals(referencedAP.getFields()[fieldIdx])) {
