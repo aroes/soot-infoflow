@@ -449,9 +449,9 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 	 * 		  solver.
 	 */
 	protected void propagate(D sourceVal, N target, D targetVal,
-		/* deliberately exposed to clients */ N relatedCallSite,
-		/* deliberately exposed to clients */ boolean isUnbalancedReturn,
-		boolean forceRegister) {
+			/* deliberately exposed to clients */ N relatedCallSite,
+			/* deliberately exposed to clients */ boolean isUnbalancedReturn,
+			boolean forceRegister) {
 		final PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
 		final D existingVal = (forceRegister || isMergePoint(target)) ?
 				jumpFn.addFunction(new WeakPathEdge<N, D>(sourceVal, target, targetVal)) : null;

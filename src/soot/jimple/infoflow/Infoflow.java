@@ -42,7 +42,6 @@ import soot.jimple.infoflow.aliasing.FlowSensitiveAliasStrategy;
 import soot.jimple.infoflow.aliasing.IAliasingStrategy;
 import soot.jimple.infoflow.aliasing.PtsBasedAliasStrategy;
 import soot.jimple.infoflow.config.IInfoflowConfig;
-import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.pathBuilders.DefaultPathBuilderFactory;
 import soot.jimple.infoflow.data.pathBuilders.IAbstractionPathBuilder;
@@ -68,9 +67,9 @@ import soot.options.Options;
 public class Infoflow extends AbstractInfoflow {
 	
     private final Logger logger = LoggerFactory.getLogger(getClass());
-
-    private static boolean debug = false;
+    
 	private static int accessPathLength = 5;
+	private static boolean useRecursiveAccessPaths = true;
 	
 	private InfoflowResults results = null;
 	private final IPathBuilderFactory pathBuilderFactory;
@@ -129,10 +128,6 @@ public class Infoflow extends AbstractInfoflow {
 		this.pathBuilderFactory = pathBuilderFactory;
 	}
 	
-	public static void setDebug(boolean debugflag) {
-		debug = debugflag;
-	}
-	
 	public void setSootConfig(IInfoflowConfig config){
 		sootConfig = config;
 	}
@@ -165,7 +160,7 @@ public class Infoflow extends AbstractInfoflow {
 				
 		Options.v().set_no_bodies_for_excluded(true);
 		Options.v().set_allow_phantom_refs(true);
-		if (debug)
+		if (logger.isDebugEnabled())
 			Options.v().set_output_format(Options.output_format_jimple);
 		else
 			Options.v().set_output_format(Options.output_format_none);
@@ -273,7 +268,7 @@ public class Infoflow extends AbstractInfoflow {
 	        PackManager.v().getPack("cg").apply();
 		}
         runAnalysis(sourcesSinks, null);
-		if (debug)
+		if (logger.isDebugEnabled())
 			PackManager.v().writeOutput();
 	}
 
@@ -316,7 +311,7 @@ public class Infoflow extends AbstractInfoflow {
 	        PackManager.v().getPack("cg").apply();
 		}
         runAnalysis(sourcesSinks, seeds);
-		if (debug)
+		if (logger.isDebugEnabled())
 			PackManager.v().writeOutput();
 	}
 
@@ -372,8 +367,6 @@ public class Infoflow extends AbstractInfoflow {
 			forwardProblem.addTaintPropagationHandler(tp);
 		forwardProblem.setTaintWrapper(taintWrapper);
 		forwardProblem.setStopAfterFirstFlow(stopAfterFirstFlow);
-		
-		Abstraction.setPruneThis0AccessPaths(pruneThis0AccessPaths);
 		
 		if (backProblem != null) {
 			backProblem.setForwardSolver((InfoflowSolver) forwardSolver);
@@ -593,7 +586,6 @@ public class Infoflow extends AbstractInfoflow {
 		}
 		return true;
 	}
-
 	
 	public static int getAccessPathLength() {
 		return accessPathLength;
@@ -607,8 +599,22 @@ public class Infoflow extends AbstractInfoflow {
 	 *  (which is imprecise but gains performance)
 	 *  Default value is 5.
 	 */
-	public void setAccessPathLength(int accessPathLength) {
+	public static void setAccessPathLength(int accessPathLength) {
 		Infoflow.accessPathLength = accessPathLength;
+	}
+	
+	public static boolean getUseRecursiveAccessPaths() {
+		return useRecursiveAccessPaths;
+	}
+	
+	/**
+	 * Sets whether recursive access paths shall be reduced, e.g. whether we
+	 * shall propagate a.[next].data instead of a.next.next.data.
+	 * @param useRecursiveAccessPaths True if recursive access paths shall be
+	 * reduced, otherwise false
+	 */
+	public static void setUseRecursiveAccessPaths(boolean useRecursiveAccessPaths) {
+		Infoflow.useRecursiveAccessPaths = useRecursiveAccessPaths;
 	}
 	
 	/**

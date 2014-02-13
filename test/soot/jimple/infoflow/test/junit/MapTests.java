@@ -112,16 +112,10 @@ public class MapTests extends JUnitTests {
     @Ignore // does not work anymore since JRE 1.7.0_45
     public void concreteNegativeTest(){
     	Infoflow infoflow = initInfoflow();
-    	
-    	int oldAPLength = Infoflow.getAccessPathLength();
-//    	infoflow.setAccessPathLength(1);
-
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void concreteWriteReadNegativeTest()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		negativeCheckInfoflow(infoflow);
-    
-		infoflow.setAccessPathLength(oldAPLength);	// this is a global setting! Restore it when we're done
     }
 
 }

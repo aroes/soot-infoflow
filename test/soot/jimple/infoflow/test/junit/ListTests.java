@@ -119,14 +119,14 @@ public class ListTests extends JUnitTests {
     	Infoflow infoflow = initInfoflow();
 
     	int oldAPLength = Infoflow.getAccessPathLength();
-    	infoflow.setAccessPathLength(1);
+    	Infoflow.setAccessPathLength(1);
     	
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.ListTestCode: void linkedList()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);	
 	
-		infoflow.setAccessPathLength(oldAPLength);	// this is a global setting! Restore it when we're done
+		Infoflow.setAccessPathLength(oldAPLength);	// this is a global setting! Restore it when we're done
     }
 
     @Test(timeout=300000)
@@ -134,14 +134,14 @@ public class ListTests extends JUnitTests {
     	Infoflow infoflow = initInfoflow();
 
     	int oldAPLength = Infoflow.getAccessPathLength();
-    	infoflow.setAccessPathLength(1);
+    	Infoflow.setAccessPathLength(1);
     	
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.ListTestCode: void staticLinkedList()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);	
 	
-		infoflow.setAccessPathLength(oldAPLength);	// this is a global setting! Restore it when we're done
+		Infoflow.setAccessPathLength(oldAPLength);	// this is a global setting! Restore it when we're done
     }
     
     @Test(timeout=300000)

@@ -208,16 +208,7 @@ public interface IInfoflow {
 	 * shall be used, otherwise false
 	 */
 	public void setFlowSensitiveAliasing(boolean flowSensitiveAliasing);
-
-	/**
-	 * Sets whether back references to parent classes shall be pruned. This may
-	 * lead to false positives. If this option is enabled, an access path
-	 * a.this$0.a will be pruned down to a.
-	 * @param pruneThis0AccessPaths True if access paths containing references
-	 * to parent objects shall be pruned, otherwise false.
-	 */
-	public void setPruneThis0AccessPaths(boolean pruneThis0AccessPaths);
-
+	
 	/**
 	 * Sets whether the solver shall track taints of thrown exception objects
 	 * @param enableExceptions True if taints associated with exceptions shall

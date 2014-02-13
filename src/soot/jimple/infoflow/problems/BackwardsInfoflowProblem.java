@@ -159,7 +159,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 									&& ref.getBase().equals(source.getAccessPath().getPlainValue())
 									&& source.getAccessPath().firstFieldMatches(ref.getField())) {
 								newLeftAbs = source.deriveNewAbstraction(leftValue, true,
-										source.getAccessPath().getBaseType());
+										source.getAccessPath().getFirstFieldType());
 							}
 						}
 						else if (enableStaticFields && rightValue instanceof StaticFieldRef) {
@@ -193,7 +193,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							}
 							else {
 								newLeftAbs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
-										(leftValue, newType), defStmt);
+										(leftValue, newType, false), defStmt);
 							}
 						}
 						if (newLeftAbs != null) {
@@ -215,12 +215,12 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						Type targetType = null;
 						
 						// if both are fields, we have to compare their fieldName via equals and their bases via PTS
-						targetType = source.getAccessPath().getBaseType();
 						if (leftValue instanceof InstanceFieldRef) {
 							InstanceFieldRef leftRef = (InstanceFieldRef) leftValue;
 							if (leftRef.getBase().equals(source.getAccessPath().getPlainLocal())) {
 								if (source.getAccessPath().isInstanceFieldRef()) {
 									if (source.getAccessPath().firstFieldMatches(leftRef.getField())) {
+										targetType = source.getAccessPath().getFirstFieldType();
 										addRightValue = true;
 										cutFirstField = true;
 									}
@@ -231,18 +231,21 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						} else if (leftValue instanceof Local && source.getAccessPath().isInstanceFieldRef()) {
 							Local base = source.getAccessPath().getPlainLocal(); // ?
 							if (leftValue.equals(base)) {
+								targetType = source.getAccessPath().getBaseType();
 								addRightValue = true;
 							}
 						} else if (leftValue instanceof ArrayRef) {
 							Local leftBase = (Local) ((ArrayRef) leftValue).getBase();
 							if (leftBase.equals(source.getAccessPath().getPlainValue())) {
 								addRightValue = true;
+								targetType = source.getAccessPath().getBaseType();
 								assert source.getAccessPath().getBaseType() instanceof ArrayType;
 							}
 							// generic case, is true for Locals, ArrayRefs that are equal etc..
 						} else if (leftValue.equals(source.getAccessPath().getPlainValue())) {
 							addRightValue = true;
-	
+							targetType = source.getAccessPath().getBaseType();
+							
 							// Check for unrealizable casts. If a = (O) b and a is tainted,
 							// but incompatible to the type of b, this cast is impossible
 							if (defStmt.getRightOp() instanceof CastExpr) {
@@ -375,7 +378,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 										if (rStmt.getOp() instanceof Local
 												|| rStmt.getOp() instanceof FieldRef) {
 											Abstraction abs = source.deriveNewAbstraction
-													(source.getAccessPath().copyWithNewValue(rStmt.getOp(), null), (Stmt) src);
+													(source.getAccessPath().copyWithNewValue
+															(rStmt.getOp(), null, false), (Stmt) src);
 											res.add(abs);
 										}
 									}

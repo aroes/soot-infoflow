@@ -833,7 +833,7 @@ public class HeapTestCode {
 		a.obj.set();
 		String untainted = b.get();
 		ConnectionManager cm = new ConnectionManager();
-		cm.publish(untainted);		
+		cm.publish(untainted);
 	}
 
 	private class Inner1b {
@@ -920,6 +920,44 @@ public class HeapTestCode {
 		root.right.data = "foo";
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(root.right.data);
+	}
+	
+	private class Tree {
+		private Tree left;
+		private Tree right;
+		private String data;
+	}
+	
+	private static Tree myTree;
+	
+	public void staticAccessPathTest() {
+		myTree = new Tree();
+		myTree.left = new Tree();
+		myTree.left.right = new Tree();
+		myTree.left.right.left = myTree;
+		myTree.data = TelephonyManager.getDeviceId();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(myTree.left.right.left.data);
+	}
+	
+	private class SeparatedTree {
+		private TreeElement left;
+		private TreeElement right;
+	}
+	
+	private class TreeElement {
+		private SeparatedTree child;
+		private String data;
+	}
+	
+	public void separatedTreeTest() {
+		SeparatedTree myTree = new SeparatedTree();
+		myTree.left = new TreeElement();
+		myTree.left.child = new SeparatedTree();
+		myTree.left.child.right = new TreeElement();
+		myTree.left.child.right.data = TelephonyManager.getDeviceId();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(myTree.left.child.right.data);
 	}
 
 }

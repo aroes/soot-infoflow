@@ -281,7 +281,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 		infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 
 		int oldAPLength = Infoflow.getAccessPathLength();
-		infoflow.setAccessPathLength(1);
+		Infoflow.setAccessPathLength(1);
 
 		infoflow.setInspectSinks(false);
 		List<String> epoints = new ArrayList<String>();
@@ -289,7 +289,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
 
-		infoflow.setAccessPathLength(oldAPLength); // this is a global setting!
+		Infoflow.setAccessPathLength(oldAPLength); // this is a global setting!
 													// Restore it when we're
 													// done
 		Assert.assertEquals(1, infoflow.getResults().size());
@@ -408,7 +408,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 		Infoflow infoflow = initInfoflow();
 		infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		int oldLength = Infoflow.getAccessPathLength();
-		infoflow.setAccessPathLength(3);
+		Infoflow.setAccessPathLength(3);
 
 		infoflow.setInspectSources(false);
 		infoflow.setInspectSinks(false);
@@ -420,7 +420,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 		checkInfoflow(infoflow, 1);
 		Assert.assertEquals(1, infoflow.getResults().size());
 
-		infoflow.setAccessPathLength(oldLength);
+		Infoflow.setAccessPathLength(oldLength);
 	}
 
 	@Test(timeout = 300000)
@@ -428,7 +428,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 		Infoflow infoflow = initInfoflow();
 		infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		int oldLength = Infoflow.getAccessPathLength();
-		infoflow.setAccessPathLength(3);
+		Infoflow.setAccessPathLength(3);
 
 		infoflow.setTaintWrapper(new AbstractTaintWrapper() {
 
@@ -546,7 +546,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 		checkInfoflow(infoflow, 1);
 		Assert.assertEquals(1, infoflow.getResults().size());
 
-		infoflow.setAccessPathLength(oldLength);
+		Infoflow.setAccessPathLength(oldLength);
 	}
 
 	@Test(timeout = 300000)
@@ -554,7 +554,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 		Infoflow infoflow = initInfoflow();
 		infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		int oldLength = Infoflow.getAccessPathLength();
-		infoflow.setAccessPathLength(3);
+		Infoflow.setAccessPathLength(3);
 
 		infoflow.setInspectSources(false);
 		infoflow.setInspectSinks(false);
@@ -565,7 +565,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
 
-		infoflow.setAccessPathLength(oldLength);
+		Infoflow.setAccessPathLength(oldLength);
 	}
 
 	@Test(timeout = 300000)
@@ -573,7 +573,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 		Infoflow infoflow = initInfoflow();
 		infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		int oldLength = Infoflow.getAccessPathLength();
-		infoflow.setAccessPathLength(3);
+		Infoflow.setAccessPathLength(3);
 
 		infoflow.setInspectSources(false);
 		infoflow.setInspectSinks(false);
@@ -585,7 +585,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 		checkInfoflow(infoflow, 3); // +1 for flow insensitivty
 		Assert.assertEquals(3, infoflow.getResults().size());
 
-		infoflow.setAccessPathLength(oldLength);
+		Infoflow.setAccessPathLength(oldLength);
 	}
 
 	@Test(timeout = 300000)

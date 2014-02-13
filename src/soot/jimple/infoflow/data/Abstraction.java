@@ -19,12 +19,10 @@ import java.util.List;
 import java.util.Set;
 
 import soot.NullType;
-import soot.SootField;
 import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
 import soot.Value;
-import soot.jimple.FieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.solver.IInfoflowCFG.UnitContainer;
 import soot.jimple.infoflow.source.SourceInfo;
@@ -42,8 +40,7 @@ import com.google.common.collect.Sets;
 public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	
 	private static boolean flowSensitiveAliasing = true;
-	private static boolean pruneThis0AccessPaths = false;
-		
+	
 	/**
 	 * the access path contains the currently tainted variable or field
 	 */
@@ -208,54 +205,8 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	public final Abstraction deriveNewAbstraction(Value taint, boolean cutFirstField, Stmt currentStmt,
 			Type baseType){
 		assert !this.getAccessPath().isEmpty();
-
-		SootField[] orgFields = accessPath.getFields();
-		SootField[] fields = null;
-
-		if (orgFields != null) {
-			fields = new SootField[cutFirstField ? orgFields.length - 1 : orgFields.length];
-			for (int i = cutFirstField ? 1 : 0; i < orgFields.length; i++)
-				fields[cutFirstField ? i - 1 : i] = orgFields[i];
-		}
 		
-		Type[] orgTypes = accessPath.getFieldTypes();
-		Type[] types = null;
-		
-		if (orgTypes != null) {
-			types = new Type[cutFirstField ? orgTypes.length - 1 : orgTypes.length];
-			for (int i = cutFirstField ? 1 : 0; i < orgTypes.length; i++)
-				types[cutFirstField ? i - 1 : i] = orgTypes[i];
-		}
-		
-		if (cutFirstField)
-			baseType = accessPath.getFirstFieldType();
-		
-		if (pruneThis0AccessPaths && taint instanceof FieldRef) {
-			// Filter this$0 backwards references.
-			// 1) f.this$0.f -> f
-			while (fields != null
-					&& fields.length >= 2
-					&& fields[0].getName().startsWith("this$")
-					&& fields[1] == ((FieldRef) taint).getField()) {
-				// If we have f.this$0.f, this gets reduced to f
-				if (fields.length == 2) {
-					fields = null;
-					types = null;
-				} else {
-					// otherwise, we need to throw away the first two fields
-					SootField[] fieldsNew = new SootField[fields.length - 2];
-					Type[] typesNew = new Type[fields.length - 2];
-					System.arraycopy(fields, 2, fieldsNew, 0, fields.length - 2);
-					System.arraycopy(types, 2, typesNew, 0, types.length - 2);
-					fields = fieldsNew;
-					types = typesNew;
-				}
-			}
-		}
-		
-		AccessPath newAP = new AccessPath(taint, fields, baseType, types,
-				accessPath.getTaintSubFields());
-		
+		AccessPath newAP = accessPath.copyWithNewValue(taint, baseType, cutFirstField);
 		if (this.getAccessPath().equals(newAP) && this.currentStmt == currentStmt)
 			return this;
 		return deriveNewAbstractionMutable(newAP, currentStmt);
@@ -564,17 +515,6 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 				null, false, false);
 		Abstraction.flowSensitiveAliasing = flowSensitiveAliasing;
 		return zeroValue;
-	}
-	
-	/**
-	 * Sets whether back references to parent classes shall be pruned. This may
-	 * lead to false positives. If this option is enabled, an access path
-	 * a.this$0.a will be pruned down to a.
-	 * @param pruneAPs True if access paths containing references to parent objects
-	 * shall be pruned, otherwise false.
-	 */
-	public static void setPruneThis0AccessPaths(boolean pruneAPs) {
-		pruneThis0AccessPaths = pruneAPs;
 	}
 	
 }
