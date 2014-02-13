@@ -553,8 +553,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 	public void negativeAliasesTest() {
 		Infoflow infoflow = initInfoflow();
 		infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
-		int oldLength = Infoflow.getAccessPathLength();
-		Infoflow.setAccessPathLength(3);
 
 		infoflow.setInspectSources(false);
 		infoflow.setInspectSinks(false);
@@ -563,9 +561,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void negativeTestAliases()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
-		checkInfoflow(infoflow, 1);
-
-		Infoflow.setAccessPathLength(oldLength);
+		negativeCheckInfoflow(infoflow);
 	}
 
 	@Test(timeout = 300000)
