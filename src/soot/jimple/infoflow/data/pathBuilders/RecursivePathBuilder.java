@@ -111,11 +111,9 @@ public class RecursivePathBuilder implements IAbstractionPathBuilder {
 				@Override
 				public void run() {
 		    		for (SourceContextAndPath context : getPaths(abs.getAbstraction(), computeResultPaths, new Object()))
-		    			if (context.getSymbolic() == null) {
-							results.addResult(abs.getSinkValue(), abs.getSinkStmt(),
-									context.getValue(), context.getStmt(), context.getUserData(),
-									context.getPath(), abs.getSinkStmt());
-		    			}
+						results.addResult(abs.getSinkValue(), abs.getSinkStmt(),
+								context.getValue(), context.getStmt(), context.getUserData(),
+								context.getPath(), abs.getSinkStmt());
 				}
 				
 			});

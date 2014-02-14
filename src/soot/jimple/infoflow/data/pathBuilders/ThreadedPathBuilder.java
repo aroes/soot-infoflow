@@ -272,11 +272,9 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
     					allScaps.addAll(nb.getPaths());
     		
     		for (SourceContextAndPath context : allScaps)
-    			if (context.getSymbolic() == null) {
-					results.addResult(abs.getSinkValue(), abs.getSinkStmt(),
-							context.getValue(), context.getStmt(), context.getUserData(),
-							context.getPath(), abs.getSinkStmt());
-    			}
+				results.addResult(abs.getSinkValue(), abs.getSinkStmt(),
+						context.getValue(), context.getStmt(), context.getUserData(),
+						context.getPath(), abs.getSinkStmt());
     	}
     	
     	successors = null;
