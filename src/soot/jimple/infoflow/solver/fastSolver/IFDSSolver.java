@@ -20,7 +20,6 @@ import heros.FlowFunctions;
 import heros.IFDSTabulationProblem;
 import heros.SynchronizedBy;
 import heros.ZeroedFlowFunctions;
-import heros.solver.ChainedNode;
 import heros.solver.CountingThreadPoolExecutor;
 import heros.solver.LinkedNode;
 import heros.solver.Pair;
@@ -41,6 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import soot.SootMethod;
 import soot.Unit;
+import soot.jimple.infoflow.solver.ChainedNode;
 import soot.jimple.infoflow.util.ConcurrentHashSet;
 import soot.jimple.infoflow.util.MyConcurrentHashMap;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;

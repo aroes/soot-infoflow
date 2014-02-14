@@ -11,7 +11,6 @@
 package soot.jimple.infoflow.data;
 
 
-import heros.solver.ChainedNode;
 import heros.solver.LinkedNode;
 
 import java.util.ArrayList;
@@ -26,6 +25,7 @@ import soot.Unit;
 import soot.Value;
 import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.solver.ChainedNode;
 import soot.jimple.infoflow.solver.IInfoflowCFG.UnitContainer;
 import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.infoflow.util.ConcurrentHashSet;
