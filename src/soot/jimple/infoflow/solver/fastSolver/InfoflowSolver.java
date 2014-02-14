@@ -55,7 +55,7 @@ public class InfoflowSolver extends IFDSSolver<Unit, Abstraction, SootMethod, Bi
 	@Override
 	public void injectContext(IInfoflowSolver otherSolver, SootMethod callee,
 			Abstraction d3, Unit callSite, Abstraction d2, Abstraction d1) {
-		addIncoming(callee, d3, callSite, d1);
+		addIncoming(callee, d3, callSite, d1, d2);
 	}
 	
 	@Override
@@ -101,6 +101,19 @@ public class InfoflowSolver extends IFDSSolver<Unit, Abstraction, SootMethod, Bi
 		this.jumpFn.clear();
 		this.incoming.clear();
 		this.endSummary.clear();
+	}
+	
+	@Override
+	public void solve() {
+		super.solve();
+		
+		// Compute function path summaries
+		/*
+		for (Entry<Pair<SootMethod, Abstraction>, Set<Pair<Unit, Abstraction>>>
+				entry : endSummary.entrySet()) {
+			entry.
+		}
+		*/
 	}
 	
 }

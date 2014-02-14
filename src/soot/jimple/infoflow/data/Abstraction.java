@@ -11,6 +11,7 @@
 package soot.jimple.infoflow.data;
 
 
+import heros.solver.ChainedNode;
 import heros.solver.LinkedNode;
 
 import java.util.ArrayList;
@@ -23,6 +24,7 @@ import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
 import soot.Value;
+import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.solver.IInfoflowCFG.UnitContainer;
 import soot.jimple.infoflow.source.SourceInfo;
@@ -37,7 +39,7 @@ import com.google.common.collect.Sets;
  * @author Steven Arzt
  * @author Christian Fritz
  */
-public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
+public class Abstraction implements Cloneable, LinkedNode<Abstraction>, ChainedNode<Abstraction> {
 	
 	private static boolean flowSensitiveAliasing = true;
 	
@@ -491,7 +493,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	public Stmt getCurrentStmt() {
 		return this.currentStmt;
 	}
-		
+	
 	@Override
 	public void addNeighbor(Abstraction originalAbstraction) {
 		assert originalAbstraction.equals(this);
@@ -511,10 +513,17 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	}
 		
 	public static Abstraction getZeroAbstraction(boolean flowSensitiveAliasing) {
-		Abstraction zeroValue = new Abstraction(new JimpleLocal("zero", NullType.v()), new SourceInfo(false), null,
-				null, false, false);
+		Abstraction zeroValue = new Abstraction(new JimpleLocal("zero", NullType.v()), new SourceInfo(false),
+				NullConstant.v(), null, false, false);
 		Abstraction.flowSensitiveAliasing = flowSensitiveAliasing;
 		return zeroValue;
+	}
+
+	@Override
+	public Abstraction setJumpPredecessor(Abstraction predecessor) {
+		Abstraction abs = clone();
+		abs.predecessor = predecessor;
+		return abs;
 	}
 	
 }

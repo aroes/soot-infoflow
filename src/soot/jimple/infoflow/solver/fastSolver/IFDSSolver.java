@@ -20,6 +20,7 @@ import heros.FlowFunctions;
 import heros.IFDSTabulationProblem;
 import heros.SynchronizedBy;
 import heros.ZeroedFlowFunctions;
+import heros.solver.ChainedNode;
 import heros.solver.CountingThreadPoolExecutor;
 import heros.solver.LinkedNode;
 import heros.solver.Pair;
@@ -31,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -86,8 +88,8 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 	//edges going along calls
 	//see CC 2010 paper by Naeem, Lhotak and Rodriguez
 	@SynchronizedBy("consistent lock on field")
-	protected final MyConcurrentHashMap<Pair<M,D>,MyConcurrentHashMap<N,Set<D>>> incoming =
-			new MyConcurrentHashMap<Pair<M,D>,MyConcurrentHashMap<N,Set<D>>>();
+	protected final MyConcurrentHashMap<Pair<M,D>,MyConcurrentHashMap<N,Map<D, D>>> incoming =
+			new MyConcurrentHashMap<Pair<M,D>,MyConcurrentHashMap<N,Map<D, D>>>();
 	
 	@DontSynchronize("stateless")
 	protected final FlowFunctions<N, D, M> flowFunctions;
@@ -221,6 +223,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 	 * 
 	 * @param edge an edge whose target node resembles a method call
 	 */
+	@SuppressWarnings("unchecked")
 	private void processCall(PathEdge<N,D> edge) {
 		final D d1 = edge.factAtSource();
 		final N n = edge.getTarget(); // a call node; line 14...
@@ -249,9 +252,9 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 				
 				//register the fact that <sp,d3> has an incoming edge from <n,d2>
 				//line 15.1 of Naeem/Lhotak/Rodriguez
-				if (!addIncoming(sCalledProcN,d3,n,d1))
+				if (!addIncoming(sCalledProcN,d3,n,d1,d2))
 					continue;
-						
+				
 				//line 15.2
 				Set<Pair<N, D>> endSumm = endSummary(sCalledProcN, d3);
 					
@@ -268,8 +271,10 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 							//compute return-flow function
 							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
 							//for each target value of the function
-							for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d2)))
-								propagate(d1, retSiteN, d5, n, false);
+							for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d2))) {
+								D d5p = d5 instanceof ChainedNode ? d5p = ((ChainedNode<D>) d5).setJumpPredecessor(d2) : d5;
+								propagate(d1, retSiteN, d5p, n, false);
+							}
 						}
 					}
 			}
@@ -318,6 +323,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 	 * 
 	 * @param edge an edge whose target node resembles a method exits
 	 */
+	@SuppressWarnings("unchecked")
 	protected void processExit(PathEdge<N,D> edge) {
 		final N n = edge.getTarget(); // an exit node; line 21...
 		M methodThatNeedsSummary = icfg.getMethodOf(n);
@@ -331,23 +337,25 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 		//register end-summary
 		if (!addEndSummary(methodThatNeedsSummary, d1, n, d2))
 			return;
-		Map<N,Set<D>> inc = incoming(d1, methodThatNeedsSummary);
+		Map<N,Map<D, D>> inc = incoming(d1, methodThatNeedsSummary);
 		
 		//for each incoming call edge already processed
 		//(see processCall(..))
 		if (inc != null)
-			for (Entry<N,Set<D>> entry: inc.entrySet()) {
+			for (Entry<N,Map<D, D>> entry: inc.entrySet()) {
 				//line 22
 				N c = entry.getKey();
 				//for each return site
 				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
 					//compute return-flow function
 					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
-					Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, entry.getValue());
+					Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, entry.getValue().keySet());
 					//for each incoming-call value
-					for(D d4: entry.getValue())
-						for(D d5: targets)
-							propagate(d4, retSiteC, d5, c, false);
+					for(D d4: entry.getValue().keySet())
+						for(D d5: targets) {
+							D d5p = d5 instanceof ChainedNode ? d5p = ((ChainedNode<D>) d5).setJumpPredecessor(entry.getValue().get(d4)) : d5;
+							propagate(d4, retSiteC, d5p, c, false);
+						}
 				}
 			}
 		
@@ -355,24 +363,24 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 		//note: we propagate that way only values that originate from ZERO, as conditionally generated values should only
 		//be propagated into callers that have an incoming edge for this condition
 		if(followReturnsPastSeeds && (inc == null || inc.isEmpty()) && d1.equals(zeroValue)) {
-				Set<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
-				for(N c: callers) {
-					for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
-						FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
-						Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, Collections.singleton(zeroValue));
-						for(D d5: targets)
-							propagate(zeroValue, retSiteC, d5, c, true);
-					}
-				}
-				//in cases where there are no callers, the return statement would normally not be processed at all;
-				//this might be undesirable if the flow function has a side effect such as registering a taint;
-				//instead we thus call the return flow function will a null caller
-				if(callers.isEmpty()) {
-					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(null, methodThatNeedsSummary,n,null);
-					retFunction.computeTargets(d2);
+			Set<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
+			for(N c: callers) {
+				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
+					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
+					Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, Collections.singleton(zeroValue));
+					for(D d5: targets)
+						propagate(zeroValue, retSiteC, d5, c, true);
 				}
 			}
+			//in cases where there are no callers, the return statement would normally not be processed at all;
+			//this might be undesirable if the flow function has a side effect such as registering a taint;
+			//instead we thus call the return flow function will a null caller
+			if(callers.isEmpty()) {
+				FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(null, methodThatNeedsSummary,n,null);
+				retFunction.computeTargets(d2);
+			}
 		}
+	}
 	
 	/**
 	 * Computes the return flow function for the given set of caller-side
@@ -500,16 +508,16 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 		return summaries.add(new Pair<N, D>(eP, d2));
 	}	
 	
-	protected Map<N, Set<D>> incoming(D d1, M m) {
-		Map<N, Set<D>> map = incoming.get(new Pair<M, D>(m, d1));
+	protected Map<N, Map<D, D>> incoming(D d1, M m) {
+		Map<N, Map<D, D>> map = incoming.get(new Pair<M, D>(m, d1));
 		return map;
 	}
 	
-	protected boolean addIncoming(M m, D d3, N n, D d2) {
-		MyConcurrentHashMap<N, Set<D>> summaries = incoming.putIfAbsentElseGet
-				(new Pair<M, D>(m, d3), new MyConcurrentHashMap<N, Set<D>>());
-		Set<D> set = summaries.putIfAbsentElseGet(n, new ConcurrentHashSet<D>());
-		return set.add(d2);
+	protected boolean addIncoming(M m, D d3, N n, D d1, D d2) {
+		MyConcurrentHashMap<N, Map<D, D>> summaries = incoming.putIfAbsentElseGet
+				(new Pair<M, D>(m, d3), new MyConcurrentHashMap<N, Map<D, D>>());
+		Map<D, D> set = summaries.putIfAbsentElseGet(n, new ConcurrentHashMap<D, D>());
+		return set.put(d1, d2) == null;
 	}
 	
 	/**
