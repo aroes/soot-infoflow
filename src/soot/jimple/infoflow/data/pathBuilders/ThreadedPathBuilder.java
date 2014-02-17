@@ -8,6 +8,7 @@ import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,7 @@ import soot.util.IdentityHashSet;
  */
 public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 	
+	private AtomicInteger propagationCount = null;
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final InfoflowResults results = new InfoflowResults();
@@ -106,6 +108,8 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 
 		@Override
 		public void run() {
+			propagationCount.incrementAndGet();
+			
 			if (!abstraction.registerPathFlag(flagAbs))
 				return;
 
@@ -217,7 +221,8 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 		if (res.isEmpty())
 			return;
 		
-		logger.debug("Running path reconstruction");
+		long beforePathTracking = System.nanoTime();
+		propagationCount = new AtomicInteger();
     	logger.info("Obtainted {} connections between sources and sinks", res.size());
     	
     	// Start the propagation tasks
@@ -234,7 +239,8 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 			ex.printStackTrace();
 		}
     	
-    	logger.debug("Path reconstruction done.");
+    	logger.info("Path proecssing took {} seconds in total for {} edges",
+    			(System.nanoTime() - beforePathTracking) / 1E9, propagationCount.get());
 	}
 	
 	@Override
@@ -259,7 +265,7 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 			ex.printStackTrace();
 		}
     	
-    	logger.info("Path extension done.");
+    	logger.info("Path extension took {} seconds.", (System.nanoTime() - beforePathTracking) / 1E9);
     	
     	// Collect the results
     	for (final AbstractionAtSink abs : res) {
@@ -278,7 +284,7 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
     	}
     	
     	successors = null;
-    	logger.info("Path proecssing took {} seconds", (System.nanoTime() - beforePathTracking) / 1E9);
+    	logger.info("Path proecssing took {} seconds in total", (System.nanoTime() - beforePathTracking) / 1E9);
 	}
 	
 	@Override
