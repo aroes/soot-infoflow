@@ -109,6 +109,9 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 	@DontSynchronize("readOnly")
 	protected final boolean followReturnsPastSeeds;
 	
+	@DontSynchronize("readOnly")
+	private boolean setJumpPredecessors = false;
+	
 	/**
 	 * Creates a solver for the given problem, which caches flow functions and edge functions.
 	 * The solver must then be started by calling {@link #solve()}.
@@ -272,7 +275,8 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
 							//for each target value of the function
 							for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d2))) {
-								D d5p = d5 instanceof ChainedNode ? d5p = ((ChainedNode<D>) d5).setJumpPredecessor(d2) : d5;
+								D d5p = setJumpPredecessors && d5 instanceof ChainedNode
+										? d5p = ((ChainedNode<D>) d5).setJumpPredecessor(d2) : d5;
 								propagate(d1, retSiteN, d5p, n, false);
 							}
 						}
@@ -353,7 +357,8 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 					//for each incoming-call value
 					for(D d4: entry.getValue().keySet())
 						for(D d5: targets) {
-							D d5p = d5 instanceof ChainedNode ? d5p = ((ChainedNode<D>) d5).setJumpPredecessor(entry.getValue().get(d4)) : d5;
+							D d5p = setJumpPredecessors && d5 instanceof ChainedNode
+									? d5p = ((ChainedNode<D>) d5).setJumpPredecessor(entry.getValue().get(d4)) : d5;
 							propagate(d4, retSiteC, d5p, c, false);
 						}
 				}
@@ -565,6 +570,16 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 				}
 			}
 		}
+	}
+	
+	/**
+	 * Sets whether abstractions on method returns shall be connected to the
+	 * respective call abstractions to shortcut paths.
+	 * @param setJumpPredecessors True if return abstractions shall be connected
+	 * to call abstractions as predecessors, otherwise false.
+	 */
+	public void setJumpPredecessors(boolean setJumpPredecessors) {
+		this.setJumpPredecessors = setJumpPredecessors;
 	}
 
 }

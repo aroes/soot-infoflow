@@ -14,6 +14,7 @@ package soot.jimple.infoflow.data;
 import heros.solver.LinkedNode;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -56,7 +57,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction>, ChainedN
 
 	// only used in path generation
 	private Set<SourceContextAndPath> pathCache = null;
-	private Set<Object> pathFlags = null;
+	private BitSet pathFlags = null;
 	
 	/**
 	 * Unit/Stmt which activates the taint when the abstraction passes it
@@ -266,12 +267,16 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction>, ChainedN
 		return pathCache;
 	}
 	
-	public boolean registerPathFlag(Object flag) {
+	public boolean registerPathFlag(int id) {
+		if (pathFlags != null && pathFlags.get(id))
+			return false;
+		
 		synchronized (this) {
 			if (pathFlags == null)
-				pathFlags = new ConcurrentHashSet<Object>();
+				pathFlags = new BitSet();
+			pathFlags.set(id);
 		}
-		return pathFlags.add(flag);
+		return true;
 	}
 
 	public boolean isAbstractionActive(){

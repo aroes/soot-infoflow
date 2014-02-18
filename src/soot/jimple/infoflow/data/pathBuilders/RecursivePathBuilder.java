@@ -53,15 +53,16 @@ public class RecursivePathBuilder implements IAbstractionPathBuilder {
 	 * Gets the path of statements from the source to the current statement
 	 * with which this abstraction is associated. If this path is ambiguous,
 	 * a single path is selected randomly.
+	 * @param taskId A unique ID identifying this path search task
 	 * @param curAbs The current abstraction from which to start the search
 	 * @param reconstructPaths True if the path to the source shall be
-	 * reconstructed, falso if only the source as such shall be found
+	 * reconstructed, false if only the source as such shall be found
 	 * @param flagAbs An object to uniquely identify this search run
 	 * @return The path from the source to the current statement
 	 */
-	private Set<SourceContextAndPath> getPaths(Abstraction curAbs,
+	private Set<SourceContextAndPath> getPaths(int taskId, Abstraction curAbs,
 			boolean reconstructPaths, Object flagAbs) {
-		if (!curAbs.registerPathFlag(flagAbs))
+		if (!curAbs.registerPathFlag(taskId))
 			return Collections.emptySet();
 		
 		Set<SourceContextAndPath> cacheData = new HashSet<SourceContextAndPath>();
@@ -78,7 +79,8 @@ public class RecursivePathBuilder implements IAbstractionPathBuilder {
 			assert curAbs.getPredecessor() == null;
 		}
 		else {
-			for (SourceContextAndPath curScap : getPaths(curAbs.getPredecessor(), reconstructPaths, flagAbs)) {
+			for (SourceContextAndPath curScap : getPaths(taskId,
+					curAbs.getPredecessor(), reconstructPaths, flagAbs)) {
 				SourceContextAndPath extendedPath = (curAbs.getCurrentStmt() == null || !reconstructPaths)
 						? curScap : curScap.extendPath(curAbs.getCurrentStmt());
 				cacheData.add(extendedPath);
@@ -87,7 +89,7 @@ public class RecursivePathBuilder implements IAbstractionPathBuilder {
 		
 		if (curAbs.getNeighbors() != null)
 			for (Abstraction nb : curAbs.getNeighbors())
-				for (SourceContextAndPath path : getPaths(nb, reconstructPaths, flagAbs))
+				for (SourceContextAndPath path : getPaths(taskId, nb, reconstructPaths, flagAbs))
 					cacheData.add(path);
 		
 		return Collections.unmodifiableSet(cacheData);
@@ -106,11 +108,13 @@ public class RecursivePathBuilder implements IAbstractionPathBuilder {
     	int curResIdx = 0;
     	for (final AbstractionAtSink abs : res) {
     		logger.info("Building path " + ++curResIdx);
+    		final int taskId = curResIdx;
     		executor.execute(new Runnable() {
 				
 				@Override
 				public void run() {
-		    		for (SourceContextAndPath context : getPaths(abs.getAbstraction(), computeResultPaths, new Object()))
+		    		for (SourceContextAndPath context : getPaths(taskId,
+		    				abs.getAbstraction(), computeResultPaths, new Object()))
 						results.addResult(abs.getSinkValue(), abs.getSinkStmt(),
 								context.getValue(), context.getStmt(), context.getUserData(),
 								context.getPath(), abs.getSinkStmt());

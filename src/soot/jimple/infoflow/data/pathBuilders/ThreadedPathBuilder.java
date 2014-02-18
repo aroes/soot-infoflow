@@ -65,10 +65,12 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 	 * @author Steven Arzt
 	 */
 	private class SourceFindingTask implements Runnable {
+		private final int taskId;
 		private final AbstractionAtSink flagAbs;
 		private final Abstraction abstraction;
 		
-		public SourceFindingTask(AbstractionAtSink flagAbs, Abstraction abstraction) {
+		public SourceFindingTask(int taskId, AbstractionAtSink flagAbs, Abstraction abstraction) {
+			this.taskId = taskId;
 			this.flagAbs = flagAbs;
 			this.abstraction = abstraction;
 		}
@@ -110,9 +112,9 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 		public void run() {
 			propagationCount.incrementAndGet();
 			
-			if (!abstraction.registerPathFlag(flagAbs))
+			if (!abstraction.registerPathFlag(taskId))
 				return;
-
+			
 			if (abstraction.getPredecessor() != null)
 				addSuccessor(abstraction.getPredecessor(), abstraction);
 			if (abstraction.getNeighbors() != null)
@@ -130,7 +132,7 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 							abstraction.getSourceContext().getStmt(),
 							abstraction.getSourceContext().getUserData(),
 							Collections.<Stmt>emptyList());
-
+				
 				SourceContextAndPath rootScap = new SourceContextAndPath
 						(abstraction.getSourceContext().getValue(),
 						abstraction.getSourceContext().getStmt(),
@@ -144,11 +146,11 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 				assert abstraction.getPredecessor() == null;
 			}
 			else
-				executor.execute(new SourceFindingTask(flagAbs, abstraction.getPredecessor()));
+				executor.execute(new SourceFindingTask(taskId, flagAbs, abstraction.getPredecessor()));
 			
 			if (abstraction.getNeighbors() != null)
 				for (Abstraction nb : abstraction.getNeighbors())
-					executor.execute(new SourceFindingTask(flagAbs, nb));
+					executor.execute(new SourceFindingTask(taskId, flagAbs, nb));
 		}
 	}
 	
@@ -229,7 +231,7 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
     	int curResIdx = 0;
     	for (final AbstractionAtSink abs : res) {
     		logger.info("Building path " + ++curResIdx);
-    		executor.execute(new SourceFindingTask(abs, abs.getAbstraction()));
+    		executor.execute(new SourceFindingTask(curResIdx, abs, abs.getAbstraction()));
     	}
 
     	try {
