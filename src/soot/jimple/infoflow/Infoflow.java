@@ -496,9 +496,9 @@ public class Infoflow extends AbstractInfoflow {
 	 */
 	private void computeTaintPaths(final Set<AbstractionAtSink> res) {
 		IAbstractionPathBuilder builder = this.pathBuilderFactory.createPathBuilder(maxThreadNum);
-//    	if (computeResultPaths)
-//    		builder.computeTaintPaths(res);
-//    	else
+    	if (computeResultPaths)
+    		builder.computeTaintPaths(res);
+    	else
     		builder.computeTaintSources(res);
     	this.results = builder.getResults();
     	builder.shutdown();
