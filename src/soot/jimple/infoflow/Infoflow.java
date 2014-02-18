@@ -335,7 +335,10 @@ public class Infoflow extends AbstractInfoflow {
 				backProblem = new BackwardsInfoflowProblem(new BackwardsInfoflowCFG(iCfg), sourcesSinks);
 				// need to set this before creating the zero abstraction
 				backProblem.setFlowSensitiveAliasing(flowSensitiveAliasing);
+				
 				backSolver = new InfoflowSolver(backProblem, executor);
+				backSolver.setJumpPredecessors(!computeResultPaths);
+				
 				aliasingStrategy = new FlowSensitiveAliasStrategy(iCfg, backSolver);
 				break;
 			case PtsBased:
