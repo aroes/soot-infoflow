@@ -1178,7 +1178,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				if (call instanceof Stmt) {
 					final Stmt iStmt = (Stmt) call;
 					final InvokeExpr invExpr = iStmt.getInvokeExpr();
-					final List<Value> callArgs = iStmt.getInvokeExpr().getArgs();
+					final List<Value> callArgs = invExpr.getArgs();
 					
 					final SourceInfo sourceInfo = sourceSinkManager != null
 							? sourceSinkManager.getSourceInfo((Stmt) call, interproceduralCFG()) : null;
@@ -1189,7 +1189,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							(interproceduralCFG().getMethodOf(call), iStmt) : null;
 					final Set<SootField> fieldsWrittenByCallee = enableStaticFields ? interproceduralCFG().getWriteVariables
 							(interproceduralCFG().getMethodOf(call), iStmt) : null;
-							
+					
+					final SootMethod callee = invExpr.getMethod();
 					final boolean hasValidCallees = hasValidCallees(call);
 
 					return new SolverCallToReturnFlowFunction() {
@@ -1210,7 +1211,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										interproceduralCFG(), FlowFunctionType.CallToReturnFlowFunction);
 							
 							// Check whether we must leave a conditional branch
-							if (source.isTopPostdominator(iStmt)) {
+							if (source.isTopPostdominator(call)) {
 								source = source.dropTopPostdominator();
 								// Have we dropped the last postdominator for an empty taint?
 								if (source.getAccessPath().isEmpty() && source.getTopPostdominator() == null)
@@ -1223,17 +1224,17 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							// instance method calls like constructor invocations
 							if (source == getZeroValue() && sourceInfo != null) {
 								// If we have nothing to taint, we can skip this source
-								if (!(iStmt instanceof AssignStmt || invExpr instanceof InstanceInvokeExpr))
+								if (!(call instanceof AssignStmt || invExpr instanceof InstanceInvokeExpr))
 									return Collections.emptySet();
 								
 								final Value target;
-								if (iStmt instanceof AssignStmt)
-									target = ((AssignStmt) iStmt).getLeftOp();
+								if (call instanceof AssignStmt)
+									target = ((AssignStmt) call).getLeftOp();
 								else
 									target = ((InstanceInvokeExpr) invExpr).getBase();
 									
 								final Abstraction abs = new Abstraction(target, sourceInfo,
-										iStmt.getInvokeExpr(), iStmt, false, false);
+										invExpr, iStmt, false, false);
 								res.add(abs);
 								
 								// Compute the aliases
@@ -1275,8 +1276,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									if(hasValidCallees || (taintWrapper != null
 											&& taintWrapper.isExclusive(iStmt, newSource.getAccessPath(),
 													interproceduralCFG()))) {
-										if (iStmt.getInvokeExpr() instanceof InstanceInvokeExpr)
-											if (aliasing.mayAlias(((InstanceInvokeExpr) iStmt.getInvokeExpr()).getBase(),
+										if (invExpr instanceof InstanceInvokeExpr)
+											if (aliasing.mayAlias(((InstanceInvokeExpr) invExpr).getBase(),
 													newSource.getAccessPath().getPlainLocal())) {
 												passOn = false;
 											}
@@ -1305,7 +1306,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								if (newSource != getZeroValue())
 									res.add(newSource);
 							
-							if (iStmt.getInvokeExpr().getMethod().isNative())
+							if (callee.isNative())
 								if (callArgs.contains(newSource.getAccessPath().getPlainValue())) {
 									// java uses call by value, but fields of complex objects can be changed (and tainted), so use this conservative approach:
 									Set<Abstraction> nativeAbs = ncHandler.getTaintedValues(iStmt, newSource, callArgs);
@@ -1343,13 +1344,13 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								}
 								
 								if (newSource.isAbstractionActive() && taintedParam)
-									addResult(new AbstractionAtSink(newSource, iStmt.getInvokeExpr(), iStmt));
+									addResult(new AbstractionAtSink(newSource, invExpr, iStmt));
 								// if the base object which executes the method is tainted the sink is reached, too.
-								if (iStmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
+								if (invExpr instanceof InstanceInvokeExpr) {
 									InstanceInvokeExpr vie = (InstanceInvokeExpr) iStmt.getInvokeExpr();
 									if (newSource.isAbstractionActive()
 											&& aliasing.mayAlias(vie.getBase(), newSource.getAccessPath().getPlainValue()))
-										addResult(new AbstractionAtSink(newSource, iStmt.getInvokeExpr(), iStmt));
+										addResult(new AbstractionAtSink(newSource, invExpr, iStmt));
 								}
 							}
 							

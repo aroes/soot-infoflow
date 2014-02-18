@@ -112,6 +112,9 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 	@DontSynchronize("readOnly")
 	private boolean setJumpPredecessors = false;
 	
+	@DontSynchronize("readOnly")
+	private boolean enableMergePointChecking = false;
+	
 	/**
 	 * Creates a solver for the given problem, which caches flow functions and edge functions.
 	 * The solver must then be started by calling {@link #solve()}.
@@ -466,7 +469,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 			/* deliberately exposed to clients */ boolean isUnbalancedReturn,
 			boolean forceRegister) {
 		final PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
-		final D existingVal = (forceRegister || isMergePoint(target)) ?
+		final D existingVal = (forceRegister || !enableMergePointChecking || isMergePoint(target)) ?
 				jumpFn.addFunction(new WeakPathEdge<N, D>(sourceVal, target, targetVal)) : null;
 		if (existingVal != null) {
 			if (existingVal != targetVal)
@@ -580,6 +583,15 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 	 */
 	public void setJumpPredecessors(boolean setJumpPredecessors) {
 		this.setJumpPredecessors = setJumpPredecessors;
+	}
+	
+	/**
+	 * Sets whether only abstractions at merge points shall be recorded to jumpFn.
+	 * @param enableMergePointChecking True if only abstractions at merge points
+	 * shall be recorded to jumpFn, otherwise false.
+	 */
+	public void setEnableMergePointChecking(boolean enableMergePointChecking) {
+		this.enableMergePointChecking = enableMergePointChecking;
 	}
 
 }
