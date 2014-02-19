@@ -338,6 +338,7 @@ public class Infoflow extends AbstractInfoflow {
 				
 				backSolver = new InfoflowSolver(backProblem, executor);
 				backSolver.setJumpPredecessors(!computeResultPaths);
+				backSolver.setEnableMergePointChecking(true);
 				
 				aliasingStrategy = new FlowSensitiveAliasStrategy(iCfg, backSolver);
 				break;
@@ -361,6 +362,7 @@ public class Infoflow extends AbstractInfoflow {
 		InfoflowSolver forwardSolver = new InfoflowSolver(forwardProblem, executor);
 		aliasingStrategy.setForwardSolver(forwardSolver);
 		forwardSolver.setJumpPredecessors(!computeResultPaths);
+		forwardSolver.setEnableMergePointChecking(true);
 		
 		forwardProblem.setInspectSources(inspectSources);
 		forwardProblem.setInspectSinks(inspectSinks);
