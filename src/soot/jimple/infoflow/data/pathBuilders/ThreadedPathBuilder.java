@@ -112,9 +112,6 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 		public void run() {
 			propagationCount.incrementAndGet();
 			
-			if (!abstraction.registerPathFlag(taskId))
-				return;
-			
 			if (abstraction.getPredecessor() != null)
 				addSuccessor(abstraction.getPredecessor(), abstraction);
 			if (abstraction.getNeighbors() != null)
@@ -132,25 +129,27 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 							abstraction.getSourceContext().getStmt(),
 							abstraction.getSourceContext().getUserData(),
 							Collections.<Stmt>emptyList());
-				
-				SourceContextAndPath rootScap = new SourceContextAndPath
-						(abstraction.getSourceContext().getValue(),
-						abstraction.getSourceContext().getStmt(),
-						abstraction.getSourceContext().getUserData()).extendPath
-								(abstraction.getSourceContext().getStmt());
-				abstraction.getOrMakePathCache().add(rootScap);
-				
-				addRoot(abstraction);
+				else {
+					SourceContextAndPath rootScap = new SourceContextAndPath
+							(abstraction.getSourceContext().getValue(),
+							abstraction.getSourceContext().getStmt(),
+							abstraction.getSourceContext().getUserData()).extendPath
+									(abstraction.getSourceContext().getStmt());
+					abstraction.getOrMakePathCache().add(rootScap);				
+					addRoot(abstraction);
+				}
 				
 				// Sources may not have predecessors
 				assert abstraction.getPredecessor() == null;
 			}
 			else
-				executor.execute(new SourceFindingTask(taskId, flagAbs, abstraction.getPredecessor()));
+				if (abstraction.getPredecessor().registerPathFlag(taskId))
+					executor.execute(new SourceFindingTask(taskId, flagAbs, abstraction.getPredecessor()));
 			
 			if (abstraction.getNeighbors() != null)
 				for (Abstraction nb : abstraction.getNeighbors())
-					executor.execute(new SourceFindingTask(taskId, flagAbs, nb));
+					if (nb.registerPathFlag(taskId))
+						executor.execute(new SourceFindingTask(taskId, flagAbs, nb));
 		}
 	}
 	
