@@ -79,15 +79,11 @@ public class SetTests extends JUnitTests {
     	System.out.println("Running test case concreteTreeSetPos1Test...");
     	Infoflow infoflow = initInfoflow();
     	
-    	int oldAPLength = Infoflow.getAccessPathLength();
-    	Infoflow.setAccessPathLength(1);
-
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.SetTestCode: void concreteWriteReadTreePos1Test()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
 
-		Infoflow.setAccessPathLength(oldAPLength);	// this is a global setting! Restore it when we're done
 		System.out.println("Test case concreteTreeSetPos1Test done.");
     }
     
