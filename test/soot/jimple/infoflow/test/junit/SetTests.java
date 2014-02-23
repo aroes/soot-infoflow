@@ -155,16 +155,12 @@ public class SetTests extends JUnitTests {
     public void concreteNegativeTest(){
     	System.out.println("Running test case concreteNegativeTest...");
     	Infoflow infoflow = initInfoflow();
-
-    	int oldAPLength = Infoflow.getAccessPathLength();
-    	Infoflow.setAccessPathLength(1);
-
+    	
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.SetTestCode: void concreteWriteReadNegativeTest()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		negativeCheckInfoflow(infoflow);
-
-		Infoflow.setAccessPathLength(oldAPLength);	// this is a global setting! Restore it when we're done
+		
 		System.out.println("Test case concreteNegativeTest done.");
     }
 }

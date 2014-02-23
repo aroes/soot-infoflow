@@ -28,7 +28,9 @@ public class RecursivePathBuilder implements IAbstractionPathBuilder {
     private final InfoflowResults results = new InfoflowResults();
 	private final CountingThreadPoolExecutor executor;
     
-    /**
+	private static int lastTaskId = 0;
+
+	/**
      * Creates a new instanceof the {@link RecursivePathBuilder} class
 	 * @param maxThreadNum The maximum number of threads to use
      */
@@ -108,12 +110,11 @@ public class RecursivePathBuilder implements IAbstractionPathBuilder {
     	int curResIdx = 0;
     	for (final AbstractionAtSink abs : res) {
     		logger.info("Building path " + ++curResIdx);
-    		final int taskId = curResIdx;
     		executor.execute(new Runnable() {
 				
 				@Override
 				public void run() {
-		    		for (SourceContextAndPath context : getPaths(taskId,
+		    		for (SourceContextAndPath context : getPaths(lastTaskId++,
 		    				abs.getAbstraction(), computeResultPaths, new Object()))
 						results.addResult(abs.getSinkValue(), abs.getSinkStmt(),
 								context.getValue(), context.getStmt(), context.getUserData(),

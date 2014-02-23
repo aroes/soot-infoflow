@@ -38,6 +38,8 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 	private IdentityHashMap<Abstraction, Set<Abstraction>> successors = null;
 	private IdentityHashMap<Abstraction, Set<Abstraction>> neighbors = null;
 	
+	private static int lastTaskId = 0;
+	
 	/**
 	 * Creates a new instance of the {@link ThreadedPathBuilder} class
 	 * @param maxThreadNum The maximum number of threads to use
@@ -230,7 +232,7 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
     	int curResIdx = 0;
     	for (final AbstractionAtSink abs : res) {
     		logger.info("Building path " + ++curResIdx);
-    		executor.execute(new SourceFindingTask(curResIdx, abs, abs.getAbstraction()));
+    		executor.execute(new SourceFindingTask(lastTaskId++, abs, abs.getAbstraction()));
     	}
 
     	try {
