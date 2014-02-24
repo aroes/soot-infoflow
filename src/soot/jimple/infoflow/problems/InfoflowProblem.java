@@ -464,7 +464,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 											interproceduralCFG().getMethodOf(assignStmt), abs);
                                 return res;
                             }
-
+                            
                             // on NormalFlow taint cannot be created
 							if (source == getZeroValue())
 								return Collections.emptySet();
