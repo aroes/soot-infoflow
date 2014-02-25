@@ -255,7 +255,8 @@ public class AccessPath implements Cloneable {
 	}
 
 	public AccessPath(Value base, SootField field, boolean taintSubFields){
-		this(base, new SootField[] { field }, null, new Type[] { field.getType() }, taintSubFields);
+		this(base, field == null ? null : new SootField[] { field }, null,
+				field == null ? null : new Type[] { field.getType() }, taintSubFields);
 		assert base instanceof Local;
 	}
 	

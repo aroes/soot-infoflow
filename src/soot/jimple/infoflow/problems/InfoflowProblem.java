@@ -669,7 +669,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							}
 								
 							Set<Abstraction> res = new HashSet<Abstraction>();
-
+							
 							// If this is a sink, we need to report the finding
 							if (isSink && newSource.isAbstractionActive() && newSource.getAccessPath().isEmpty())
 								addResult(new AbstractionAtSink(newSource, leftValue, assignStmt));
