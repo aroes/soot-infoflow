@@ -338,7 +338,7 @@ public class Infoflow extends AbstractInfoflow {
 				
 				backSolver = new InfoflowSolver(backProblem, executor);
 				backSolver.setJumpPredecessors(!computeResultPaths);
-				backSolver.setEnableMergePointChecking(true);
+//				backSolver.setEnableMergePointChecking(true);
 				
 				aliasingStrategy = new FlowSensitiveAliasStrategy(iCfg, backSolver);
 				break;
@@ -357,12 +357,12 @@ public class Infoflow extends AbstractInfoflow {
 		forwardProblem.setFlowSensitiveAliasing(flowSensitiveAliasing);
 		if (backProblem != null)
 			forwardProblem.setZeroValue(backProblem.createZeroValue());
-
+		
 		// Set the options
 		InfoflowSolver forwardSolver = new InfoflowSolver(forwardProblem, executor);
 		aliasingStrategy.setForwardSolver(forwardSolver);
 		forwardSolver.setJumpPredecessors(!computeResultPaths);
-		forwardSolver.setEnableMergePointChecking(true);
+//		forwardSolver.setEnableMergePointChecking(true);
 		
 		forwardProblem.setInspectSources(inspectSources);
 		forwardProblem.setInspectSinks(inspectSinks);
