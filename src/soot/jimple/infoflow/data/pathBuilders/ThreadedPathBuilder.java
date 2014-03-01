@@ -198,7 +198,8 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 				Set<SourceContextAndPath> childScaps = child.getOrMakePathCache();
 				for (SourceContextAndPath scap : parentPaths) {
 					if (extendPath && child.getCurrentStmt() != null) {
-						if (childScaps.add(scap.extendPath(child.getCurrentStmt())))
+						SourceContextAndPath extendedScap = scap.extendPath(child.getCurrentStmt());
+						if (childScaps.add(extendedScap))
 							added = true;
 					}
 					else if (childScaps.add(scap))

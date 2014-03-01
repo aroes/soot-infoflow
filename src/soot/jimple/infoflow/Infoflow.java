@@ -43,6 +43,7 @@ import soot.jimple.infoflow.aliasing.IAliasingStrategy;
 import soot.jimple.infoflow.aliasing.PtsBasedAliasStrategy;
 import soot.jimple.infoflow.config.IInfoflowConfig;
 import soot.jimple.infoflow.data.AbstractionAtSink;
+import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.data.pathBuilders.DefaultPathBuilderFactory;
 import soot.jimple.infoflow.data.pathBuilders.IAbstractionPathBuilder;
 import soot.jimple.infoflow.data.pathBuilders.IPathBuilderFactory;
@@ -458,6 +459,7 @@ public class Infoflow extends AbstractInfoflow {
 			backSolver = null;
 		}
 		forwardSolver = null;
+		AccessPath.clearBaseRegister();
 		Runtime.getRuntime().gc();
 		
 		Set<AbstractionAtSink> res = forwardProblem.getResults();

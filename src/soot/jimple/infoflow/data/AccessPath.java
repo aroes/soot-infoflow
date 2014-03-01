@@ -282,6 +282,10 @@ public class AccessPath implements Cloneable {
 		bases.add(new Pair<SootField[], Type[]>(base, baseTypes));
 	}
 	
+	public static void clearBaseRegister() {
+		baseRegister.clear();
+	}
+	
 	public static Collection<Pair<SootField[], Type[]>> getBaseForType(Type tp) {
 		return baseRegister.get(tp);
 	}
