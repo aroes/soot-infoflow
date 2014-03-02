@@ -321,9 +321,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						// we must update our typing information
 						CastExpr cast = (CastExpr) assignStmt.getRightOp();
 						if (cast.getType() instanceof ArrayType && !(targetType instanceof ArrayType)) {
-							assert targetType instanceof RefType;
-							assert ((RefType) targetType).getSootClass()
-									.getName().equals("java.lang.Object");
+							assert canCastType(targetType, cast.getType());
 							targetType = cast.getType();
 						}
 					}
