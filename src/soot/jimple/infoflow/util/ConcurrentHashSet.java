@@ -13,7 +13,9 @@ package soot.jimple.infoflow.util;
 import java.util.AbstractSet;
 import java.util.Iterator;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+import com.google.common.collect.MapMaker;
 
 /**
  * Multithreaded version of a hash set
@@ -22,13 +24,16 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ConcurrentHashSet<E> extends AbstractSet<E> implements Set<E> {
 
-    protected ConcurrentHashMap<E,E> delegate;
+    protected final ConcurrentMap<E,E> delegate;
     
     /**
      * Creates a new, empty ConcurrentHashSet. 
      */
     public ConcurrentHashSet() {
-        delegate = new ConcurrentHashMap<E, E>();
+    	// had some really weird NPEs with Java's ConcurrentHashMap (i.e. got a
+    	// NPE at size()), now trying witrh Guava instead
+        delegate = new MapMaker().concurrencyLevel
+        		(Runtime.getRuntime().availableProcessors()).makeMap();
     }
 
     @Override
@@ -48,6 +53,7 @@ public class ConcurrentHashSet<E> extends AbstractSet<E> implements Set<E> {
 
     @Override
     public boolean add(E o) {
+    	assert o != null;
         return delegate.put(o, o)==null;
     }
 
