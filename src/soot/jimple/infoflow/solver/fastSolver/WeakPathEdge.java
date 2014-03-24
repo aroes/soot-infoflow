@@ -31,7 +31,7 @@ public class WeakPathEdge<N,D> {
 
 	protected final WeakReference<N> target;
 	protected final WeakReference<D> dSource, dTarget;
-	protected int hashCode = -1;
+	protected final int hashCode;
 
 	/**
 	 * @param dSource The fact at the source.
@@ -43,6 +43,13 @@ public class WeakPathEdge<N,D> {
 		this.target = target == null ? null : new WeakReference<N>(target);
 		this.dSource = dSource == null ? null : new WeakReference<D>(dSource);
 		this.dTarget = dTarget == null ? null : new WeakReference<D>(dTarget);
+		
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((dSource == null) ? 0 : dSource.hashCode());
+		result = prime * result + ((dTarget == null) ? 0 : dTarget.hashCode());
+		result = prime * result + ((target == null) ? 0 : target.hashCode());
+		this.hashCode = result;
 	}
 	
 	public N getTarget() {
@@ -63,14 +70,6 @@ public class WeakPathEdge<N,D> {
 
 	@Override
 	public int hashCode() {
-		if (hashCode < 0) {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + ((dSource == null) ? 0 : dSource.hashCode());
-			result = prime * result + ((dTarget == null) ? 0 : dTarget.hashCode());
-			result = prime * result + ((target == null) ? 0 : target.hashCode());
-			this.hashCode = result;
-		}
 		return hashCode;
 	}
 
