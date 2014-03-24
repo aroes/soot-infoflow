@@ -505,7 +505,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 		return false;
 	}
 
-	protected Set<Pair<N, D>> endSummary(M m, D d3) {
+	private Set<Pair<N, D>> endSummary(M m, D d3) {
 		Set<Pair<N, D>> map = endSummary.get(new Pair<M, D>(m, d3));
 		return map;
 	}
