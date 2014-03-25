@@ -35,8 +35,8 @@
 	</target>
 	
 	<target name="compiletests" depends="settings,compile">
-		<mkdir dir="build/classes" />
-		<javac srcdir="src:test:securiBench" includeantruntime="true" source="1.6" target="1.6" destdir="build/classes" debug="true">
+		<mkdir dir="build/testclasses" />
+		<javac srcdir="test:securiBench" includeantruntime="true" source="1.6" target="1.6" destdir="build/testclasses" debug="true">
 			<classpath>
 				<pathelement location="${soot.jar}" />
 				<pathelement location="${heros.jar}" />
@@ -48,6 +48,14 @@
 		</javac>
 	</target>
 
+	<target name="testjar" depends="settings,compiletests">
+
+	    	<jar destfile="${infoflow-tests.jar}" >
+	            <fileset dir="build/testclasses"/>
+	        </jar>
+
+	</target>
+
 	<target name="runtests" depends="compiletests">
 		<mkdir dir="reports" />
 		<junit printsummary="yes" fork="true" maxmemory="4G">
@@ -55,6 +63,7 @@
 				<pathelement location="${soot.jar}" />
 				<pathelement location="${heros.jar}" />
 				<pathelement location="build/classes" />
+				<pathelement location="build/testclasses" />
 				<fileset dir="lib">
 					<include name="*.jar" />
 				</fileset>

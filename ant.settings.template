@@ -5,5 +5,6 @@ soot.jar=
 
 # Target JAR file
 infoflow.jar=
+infoflow-tests.jar=
 
 # TODO: compile with projects checked out and recompile them with build.xml
