@@ -833,9 +833,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (stopAfterFirstFlow && !results.isEmpty())
 							return Collections.emptySet();
 						
-						if (dest.getName().equals("setaString"))
-							System.out.println("x");
-						
 						//if we do not have to look into sources or sinks:
 						if (!inspectSources && sourceInfo != null)
 							return Collections.emptySet();
@@ -915,7 +912,15 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							res.add(source);
 						
 						//special treatment for clinit methods - no param mapping possible
-						if(!dest.getName().equals("<clinit>")) {
+						if (ie.getMethod().getSubSignature().equals("void execute(java.lang.Runnable)")
+								&& dest.getSubSignature().equals("void run()")) {
+							if (aliasing.mayAlias(callArgs.get(0), source.getAccessPath().getPlainLocal())) {
+								Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
+										(dest.getActiveBody().getThisLocal()), stmt);
+								res.add(abs);
+							}
+						}
+						else if(!dest.getName().equals("<clinit>")) {
 							assert dest.getParameterCount() == callArgs.size();
 							// check if param is tainted:
 							for (int i = 0; i < callArgs.size(); i++) {
@@ -962,9 +967,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (source == getZeroValue())
 							return Collections.emptySet();
 						
-						if (callee.getName().equals("setaString"))
-							System.out.println("x");
-
 						// Notify the handler if we have one
 						for (TaintPropagationHandler tp : taintPropagationHandlers)
 							tp.notifyFlowIn(exitStmt, Collections.singleton(source),

@@ -414,7 +414,15 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						}
 						
 						// Map the parameter values into the callee
-						if(!dest.getName().equals("<clinit>")) {
+						if (ie.getMethod().getSubSignature().equals("void execute(java.lang.Runnable)")
+								&& dest.getSubSignature().equals("void run()")) {
+							if (callArgs.get(0).equals(source.getAccessPath().getPlainLocal())) {
+								Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
+										(dest.getActiveBody().getThisLocal()), stmt);
+								res.add(abs);
+							}
+						}
+						else if(!dest.getName().equals("<clinit>")) {
 							assert dest.getParameterCount() == callArgs.size();
 							// check if param is tainted:
 							for (int i = 0; i < callArgs.size(); i++) {
