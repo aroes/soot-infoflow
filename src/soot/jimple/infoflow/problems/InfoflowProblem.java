@@ -448,9 +448,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									|| interproceduralCFG().getMethodOf(src).getActiveBody().getUnits().contains
 											(source.getTopPostdominator().getUnit());
 							
-							if (interproceduralCFG().getMethodOf(assignStmt).getName().equals("setaString"))
-								System.out.println(interproceduralCFG().getMethodOf(assignStmt).getActiveBody());
-
 							// Fields can be sources in some cases
                             if (source == getZeroValue() && sourceInfo != null) {
     							Set<Abstraction> res = new HashSet<Abstraction>();
@@ -842,6 +839,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							assert sourceInfo != null;
 							return Collections.singleton(source);
 						}
+						
+						if (src.toString().contains("LinkedList"))
+							System.out.println("x");
 						
 						// Notify the handler if we have one
 						for (TaintPropagationHandler tp : taintPropagationHandlers)
