@@ -839,10 +839,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							assert sourceInfo != null;
 							return Collections.singleton(source);
 						}
-						
-						if (src.toString().contains("LinkedList"))
-							System.out.println("x");
-						
+												
 						// Notify the handler if we have one
 						for (TaintPropagationHandler tp : taintPropagationHandlers)
 							tp.notifyFlowIn(stmt, Collections.singleton(source),
