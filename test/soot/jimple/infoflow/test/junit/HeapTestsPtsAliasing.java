@@ -456,7 +456,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 				if (stmt.getInvokeExpr().getMethod().getName().equals("foo2")) {
 					InstanceInvokeExpr iinv = (InstanceInvokeExpr) stmt
 							.getInvokeExpr();
-					if (taintedPath.getPlainLocal() == iinv.getArg(0)) {
+					if (taintedPath.getPlainValue() == iinv.getArg(0)) {
 						RefType rt = (RefType) iinv.getBase().getType();
 						AccessPath ap = new AccessPath(iinv.getBase(),
 								new SootField[] { rt.getSootClass()
@@ -475,7 +475,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 															 */}, true);
 						res.add(ap);
 					}
-					if (taintedPath.getPlainLocal() == iinv.getArg(1)) {
+					if (taintedPath.getPlainValue() == iinv.getArg(1)) {
 						RefType rt = (RefType) iinv.getBase().getType();
 						AccessPath ap = new AccessPath(iinv.getBase(),
 								new SootField[] { rt.getSootClass()
@@ -498,7 +498,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 						.equals("bar2")) {
 					InstanceInvokeExpr iinv = (InstanceInvokeExpr) stmt
 							.getInvokeExpr();
-					if (taintedPath.getPlainLocal() == iinv.getArg(0)) {
+					if (taintedPath.getPlainValue() == iinv.getArg(0)) {
 						RefType rt = (RefType) iinv.getBase().getType();
 						AccessPath ap = new AccessPath(iinv.getBase(),
 								new SootField[] { rt.getSootClass()

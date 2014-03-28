@@ -155,7 +155,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						if (rightValue instanceof InstanceFieldRef) {
 							InstanceFieldRef ref = (InstanceFieldRef) rightValue;
 							if (source.getAccessPath().isInstanceFieldRef()
-									&& ref.getBase().equals(source.getAccessPath().getPlainValue())
+									&& ref.getBase() == source.getAccessPath().getPlainValue()
 									&& source.getAccessPath().firstFieldMatches(ref.getField())) {
 								newLeftAbs = source.deriveNewAbstraction(leftValue, true,
 										source.getAccessPath().getFirstFieldType());
@@ -169,7 +169,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 										source.getAccessPath().getBaseType());
 							}
 						}
-						else if (rightValue.equals(source.getAccessPath().getPlainValue())) {
+						else if (rightValue == source.getAccessPath().getPlainValue()) {
 							Type newType = source.getAccessPath().getBaseType();
 							if (leftValue instanceof ArrayRef)
 								newType = buildArrayOrAddDimension(newType);
@@ -216,7 +216,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						// if both are fields, we have to compare their fieldName via equals and their bases via PTS
 						if (leftValue instanceof InstanceFieldRef) {
 							InstanceFieldRef leftRef = (InstanceFieldRef) leftValue;
-							if (leftRef.getBase().equals(source.getAccessPath().getPlainLocal())) {
+							if (leftRef.getBase() == source.getAccessPath().getPlainValue()) {
 								if (source.getAccessPath().isInstanceFieldRef()) {
 									if (source.getAccessPath().firstFieldMatches(leftRef.getField())) {
 										targetType = source.getAccessPath().getFirstFieldType();
@@ -228,20 +228,20 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							// indirect taint propagation:
 							// if leftValue is local and source is instancefield of this local:
 						} else if (leftValue instanceof Local && source.getAccessPath().isInstanceFieldRef()) {
-							Local base = source.getAccessPath().getPlainLocal(); // ?
-							if (leftValue.equals(base)) {
+							Local base = source.getAccessPath().getPlainValue(); // ?
+							if (leftValue == base) {
 								targetType = source.getAccessPath().getBaseType();
 								addRightValue = true;
 							}
 						} else if (leftValue instanceof ArrayRef) {
 							Local leftBase = (Local) ((ArrayRef) leftValue).getBase();
-							if (leftBase.equals(source.getAccessPath().getPlainValue())) {
+							if (leftBase == source.getAccessPath().getPlainValue()) {
 								addRightValue = true;
 								targetType = source.getAccessPath().getBaseType();
 								assert source.getAccessPath().getBaseType() instanceof ArrayType;
 							}
 							// generic case, is true for Locals, ArrayRefs that are equal etc..
-						} else if (leftValue.equals(source.getAccessPath().getPlainValue())) {
+						} else if (leftValue == source.getAccessPath().getPlainValue()) {
 							addRightValue = true;
 							targetType = source.getAccessPath().getBaseType();
 							
@@ -371,7 +371,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						if (src instanceof DefinitionStmt) {
 							DefinitionStmt defnStmt = (DefinitionStmt) src;
 							Value leftOp = defnStmt.getLeftOp();
-							if (leftOp.equals(source.getAccessPath().getPlainValue())) {
+							if (leftOp == source.getAccessPath().getPlainValue()) {
 								// look for returnStmts:
 								for (Unit u : dest.getActiveBody().getUnits()) {
 									if (u instanceof ReturnStmt) {
@@ -396,12 +396,12 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						Value sourceBase = source.getAccessPath().getPlainValue();
 						if (!dest.isStatic()) {
 							InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();
-							if (iIExpr.getBase().equals(sourceBase)
+							if (iIExpr.getBase() == sourceBase
 									&& (hasCompatibleTypesForCall(source.getAccessPath(), dest.getDeclaringClass()))) {
 								boolean param = false;
 								// check if it is not one of the params (then we have already fixed it)
 								for (int i = 0; i < dest.getParameterCount(); i++) {
-									if (stmt.getInvokeExpr().getArg(i).equals(sourceBase)) {
+									if (stmt.getInvokeExpr().getArg(i) == sourceBase) {
 										param = true;
 										break;
 									}
@@ -416,7 +416,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						
 						// Map the parameter values into the callee
 						if (isExecutorExecute) {
-							if (ie.getArg(0).equals(source.getAccessPath().getPlainLocal())) {
+							if (ie.getArg(0) == source.getAccessPath().getPlainValue()) {
 								Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
 										(dest.getActiveBody().getThisLocal()), stmt);
 								res.add(abs);
@@ -426,7 +426,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							assert dest.getParameterCount() == ie.getArgCount();
 							// check if param is tainted:
 							for (int i = 0; i < ie.getArgCount(); i++) {
-								if (ie.getArg(i).equals(source.getAccessPath().getPlainLocal())) {
+								if (ie.getArg(i) == source.getAccessPath().getPlainValue()) {
 									Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
 											(paramLocals[i]), stmt);
 									res.add(abs);
@@ -489,7 +489,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							return Collections.singleton(source);
 						}
 
-						final Value sourceBase = source.getAccessPath().getPlainLocal();
+						final Value sourceBase = source.getAccessPath().getPlainValue();
 						Set<Abstraction> res = new HashSet<Abstraction>();
 
 						// if we have a returnStmt we have to look at the returned value:
@@ -576,21 +576,21 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								return Collections.emptySet();
 							
 							// We may not pass on a taint if it is overwritten by this call
-							if (iStmt instanceof DefinitionStmt && ((DefinitionStmt) iStmt).getLeftOp().equals
-									(source.getAccessPath().getPlainValue()))
+							if (iStmt instanceof DefinitionStmt && ((DefinitionStmt) iStmt).getLeftOp()
+									== source.getAccessPath().getPlainValue())
 								return Collections.emptySet();
 							
 							// If the base local of the invocation is tainted, we do not
 							// pass on the taint
 							if (iStmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
 								InstanceInvokeExpr iinv = (InstanceInvokeExpr) iStmt.getInvokeExpr();
-								if (iinv.getBase().equals(source.getAccessPath().getPlainValue()))
+								if (iinv.getBase() == source.getAccessPath().getPlainValue())
 									return Collections.emptySet();
 							}
 							
 							// We do not pass taints on parameters over the call-to-return edge
 							for (int i = 0; i < callArgs.size(); i++)
-								if (callArgs.get(i).equals(source.getAccessPath().getPlainLocal()))
+								if (callArgs.get(i) == source.getAccessPath().getPlainValue())
 									return Collections.emptySet();
 							
 							return Collections.singleton(source);
