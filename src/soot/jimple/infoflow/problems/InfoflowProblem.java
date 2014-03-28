@@ -429,8 +429,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					Value left = assignStmt.getLeftOp();
 
 					final Value leftValue = BaseSelector.selectBase(left, true);
-					final Set<Value> rightVals = Collections.unmodifiableSet
-							(BaseSelector.selectBaseList(right, true));
+					final Set<Value> rightVals = BaseSelector.selectBaseList(right, true);
 					
 					final boolean isSink = sourceSinkManager != null
 							? sourceSinkManager.isSink(assignStmt, interproceduralCFG()) : false;

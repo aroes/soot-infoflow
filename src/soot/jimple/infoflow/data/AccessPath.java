@@ -126,7 +126,7 @@ public class AccessPath implements Cloneable {
 				System.arraycopy(appendingFields, 0, fields, 1, appendingFields.length);
 			
 			fieldTypes = new Type[(appendingFieldTypes == null ? 0 : appendingFieldTypes.length) + 1];
-			fieldTypes[0] = valType != null ? valType : ref.getField().getType();
+			fieldTypes[0] = valType != null ? valType : fields[0].getType();
 			if (appendingFieldTypes != null)
 				System.arraycopy(appendingFieldTypes, 0, fieldTypes, 1, appendingFieldTypes.length);
 		}
