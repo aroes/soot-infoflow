@@ -183,10 +183,15 @@ public class Infoflow extends AbstractInfoflow {
 		// Configure the callgraph algorithm
 		switch (callgraphAlgorithm) {
 			case AutomaticSelection:
-				Options.v().setPhaseOption("cg.spark", "on");
-				if (extraSeed != null && !extraSeed.isEmpty())
-					Options.v().setPhaseOption("cg.spark", "vta:true");
-				Options.v().setPhaseOption("cg.spark", "string-constants:true");
+				// If we analyze a distinct entry point which is not static,
+				// SPARK fails due to the missing allocation site and we fall
+				// back to CHA.
+				if (extraSeed == null || extraSeed.isEmpty()) {
+					Options.v().setPhaseOption("cg.spark", "on");
+					Options.v().setPhaseOption("cg.spark", "string-constants:true");
+				}
+				else
+					Options.v().setPhaseOption("cg.cha", "on");
 				break;
 			case CHA:
 				Options.v().setPhaseOption("cg.cha", "on");
