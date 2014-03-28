@@ -16,7 +16,6 @@ import heros.flowfunc.Identity;
 import heros.flowfunc.KillAll;
 import heros.solver.PathEdge;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -330,10 +329,9 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				final Stmt stmt = (Stmt) src;
 				final InvokeExpr ie = stmt.getInvokeExpr();
 
-				final List<Value> callArgs = ie.getArgs();
-				final List<Value> paramLocals = new ArrayList<Value>(dest.getParameterCount()); 
+				final Value[] paramLocals = new Value[dest.getParameterCount()]; 
 				for (int i = 0; i < dest.getParameterCount(); i++)
-					paramLocals.add(dest.getActiveBody().getParameterLocal(i));
+					paramLocals[i] = dest.getActiveBody().getParameterLocal(i);
 				
 				final SourceInfo sourceInfo = sourceSinkManager != null
 						? sourceSinkManager.getSourceInfo((Stmt) src, interproceduralCFG()) : null;
@@ -343,6 +341,9 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				// This is not cached by Soot, so accesses are more expensive
 				// than one might think
 				final Local thisLocal = dest.isStatic() ? null : dest.getActiveBody().getThisLocal();	
+				
+				final boolean isExecutorExecute = ie.getMethod().getSubSignature().equals("void execute(java.lang.Runnable)")
+						&& dest.getSubSignature().equals("void run()");
 
 				return new SolverCallFlowFunction() {
 
@@ -414,21 +415,20 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						}
 						
 						// Map the parameter values into the callee
-						if (ie.getMethod().getSubSignature().equals("void execute(java.lang.Runnable)")
-								&& dest.getSubSignature().equals("void run()")) {
-							if (callArgs.get(0).equals(source.getAccessPath().getPlainLocal())) {
+						if (isExecutorExecute) {
+							if (ie.getArg(0).equals(source.getAccessPath().getPlainLocal())) {
 								Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
 										(dest.getActiveBody().getThisLocal()), stmt);
 								res.add(abs);
 							}
 						}
 						else if(!dest.getName().equals("<clinit>")) {
-							assert dest.getParameterCount() == callArgs.size();
+							assert dest.getParameterCount() == ie.getArgCount();
 							// check if param is tainted:
-							for (int i = 0; i < callArgs.size(); i++) {
-								if (callArgs.get(i).equals(source.getAccessPath().getPlainLocal())) {
+							for (int i = 0; i < ie.getArgCount(); i++) {
+								if (ie.getArg(i).equals(source.getAccessPath().getPlainLocal())) {
 									Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
-											(paramLocals.get(i)), stmt);
+											(paramLocals[i]), stmt);
 									res.add(abs);
 								}
 							}
@@ -461,9 +461,9 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					final Unit exitStmt, final Unit retSite) {
 				final ReturnStmt returnStmt = (exitStmt instanceof ReturnStmt) ? (ReturnStmt) exitStmt : null;
 				
-				final List<Value> paramLocals = new ArrayList<Value>(callee.getParameterCount()); 
+				final Value[] paramLocals = new Value[callee.getParameterCount()]; 
 				for (int i = 0; i < callee.getParameterCount(); i++)
-					paramLocals.add(callee.getActiveBody().getParameterLocal(i));
+					paramLocals[i] = callee.getActiveBody().getParameterLocal(i);
 
 				// This is not cached by Soot, so accesses are more expensive
 				// than one might think
@@ -506,10 +506,12 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						}
 						
 						// check one of the call params are tainted (not if simple type)
+						boolean parameterAliases = false;
 						{
 						Value originalCallArg = null;
 						for (int i = 0; i < callee.getParameterCount(); i++) {
-							if (paramLocals.get(i) == sourceBase) 
+							if (paramLocals[i] == sourceBase) {
+								parameterAliases = true;
 								if (callSite instanceof Stmt) {
 									Stmt iStmt = (Stmt) callSite;
 									originalCallArg = iStmt.getInvokeExpr().getArg(i);
@@ -525,6 +527,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 									res.add(abs);
 									registerActivationCallSite(callSite, callee, abs);
 								}
+							}
 						}
 						}
 						
@@ -532,15 +535,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						if (!callee.isStatic()) {
 							if (thisLocal == sourceBase && hasCompatibleTypesForCall
 									(source.getAccessPath(), callee.getDeclaringClass())) {
-								boolean param = false;
 								// check if it is not one of the params (then we have already fixed it)
-								for (int i = 0; i < callee.getParameterCount(); i++) {
-									if (paramLocals.get(i) == sourceBase) {
-										param = true;
-										break;
-									}
-								}
-								if (!param) {
+								if (!parameterAliases) {
 									if (callSite instanceof Stmt) {
 										Stmt stmt = (Stmt) callSite;
 										if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
