@@ -206,6 +206,10 @@ public class Infoflow extends AbstractInfoflow {
 				Options.v().setPhaseOption("cg.spark", "vta:true");
 				Options.v().setPhaseOption("cg.spark", "string-constants:true");
 				break;
+			case SPARK:
+				Options.v().setPhaseOption("cg.spark", "on");
+				Options.v().setPhaseOption("cg.spark", "string-constants:true");
+				break;
 			case OnDemand:
 				// nothing to set here
 				break;

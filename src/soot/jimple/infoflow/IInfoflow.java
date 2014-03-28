@@ -33,6 +33,7 @@ public interface IInfoflow {
 		CHA,
 		VTA,
 		RTA,
+		SPARK,
 		OnDemand
 	}
 	
