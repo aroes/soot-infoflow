@@ -45,7 +45,7 @@ public class Aliasing {
 		
 		if (taintedAP.isInstanceFieldRef() || taintedAP.isLocal()) {
 			// For instance field references, the base must match
-			if (!taintedAP.getPlainValue().equals(referencedAP.getPlainValue()))
+			if (taintedAP.getPlainValue() != referencedAP.getPlainValue())
 				return null;
 			
 			// Shortcut: If we have no fields and the base matches, we're done
@@ -77,14 +77,14 @@ public class Aliasing {
 			}
 			
 			// a.b does not match a.c
-			if (!taintedAP.getFields()[fieldIdx].equals(referencedAP.getFields()[fieldIdx])) {
+			if (taintedAP.getFields()[fieldIdx] != referencedAP.getFields()[fieldIdx]) {
 				// If the referenced field is a base, we add it in. Note that
 				// the first field in a static reference is the base, so this
 				// must be excluded from base matching.
 				if (bases != null && !(taintedAP.isStaticFieldRef() && fieldIdx == 0)) {
 					// Check the base. Handles A.y (taint) ~ A.[x].y (ref)
 					for (Pair<SootField[], Type[]> base : bases) {
-						if (base.getO1()[0].equals(referencedAP.getFields()[fieldIdx])) {
+						if (base.getO1()[0] == referencedAP.getFields()[fieldIdx]) {
 							// Build the access path against which we have
 							// actually matched
 							SootField[] cutFields = new SootField
@@ -131,7 +131,7 @@ public class Aliasing {
 			return false;
 		
 		// If the two values are equal, they alias by definition
-		if (val1.equals(val2))
+		if (val1 == val2)
 			return true;
 		
 		// If we have an interactive aliasing algorithm, we check that as well
@@ -149,7 +149,7 @@ public class Aliasing {
 	 * object, otherwise false
 	 */
 	public boolean mustAlias(SootField field1, SootField field2) {
-		return field1.equals(field2);
+		return field1 == field2;
 	}
 
 	/**
@@ -160,7 +160,7 @@ public class Aliasing {
 	 * object, otherwise false
 	 */
 	public boolean mustAlias(Value val1, Value val2) {
-		return val1.equals(val2);
+		return val1 == val2;
 	}
 
 }
