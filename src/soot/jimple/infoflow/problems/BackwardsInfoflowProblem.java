@@ -319,7 +319,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							
 							Set<Abstraction> res = computeAliases(defStmt, leftValue, d1, source);
 							
-							if (interproceduralCFG().isExitStmt(destDefStmt))
+							if (destDefStmt != null && interproceduralCFG().isExitStmt(destDefStmt))
 								for (Abstraction abs : res)
 									computeAliases(destDefStmt, destLeftValue, d1, abs);
 							
