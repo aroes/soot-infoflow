@@ -96,26 +96,21 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction>, ChainedN
 			boolean exceptionThrown,
 			boolean isImplicit){
 		this(taint, taintSubFields, new SourceContext(sourceVal, sourceStmt, userData),
-				exceptionThrown, null, isImplicit);
+				exceptionThrown, isImplicit);
 	}
 
 	protected Abstraction(Value taint, boolean taintSubFields,
 			SourceContext sourceContext,
 			boolean exceptionThrown,
-			Unit activationUnit,
 			boolean isImplicit){
 		this.sourceContext = sourceContext;
 		this.accessPath = new AccessPath(taint, taintSubFields);
-		
-		if (flowSensitiveAliasing)
-			this.activationUnit = activationUnit;
-		else
-			this.activationUnit = null;
-		
+		this.activationUnit = null;
 		this.exceptionThrown = exceptionThrown;
 		
 		this.neighbors = null;
 		this.isImplicit = isImplicit;
+		this.currentStmt = null;
 	}
 
 	/**
@@ -146,6 +141,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction>, ChainedN
 		}
 		accessPath = p;
 		neighbors = null;
+		currentStmt = null;
 	}
 	
 	public final Abstraction deriveInactiveAbstraction(Unit activationUnit){
@@ -279,7 +275,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction>, ChainedN
 		return true;
 	}
 
-	public boolean isAbstractionActive(){
+	public boolean isAbstractionActive() {
 		return activationUnit == null;
 	}
 	
