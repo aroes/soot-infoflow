@@ -140,8 +140,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			
 			// or one of the parameters must be tainted
 			if (!found)
-				for (Value param : iStmt.getInvokeExpr().getArgs())
-					if (aliasing.mayAlias(source.getAccessPath().getPlainValue(), param)) {
+				for (int paramIdx = 0; paramIdx < iStmt.getInvokeExpr().getArgCount(); paramIdx++)
+					if (aliasing.mayAlias(source.getAccessPath().getPlainValue(),
+							iStmt.getInvokeExpr().getArg(paramIdx))) {
 						found = true;
 						break;
 				}
@@ -839,7 +840,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							assert sourceInfo != null;
 							return Collections.singleton(source);
 						}
-												
+						
 						// Notify the handler if we have one
 						for (TaintPropagationHandler tp : taintPropagationHandlers)
 							tp.notifyFlowIn(stmt, Collections.singleton(source),
@@ -927,7 +928,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								}
 							}
 						}
-						
 						return res;
 					}
 				};
@@ -1147,7 +1147,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
 											InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();
 											Abstraction abs = newSource.deriveNewAbstraction
-													(newSource.getAccessPath().copyWithNewValue(iIExpr.getBase()), stmt);
+													(newSource.getAccessPath().copyWithNewValue(iIExpr.getBase()), (Stmt) exitStmt);
 											res.add(abs);
 											
 											// Aliases of implicitly tainted variables must be mapped back
@@ -1178,7 +1178,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				if (call instanceof Stmt) {
 					final Stmt iStmt = (Stmt) call;
 					final InvokeExpr invExpr = iStmt.getInvokeExpr();
-					final List<Value> callArgs = invExpr.getArgs();
+					
+					final Value[] callArgs = new Value[invExpr.getArgCount()];
+					for (int i = 0; i < invExpr.getArgCount(); i++)
+						callArgs[i] = invExpr.getArg(i);
 					
 					final SourceInfo sourceInfo = sourceSinkManager != null
 							? sourceSinkManager.getSourceInfo((Stmt) call, interproceduralCFG()) : null;
@@ -1282,8 +1285,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 												passOn = false;
 											}
 											if (passOn)
-												for (int i = 0; i < callArgs.size(); i++)
-													if (aliasing.mayAlias(callArgs.get(i), newSource.getAccessPath().getPlainValue())) {
+												for (int i = 0; i < callArgs.length; i++)
+													if (aliasing.mayAlias(callArgs[i], newSource.getAccessPath().getPlainValue())) {
 														passOn = false;
 														break;
 													}
@@ -1307,18 +1310,22 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									res.add(newSource);
 							
 							if (callee.isNative())
-								if (callArgs.contains(newSource.getAccessPath().getPlainValue())) {
-									// java uses call by value, but fields of complex objects can be changed (and tainted), so use this conservative approach:
-									Set<Abstraction> nativeAbs = ncHandler.getTaintedValues(iStmt, newSource, callArgs);
-									res.addAll(nativeAbs);
-									
-									// Compute the aliases
-									for (Abstraction abs : nativeAbs)
-										if (abs.getAccessPath().isStaticFieldRef()
-												|| triggerInaktiveTaintOrReverseFlow(iStmt, abs.getAccessPath().getPlainValue(), abs))
-											computeAliasTaints(d1, (Stmt) call, abs.getAccessPath().getPlainValue(), res,
-													interproceduralCFG().getMethodOf(call), abs);
-								}
+								for (Value callVal : callArgs)
+									if (callVal == newSource.getAccessPath().getPlainValue()) {
+										// java uses call by value, but fields of complex objects can be changed (and tainted), so use this conservative approach:
+										Set<Abstraction> nativeAbs = ncHandler.getTaintedValues(iStmt, newSource, callArgs);
+										res.addAll(nativeAbs);
+										
+										// Compute the aliases
+										for (Abstraction abs : nativeAbs)
+											if (abs.getAccessPath().isStaticFieldRef()
+													|| triggerInaktiveTaintOrReverseFlow(iStmt, abs.getAccessPath().getPlainValue(), abs))
+												computeAliasTaints(d1, (Stmt) call, abs.getAccessPath().getPlainValue(), res,
+														interproceduralCFG().getMethodOf(call), abs);
+										
+										// We only call the native code handler once per statement
+										break;
+									}
 							
 							// if we have called a sink we have to store the path from the source - in case one of the params is tainted!
 							if (isSink) {
@@ -1335,8 +1342,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								// If the base object is tainted, we also consider the "code" associated
 								// with the object's class as tainted.
 								if (!taintedParam) {
-									for (int i = 0; i < callArgs.size(); i++) {
-										if (aliasing.mayAlias(callArgs.get(i), newSource.getAccessPath().getPlainValue())) {
+									for (int i = 0; i < callArgs.length; i++) {
+										if (aliasing.mayAlias(callArgs[i], newSource.getAccessPath().getPlainValue())) {
 											taintedParam = true;
 											break;
 										}

@@ -19,7 +19,6 @@ import heros.solver.PathEdge;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import soot.ArrayType;
@@ -542,7 +541,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 										if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
 											InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();
 											Abstraction abs = source.deriveNewAbstraction
-													(source.getAccessPath().copyWithNewValue(iIExpr.getBase()), stmt);
+													(source.getAccessPath().copyWithNewValue(iIExpr.getBase()), (Stmt) exitStmt);
 											res.add(abs);
 											registerActivationCallSite(callSite, callee, abs);
 										}
@@ -562,7 +561,10 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				// special treatment for native methods:
 				if (call instanceof Stmt) {
 					final Stmt iStmt = (Stmt) call;
-					final List<Value> callArgs = iStmt.getInvokeExpr().getArgs();
+					
+					final Value[] callArgs = new Value[iStmt.getInvokeExpr().getArgCount()];
+					for (int i = 0; i < iStmt.getInvokeExpr().getArgCount(); i++)
+						callArgs[i] = iStmt.getInvokeExpr().getArg(i);
 					
 					return new SolverCallToReturnFlowFunction() {
 						@Override
@@ -589,8 +591,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							}
 							
 							// We do not pass taints on parameters over the call-to-return edge
-							for (int i = 0; i < callArgs.size(); i++)
-								if (callArgs.get(i) == source.getAccessPath().getPlainValue())
+							for (int i = 0; i < callArgs.length; i++)
+								if (callArgs[i] == source.getAccessPath().getPlainValue())
 									return Collections.emptySet();
 							
 							return Collections.singleton(source);

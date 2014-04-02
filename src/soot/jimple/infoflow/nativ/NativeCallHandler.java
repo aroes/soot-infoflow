@@ -10,7 +10,6 @@
  ******************************************************************************/
 package soot.jimple.infoflow.nativ;
 
-import java.util.List;
 import java.util.Set;
 
 import soot.Value;
@@ -30,6 +29,6 @@ public abstract class NativeCallHandler {
 	 * @param params list of arguments
 	 * @return the resulting set of taints
 	 */
-	public abstract Set<Abstraction> getTaintedValues(Stmt call, Abstraction source, List<Value> params);
+	public abstract Set<Abstraction> getTaintedValues(Stmt call, Abstraction source, Value[] params);
 
 }
