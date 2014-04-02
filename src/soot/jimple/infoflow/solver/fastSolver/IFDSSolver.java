@@ -241,7 +241,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 		Collection<N> returnSiteNs = icfg.getReturnSitesOfCallAt(n);
 		
 		//for each possible callee
-		Set<M> callees = icfg.getCalleesOfCallAt(n);
+		Collection<M> callees = icfg.getCalleesOfCallAt(n);
 		for(M sCalledProcN: callees) { //still line 14
 			//compute the call-flow function
 			FlowFunction<D> function = flowFunctions.getCallFlowFunction(n, sCalledProcN);
@@ -360,8 +360,13 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 					//for each incoming-call value
 					for(D d4: entry.getValue().keySet())
 						for(D d5: targets) {
-							D d5p = setJumpPredecessors && d5 instanceof ChainedNode
-									? d5p = ((ChainedNode<D>) d5).setJumpPredecessor(entry.getValue().get(d4)) : d5;
+							D predVal = entry.getValue().get(d4);
+							D d5p = d5 instanceof ChainedNode && (setJumpPredecessors || d5.equals(predVal))
+									? d5p = ((ChainedNode<D>) d5).setJumpPredecessor(predVal) : d5;
+									
+							if (methodThatNeedsSummary.toString().contains("goGetIt"))
+								System.out.println();
+									
 							propagate(d4, retSiteC, d5p, c, false);
 						}
 				}
@@ -371,7 +376,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 		//note: we propagate that way only values that originate from ZERO, as conditionally generated values should only
 		//be propagated into callers that have an incoming edge for this condition
 		if(followReturnsPastSeeds && (inc == null || inc.isEmpty()) && d1.equals(zeroValue)) {
-			Set<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
+			Collection<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
 			for(N c: callers) {
 				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
 					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);

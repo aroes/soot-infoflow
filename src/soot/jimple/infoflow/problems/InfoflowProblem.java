@@ -365,7 +365,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			 * for the given call, otherwise false
 			 */
 			private boolean hasValidCallees(Unit call) {
-				Set<SootMethod> callees = interproceduralCFG().getCalleesOfCallAt(call);
+				Collection<SootMethod> callees = interproceduralCFG().getCalleesOfCallAt(call);
 				for (SootMethod callee : callees)
 					if (callee.isConcrete())
 						return true;
