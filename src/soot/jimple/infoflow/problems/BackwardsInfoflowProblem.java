@@ -306,7 +306,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					
 					final DefinitionStmt destDefStmt = dest instanceof DefinitionStmt
 							? (DefinitionStmt) dest : null;
-					final Value destLeftValue = dest == null ? null : BaseSelector.selectBase
+					final Value destLeftValue = destDefStmt == null ? null : BaseSelector.selectBase
 							(destDefStmt.getLeftOp(), true);
 
 					return new SolverNormalFlowFunction() {
