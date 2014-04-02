@@ -52,7 +52,6 @@ import soot.jimple.infoflow.solver.functions.SolverCallToReturnFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverNormalFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverReturnFlowFunction;
 import soot.jimple.infoflow.source.ISourceSinkManager;
-import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
 import soot.jimple.infoflow.util.BaseSelector;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
@@ -84,17 +83,22 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 			 * Computes the aliases for the given statement
 			 * @param def The definition statement from which to extract
 			 * the alias information
+			 * @param leftValue The left side of def. Passed in to allow for
+			 * caching, no need to recompute this for every abstraction being
+			 * processed.
 			 * @param d1 The abstraction at the method's start node
 			 * @param source The source abstraction of the alias search
 			 * from before the current statement
 			 * @return The set of abstractions after the current statement
 			 */
 			private Set<Abstraction> computeAliases
-					(final DefinitionStmt defStmt, Abstraction d1, Abstraction source) {
+					(final DefinitionStmt defStmt,
+					Value leftValue,
+					Abstraction d1,
+					Abstraction source) {
 				assert !source.getAccessPath().isEmpty();
 				
 				final Set<Abstraction> res = new MutableTwoElementSet<Abstraction>();
-				final Value leftValue = BaseSelector.selectBase(defStmt.getLeftOp(), true);
 				
 				// A backward analysis looks for aliases of existing taints and thus
 				// cannot create new taints out of thin air
@@ -295,8 +299,15 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 			@Override
 			public FlowFunction<Abstraction> getNormalFlowFunction(final Unit src, final Unit dest) {
 				
+
 				if (src instanceof DefinitionStmt) {
 					final DefinitionStmt defStmt = (DefinitionStmt) src;
+					final Value leftValue = BaseSelector.selectBase(defStmt.getLeftOp(), true);
+					
+					final DefinitionStmt destDefStmt = dest instanceof DefinitionStmt
+							? (DefinitionStmt) dest : null;
+					final Value destLeftValue = dest == null ? null : BaseSelector.selectBase
+							(destDefStmt.getLeftOp(), true);
 
 					return new SolverNormalFlowFunction() {
 
@@ -306,11 +317,11 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								return Collections.emptySet();
 							assert source.isAbstractionActive() || flowSensitiveAliasing;
 							
-							Set<Abstraction> res = computeAliases(defStmt, d1, source);
+							Set<Abstraction> res = computeAliases(defStmt, leftValue, d1, source);
 							
-							if (dest instanceof DefinitionStmt && interproceduralCFG().isExitStmt(dest))
+							if (interproceduralCFG().isExitStmt(destDefStmt))
 								for (Abstraction abs : res)
-									computeAliases((DefinitionStmt) dest, d1, abs);
+									computeAliases(destDefStmt, destLeftValue, d1, abs);
 							
 							return res;
 						}
@@ -332,8 +343,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				for (int i = 0; i < dest.getParameterCount(); i++)
 					paramLocals[i] = dest.getActiveBody().getParameterLocal(i);
 				
-				final SourceInfo sourceInfo = sourceSinkManager != null
-						? sourceSinkManager.getSourceInfo((Stmt) src, interproceduralCFG()) : null;
+				final boolean isSource = sourceSinkManager != null
+						? sourceSinkManager.getSourceInfo((Stmt) src, interproceduralCFG()) != null : false;
 				final boolean isSink = sourceSinkManager != null
 						? sourceSinkManager.isSink(stmt, interproceduralCFG()) : false;
 				
@@ -353,7 +364,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						assert source.isAbstractionActive() || flowSensitiveAliasing;
 						
 						//if we do not have to look into sources or sinks:
-						if (!inspectSources && sourceInfo != null)
+						if (!inspectSources && isSource)
 							return Collections.emptySet();
 						if (!inspectSinks && isSink)
 							return Collections.emptySet();
@@ -558,49 +569,46 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 
 			@Override
 			public FlowFunction<Abstraction> getCallToReturnFlowFunction(final Unit call, final Unit returnSite) {
-				// special treatment for native methods:
-				if (call instanceof Stmt) {
-					final Stmt iStmt = (Stmt) call;
-					
-					final Value[] callArgs = new Value[iStmt.getInvokeExpr().getArgCount()];
-					for (int i = 0; i < iStmt.getInvokeExpr().getArgCount(); i++)
-						callArgs[i] = iStmt.getInvokeExpr().getArg(i);
-					
-					return new SolverCallToReturnFlowFunction() {
-						@Override
-						public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
-							if (source == getZeroValue())
+				final Stmt iStmt = (Stmt) call;
+				
+				final Value[] callArgs = new Value[iStmt.getInvokeExpr().getArgCount()];
+				for (int i = 0; i < iStmt.getInvokeExpr().getArgCount(); i++)
+					callArgs[i] = iStmt.getInvokeExpr().getArg(i);
+				
+				return new SolverCallToReturnFlowFunction() {
+					@Override
+					public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
+						if (source == getZeroValue())
+							return Collections.emptySet();
+						assert source.isAbstractionActive() || flowSensitiveAliasing;
+						
+						// We never pass static taints over the call-to-return edge
+						if (source.getAccessPath().isStaticFieldRef())
+							return Collections.emptySet();
+						
+						// We may not pass on a taint if it is overwritten by this call
+						if (iStmt instanceof DefinitionStmt && ((DefinitionStmt) iStmt).getLeftOp()
+								== source.getAccessPath().getPlainValue())
+							return Collections.emptySet();
+						
+						// If the base local of the invocation is tainted, we do not
+						// pass on the taint
+						if (iStmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
+							InstanceInvokeExpr iinv = (InstanceInvokeExpr) iStmt.getInvokeExpr();
+							if (iinv.getBase() == source.getAccessPath().getPlainValue())
 								return Collections.emptySet();
-							assert source.isAbstractionActive() || flowSensitiveAliasing;
-							
-							// We never pass static taints over the call-to-return edge
-							if (source.getAccessPath().isStaticFieldRef())
-								return Collections.emptySet();
-							
-							// We may not pass on a taint if it is overwritten by this call
-							if (iStmt instanceof DefinitionStmt && ((DefinitionStmt) iStmt).getLeftOp()
-									== source.getAccessPath().getPlainValue())
-								return Collections.emptySet();
-							
-							// If the base local of the invocation is tainted, we do not
-							// pass on the taint
-							if (iStmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
-								InstanceInvokeExpr iinv = (InstanceInvokeExpr) iStmt.getInvokeExpr();
-								if (iinv.getBase() == source.getAccessPath().getPlainValue())
-									return Collections.emptySet();
-							}
-							
-							// We do not pass taints on parameters over the call-to-return edge
-							for (int i = 0; i < callArgs.length; i++)
-								if (callArgs[i] == source.getAccessPath().getPlainValue())
-									return Collections.emptySet();
-							
-							return Collections.singleton(source);
 						}
-					};
-				}
-				return Identity.v();
+						
+						// We do not pass taints on parameters over the call-to-return edge
+						for (int i = 0; i < callArgs.length; i++)
+							if (callArgs[i] == source.getAccessPath().getPlainValue())
+								return Collections.emptySet();
+						
+						return Collections.singleton(source);
+					}
+				};
 			}
+			
 		};
 	}
 	
