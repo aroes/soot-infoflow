@@ -26,7 +26,6 @@ import soot.Unit;
 import soot.Value;
 import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
-import soot.jimple.infoflow.solver.ChainedNode;
 import soot.jimple.infoflow.solver.IInfoflowCFG.UnitContainer;
 import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.infoflow.util.ConcurrentHashSet;
@@ -40,7 +39,7 @@ import com.google.common.collect.Sets;
  * @author Steven Arzt
  * @author Christian Fritz
  */
-public class Abstraction implements Cloneable, LinkedNode<Abstraction>, ChainedNode<Abstraction> {
+public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 	
 	private static boolean flowSensitiveAliasing = true;
 	
@@ -247,6 +246,8 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction>, ChainedN
 	 * @return The path from the source to the current statement
 	 */
 	public Set<SourceContextAndPath> getPaths() {
+		if (pathCache == null)
+			return Collections.emptySet();
 		return pathCache;
 	}
 	
@@ -518,13 +519,6 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction>, ChainedN
 				NullConstant.v(), null, false, false);
 		Abstraction.flowSensitiveAliasing = flowSensitiveAliasing;
 		return zeroValue;
-	}
-
-	@Override
-	public Abstraction setJumpPredecessor(Abstraction predecessor) {
-		Abstraction abs = clone();
-		abs.predecessor = predecessor;
-		return abs;
 	}
 	
 }

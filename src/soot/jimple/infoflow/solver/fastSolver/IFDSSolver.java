@@ -40,7 +40,6 @@ import org.slf4j.LoggerFactory;
 
 import soot.SootMethod;
 import soot.Unit;
-import soot.jimple.infoflow.solver.ChainedNode;
 import soot.jimple.infoflow.util.ConcurrentHashSet;
 import soot.jimple.infoflow.util.MyConcurrentHashMap;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
@@ -229,7 +228,6 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 	 * 
 	 * @param edge an edge whose target node resembles a method call
 	 */
-	@SuppressWarnings("unchecked")
 	private void processCall(PathEdge<N,D> edge) {
 		final D d1 = edge.factAtSource();
 		final N n = edge.getTarget(); // a call node; line 14...
@@ -278,8 +276,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
 							//for each target value of the function
 							for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d2))) {
-								D d5p = setJumpPredecessors && d5 instanceof ChainedNode
-										? d5p = ((ChainedNode<D>) d5).setJumpPredecessor(d2) : d5;
+								D d5p = setJumpPredecessors || d5.equals(d2) ? d5p = d2 : d5;
 								propagate(d1, retSiteN, d5p, n, false);
 							}
 						}
@@ -330,7 +327,6 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 	 * 
 	 * @param edge an edge whose target node resembles a method exits
 	 */
-	@SuppressWarnings("unchecked")
 	protected void processExit(PathEdge<N,D> edge) {
 		final N n = edge.getTarget(); // an exit node; line 21...
 		M methodThatNeedsSummary = icfg.getMethodOf(n);
@@ -361,12 +357,8 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 					for(D d4: entry.getValue().keySet())
 						for(D d5: targets) {
 							D predVal = entry.getValue().get(d4);
-							D d5p = d5 instanceof ChainedNode && (setJumpPredecessors || d5.equals(predVal))
-									? d5p = ((ChainedNode<D>) d5).setJumpPredecessor(predVal) : d5;
-									
-							if (methodThatNeedsSummary.toString().contains("goGetIt"))
-								System.out.println();
-									
+							// make this directly predVal, no need to clone
+							D d5p = setJumpPredecessors || d5.equals(predVal) ? d5p = predVal : d5;
 							propagate(d4, retSiteC, d5p, c, false);
 						}
 				}
