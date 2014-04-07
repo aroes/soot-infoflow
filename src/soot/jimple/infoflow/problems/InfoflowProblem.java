@@ -1381,6 +1381,13 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 	 * @param resultAbs The abstraction at the sink instruction
 	 */
 	private void addResult(AbstractionAtSink resultAbs) {
+		// Make sure that the sink statement also appears inside the
+		// abstraction
+		resultAbs = new AbstractionAtSink
+				(resultAbs.getAbstraction().deriveNewAbstraction
+						(resultAbs.getAbstraction().getAccessPath(), resultAbs.getSinkStmt()),
+				resultAbs.getSinkValue(), resultAbs.getSinkStmt());
+		
 		Abstraction newAbs = this.results.putIfAbsentElseGet
 				(resultAbs, resultAbs.getAbstraction());
 		if (newAbs != resultAbs.getAbstraction())

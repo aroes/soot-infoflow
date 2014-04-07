@@ -71,6 +71,7 @@ public class Infoflow extends AbstractInfoflow {
     
 	private static int accessPathLength = 5;
 	private static boolean useRecursiveAccessPaths = true;
+	private static boolean pathAgnosticResults = true;
 	
 	private InfoflowResults results = null;
 	private final IPathBuilderFactory pathBuilderFactory;
@@ -486,6 +487,7 @@ public class Infoflow extends AbstractInfoflow {
 				if (source.getPath() != null && !source.getPath().isEmpty()) {
 					logger.info("\ton Path: ");
 					for (Unit p : source.getPath()) {
+						logger.info("\t -> " + iCfg.getMethodOf(p));
 						logger.info("\t\t -> " + p);
 					}
 				}
@@ -622,10 +624,37 @@ public class Infoflow extends AbstractInfoflow {
 		Infoflow.accessPathLength = accessPathLength;
 	}
 	
+	/**
+	 * Sets whether results (source-to-sink connections) that only differ in their
+	 * propagation paths shall be merged into a single result or not.
+	 * @param pathAgnosticResults True if two results shall be regarded as equal
+	 * if they connect the same source and sink, even if their propagation paths
+	 * differ, otherwise false
+	 */
+	public static void setPathAgnosticResults(boolean pathAgnosticResults) {
+		Infoflow.pathAgnosticResults = pathAgnosticResults;
+	}
+	
+	/**
+	 * Gets whether results (source-to-sink connections) that only differ in their
+	 * propagation paths shall be merged into a single result or not.
+	 * @return True if two results shall be regarded as equal if they connect the
+	 * same source and sink, even if their propagation paths differ, otherwise
+	 * false
+	 */
+	public static boolean getPathAgnosticResults() {
+		return Infoflow.pathAgnosticResults;
+	}
+	
+	/**
+	 * Gets whether recursive access paths shall be reduced, e.g. whether we
+	 * shall propagate a.[next].data instead of a.next.next.data.
+	 * @return True if recursive access paths shall be reduced, otherwise false
+	 */
 	public static boolean getUseRecursiveAccessPaths() {
 		return useRecursiveAccessPaths;
 	}
-	
+
 	/**
 	 * Sets whether recursive access paths shall be reduced, e.g. whether we
 	 * shall propagate a.[next].data instead of a.next.next.data.
