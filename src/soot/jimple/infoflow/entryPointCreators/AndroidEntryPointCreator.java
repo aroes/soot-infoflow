@@ -11,6 +11,7 @@
 package soot.jimple.infoflow.entryPointCreators;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -70,7 +71,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 	private Local applicationLocal = null;
 	private Set<SootClass> applicationCallbackClasses = new HashSet<SootClass>();
 	
-	private List<String> androidClasses;
+	private Collection<String> androidClasses;
 	private Map<String, List<String>> callbackFunctions;
 	private boolean modelAdditionalMethods = false;
 	
@@ -101,7 +102,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 	 * @param androidClasses The list of classes to be automatically scanned for
 	 * Android lifecycle methods
 	 */
-	public AndroidEntryPointCreator(List<String> androidClasses) {
+	public AndroidEntryPointCreator(Collection<String> androidClasses) {
 		this.androidClasses = androidClasses;
 		this.callbackFunctions = new HashMap<String, List<String>>();
 	}
