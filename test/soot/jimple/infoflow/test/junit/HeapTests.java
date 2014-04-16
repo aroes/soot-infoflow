@@ -854,4 +854,32 @@ public class HeapTests extends JUnitTests {
 		negativeCheckInfoflow(infoflow);
 	}
 
+	@Test(timeout = 300000)
+	public void overwriteAliasedVariableTest3() {
+		Infoflow infoflow = initInfoflow();
+		infoflow.setInspectSources(false);
+		infoflow.setInspectSinks(false);
+		infoflow.setEnableImplicitFlows(false);
+		
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void overwriteAliasedVariableTest3()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+		Assert.assertEquals(1, infoflow.getResults().size());
+	}
+
+	@Test(timeout = 300000)
+	public void overwriteAliasedVariableTest4() {
+		Infoflow infoflow = initInfoflow();
+		infoflow.setInspectSources(false);
+		infoflow.setInspectSinks(false);
+		infoflow.setEnableImplicitFlows(false);
+		
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void overwriteAliasedVariableTest4()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+		Assert.assertEquals(2, infoflow.getResults().size());
+	}
+
 }

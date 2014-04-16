@@ -980,4 +980,24 @@ public class HeapTestCode {
 		cm.publish(y2.f);
 	}
 
+	public void overwriteAliasedVariableTest3() {
+		Y y1 = new Y();
+		Y y2 = y1;
+		y1.f = TelephonyManager.getDeviceId();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(y1.f);
+		y2.f = "";
+		cm.publish(y2.f);
+	}
+
+	public void overwriteAliasedVariableTest4() {
+		Y y1 = new Y();
+		Y y2 = y1;
+		y1.f = TelephonyManager.getDeviceId();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(y1.f);
+		cm.publish(y2.f);
+		y2.f = "";
+	}
+
 }
