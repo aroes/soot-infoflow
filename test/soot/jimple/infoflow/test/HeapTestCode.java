@@ -959,5 +959,25 @@ public class HeapTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(myTree.left.child.right.data);
 	}
+	
+	public void overwriteAliasedVariableTest() {
+		Y y1 = new Y();
+		Y y2 = y1;
+		y1.f = TelephonyManager.getDeviceId();
+		y2 = new Y();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(y1.f);
+		cm.publish(y2.f);
+	}
+
+	public void overwriteAliasedVariableTest2() {
+		Y y1 = new Y();
+		Y y2 = y1;
+		y1.f = TelephonyManager.getDeviceId();
+		y2.f = "";
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(y1.f);
+		cm.publish(y2.f);
+	}
 
 }

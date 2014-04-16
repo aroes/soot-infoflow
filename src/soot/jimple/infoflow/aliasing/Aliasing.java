@@ -1,13 +1,25 @@
 package soot.jimple.infoflow.aliasing;
 
+import heros.solver.IDESolver;
 import heros.solver.Pair;
 
 import java.util.Collection;
 
+import soot.Local;
+import soot.RefLikeType;
 import soot.SootField;
+import soot.SootMethod;
 import soot.Type;
 import soot.Value;
+import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.solver.IInfoflowCFG;
+import soot.jimple.toolkits.pointer.LocalMustAliasAnalysis;
+import soot.jimple.toolkits.pointer.StrongLocalMustAliasAnalysis;
+import soot.toolkits.graph.UnitGraph;
+
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 
 /**
  * Helper class for aliasing operations
@@ -17,9 +29,20 @@ import soot.jimple.infoflow.data.AccessPath;
 public class Aliasing {
 	
 	private final IAliasingStrategy aliasingStrategy;
+	private final IInfoflowCFG cfg;
 	
-	public Aliasing(IAliasingStrategy aliasingStrategy) {
+	protected final LoadingCache<SootMethod,LocalMustAliasAnalysis> strongAliasAnalysis =
+			IDESolver.DEFAULT_CACHE_BUILDER.build( new CacheLoader<SootMethod,LocalMustAliasAnalysis>() {
+				@Override
+				public LocalMustAliasAnalysis load(SootMethod method) throws Exception {
+					return new StrongLocalMustAliasAnalysis
+							((UnitGraph) cfg.getOrCreateUnitGraph(method));
+				}
+			});
+	
+	public Aliasing(IAliasingStrategy aliasingStrategy, IInfoflowCFG cfg) {
 		this.aliasingStrategy = aliasingStrategy;
+		this.cfg = cfg;
 	}
 	
 	/**
@@ -156,11 +179,19 @@ public class Aliasing {
 	 * Gets whether the two values must always point to the same runtime object
 	 * @param field1 The first value
 	 * @param field2 The second value
+	 * @param position The statement at which to check for an aliasing
+	 * relationship
 	 * @return True if the two values must always point to the same runtime
 	 * object, otherwise false
 	 */
-	public boolean mustAlias(Value val1, Value val2) {
-		return val1 == val2;
+	public boolean mustAlias(Local val1, Local val2, Stmt position) {
+		if (val1 == val2)
+			return true;
+		if (!(val1.getType() instanceof RefLikeType) || !(val2.getType() instanceof RefLikeType))
+			return false;
+
+		LocalMustAliasAnalysis lmaa = strongAliasAnalysis.getUnchecked(cfg.getMethodOf(position));
+		return lmaa.mustAlias(val1, position, val2, position);
 	}
 
 }

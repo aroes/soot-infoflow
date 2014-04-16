@@ -108,7 +108,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 		super(icfg, sourceSinkManager);
 		this.aliasingStrategy = aliasingStrategy;
 		this.implicitFlowAliasingStrategy = new ImplicitFlowAliasStrategy(icfg);
-		this.aliasing = new Aliasing(aliasingStrategy);
+		this.aliasing = new Aliasing(aliasingStrategy, icfg);
 	}
 
 	/**
@@ -498,17 +498,22 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							
 							if(newSource.getAccessPath().isInstanceFieldRef()) {
 								//x.f = y && x.f tainted --> no taint propagated
+								// Exception: This statement activates the taint
 								if (leftValue instanceof InstanceFieldRef) {
-									InstanceFieldRef leftRef = (InstanceFieldRef) leftValue;
-									if (aliasing.mustAlias(leftRef.getBase(), newSource.getAccessPath().getPlainValue())) {
-										if (aliasing.mustAlias(leftRef.getField(), newSource.getAccessPath().getFirstField())) {
-											return Collections.emptySet();
+									if (!(newSource.isAbstractionActive() && !source.isAbstractionActive())) {
+										InstanceFieldRef leftRef = (InstanceFieldRef) leftValue;
+										if (aliasing.mustAlias((Local) leftRef.getBase(),
+												newSource.getAccessPath().getPlainValue(), assignStmt)) {
+											if (aliasing.mustAlias(leftRef.getField(), newSource.getAccessPath().getFirstField())) {
+												return Collections.emptySet();
+											}
 										}
 									}
 								}
-								//x = y && x.f tainted -> no taint propagated
+								// x = y && x.f tainted -> no taint propagated. This must only check the precise
+								// variable which gets replaced, but not any potential strong aliases
 								else if (leftValue instanceof Local){
-									if (aliasing.mustAlias(leftValue, newSource.getAccessPath().getPlainValue())) {
+									if (leftValue == newSource.getAccessPath().getPlainValue()) {
 										return Collections.emptySet();
 									}
 								}	
@@ -527,7 +532,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							// then the fields should not be tainted any more
 							//x = y && x.f tainted -> no taint propagated
 							else if (newSource.getAccessPath().isLocal()
-									&& aliasing.mustAlias(leftValue, newSource.getAccessPath().getPlainValue())){
+									&& leftValue instanceof Local
+									&& aliasing.mustAlias((Local) leftValue, newSource.getAccessPath().getPlainValue(),
+											assignStmt)){
 								return Collections.emptySet();
 							}
 														
