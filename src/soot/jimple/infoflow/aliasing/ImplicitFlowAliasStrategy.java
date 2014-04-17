@@ -1,6 +1,10 @@
 package soot.jimple.infoflow.aliasing;
 
+import heros.solver.IDESolver;
+
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import soot.Local;
@@ -17,8 +21,8 @@ import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
 
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Table;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 
 /**
  * Aliasing strategy to be used for conditionally-called methods when analyzing
@@ -27,71 +31,69 @@ import com.google.common.collect.Table;
  * @author Steven Arzt
  */
 public class ImplicitFlowAliasStrategy extends AbstractBulkAliasStrategy {
-
-    public ImplicitFlowAliasStrategy(IInfoflowCFG cfg) {
+	
+	protected final LoadingCache<SootMethod,Map<AccessPath, Set<AccessPath>>> methodToAliases =
+			IDESolver.DEFAULT_CACHE_BUILDER.build( new CacheLoader<SootMethod,Map<AccessPath, Set<AccessPath>>>() {
+				@Override
+				public Map<AccessPath, Set<AccessPath>> load(SootMethod method) throws Exception {
+					return computeGlobalAliases(method);
+				}
+			});
+	
+	public ImplicitFlowAliasStrategy(IInfoflowCFG cfg) {
 		super(cfg);
 	}
     
-	private final Table<SootMethod, AccessPath, Set<AccessPath>> globalAliases = HashBasedTable.create();
-	
 	/**
 	 * Computes the global non-flow-sensitive alias information for the given
 	 * method
 	 * @param method The method for which to compute the alias information
 	 */
-	private void computeGlobalAliases(SootMethod method) {
-		synchronized (globalAliases) {
-			// If we already know the aliases for the given method, there is nothing
-			// left to be done
-			if (globalAliases.containsRow(method))
-				return;
-	
-			// Find the aliases
-			for (Unit u : method.getActiveBody().getUnits()) {
-				if (!(u instanceof AssignStmt))
+	private Map<AccessPath, Set<AccessPath>> computeGlobalAliases(SootMethod method) {
+		Map<AccessPath, Set<AccessPath>> res = new HashMap<AccessPath, Set<AccessPath>>();
+
+		// Find the aliases
+		for (Unit u : method.getActiveBody().getUnits()) {
+			if (!(u instanceof AssignStmt))
+				continue;
+			final AssignStmt assign = (AssignStmt) u;
+			
+			// Aliases can only be generated on the heap
+			if (!(assign.getLeftOp() instanceof FieldRef
+					&& (assign.getRightOp() instanceof FieldRef
+							|| assign.getRightOp() instanceof Local)))
+				if (!(assign.getRightOp() instanceof FieldRef
+						&& (assign.getLeftOp() instanceof FieldRef
+								|| assign.getLeftOp() instanceof Local)))
 					continue;
-				final AssignStmt assign = (AssignStmt) u;
-				
-				// Aliases can only be generated on the heap
-				if (!(assign.getLeftOp() instanceof FieldRef
-						&& (assign.getRightOp() instanceof FieldRef
-								|| assign.getRightOp() instanceof Local)))
-					if (!(assign.getRightOp() instanceof FieldRef
-							&& (assign.getLeftOp() instanceof FieldRef
-									|| assign.getLeftOp() instanceof Local)))
-						continue;
-				
-				final AccessPath apLeft = new AccessPath(assign.getLeftOp(), true);
-				final AccessPath apRight = new AccessPath(assign.getRightOp(), true);
-
-				Set<AccessPath> mapLeft = globalAliases.get(method, apLeft);
-				if (mapLeft == null) {
-					mapLeft = new HashSet<AccessPath>();
-					globalAliases.put(method, apLeft, mapLeft);
-				}
-				mapLeft.add(apRight);
-
-				Set<AccessPath> mapRight = globalAliases.get(method, apRight);
-				if (mapRight == null) {
-					mapRight = new HashSet<AccessPath>();
-					globalAliases.put(method, apRight, mapRight);
-				}
-				mapLeft.add(apLeft);
+			
+			final AccessPath apLeft = new AccessPath(assign.getLeftOp(), true);
+			final AccessPath apRight = new AccessPath(assign.getRightOp(), true);
+			
+			Set<AccessPath> mapLeft = res.get(apLeft);
+			if (mapLeft == null) {
+				mapLeft = new HashSet<AccessPath>();
+				res.put(apLeft, mapLeft);
 			}
+			mapLeft.add(apRight);
+			
+			Set<AccessPath> mapRight = res.get(apRight);
+			if (mapRight == null) {
+				mapRight = new HashSet<AccessPath>();
+				res.put(apRight, mapRight);
+			}
+			mapLeft.add(apLeft);
 		}
+		return res;
 	}
 
 	@Override
 	public void computeAliasTaints(Abstraction d1, Stmt src, Value targetValue,
 			Set<Abstraction> taintSet, SootMethod method, Abstraction newAbs) {	
-		// If we don't have an alias set for this method yet, we compute it
-		if (!globalAliases.containsRow(method))
-			computeGlobalAliases(method);
-		
 		// Use global aliasing
 		Value baseValue = ((InstanceFieldRef) targetValue).getBase();
-		Set<AccessPath> aliases = globalAliases.get(method, new AccessPath
-				(baseValue, true));
+		Set<AccessPath> aliases = methodToAliases.getUnchecked(method).get
+				(new AccessPath(baseValue, true));
 		if (aliases != null)
 			for (AccessPath ap : aliases) {
 				Abstraction aliasAbs = newAbs.deriveNewAbstraction(
@@ -124,7 +126,7 @@ public class ImplicitFlowAliasStrategy extends AbstractBulkAliasStrategy {
 
 	@Override
 	public boolean hasProcessedMethod(SootMethod method) {
-		return globalAliases.containsRow(method);
+		return methodToAliases.getIfPresent(method) != null;
 	}
 	
 }
