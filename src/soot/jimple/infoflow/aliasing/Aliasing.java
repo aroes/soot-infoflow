@@ -11,6 +11,7 @@ import soot.SootField;
 import soot.SootMethod;
 import soot.Type;
 import soot.Value;
+import soot.jimple.Constant;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
@@ -151,6 +152,10 @@ public class Aliasing {
 	public boolean mayAlias(Value val1, Value val2) {
 		// What cannot be represented in an access path cannot alias
 		if (!AccessPath.canContainValue(val1) || !AccessPath.canContainValue(val2))
+			return false;
+		
+		// Constants can never alias
+		if (val1 instanceof Constant || val2 instanceof Constant)
 			return false;
 		
 		// If the two values are equal, they alias by definition
