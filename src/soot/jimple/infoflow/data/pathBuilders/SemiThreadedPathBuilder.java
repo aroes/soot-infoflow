@@ -251,7 +251,7 @@ public class SemiThreadedPathBuilder implements IAbstractionPathBuilder {
 			ex.printStackTrace();
 		}
     	
-    	logger.info("Path proecssing took {} seconds in total for {} edges",
+    	logger.info("Path processing took {} seconds in total for {} edges",
     			(System.nanoTime() - beforePathTracking) / 1E9, propagationCount.get());
 	}
 	
