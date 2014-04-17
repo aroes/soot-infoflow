@@ -238,5 +238,15 @@ public interface IInfoflow {
 	 * or -1 for an unlimited number of threads.
 	 */
 	public void setMaxThreadNum(int threadNum);
+	
 	public void setIPCManager(IIPCManager ipcManager);
+	
+	/**
+	 * Sets whether flows starting or ending in system packages such as Android's
+	 * support library shall be ignored.
+	 * @param ignoreFlowsInSystemPackages True if flows starting or ending in
+	 * system packages shall be ignored, otherwise false.
+	 */
+	public void setIgnoreFlowsInSystemPackages(boolean ignoreFlowsInSystemPackages);
+	
 }

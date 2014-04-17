@@ -67,7 +67,8 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	protected boolean enableExceptions = true;
 	protected boolean flowSensitiveAliasing = true;
 	protected boolean enableTypeChecking = true;
-
+	protected boolean ignoreFlowsInSystemPackages = true;
+	
 	protected boolean inspectSources = false;
 	protected boolean inspectSinks = false;
 
@@ -205,6 +206,16 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 		this.enableTypeChecking = enableTypeChecking;
 	}
 	
+	/**
+	 * Sets whether flows starting or ending in system packages such as Android's
+	 * support library shall be ignored.
+	 * @param ignoreFlowsInSystemPackages True if flows starting or ending in
+	 * system packages shall be ignored, otherwise false.
+	 */
+	public void setIgnoreFlowsInSystemPackages(boolean ignoreFlowsInSystemPackages) {
+		this.ignoreFlowsInSystemPackages = ignoreFlowsInSystemPackages;
+	}
+
 	/**
 	 * Gets whether the given method is an entry point, i.e. one of the initial
 	 * seeds belongs to the given method

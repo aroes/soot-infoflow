@@ -59,6 +59,7 @@ import soot.jimple.infoflow.solver.IInfoflowCFG;
 import soot.jimple.infoflow.solver.fastSolver.InfoflowSolver;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.util.SootMethodRepresentationParser;
+import soot.jimple.infoflow.util.SystemClassHandler;
 import soot.jimple.toolkits.callgraph.ReachableMethods;
 import soot.options.Options;
 /**
@@ -386,6 +387,7 @@ public class Infoflow extends AbstractInfoflow {
 			forwardProblem.addTaintPropagationHandler(tp);
 		forwardProblem.setTaintWrapper(taintWrapper);
 		forwardProblem.setStopAfterFirstFlow(stopAfterFirstFlow);
+		forwardProblem.setIgnoreFlowsInSystemPackages(ignoreFlowsInSystemPackages);
 		
 		if (backProblem != null) {
 			backProblem.setForwardSolver((InfoflowSolver) forwardSolver);
@@ -396,6 +398,7 @@ public class Infoflow extends AbstractInfoflow {
 				backProblem.addTaintPropagationHandler(tp);
 			backProblem.setTaintWrapper(taintWrapper);
 			backProblem.setActivationUnitsToCallSites(forwardProblem);
+			backProblem.setIgnoreFlowsInSystemPackages(ignoreFlowsInSystemPackages);
 		}
 		
 		if (!enableStaticFields)
@@ -575,6 +578,11 @@ public class Infoflow extends AbstractInfoflow {
 			SootMethod m) {
 		int sinkCount = 0;
 		if (m.hasActiveBody()) {
+			// Check whether this is a system class we need to ignore
+			final String className = m.getDeclaringClass().getName();
+			if (ignoreFlowsInSystemPackages && SystemClassHandler.isClassInSystemPackage(className))
+				return sinkCount;
+			
 			// Look for a source in the method. Also look for sinks. If we
 			// have no sink in the program, we don't need to perform any
 			// analysis

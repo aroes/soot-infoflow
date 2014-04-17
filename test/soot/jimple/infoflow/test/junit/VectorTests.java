@@ -37,7 +37,7 @@ public class VectorTests extends JUnitTests {
 		epoints.add("<soot.jimple.infoflow.test.VectorTestCode: void concreteWriteReadPos1Test()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
-		}
+	}
 
 	@Test(timeout=300000)
 	public void vIteratorPos0Test() {

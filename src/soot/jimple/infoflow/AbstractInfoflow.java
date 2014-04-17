@@ -12,7 +12,7 @@ import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
 
 /**
  * Abstract base class for all data/information flow analyses in FlowDroid
- * @author sarzt
+ * @author Steven Arzt
  *
  */
 public abstract class AbstractInfoflow implements IInfoflow {
@@ -25,6 +25,7 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	protected boolean enableExceptions = true;
 	protected boolean computeResultPaths = true;
 	protected boolean flowSensitiveAliasing = true;
+	protected boolean ignoreFlowsInSystemPackages = true;
 	
 	protected boolean inspectSources = false;
 	protected boolean inspectSinks = false;
@@ -123,7 +124,7 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	public void setFlowSensitiveAliasing(boolean flowSensitiveAliasing) {
 		this.flowSensitiveAliasing = flowSensitiveAliasing;
 	}
-	
+		
 	@Override
 	public void setEnableExceptionTracking(boolean enableExceptions) {
 		this.enableExceptions = enableExceptions;
@@ -144,4 +145,9 @@ public abstract class AbstractInfoflow implements IInfoflow {
 		this.maxThreadNum = threadNum;
 	}
 
+	@Override
+	public void setIgnoreFlowsInSystemPackages(boolean ignoreFlowsInSystemPackages) {
+		this.ignoreFlowsInSystemPackages = ignoreFlowsInSystemPackages;
+	}
+	
 }

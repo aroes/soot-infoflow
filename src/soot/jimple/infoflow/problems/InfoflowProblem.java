@@ -73,6 +73,7 @@ import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.infoflow.util.BaseSelector;
 import soot.jimple.infoflow.util.ConcurrentHashSet;
 import soot.jimple.infoflow.util.MyConcurrentHashMap;
+import soot.jimple.infoflow.util.SystemClassHandler;
 
 public class InfoflowProblem extends AbstractInfoflowProblem {
 	
@@ -1388,6 +1389,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 	 * @param resultAbs The abstraction at the sink instruction
 	 */
 	private void addResult(AbstractionAtSink resultAbs) {
+		// Check whether we need to filter a result in a system package
+		if (ignoreFlowsInSystemPackages && SystemClassHandler.isClassInSystemPackage
+				(interproceduralCFG().getMethodOf(resultAbs.getSinkStmt()).getDeclaringClass().getName()))
+			return;
+		
 		// Make sure that the sink statement also appears inside the
 		// abstraction
 		resultAbs = new AbstractionAtSink
