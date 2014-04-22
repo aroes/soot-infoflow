@@ -431,7 +431,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					Value left = assignStmt.getLeftOp();
 
 					final Value leftValue = BaseSelector.selectBase(left, true);
-					final Set<Value> rightVals = BaseSelector.selectBaseList(right, true);
+					final Value[] rightVals = BaseSelector.selectBaseList(right, true);
 					
 					final boolean isSink = sourceSinkManager != null
 							? sourceSinkManager.isSink(assignStmt, interproceduralCFG()) : false;
@@ -547,7 +547,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								final AssignStmt assignStmt,
 								final Value right,
 								final Value leftValue,
-								final Set<Value> rightVals,
+								final Value[] rightVals,
 								final boolean isSink,
 								Abstraction d1,
 								final Abstraction newSource) {

@@ -513,17 +513,15 @@ public class AccessPath implements Cloneable {
 		int offset = this.fields == null ? 0 : this.fields.length;
 		SootField[] fields = new SootField[offset + (apFields == null ? 0 : apFields.length)];
 		Type[] fieldTypes = new Type[offset + (apFields == null ? 0 : apFields.length)];
-		if (this.fields != null)
-			for (int i = 0; i < this.fields.length; i++) {
-				fields[i] = this.fields[i];
-				fieldTypes[i] = this.fieldTypes[i];
-			}
+		if (this.fields != null) {
+			System.arraycopy(this.fields, 0, fields, 0, this.fields.length);
+			System.arraycopy(this.fieldTypes, 0, fieldTypes, 0, this.fieldTypes.length);
+		}
 		if (apFields != null)
-			if (apFields != null && apFields.length > 0)
-				for (int i = 0; i < apFields.length; i++) {
-					fields[offset + i] = apFields[i];
-					fieldTypes[offset + i] = apFieldTypes[i];
-				}
+			if (apFields != null && apFields.length > 0) {
+				System.arraycopy(apFields, 0, fields, offset, apFields.length);
+				System.arraycopy(apFieldTypes, 0, fieldTypes, offset, apFieldTypes.length);
+			}
 		
 		return new AccessPath(this.value, fields, baseType, fieldTypes, taintSubFields);
 	}

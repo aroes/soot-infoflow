@@ -10,10 +10,6 @@
  ******************************************************************************/
 package soot.jimple.infoflow.util;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-
 import soot.Value;
 import soot.jimple.ArrayRef;
 import soot.jimple.BinopExpr;
@@ -57,15 +53,15 @@ public class BaseSelector {
 	 * @param keepArrayRef if false then array refs are pruned to the base array object
 	 * @return one or more values 
 	 */
-	public static Set<Value> selectBaseList(Value val, boolean keepArrayRef){
+	public static Value[] selectBaseList(Value val, boolean keepArrayRef){
 		if (val instanceof BinopExpr) {
-			Set<Value> set = new HashSet<Value>();
+			Value[] set = new Value[2];
 			BinopExpr expr = (BinopExpr) val;
-			set.add(expr.getOp1());
-			set.add(expr.getOp2());
+			set[0] = expr.getOp1();
+			set[1] = expr.getOp2();
 			return set;
 		}
-		return Collections.singleton(selectBase(val, keepArrayRef));
+		return new Value[] { selectBase(val, keepArrayRef) };
 	}
 	
 }
