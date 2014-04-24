@@ -427,8 +427,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						// Map the parameter values into the callee
 						if (isExecutorExecute) {
 							if (ie.getArg(0) == source.getAccessPath().getPlainValue()) {
-								Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
-										(dest.getActiveBody().getThisLocal()), stmt);
+								Abstraction abs = source.deriveNewAbstraction
+										(source.getAccessPath().copyWithNewValue(thisLocal), stmt);
 								res.add(abs);
 							}
 						}
