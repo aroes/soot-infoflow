@@ -21,10 +21,7 @@ import soot.SootField;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
-import soot.jimple.RetStmt;
-import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
-import soot.jimple.ThrowStmt;
 import soot.jimple.infoflow.util.ConcurrentHashSet;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
@@ -134,14 +131,10 @@ public class InfoflowCFG implements IInfoflowCFG {
 	public List<Unit> getSuccsOf(Unit u) {
 		return delegate.getSuccsOf(u);
 	}
-	
+
 	@Override
 	public boolean isExitStmt(Unit u) {
-		// Do not query the unit graph and its tails, instead check for object
-		// types to improve performance
-		return u instanceof ReturnStmt
-				|| u instanceof RetStmt
-				|| u instanceof ThrowStmt;
+		return delegate.isExitStmt(u);
 	}
 
 	@Override
