@@ -679,7 +679,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							if (isSink && newSource.isAbstractionActive() && newSource.getAccessPath().isEmpty())
 								addResult(new AbstractionAtSink(newSource, leftValue, assignStmt));
 							
-							Abstraction targetAB = newSource.deriveNewAbstraction(mappedAP, null);
+							Abstraction targetAB = mappedAP.equals(newSource.getAccessPath()) ? newSource
+									: newSource.deriveNewAbstraction(mappedAP, null);
 							addTaintViaStmt(d1, assignStmt, leftValue, targetAB, res, cutFirstField,
 									interproceduralCFG().getMethodOf(src), targetType);
 							res.add(newSource);
