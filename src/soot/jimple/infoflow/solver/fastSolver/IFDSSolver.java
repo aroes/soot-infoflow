@@ -9,6 +9,7 @@
  * Contributors:
  *     Eric Bodden - initial API and implementation
  *     Marc-Andre Laverdiere-Papineau - Fixed race condition
+ *     Steven Arzt - Created FastSolver implementation
  ******************************************************************************/
 package soot.jimple.infoflow.solver.fastSolver;
 
@@ -357,7 +358,6 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 					for(D d4: entry.getValue().keySet())
 						for(D d5: targets) {
 							D predVal = entry.getValue().get(d4);
-							// make this directly predVal, no need to clone
 							D d5p = setJumpPredecessors || d5.equals(predVal) ? d5p = predVal : d5;
 							propagate(d4, retSiteC, d5p, c, false);
 						}
