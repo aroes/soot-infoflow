@@ -268,7 +268,7 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 		
 		// Generate a single element in the array
 		AssignStmt assign = Jimple.v().newAssignStmt
-				(Jimple.v().newArrayRef(local, IntConstant.v(19)),
+				(Jimple.v().newArrayRef(local, IntConstant.v(0)),
 				getValueForType(body, gen, tp.getElementType(), constructionStack, parentClasses));
 		body.getUnits().add(assign);
 		return local;
