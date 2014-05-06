@@ -12,6 +12,7 @@ package soot.jimple.infoflow.test;
 
 import java.util.ArrayList;
 
+import soot.jimple.infoflow.test.android.AccountManager;
 import soot.jimple.infoflow.test.android.ConnectionManager;
 import soot.jimple.infoflow.test.android.TelephonyManager;
 import soot.jimple.infoflow.test.utilclasses.ClassWithField;
@@ -1000,4 +1001,31 @@ public class HeapTestCode {
 		y2.f = "";
 	}
 
+	public void overwriteAliasedVariableTest5() {
+		ConnectionManager cm = new ConnectionManager();
+		Object x = TelephonyManager.getDeviceId();
+		Object y = new AccountManager().getPassword();
+		
+		String z = "";
+		
+		z = (String) x;
+		String z2 = z;
+		
+		z = (String) y;
+		String z3 = z;
+
+		cm.publish(z2);
+		cm.publish(z3);
+	}
+
+	@SuppressWarnings("null")	// would cause an NPE
+	public void overwriteAliasedVariableTest6() {
+		Y y1 = new Y();
+		y1.f = TelephonyManager.getDeviceId();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(y1.f);
+		y1 = null;
+		cm.publish(y1.f);
+	}
+	
 }

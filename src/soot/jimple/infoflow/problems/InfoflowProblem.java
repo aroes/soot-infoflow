@@ -534,8 +534,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							//x = y && x.f tainted -> no taint propagated
 							else if (newSource.getAccessPath().isLocal()
 									&& leftValue instanceof Local
-									&& aliasing.mustAlias((Local) leftValue, newSource.getAccessPath().getPlainValue(),
-											assignStmt)){
+									&& leftValue == newSource.getAccessPath().getPlainValue()){
 								return Collections.emptySet();
 							}
 														
@@ -1217,6 +1216,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						private Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
 							if (stopAfterFirstFlow && !results.isEmpty())
 								return Collections.emptySet();
+							
+							if (call.toString().contains("$r7 = $r12[3]"))
+								System.out.println("x");
 							
 							// Notify the handler if we have one
 							for (TaintPropagationHandler tp : taintPropagationHandlers)

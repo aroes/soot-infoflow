@@ -115,8 +115,7 @@ public class InfoflowResults {
 					return false;
 			}
 			
-			return this.path.equals(si.path)
-					&& this.source.equals(si.source)
+			return this.source.equals(si.source)
 					&& this.context.equals(si.context);
 		}
 	}
