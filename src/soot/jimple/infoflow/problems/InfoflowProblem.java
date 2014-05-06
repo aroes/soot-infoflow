@@ -25,6 +25,7 @@ import java.util.Set;
 import soot.ArrayType;
 import soot.IntType;
 import soot.Local;
+import soot.NullType;
 import soot.PrimType;
 import soot.RefType;
 import soot.SootField;
@@ -580,8 +581,15 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							if (!addLeftValue && !aliasOverwritten) {
 								for (Value rightValue : rightVals) {
 									if (rightValue instanceof FieldRef) {
-										// Get the field reference and check for aliasing
+										// Get the field reference
 										FieldRef rightRef = (FieldRef) rightValue;
+
+										// If the right side references a NULL field, we kill the taint
+										if (rightRef instanceof InstanceFieldRef
+												&& ((InstanceFieldRef) rightRef).getBase().getType() instanceof NullType)
+											return null;
+										
+										// Check for aliasing
 										mappedAP = aliasing.mayAlias(newSource.getAccessPath(),
 												new AccessPath(rightRef, false));
 										
