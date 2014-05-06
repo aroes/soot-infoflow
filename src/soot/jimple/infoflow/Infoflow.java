@@ -262,18 +262,19 @@ public class Infoflow extends AbstractInfoflow {
 	@Override
 	public void computeInfoflow(String appPath, String libPath,
 			IEntryPointCreator entryPointCreator,
-			List<String> entryPoints, ISourceSinkManager sourcesSinks) {
+			ISourceSinkManager sourcesSinks) {
 		if (sourcesSinks == null) {
 			logger.error("Sources are empty!");
 			return;
 		}
 		
-		initializeSoot(appPath, libPath,
-				SootMethodRepresentationParser.v().parseClassNames(entryPoints, false).keySet());
+		Set<String> requiredClasses = SootMethodRepresentationParser.v().parseClassNames
+				(entryPointCreator.getRequiredClasses(), false).keySet();
+		initializeSoot(appPath, libPath, requiredClasses);
 
 		// entryPoints are the entryPoints required by Soot to calculate Graph - if there is no main method,
 		// we have to create a new main method and use it as entryPoint and store our real entryPoints
-		Scene.v().setEntryPoints(Collections.singletonList(entryPointCreator.createDummyMain(entryPoints)));
+		Scene.v().setEntryPoints(Collections.singletonList(entryPointCreator.createDummyMain()));
 		ipcManager.updateJimpleForICC();
 		
 		// We explicitly select the packs we want to run for performance reasons

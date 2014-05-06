@@ -10,8 +10,8 @@
  ******************************************************************************/
 package soot.jimple.infoflow.entryPointCreators;
 
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -19,6 +19,7 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import soot.Body;
 import soot.IntType;
 import soot.Local;
 import soot.Scene;
@@ -28,7 +29,6 @@ import soot.Value;
 import soot.javaToJimple.LocalGenerator;
 import soot.jimple.IntConstant;
 import soot.jimple.Jimple;
-import soot.jimple.JimpleBody;
 import soot.jimple.infoflow.data.SootMethodAndClass;
 import soot.jimple.infoflow.util.SootMethodRepresentationParser;
 import soot.jimple.internal.JEqExpr;
@@ -39,26 +39,27 @@ import soot.jimple.toolkits.scalar.NopEliminator;
 
 public class DefaultEntryPointCreator extends BaseEntryPointCreator {
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
-
-	/**
-	 * Soot requires a main method, so we create a dummy method which calls all entry functions.
-	 * 
-	 * @param classMap
-	 *            the methods to call (signature as String)
-	 * @param createdClass
-	 *            the class which contains the methods
-	 * @return list of entryPoints
-	 */
+    private static final Logger logger = LoggerFactory.getLogger(DefaultEntryPointCreator.class);
+    
+    private final Collection<String> methodsToCall;
+    
+    /**
+     * Creates a new instanceof the {@link DefaultEntryPointCreator} class
+     * @param methodsToCall A collection containing the methofs to be called
+     * in the dummy main method. Note that the order of the entries is not
+     * necessarily preserved. Entries must be valid Soot method signatures.
+     */
+    public DefaultEntryPointCreator(Collection<String> methodsToCall) {
+    	this.methodsToCall = methodsToCall;
+    }
+    
 	@Override
-	protected SootMethod createDummyMainInternal(List<String> methods) {
+	protected SootMethod createDummyMainInternal(SootMethod mainMethod) {
 		Map<String, Set<String>> classMap =
-				SootMethodRepresentationParser.v().parseClassNames(methods, false);
+				SootMethodRepresentationParser.v().parseClassNames(methodsToCall, false);
 		
 		// create new class:
- 		JimpleBody body = Jimple.v().newBody();
- 		SootMethod mainMethod = createEmptyMainMethod(body);
-		
+		Body body = mainMethod.getActiveBody();
  		LocalGenerator generator = new LocalGenerator(body);
 		HashMap<String, Local> localVarsForClasses = new HashMap<String, Local>();
 		
@@ -113,16 +114,8 @@ public class DefaultEntryPointCreator extends BaseEntryPointCreator {
 	}
 
 	@Override
-	public SootMethod createDummyMain(List<String> methods, SootMethod dummyMainMethod) 
-	{
-		
-		return null;
+	public Collection<String> getRequiredClasses() {
+		return SootMethodRepresentationParser.v().parseClassNames(methodsToCall, false).keySet();
 	}
-
-	@Override
-	protected SootMethod createDummyMainInternal(List<String> methods,
-			SootMethod emptySootMethod) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+	
 }

@@ -600,19 +600,20 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										else if (rightValue instanceof InstanceFieldRef) {								
 											Local rightBase = (Local) ((InstanceFieldRef) rightRef).getBase();
 											Local sourceBase = newSource.getAccessPath().getPlainValue();
+											final SootField rightField = rightRef.getField();
 											
 											// We need to compare the access path on the right side
 											// with the start of the given one
 											if (mappedAP != null) {
 												addLeftValue = true;
 												cutFirstField = (mappedAP.getFieldCount() > 0
-														&& mappedAP.getFirstField() == rightRef.getField());
+														&& mappedAP.getFirstField() == rightField);
 											}
 											else if (aliasing.mayAlias(rightBase, sourceBase)
 													&& newSource.getAccessPath().getFieldCount() == 0
 													&& newSource.getAccessPath().getTaintSubFields()) {
 												addLeftValue = true;
-												targetType = rightRef.getField().getType();
+												targetType = rightField.getType();
 											}
 										}
 									}

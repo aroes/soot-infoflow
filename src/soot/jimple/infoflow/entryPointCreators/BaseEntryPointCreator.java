@@ -49,7 +49,6 @@ import soot.jimple.IfStmt;
 import soot.jimple.IntConstant;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Jimple;
-import soot.jimple.JimpleBody;
 import soot.jimple.LongConstant;
 import soot.jimple.NewArrayExpr;
 import soot.jimple.NewExpr;
@@ -79,41 +78,44 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 	}
 
 	@Override
-	public SootMethod createDummyMain(List<String> methods) {
+	public SootMethod createDummyMain() {
 		// Load the substitution classes
 		if (substituteCallParams)
 			for (String className : substituteClasses)
 				Scene.v().forceResolve(className, SootClass.BODIES).setApplicationClass();
 		
-		return this.createDummyMainInternal(methods);
+		return this.createDummyMainInternal();
 	}
 	
 	@Override
-	public SootMethod createDummyMain(List<String> methods,
-			SootMethod dummyMainMethod) {
+	public SootMethod createDummyMain(SootMethod dummyMainMethod) {
 		// Load the substitution classes
 		if (substituteCallParams)
 			for (String className : substituteClasses)
 				Scene.v().forceResolve(className, SootClass.BODIES).setApplicationClass();
 		
-		return this.createDummyMainInternal(methods, dummyMainMethod);
+		return this.createDummyMainInternal(dummyMainMethod);
 	}
 
-	protected SootMethod createDummyMainInternal(List<String> methods) 
+	protected SootMethod createDummyMainInternal() 
 	{
 		SootMethod emptySootMethod = createEmptyMainMethod(Jimple.v().newBody());
-		return createDummyMainInternal(methods, emptySootMethod);
+		return createDummyMainInternal(emptySootMethod);
 	}
 	
 	/**
 	 * Implementors need to overwrite this method for providing the actual dummy
 	 * main method
-	 * @param methods The methods to be called inside the dummy main method
 	 * @return The generated dummy main method
 	 */
-	protected abstract SootMethod createDummyMainInternal(List<String> methods, SootMethod emptySootMethod);
+	protected abstract SootMethod createDummyMainInternal(SootMethod emptySootMethod);
 	
-	protected SootMethod createEmptyMainMethod(JimpleBody body){
+	/**
+	 * Creates a new, empty main method containing the given body
+	 * @param body The body to be used for the new main method
+	 * @return The newly generated main method
+	 */
+	protected SootMethod createEmptyMainMethod(Body body){
 		SootMethod mainMethod = new SootMethod("dummyMainMethod", new ArrayList<Type>(), VoidType.v());
 		body.setMethod(mainMethod);
 		mainMethod.setActiveBody(body);
@@ -127,11 +129,11 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 		return mainMethod;
 	}
 	
-	protected Stmt buildMethodCall(SootMethod currentMethod, JimpleBody body, Local classLocal, LocalGenerator gen){
+	protected Stmt buildMethodCall(SootMethod currentMethod, Body body, Local classLocal, LocalGenerator gen){
 		return buildMethodCall(currentMethod, body, classLocal, gen, Collections.<SootClass>emptySet());
 	}
 
-	protected Stmt buildMethodCall(SootMethod currentMethod, JimpleBody body, Local classLocal, LocalGenerator gen,
+	protected Stmt buildMethodCall(SootMethod currentMethod, Body body, Local classLocal, LocalGenerator gen,
 			Set<SootClass> parentClasses){
 		assert currentMethod != null : "Current method was null";
 		assert body != null : "Body was null";
@@ -197,7 +199,7 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 	 * new one.
 	 * @return The generated value, or null if no value could be generated
 	 */
-	private Value getValueForType(JimpleBody body, LocalGenerator gen,
+	private Value getValueForType(Body body, LocalGenerator gen,
 			Type tp, Set<SootClass> constructionStack, Set<SootClass> parentClasses) {
 		// Depending on the parameter type, we try to find a suitable
 		// concrete substitution
@@ -256,7 +258,7 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 	 * @return The local referencing the newly created array, or null if the
 	 * array generation failed
 	 */
-	private Value buildArrayOfType(JimpleBody body, LocalGenerator gen, ArrayType tp,
+	private Value buildArrayOfType(Body body, LocalGenerator gen, ArrayType tp,
 			Set<SootClass> constructionStack, Set<SootClass> parentClasses) {
 		Local local = gen.generateLocal(tp);
 
@@ -282,7 +284,7 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 	 * @return The local containing the new object instance if the operation
 	 * completed successfully, otherwise null.
 	 */
-	protected Local generateClassConstructor(SootClass createdClass, JimpleBody body) {
+	protected Local generateClassConstructor(SootClass createdClass, Body body) {
 		return this.generateClassConstructor(createdClass, body, new HashSet<SootClass>(),
 				Collections.<SootClass>emptySet());
 	}
@@ -298,7 +300,7 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 	 * @return The local containing the new object instance if the operation
 	 * completed successfully, otherwise null.
 	 */
-	protected Local generateClassConstructor(SootClass createdClass, JimpleBody body,
+	protected Local generateClassConstructor(SootClass createdClass, Body body,
 			Set<SootClass> parentClasses) {
 		return this.generateClassConstructor(createdClass, body, new HashSet<SootClass>(),
 				parentClasses);
@@ -319,7 +321,7 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 	 * @return The local containing the new object instance if the operation
 	 * completed successfully, otherwise null.
 	 */
-	private Local generateClassConstructor(SootClass createdClass, JimpleBody body,
+	private Local generateClassConstructor(SootClass createdClass, Body body,
 			Set<SootClass> constructionStack, Set<SootClass> parentClasses) {
 		if (createdClass == null || this.failedClasses.contains(createdClass))
 			return null;

@@ -21,28 +21,28 @@ public class FactoryTests extends JUnitTests {
 
 	@Test
 	public void factories1() {
-		Infoflow infoflow = initInfoflow();
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<securibench.micro.factories.Factories1: void doGet(javax.servlet.http.HttpServletRequest,javax.servlet.http.HttpServletResponse)>");
-		infoflow.computeInfoflow(appPath, libPath, entryPointCreator, epoints, sources, sinks);
+		Infoflow infoflow = initInfoflow(epoints);
+		infoflow.computeInfoflow(appPath, libPath, entryPointCreator, sources, sinks);
 		checkInfoflow(infoflow, 1);
 	}
 
 	@Test
 	public void factories2() {
-		Infoflow infoflow = initInfoflow();
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<securibench.micro.factories.Factories2: void doGet(javax.servlet.http.HttpServletRequest,javax.servlet.http.HttpServletResponse)>");
-		infoflow.computeInfoflow(appPath, libPath, entryPointCreator, epoints, sources, sinks);
+		Infoflow infoflow = initInfoflow(epoints);
+		infoflow.computeInfoflow(appPath, libPath, entryPointCreator, sources, sinks);
 		checkInfoflow(infoflow, 1);
 	}
 
 	@Test
 	public void factories3() {
-		Infoflow infoflow = initInfoflow();
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<securibench.micro.factories.Factories3: void doGet(javax.servlet.http.HttpServletRequest,javax.servlet.http.HttpServletResponse)>");
-		infoflow.computeInfoflow(appPath, libPath, entryPointCreator, epoints, sources, sinks);
+		Infoflow infoflow = initInfoflow(epoints);
+		infoflow.computeInfoflow(appPath, libPath, entryPointCreator, sources, sinks);
 		checkInfoflow(infoflow, 1);
 	}
 

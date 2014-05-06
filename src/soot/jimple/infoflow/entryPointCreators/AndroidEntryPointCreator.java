@@ -10,7 +10,6 @@
  ******************************************************************************/
 package soot.jimple.infoflow.entryPointCreators;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -71,7 +70,9 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 	private Local applicationLocal = null;
 	private Set<SootClass> applicationCallbackClasses = new HashSet<SootClass>();
 	
-	private Collection<String> androidClasses;
+	private final Collection<String> androidClasses;
+	private final Collection<String> additionalEntryPoints;
+	
 	private Map<String, List<String>> callbackFunctions;
 	private boolean modelAdditionalMethods = false;
 	
@@ -88,10 +89,15 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 	}
 	
 	/**
-	 * Creates a new instance of the {@link AndroidEntryPointCreator} class.
+	 * Creates a new instance of the {@link AndroidEntryPointCreator} class
+	 * and registers a list of classes to be automatically scanned for Android
+	 * lifecycle methods
+	 * @param androidClasses The list of classes to be automatically scanned for
+	 * Android lifecycle methods
 	 */
-	public AndroidEntryPointCreator() {
-		this.androidClasses = new ArrayList<String>();
+	public AndroidEntryPointCreator(Collection<String> androidClasses) {
+		this.androidClasses = androidClasses;
+		this.additionalEntryPoints = Collections.emptySet();
 		this.callbackFunctions = new HashMap<String, List<String>>();
 	}
 	
@@ -101,9 +107,14 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 	 * lifecycle methods
 	 * @param androidClasses The list of classes to be automatically scanned for
 	 * Android lifecycle methods
+	 * @param additionalEntryPoints Additional entry points to be called during
+	 * the running phase of the respective component. These values must be valid
+	 * Soot method signatures.
 	 */
-	public AndroidEntryPointCreator(Collection<String> androidClasses) {
+	public AndroidEntryPointCreator(Collection<String> androidClasses,
+			Collection<String> additionalEntryPoints) {
 		this.androidClasses = androidClasses;
+		this.additionalEntryPoints = additionalEntryPoints;
 		this.callbackFunctions = new HashMap<String, List<String>>();
 	}
 	
@@ -128,41 +139,12 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 	public Map<String, List<String>> getCallbackFunctions() {
 		return callbackFunctions;
 	}
-
-	/**
-	 * Creates a new dummy main method based only on the Android classes and
-	 * the automatic detection of the Android lifecycle methods
-	 * @return The generated dummy main method
-	 */
-	public SootMethod createDummyMain() {
-		return createDummyMain(new ArrayList<String>());
-	}
 	
-	/**
-	 * Creates a new dummy main method based only on the Android classes and
-	 * the automatic detection of the Android lifecycle methods
-	 * @param emptySootMethod an empty soot method
-	 * @return The generated dummy main method
-	 */
-	public SootMethod createDummyMain(SootMethod emptySootMethod)
-	{
-		return createDummyMain(new ArrayList<String>(), emptySootMethod);
-	}
-
-	/**
-	 * default createDummyMaiInternal create a dummyMainMethod for all component calsses and 
-	 * the dummyMainClass is belong to dummyMainClass, we want to provide a interface to generate
-	 * a dummyMainMethod for each component class.
-	 * 
-	 * @param methods
-	 * @param emptySootMethod
-	 * @return The generated dummy main method
-	 */
 	@Override
-	protected SootMethod createDummyMainInternal(List<String> methods, SootMethod emptySootMethod)
+	protected SootMethod createDummyMainInternal(SootMethod emptySootMethod)
 	{
-		Map<String, Set<String>> classMap =
-				SootMethodRepresentationParser.v().parseClassNames(methods, false);
+		Map<String, Set<String>> classMap = SootMethodRepresentationParser.v().parseClassNames
+				(additionalEntryPoints, false);
 		for (String androidClass : this.androidClasses)
 			if (!classMap.containsKey(androidClass))
 				classMap.put(androidClass, new HashSet<String>());
@@ -180,8 +162,8 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		body.getUnits().add(assignStmt);
 
 		// Resolve all requested classes
-		for (Entry<String, Set<String>> entry : classMap.entrySet())
-			Scene.v().forceResolve(entry.getKey(), SootClass.SIGNATURES);
+		for (String className : classMap.keySet())
+			Scene.v().forceResolve(className, SootClass.SIGNATURES);
 		
 		// For some weird reason unknown to anyone except the flying spaghetti
 		// monster, the onCreate() methods of content providers run even before
@@ -1005,6 +987,14 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 	 */
 	public boolean getModelAdditionalMethods() {
 		return this.modelAdditionalMethods;
+	}
+	
+	@Override
+	public Collection<String> getRequiredClasses() {
+		Set<String> requiredClasses = new HashSet<String>(androidClasses);
+		requiredClasses.addAll(SootMethodRepresentationParser.v().parseClassNames
+				(additionalEntryPoints, false).keySet());
+		return requiredClasses;
 	}
 	
 }

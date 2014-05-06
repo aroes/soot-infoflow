@@ -10,6 +10,7 @@
  ******************************************************************************/
 package soot.jimple.infoflow.entryPointCreators;
 
+import java.util.Collection;
 import java.util.List;
 
 import soot.SootMethod;
@@ -18,24 +19,20 @@ public interface IEntryPointCreator {
 
 	/**
 	 * Generates a dummy main method that calls all methods in the given list
-	 * @param methods The methods to call in the generated dummy main method.
-	 * Methods are given in Soot's signature syntax.
 	 * @return The generated main method
 	 */
-	public SootMethod createDummyMain(List<String> methods);
+	public SootMethod createDummyMain();
 	
 	/**
 	 * Generates a dummy main for specified method
-	 * 
-	 * @param methods The methods to call in the generated dummy main method.
-	 * Methods are given in Soot's signature syntax.
 	 * @param dummyMainMethod The method to hold the content of generated dummy main method
 	 * @return
 	 */
-	public SootMethod createDummyMain(List<String> methods, SootMethod dummyMainMethod);
+	public SootMethod createDummyMain(SootMethod dummyMainMethod);
 	
 	/**
-	 * with this option enabled the EntryPointCreator tries to find suitable subclasses of abstract classes and implementers of interfaces
+	 * with this option enabled the EntryPointCreator tries to find suitable subclasses
+	 * of abstract classes and implementers of interfaces
 	 * @param b sets substitution of call parameters
 	 */
 	public void setSubstituteCallParams(boolean b);
@@ -45,4 +42,12 @@ public interface IEntryPointCreator {
 	 * @param l
 	 */
 	public void setSubstituteClasses(List<String> l);
+	
+	/**
+	 * Gets the set of classes used in this dummy main method. These classes will
+	 * be loaded by the FlowDroid engine.
+	 * @return The list of required classes in this dummy main method
+	 */
+	public Collection<String> getRequiredClasses();
+	
 }
