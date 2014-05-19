@@ -97,8 +97,7 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 		return this.createDummyMainInternal(dummyMainMethod);
 	}
 
-	protected SootMethod createDummyMainInternal() 
-	{
+	protected SootMethod createDummyMainInternal() {
 		SootMethod emptySootMethod = createEmptyMainMethod(Jimple.v().newBody());
 		return createDummyMainInternal(emptySootMethod);
 	}
