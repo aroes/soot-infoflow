@@ -463,9 +463,12 @@ public class Infoflow extends AbstractInfoflow {
 			logger.info("Taint wrapper misses: " + taintWrapper.getWrapperMisses());
 		}
 		
+		Set<AbstractionAtSink> res = forwardProblem.getResults();
+
 		logger.info("IFDS problem with {} forward and {} backward edges solved, "
-				+ "processing results...", forwardSolver.propagationCount,
-				backSolver == null ? 0 : backSolver.propagationCount);
+				+ "processing {} results...", forwardSolver.propagationCount,
+				backSolver == null ? 0 : backSolver.propagationCount,
+				res == null ? 0 : res.size());
 		
 		// Force a cleanup. Everything we need is reachable through the
 		// results set, the other abstractions can be killed now.
@@ -473,12 +476,13 @@ public class Infoflow extends AbstractInfoflow {
 		if (backSolver != null) {
 			backSolver.cleanup();
 			backSolver = null;
+			backProblem = null;
 		}
 		forwardSolver = null;
+		forwardProblem = null;
 		AccessPath.clearBaseRegister();
 		Runtime.getRuntime().gc();
 		
-		Set<AbstractionAtSink> res = forwardProblem.getResults();
 		computeTaintPaths(res);
 		
 		if (results.getResults().isEmpty())
