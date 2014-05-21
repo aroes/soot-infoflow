@@ -14,6 +14,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -22,6 +23,7 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import soot.Body;
 import soot.IntType;
 import soot.Local;
 import soot.Scene;
@@ -30,6 +32,7 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
 import soot.javaToJimple.LocalGenerator;
+import soot.jimple.IfStmt;
 import soot.jimple.IntConstant;
 import soot.jimple.Jimple;
 import soot.jimple.JimpleBody;
@@ -382,6 +385,8 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		// Optimize and check the generated main method
 		NopEliminator.v().transform(body);
 		eliminateSelfLoops(body);
+		eliminateFallthroughIfs(body);
+		
 		if (DEBUG || Options.v().validate())
 			mainMethod.getActiveBody().validate();
 		
@@ -389,6 +394,24 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		return mainMethod;
 	}
 	
+	/**
+	 * Removes if statements that jump to the fall-through successor
+	 * @param body The body from which to remove unnecessary if statements
+	 */
+	private void eliminateFallthroughIfs(Body body) {
+		IfStmt ifs = null;
+		Iterator<Unit> unitIt = body.getUnits().snapshotIterator();
+		while (unitIt.hasNext()) {
+			Unit u = unitIt.next();
+			if (ifs != null && ifs.getTarget() == u) {
+				body.getUnits().remove(ifs);
+				ifs = null;
+			}
+			if (u instanceof IfStmt)
+				ifs = (IfStmt) u;
+		}
+	}
+
 	/**
 	 *  Soot requires a main method, so we create a dummy method which calls all entry functions. 
 	 *  Android's components are detected and treated according to their lifecycles. This
@@ -534,12 +557,8 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 			SootClass currentClass,
 			JNopStmt endClassStmt,
 			Local classLocal) {
-		// As we don't know the order in which the different Android lifecycles
-		// run, we allow for each single one of them to be skipped
-//		createIfStmt(endClassStmt);
-
 		// 1. onCreate:
-		Stmt onCreateStmt = searchAndBuildMethod(AndroidEntryPointConstants.SERVICE_ONCREATE, currentClass, entryPoints, classLocal);
+		searchAndBuildMethod(AndroidEntryPointConstants.SERVICE_ONCREATE, currentClass, entryPoints, classLocal);
 		
 		//service has two different lifecycles:
 		//lifecycle1:
@@ -612,8 +631,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		searchAndBuildMethod(AndroidEntryPointConstants.SERVICE_ONDESTROY, currentClass, entryPoints, classLocal);
 		
 		//either begin or end or next class:
-		createIfStmt(onCreateStmt);
-//		createIfStmt(endClassStmt);
+		// createIfStmt(onCreateStmt);	// no, the process gets killed in between
 	}
 
 	/**
@@ -725,7 +743,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		//goTo Stop, Resume or Create:
 		// (to stop is fall-through, no need to add)
 		createIfStmt(onResumeStmt);
-		createIfStmt(onCreateStmt);
+		// createIfStmt(onCreateStmt);		// no, the process gets killed in between
 		
 		//5. onStop:
 		Stmt onStop = searchAndBuildMethod(AndroidEntryPointConstants.ACTIVITY_ONSTOP, currentClass, entryPoints, classLocal);
@@ -738,7 +756,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		// (to restart is fall-through, no need to add)
 		JNopStmt stopToDestroyStmt = new JNopStmt();
 		createIfStmt(stopToDestroyStmt);
-		createIfStmt(onCreateStmt);
+		// createIfStmt(onCreateStmt);	// no, the process gets killed in between
 		
 		//6. onRestart:
 		searchAndBuildMethod(AndroidEntryPointConstants.ACTIVITY_ONRESTART, currentClass, entryPoints, classLocal);
