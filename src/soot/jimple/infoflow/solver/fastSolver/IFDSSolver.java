@@ -135,7 +135,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 		this.zeroValue = tabulationProblem.zeroValue();
 		this.icfg = tabulationProblem.interproceduralCFG();		
 		FlowFunctions<N, D, M> flowFunctions = tabulationProblem.autoAddZero() ?
-				new ZeroedFlowFunctions<N,D,M>(tabulationProblem.flowFunctions(), tabulationProblem.zeroValue()) : tabulationProblem.flowFunctions(); 
+				new ZeroedFlowFunctions<N,D,M>(tabulationProblem.flowFunctions(), zeroValue) : tabulationProblem.flowFunctions(); 
 		if(flowFunctionCacheBuilder!=null) {
 			ffCache = new FlowFunctionCache<N,D,M>(flowFunctions, flowFunctionCacheBuilder);
 			flowFunctions = ffCache;
@@ -277,7 +277,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
 							//for each target value of the function
 							for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d2))) {
-								D d5p = setJumpPredecessors || d5.equals(d2) ? d5p = d2 : d5;
+								D d5p = setJumpPredecessors || d5.equals(d2) ? d2 : d5;
 								propagate(d1, retSiteN, d5p, n, false);
 							}
 						}
@@ -358,7 +358,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 					for(D d4: entry.getValue().keySet())
 						for(D d5: targets) {
 							D predVal = entry.getValue().get(d4);
-							D d5p = setJumpPredecessors || d5.equals(predVal) ? d5p = predVal : d5;
+							D d5p = setJumpPredecessors || d5.equals(predVal) ? predVal : d5;
 							propagate(d4, retSiteC, d5p, c, false);
 						}
 				}
@@ -367,7 +367,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 		//handling for unbalanced problems where we return out of a method with a fact for which we have no incoming flow
 		//note: we propagate that way only values that originate from ZERO, as conditionally generated values should only
 		//be propagated into callers that have an incoming edge for this condition
-		if(followReturnsPastSeeds && (inc == null || inc.isEmpty()) && d1.equals(zeroValue)) {
+		if(followReturnsPastSeeds && (inc == null || inc.isEmpty()) && d1 == zeroValue) {
 			Collection<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
 			for(N c: callers) {
 				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {

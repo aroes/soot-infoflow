@@ -1352,9 +1352,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										&& aliasing.mayAlias(interproceduralCFG().getMethodOf(call).getActiveBody().getThisLocal(),
 												newSource.getAccessPath().getPlainValue())
 										&& newSource.getAccessPath().getFirstField() == null;
-								boolean taintedParam = (newSource.getTopPostdominator() != null
-											|| newSource.getAccessPath().isEmpty()
-											|| conditionalCall)
+								boolean taintedParam = (conditionalCall
+											|| newSource.getTopPostdominator() != null
+											|| newSource.getAccessPath().isEmpty())
 										&& newSource.isAbstractionActive();
 								// If the base object is tainted, we also consider the "code" associated
 								// with the object's class as tainted.
@@ -1367,7 +1367,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									}
 								}
 								
-								if (newSource.isAbstractionActive() && taintedParam)
+								if (taintedParam && newSource.isAbstractionActive())
 									addResult(new AbstractionAtSink(newSource, invExpr, iStmt));
 								// if the base object which executes the method is tainted the sink is reached, too.
 								if (invExpr instanceof InstanceInvokeExpr) {
