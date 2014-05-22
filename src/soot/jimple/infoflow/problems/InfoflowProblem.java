@@ -1225,9 +1225,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							if (stopAfterFirstFlow && !results.isEmpty())
 								return Collections.emptySet();
 							
-							if (call.toString().contains("$r7 = $r12[3]"))
-								System.out.println("x");
-							
 							// Notify the handler if we have one
 							for (TaintPropagationHandler tp : taintPropagationHandlers)
 								tp.notifyFlowIn(call, Collections.singleton(source),
