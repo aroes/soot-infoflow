@@ -393,6 +393,14 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 		if (obj == null || getClass() != obj.getClass())
 			return false;
 		Abstraction other = (Abstraction) obj;
+		
+		// If we have already computed hash codes, we can use them for
+		// comparison
+		if (this.hashCode != 0
+				&& other.hashCode != 0
+				&& this.hashCode != other.hashCode)
+			return false;
+		
 		if (accessPath == null) {
 			if (other.accessPath != null)
 				return false;
