@@ -11,8 +11,6 @@
 package soot.jimple.infoflow.data;
 
 
-import heros.solver.LinkedNode;
-
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
@@ -27,6 +25,7 @@ import soot.Value;
 import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.solver.IInfoflowCFG.UnitContainer;
+import soot.jimple.infoflow.solver.fastSolver.FastSolverLinkedNode;
 import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.infoflow.util.ConcurrentHashSet;
 import soot.jimple.internal.JimpleLocal;
@@ -39,7 +38,7 @@ import com.google.common.collect.Sets;
  * @author Steven Arzt
  * @author Christian Fritz
  */
-public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
+public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction> {
 	
 	private static boolean flowSensitiveAliasing = true;
 	
@@ -527,6 +526,11 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction> {
 				NullConstant.v(), null, false, false);
 		Abstraction.flowSensitiveAliasing = flowSensitiveAliasing;
 		return zeroValue;
+	}
+
+	@Override
+	public void setPredecessor(Abstraction predecessor) {
+		this.predecessor = predecessor;
 	}
 	
 }

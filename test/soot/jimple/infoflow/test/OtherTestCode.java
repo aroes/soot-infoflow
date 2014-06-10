@@ -494,5 +494,12 @@ public class OtherTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(data);
 	}
+	
+	public void noPathsTest1() {
+		String deviceId = TelephonyManager.getDeviceId();
+		String did = id(deviceId);
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(did);
+	}
 
 }

@@ -277,7 +277,9 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
 							//for each target value of the function
 							for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d2))) {
-								D d5p = setJumpPredecessors || d5.equals(d2) ? d2 : d5;
+								D d5p = d5.equals(d2) ? d2 : d5;
+								if (setJumpPredecessors && d5 instanceof FastSolverLinkedNode)
+									((FastSolverLinkedNode<D>) d5).setPredecessor(d2);
 								propagate(d1, retSiteN, d5p, n, false);
 							}
 						}
@@ -358,7 +360,9 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 					for(D d4: entry.getValue().keySet())
 						for(D d5: targets) {
 							D predVal = entry.getValue().get(d4);
-							D d5p = setJumpPredecessors || d5.equals(predVal) ? predVal : d5;
+							D d5p = d5.equals(predVal) ? predVal : d5;
+							if (setJumpPredecessors && d5 instanceof FastSolverLinkedNode)
+								((FastSolverLinkedNode<D>) d5).setPredecessor(predVal);
 							propagate(d4, retSiteC, d5p, c, false);
 						}
 				}
