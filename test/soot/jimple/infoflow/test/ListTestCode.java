@@ -23,7 +23,8 @@ import soot.jimple.infoflow.test.android.TelephonyManager;
 /**
  * tests list tainting
  * 
- * @author Christian
+ * @author Christian Fritz
+ * @author Steven Arzt
  * 
  */
 public class ListTestCode {
@@ -242,6 +243,18 @@ public class ListTestCode {
 
 	private void bar2(String s) {
 		c.add(s);
+	}
+	
+	public void listToStringTest() {
+        String secret = TelephonyManager.getDeviceId();
+
+        ArrayList<String> secretList = new ArrayList<String>();
+        secretList.add("asd");
+        secretList.add(secret);
+        secretList.add("aaa");
+        
+        ConnectionManager cm = new ConnectionManager();
+        cm.publish(secretList.toString());
 	}
 	
 }
