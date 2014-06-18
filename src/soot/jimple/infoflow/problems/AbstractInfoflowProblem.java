@@ -23,6 +23,7 @@ import soot.IntType;
 import soot.Local;
 import soot.LongType;
 import soot.PrimType;
+import soot.RefType;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
@@ -423,6 +424,23 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 			return canCastType(type, accessPath.getFirstFieldType());
 		else
 			return canCastType(type, accessPath.getBaseType());
+	}
+	
+	/**
+	 * Checks whether the given type is java.lang.Object, java.io.Serializable,
+	 * or java.lang.Cloneable.
+	 * @param tp The type to check
+	 * @return True if the given type is one of the three "object-like" types,
+	 * otherwise false
+	 */
+	protected boolean isObjectLikeType(Type tp) {
+		if (!(tp instanceof RefType))
+			return false;
+		
+		RefType rt = (RefType) tp;
+		return rt.getSootClass().getName().equals("java.lang.Object")
+				|| rt.getSootClass().getName().equals("java.io.Serializable")
+				|| rt.getSootClass().getName().equals("java.lang.Cloneable");
 	}
 	
 	@Override

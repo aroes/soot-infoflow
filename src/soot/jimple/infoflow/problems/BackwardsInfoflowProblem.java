@@ -270,6 +270,11 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 									// If the types do not match, the right side cannot be an alias
 									if (!canCastType(rightValue.getType(), targetType))
 										addRightValue = false;
+									else {
+										// If we have a type of java.lang.Object, we try to tighten it
+										if (isObjectLikeType(targetType))
+											targetType = rightValue.getType();
+									}
 								}
 							}
 							
