@@ -400,6 +400,8 @@ public class Infoflow extends AbstractInfoflow {
 			backProblem.setTaintWrapper(taintWrapper);
 			backProblem.setActivationUnitsToCallSites(forwardProblem);
 			backProblem.setIgnoreFlowsInSystemPackages(ignoreFlowsInSystemPackages);
+			backProblem.setInspectSources(inspectSources);
+			backProblem.setInspectSinks(inspectSinks);
 		}
 		
 		if (!enableStaticFields)
