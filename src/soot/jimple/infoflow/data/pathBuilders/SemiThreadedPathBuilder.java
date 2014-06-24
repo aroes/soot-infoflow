@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -20,7 +21,6 @@ import soot.jimple.infoflow.InfoflowResults;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.SourceContextAndPath;
-import soot.util.IdentityHashSet;
 
 /**
  * Class for reconstructing abstraction paths from sinks to source
@@ -35,9 +35,10 @@ public class SemiThreadedPathBuilder implements IAbstractionPathBuilder {
     private final InfoflowResults results = new InfoflowResults();
 	private final CountingThreadPoolExecutor executor;
 	
-	private final Set<Abstraction> roots = new IdentityHashSet<Abstraction>();
-	private IdentityHashMap<Abstraction, Set<Abstraction>> successors = null;
-	private IdentityHashMap<Abstraction, Set<Abstraction>> neighbors = null;
+	private final Set<Abstraction> roots = Collections.newSetFromMap
+			(new IdentityHashMap<Abstraction,Boolean>());
+	private Map<Abstraction, Set<Abstraction>> successors = null;
+	private Map<Abstraction, Set<Abstraction>> neighbors = null;
 	
 	private static int lastTaskId = 0;
 	
@@ -83,7 +84,7 @@ public class SemiThreadedPathBuilder implements IAbstractionPathBuilder {
 				synchronized (successors) {
 					Set<Abstraction> succs = successors.get(parent);
 					if (succs == null) {
-						succs = new IdentityHashSet<Abstraction>();
+						succs = Collections.newSetFromMap(new IdentityHashMap<Abstraction,Boolean>());
 						successors.put(parent, succs);
 					}
 					return succs.add(child);
@@ -97,7 +98,7 @@ public class SemiThreadedPathBuilder implements IAbstractionPathBuilder {
 				synchronized (neighbors) {
 					Set<Abstraction> succs = neighbors.get(abs);
 					if (succs == null) {
-						succs = new IdentityHashSet<Abstraction>();
+						succs = Collections.newSetFromMap(new IdentityHashMap<Abstraction,Boolean>());
 						neighbors.put(abs, succs);
 					}
 					return succs.add(neighbor);
