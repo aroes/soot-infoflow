@@ -171,59 +171,55 @@ public class SemiThreadedPathBuilder implements IAbstractionPathBuilder {
 	private class ExtendPathTask implements Runnable {
 		
 		private final Object flagAbs;
-		private final List<Abstraction> parentQueue = new LinkedList<Abstraction>();
+		private final Abstraction parent;
 		
 		public ExtendPathTask(Object flagAbs, Abstraction parent) {
 			this.flagAbs = flagAbs;
-			this.parentQueue.add(parent);
+			this.parent = parent;
 		}
 		
 		@Override
 		public void run() {
-			while (!parentQueue.isEmpty()) {
-				Abstraction parent = parentQueue.remove(0);
-
-				// Check the paths of the parent. If we have none, we can abort
-				Set<SourceContextAndPath> parentPaths = parent.getPaths();
-				if (parentPaths == null || parentPaths.isEmpty())
-					return;
+			// Check the paths of the parent. If we have none, we can abort
+			Set<SourceContextAndPath> parentPaths = parent.getPaths();
+			if (parentPaths == null || parentPaths.isEmpty())
+				return;
 				
-				// Copy over the paths of our neighbors
-				Set<Abstraction> nbs = neighbors.get(parent);
-				if (nbs != null)
-					for (Abstraction nb : nbs) {
-						Set<SourceContextAndPath> nbPaths = nb.getPaths();
-						if (nbPaths != null)
-							parentPaths.addAll(nbPaths);
-					}
+			// Copy over the paths of our neighbors
+			Set<Abstraction> nbs = neighbors.get(parent);
+			if (nbs != null)
+				for (Abstraction nb : nbs) {
+					Set<SourceContextAndPath> nbPaths = nb.getPaths();
+					if (nbPaths != null)
+						parentPaths.addAll(nbPaths);
+				}
 				
-				// Get the children. If we have none, we can abort
-				Set<Abstraction> children = successors.get(parent);
-				if (children == null || children.isEmpty())
-					return;
+			// Get the children. If we have none, we can abort
+			Set<Abstraction> children = successors.get(parent);
+			if (children == null || children.isEmpty())
+				return;
 				
-				for (Abstraction child : children) {
-					boolean added = false;
-					Set<SourceContextAndPath> childScaps = child.getOrMakePathCache();
-					for (SourceContextAndPath scap : parentPaths) {
-						if (child.getCurrentStmt() != null) {
-							SourceContextAndPath extendedScap = scap.extendPath(child.getCurrentStmt());
-							if (childScaps.add(extendedScap))
-								added = true;
-						}
-						else if (childScaps.add(scap))
+			for (Abstraction child : children) {
+				boolean added = false;
+				Set<SourceContextAndPath> childScaps = child.getOrMakePathCache();
+				for (SourceContextAndPath scap : parentPaths) {
+					if (child.getCurrentStmt() != null) {
+						SourceContextAndPath extendedScap = scap.extendPath(child.getCurrentStmt());
+						if (childScaps.add(extendedScap))
 							added = true;
 					}
+					else if (childScaps.add(scap))
+						added = true;
+				}
 					
-					// If we have added a new path, we schedule it to be propagated
-					// down to the child's children
-					if (added) {
-						executor.execute(new ExtendPathTask(flagAbs, child));
-						Set<Abstraction> childNbs = neighbors.get(child);
-						if (childNbs != null)
-							for (Abstraction nb : childNbs)
-								executor.execute(new ExtendPathTask(flagAbs, nb));
-					}
+				// If we have added a new path, we schedule it to be propagated
+				// down to the child's children
+				if (added) {
+					executor.execute(new ExtendPathTask(flagAbs, child));
+					Set<Abstraction> childNbs = neighbors.get(child);
+					if (childNbs != null)
+						for (Abstraction nb : childNbs)
+						executor.execute(new ExtendPathTask(flagAbs, nb));
 				}
 			}
 		}
