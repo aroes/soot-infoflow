@@ -532,5 +532,11 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction>
 	public void setPredecessor(Abstraction predecessor) {
 		this.predecessor = predecessor;
 	}
+
+	@Override
+	public void setCallingContext(Abstraction callingContext) {
+		// TODO Auto-generated method stub
+		
+	}
 	
 }

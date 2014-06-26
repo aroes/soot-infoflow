@@ -22,7 +22,6 @@ import heros.IFDSTabulationProblem;
 import heros.SynchronizedBy;
 import heros.ZeroedFlowFunctions;
 import heros.solver.CountingThreadPoolExecutor;
-import heros.solver.LinkedNode;
 import heros.solver.Pair;
 import heros.solver.PathEdge;
 
@@ -58,7 +57,7 @@ import com.google.common.cache.CacheBuilder;
  * @param <I> The type of inter-procedural control-flow graph being used.
  * @see IFDSTabulationProblem
  */
-public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterproceduralCFG<N, M>> {
+public class IFDSSolver<N,D extends FastSolverLinkedNode<D>,M,I extends BiDiInterproceduralCFG<N, M>> {
 	
 	public static CacheBuilder<Object, Object> DEFAULT_CACHE_BUILDER = CacheBuilder.newBuilder().concurrencyLevel
 			(Runtime.getRuntime().availableProcessors()).initialCapacity(10000).softValues();
@@ -277,10 +276,19 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
 							//for each target value of the function
 							for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d2))) {
-								D d5p = d5.equals(d2) ? d2 : d5;
-								if (setJumpPredecessors && d5 instanceof FastSolverLinkedNode)
-									((FastSolverLinkedNode<D>) d5).setPredecessor(d2);
-								propagate(d1, retSiteN, d5p, n, false);
+								// If we have not changed anything in the callee, we do not need the facts
+								// from there. Even if we change something: If we don't need the concrete
+								// path, we can skip the callee in the predecessor chain
+								D d5p = d5;
+								if (d5.equals(d2))
+									d5p = d2;
+								else if (setJumpPredecessors)
+									d5.setPredecessor(d2);
+								
+								// Set the calling context
+								D d5p_restoredCtx = restoreContextOnReturnedFact(d2, d5p);
+								
+								propagate(d1, retSiteN, d5p_restoredCtx, n, false);
 							}
 						}
 					}
@@ -359,11 +367,20 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 					//for each incoming-call value
 					for(D d4: entry.getValue().keySet())
 						for(D d5: targets) {
+							// If we have not changed anything in the callee, we do not need the facts
+							// from there. Even if we change something: If we don't need the concrete
+							// path, we can skip the callee in the predecessor chain
+							D d5p = d5;
 							D predVal = entry.getValue().get(d4);
-							D d5p = d5.equals(predVal) ? predVal : d5;
-							if (setJumpPredecessors && d5 instanceof FastSolverLinkedNode)
-								((FastSolverLinkedNode<D>) d5).setPredecessor(predVal);
-							propagate(d4, retSiteC, d5p, c, false);
+							if (d5.equals(predVal))
+								d5p = predVal;
+							else if (setJumpPredecessors)
+								d5.setPredecessor(predVal);
+							
+							// Set the calling context
+							D d5p_restoredCtx = restoreContextOnReturnedFact(d2, d5p);
+							
+							propagate(d4, retSiteC, d5p_restoredCtx, c, false);
 						}
 				}
 			}
@@ -371,7 +388,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 		//handling for unbalanced problems where we return out of a method with a fact for which we have no incoming flow
 		//note: we propagate that way only values that originate from ZERO, as conditionally generated values should only
 		//be propagated into callers that have an incoming edge for this condition
-		if(followReturnsPastSeeds && (inc == null || inc.isEmpty()) && d1 == zeroValue) {
+		if(followReturnsPastSeeds && d1 == zeroValue && (inc == null || inc.isEmpty())) {
 			Collection<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
 			for(N c: callers) {
 				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
@@ -435,7 +452,24 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 			(FlowFunction<D> flowFunction, D d1, D d2) {
 		return flowFunction.computeTargets(d2);
 	}
-
+	
+	/**
+	 * This method will be called for each incoming edge and can be used to
+	 * transfer knowledge from the calling edge to the returning edge, without
+	 * affecting the summary edges at the callee.
+	 * 
+	 * @param d4
+	 *            Fact stored with the incoming edge, i.e., present at the
+	 *            caller side
+	 * @param d5
+	 *            Fact that originally should be propagated to the caller.
+	 * @return Fact that will be propagated to the caller.
+	 */
+	protected D restoreContextOnReturnedFact(D d4, D d5) {
+		d5.setCallingContext(d4);
+		return d5;
+	}
+	
 	/**
 	 * Propagates the flow further down the exploded super graph. 
 	 * @param sourceVal the source value of the propagated summary edge
