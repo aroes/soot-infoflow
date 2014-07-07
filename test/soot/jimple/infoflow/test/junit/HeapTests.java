@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import soot.RefType;
@@ -867,4 +868,18 @@ public class HeapTests extends JUnitTests {
 		checkInfoflow(infoflow, 1);
 	}
 	
+	@Ignore("fails, looks like a conceptual problem")
+	@Test(timeout = 300000)
+	public void aliasFlowTest() {
+		Infoflow infoflow = initInfoflow();
+		infoflow.setInspectSources(false);
+		infoflow.setInspectSinks(false);
+		infoflow.setEnableImplicitFlows(false);
+		
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void aliasFlowTest()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		negativeCheckInfoflow(infoflow);
+	}
+
 }

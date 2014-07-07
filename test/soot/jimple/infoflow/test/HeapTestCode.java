@@ -1028,4 +1028,28 @@ public class HeapTestCode {
 		cm.publish(y1.f);
 	}
 	
+	public void aliasFlowTest() {
+		A b, q, y;
+		B a, p, x;
+		
+		a = new B();
+		p = new B();
+		
+		b = new A();
+		q = new A();
+		
+		if (Math.random() < 0.5) {
+			x = a;
+			y = b;
+		}
+		else {
+			x = p;
+			y = q;
+		}
+		x.attr = y;
+		q.b = TelephonyManager.getDeviceId();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(a.attr.b);
+	}
+	
 }
