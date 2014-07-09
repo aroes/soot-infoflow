@@ -145,4 +145,16 @@ public class MultiTest extends JUnitTests {
 		Assert.assertEquals(1, infoflow.getResults().size());
     }
 
+    @Test(timeout=300000)
+    public void sameSourceMultiTest1(){
+    	Infoflow infoflow = initInfoflow();
+    	List<String> epoints = new ArrayList<String>();
+    	epoints.add("<soot.jimple.infoflow.test.MultiTestCode: void sameSourceMultiTest1()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+
+		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));
+		Assert.assertEquals(1, infoflow.getResults().size());
+		Assert.assertEquals(2, infoflow.getResults().getResults().entrySet().iterator().next().getValue().size());
+    }
+
 }

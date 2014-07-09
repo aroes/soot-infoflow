@@ -156,5 +156,17 @@ public class MultiTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(intField);
 	}
+	
+	private String id(String s) {
+		return s;
+	}
+	
+	public void sameSourceMultiTest1() {
+		String[] data = new String[2];
+		data[0] = id(TelephonyManager.getDeviceId());
+		data[1] = id(TelephonyManager.getDeviceId());
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(data[0]);
+	}
 
 }

@@ -3,9 +3,12 @@ package soot.jimple.infoflow.data.pathBuilders;
 import heros.solver.CountingThreadPoolExecutor;
 import heros.solver.Pair;
 
+import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -73,11 +76,8 @@ public class SemiThreadedPathBuilder extends AbstractAbstractionPathBuilder {
 	 * @return The generated executor
 	 */
 	private CountingThreadPoolExecutor createExecutor(int numThreads) {
-//		return new CountingThreadPoolExecutor
-//				(numThreads, Integer.MAX_VALUE, 30, TimeUnit.SECONDS,
-//				new LinkedBlockingQueue<Runnable>());
 		return new CountingThreadPoolExecutor
-				(1, 1, 30, TimeUnit.SECONDS,
+				(numThreads, Integer.MAX_VALUE, 30, TimeUnit.SECONDS,
 				new LinkedBlockingQueue<Runnable>());
 	}
 	
@@ -139,8 +139,15 @@ public class SemiThreadedPathBuilder extends AbstractAbstractionPathBuilder {
 				Abstraction abstraction = abstractionQueue.remove(0);
 				propagationCount.incrementAndGet();
 								
-				if (abstraction.getPredecessor() != null)
+				if (abstraction.getPredecessor() != null) {
 					addSuccessor(abstraction.getPredecessor(), abstraction);
+					
+					// Add the current abstraction as a successor of the predecessor's
+					// neighbors
+					if (abstraction.getPredecessor().getNeighbors() != null)
+						for (Abstraction predNb : abstraction.getPredecessor().getNeighbors())
+							addSuccessor(predNb, abstraction);
+				}
 				if (abstraction.getNeighbors() != null)
 					for (Abstraction nb : abstraction.getNeighbors()) {
 						addNeighbor(nb, abstraction);
@@ -170,9 +177,8 @@ public class SemiThreadedPathBuilder extends AbstractAbstractionPathBuilder {
 					// Sources may not have predecessors
 					assert abstraction.getPredecessor() == null;
 				}
-				else
-					if (abstraction.getPredecessor().registerPathFlag(taskId))
-						abstractionQueue.add(abstraction.getPredecessor());
+				else if (abstraction.getPredecessor().registerPathFlag(taskId))
+					abstractionQueue.add(abstraction.getPredecessor());
 				
 				if (abstraction.getNeighbors() != null)
 					for (Abstraction nb : abstraction.getNeighbors())
@@ -202,21 +208,14 @@ public class SemiThreadedPathBuilder extends AbstractAbstractionPathBuilder {
 			if (parentPaths == null || parentPaths.isEmpty())
 				return;
 			
-			/* zu teuer, anders machen */
-			// Copy over the paths of our neighbors
-			Set<Abstraction> nbs = neighbors.get(parent);
-			if (nbs != null)
-				for (Abstraction nb : nbs)
-					parent.migratePathsFrom(nb);
-			
 			// Get the children. If we have none, we can abort
 			Set<Abstraction> children = successors.get(parent);
 			if (children == null || children.isEmpty())
 				return;
 			
-			for (Abstraction child : children) {
-				// Extend the paths from the parent to the source with the child
-				boolean added = false;
+			for (Abstraction child : children) {				
+				// Extend the paths from the parent to the source with the child				
+				boolean addedChild = false;
 				for (SourceContextAndPath scap : parentPaths) {
 					// If we have already seen this child on this path, we skip it
 					if (!scap.putAbstractionOnCallStack(child))
@@ -245,18 +244,14 @@ public class SemiThreadedPathBuilder extends AbstractAbstractionPathBuilder {
 					}
 					
 					// Add the new path
-					added = child.addPathElement(extendedScap);
+					addedChild = child.addPathElement(extendedScap);
 				}
-					
+				
 				// If we have added a new path, we schedule it to be propagated
 				// down to the child's children
-				if (added) {
-					executor.execute(new ExtendPathTask(child));
-					Set<Abstraction> childNbs = neighbors.get(child);
-					if (childNbs != null)
-						for (Abstraction nb : childNbs)
-							executor.execute(new ExtendPathTask(nb));
-				}
+				if (addedChild)
+					if (successors.get(child) != null)
+						executor.execute(new ExtendPathTask(child));
 			}
 		}
 	}

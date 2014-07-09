@@ -1264,6 +1264,12 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								// Compute the aliases
 								if (triggerInaktiveTaintOrReverseFlow(iStmt, target, abs))
 									computeAliasTaints(d1, iStmt, target, res, interproceduralCFG().getMethodOf(call), abs);
+								
+								// Set the corresponding call site
+								for (Abstraction absRet : res)
+									if (absRet != source)
+										absRet.setCorrespondingCallSite(iStmt);
+								
 								return res;
 							}
 

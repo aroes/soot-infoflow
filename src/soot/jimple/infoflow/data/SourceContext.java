@@ -13,6 +13,8 @@ public class SourceContext implements Cloneable {
 	private final Stmt stmt;
 	private final Object userData;
 	
+	private int hashCode = 0;
+	
 	public SourceContext(Value value, Stmt stmt) {
 		assert value != null;
 		
@@ -43,12 +45,17 @@ public class SourceContext implements Cloneable {
 	
 	@Override
 	public int hashCode() {
+		if (hashCode != 0)
+			return hashCode;
+		
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((stmt == null) ? 0 : stmt.hashCode());
 		result = prime * result + ((value == null) ? 0 : value.hashCode());
 		result = prime * result + ((userData == null) ? 0 : userData.hashCode());
-		return result;
+		hashCode = result;
+		
+		return hashCode;
 	}
 
 	@Override
@@ -58,6 +65,10 @@ public class SourceContext implements Cloneable {
 		if (obj == null || getClass() != obj.getClass())
 			return false;
 		SourceContext other = (SourceContext) obj;
+		
+		if (this.hashCode != 0 && other.hashCode != 0 && this.hashCode != other.hashCode)
+			return false;
+		
 		if (stmt == null) {
 			if (other.stmt != null)
 				return false;

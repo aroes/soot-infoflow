@@ -250,34 +250,10 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	 * @return The path from the source to the current statement
 	 */
 	public Set<SourceContextAndPath> getPaths() {
-		if (pathCache == null)
-			return Collections.emptySet();
-		return Collections.unmodifiableSet(pathCache.keySet());
+		return pathCache == null ? null : Collections.unmodifiableSet(pathCache.keySet());
 	}
 	
 	private static Object mergeLock = new Object();
-	
-	public void migratePathsFrom(Abstraction abs) {
-		if (abs.pathCache == null || abs.pathCache == this.pathCache)
-			return;
-		
-		synchronized (mergeLock) {			
-//			Set<SourceContextAndPath> oldThis = this.pathCache;
-//			this.pathCache = abs.pathCache;
-//			this.pathCache.addAll(oldThis);
-			
-			for (SourceContextAndPath scap : abs.pathCache.keySet()) {
-				/*
-				SourceContextAndPath oldScap = this.pathCache.get(scap);
-				if (oldScap == null)
-					this.pathCache.put(scap, scap);
-				else
-					oldScap.merge(scap);
-				 */
-				this.pathCache.put(scap, scap);
-			}
-		}
-	}
 	
 	public Set<SourceContextAndPath> getOrMakePathCache() {
 		// We're optimistic about having a path cache. If we definitely have one,
@@ -293,15 +269,19 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	}
 	
 	public boolean addPathElement(SourceContextAndPath scap) {
-		getOrMakePathCache();
-		
-		SourceContextAndPath oldScap = this.pathCache.get(scap);
-		if (oldScap == null) {
-			this.pathCache.put(scap, scap);
-			return true;
+		synchronized (mergeLock) {			
+			if (this.pathCache == null) {
+				this.pathCache = new ConcurrentHashMap<SourceContextAndPath, SourceContextAndPath>();
+			}
+			
+			SourceContextAndPath oldScap = this.pathCache.get(scap);
+			if (oldScap == null)
+				return this.pathCache.put(scap, scap) != scap;
+			else if (oldScap != scap)
+				return oldScap.merge(scap);
+			else
+				return false;
 		}
-		
-		return oldScap.merge(scap);
 	}
 	
 	public boolean registerPathFlag(int id) {

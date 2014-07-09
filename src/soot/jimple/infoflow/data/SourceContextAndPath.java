@@ -98,15 +98,16 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 		return scap;
 	}
 	
-	public synchronized boolean merge(SourceContextAndPath otherScap) {
+	public boolean merge(SourceContextAndPath otherScap) {
 		return false;
-		/*
-		if (this.callStack.size() != otherScap.callStack.size())
-			return false;
 		
+		/*
+		int maxSize = Math.min(this.callStack.size(), otherScap.callStack.size());
+			
 		boolean added = false;
-		for (int i = 0; i < this.callStack.size(); i++)
-			added = this.callStack.get(i).getO2().addAll(otherScap.callStack.get(i).getO2()) || added;
+		for (int i = 0; i < maxSize; i++)
+			if (this.callStack.get(i).getO2().addAll(otherScap.callStack.get(i).getO2()))
+				added = true;
 		
 		return added;
 		*/
