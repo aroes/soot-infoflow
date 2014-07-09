@@ -924,7 +924,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						}
 						// staticfieldRefs must be analyzed even if they are not part of the params:
 						else if (enableStaticFields && source.getAccessPath().isStaticFieldRef())
-							res.add(source);
+							res.add(source.deriveNewAbstraction(source.getAccessPath(), stmt));
 						
 						//special treatment for clinit methods - no param mapping possible
 						if (isExecutorExecute) {
@@ -1183,12 +1183,16 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							}
 						}
 						
+						for (Abstraction abs : res)
+							if (abs != newSource)
+								abs.setCorrespondingCallSite((Stmt) callSite);
+						
 						return res;
 					}
 
 				};
 			}
-
+			
 			@Override
 			public FlowFunction<Abstraction> getCallToReturnFlowFunction(final Unit call, final Unit returnSite) {
 				// special treatment for native methods:
@@ -1378,6 +1382,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								}
 							}
 							
+							for (Abstraction abs : res)
+								if (abs != newSource)
+									abs.setCorrespondingCallSite(iStmt);
+							
 							return res;
 						}
 
@@ -1409,6 +1417,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				(resultAbs.getAbstraction().deriveNewAbstraction
 						(resultAbs.getAbstraction().getAccessPath(), resultAbs.getSinkStmt()),
 				resultAbs.getSinkValue(), resultAbs.getSinkStmt());
+		resultAbs.getAbstraction().setCorrespondingCallSite(resultAbs.getSinkStmt());
 		
 		Abstraction newAbs = this.results.putIfAbsentElseGet
 				(resultAbs, resultAbs.getAbstraction());

@@ -57,7 +57,7 @@ import com.google.common.cache.CacheBuilder;
  * @param <I> The type of inter-procedural control-flow graph being used.
  * @see IFDSTabulationProblem
  */
-public class IFDSSolver<N,D extends FastSolverLinkedNode<D>,M,I extends BiDiInterproceduralCFG<N, M>> {
+public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiInterproceduralCFG<N, M>> {
 	
 	public static CacheBuilder<Object, Object> DEFAULT_CACHE_BUILDER = CacheBuilder.newBuilder().concurrencyLevel
 			(Runtime.getRuntime().availableProcessors()).initialCapacity(10000).softValues();
@@ -284,11 +284,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D>,M,I extends BiDiInte
 									d5p = d2;
 								else if (setJumpPredecessors)
 									d5.setPredecessor(d2);
-								
-								// Set the calling context
-								D d5p_restoredCtx = restoreContextOnReturnedFact(d2, d5p);
-								
-								propagate(d1, retSiteN, d5p_restoredCtx, n, false);
+								propagate(d1, retSiteN, d5p, n, false);
 							}
 						}
 					}
@@ -374,13 +370,11 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D>,M,I extends BiDiInte
 							D predVal = entry.getValue().get(d4);
 							if (d5.equals(predVal))
 								d5p = predVal;
-							else if (setJumpPredecessors)
-								d5.setPredecessor(predVal);
-							
-							// Set the calling context
-							D d5p_restoredCtx = restoreContextOnReturnedFact(d2, d5p);
-							
-							propagate(d4, retSiteC, d5p_restoredCtx, c, false);
+							else {
+								if (setJumpPredecessors)
+									d5.setPredecessor(predVal);
+							}
+							propagate(d4, retSiteC, d5p, c, false);
 						}
 				}
 			}
@@ -451,23 +445,6 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D>,M,I extends BiDiInte
 	protected Set<D> computeNormalFlowFunction
 			(FlowFunction<D> flowFunction, D d1, D d2) {
 		return flowFunction.computeTargets(d2);
-	}
-	
-	/**
-	 * This method will be called for each incoming edge and can be used to
-	 * transfer knowledge from the calling edge to the returning edge, without
-	 * affecting the summary edges at the callee.
-	 * 
-	 * @param d4
-	 *            Fact stored with the incoming edge, i.e., present at the
-	 *            caller side
-	 * @param d5
-	 *            Fact that originally should be propagated to the caller.
-	 * @return Fact that will be propagated to the caller.
-	 */
-	protected D restoreContextOnReturnedFact(D d4, D d5) {
-		d5.setCallingContext(d4);
-		return d5;
 	}
 	
 	/**

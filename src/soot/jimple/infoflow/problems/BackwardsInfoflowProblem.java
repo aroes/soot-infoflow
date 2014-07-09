@@ -285,7 +285,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							// types more imprecise when going backwards.
 							if (addRightValue) {
 								Abstraction newAbs = source.deriveNewAbstraction(rightValue, cutFirstField,
-										targetType);
+										defStmt, targetType);
 								res.add(newAbs);
 								
 								// Inject the new alias into the forward solver
@@ -405,7 +405,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 
 						// easy: static
 						if (enableStaticFields && source.getAccessPath().isStaticFieldRef())
-							res.add(source);
+							res.add(source.deriveNewAbstraction(source.getAccessPath(), stmt));
 
 						// checks: this/fields
 						Value sourceBase = source.getAccessPath().getPlainValue();
@@ -567,11 +567,15 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							}
 						}
 						
+						for (Abstraction abs : res)
+							if (abs != source)
+								abs.setCorrespondingCallSite((Stmt) callSite);
+						
 						return res;
 					}
 				};
 			}
-
+			
 			@Override
 			public FlowFunction<Abstraction> getCallToReturnFlowFunction(final Unit call, final Unit returnSite) {
 				final Stmt iStmt = (Stmt) call;

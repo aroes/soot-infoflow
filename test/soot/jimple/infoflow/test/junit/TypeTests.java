@@ -233,11 +233,13 @@ public class TypeTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void aliasTypeTest(){
+		for (int i = 0; i < 20; i++) {
 		Infoflow infoflow = initInfoflow();
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.TypeTestCode: void aliasTypeTest()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);	
+		}
 	}
 
 	@Test(timeout=300000)

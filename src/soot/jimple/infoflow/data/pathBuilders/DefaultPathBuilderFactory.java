@@ -1,5 +1,7 @@
 package soot.jimple.infoflow.data.pathBuilders;
 
+import soot.jimple.infoflow.solver.IInfoflowCFG;
+
 /**
  * Default factory class for abstraction path builders
  * 
@@ -22,7 +24,7 @@ public class DefaultPathBuilderFactory implements IPathBuilderFactory {
 	 * Creates a new instance of the {@link DefaultPathBuilderFactory} class
 	 */
 	public DefaultPathBuilderFactory() {
-		this.pathBuilder = PathBuilder.SemiThreaded;
+		this(PathBuilder.SemiThreaded);
 	}
 
 	/**
@@ -34,14 +36,15 @@ public class DefaultPathBuilderFactory implements IPathBuilderFactory {
 	}
 	
 	@Override
-	public IAbstractionPathBuilder createPathBuilder(int maxThreadNum) {
+	public IAbstractionPathBuilder createPathBuilder(int maxThreadNum,
+			IInfoflowCFG icfg) {
 		switch (pathBuilder) {
 		case Recursive :
-			return new RecursivePathBuilder(maxThreadNum);
+			return new RecursivePathBuilder(icfg, maxThreadNum);
 		case Threaded :
 			return new ThreadedPathBuilder(maxThreadNum);
 		case SemiThreaded :
-			return new SemiThreadedPathBuilder(maxThreadNum);
+			return new SemiThreadedPathBuilder(icfg, maxThreadNum);
 		}
 		throw new RuntimeException("Unsupported path building algorithm");
 	}

@@ -64,17 +64,22 @@ public class OtherTestCode {
 		intf.doSomething();
 	}
 	
+	private String x(String y) {
+		return y;
+	}
+	
 	private String annotate(String data) {
-		return "x" + data + "x";
+		return x(data);
+//		return "x" + data + "x";
 	}
 
 	public void multiCallTest() {
 		ConnectionManager cm = new ConnectionManager();
 		String deviceId = TelephonyManager.getDeviceId();
-
+		
 		String data = annotate(deviceId);
 		cm.publish(data);
-
+		
 		String did = deviceId;
 		String data2 = annotate(did);
 		cm.publish(data2);
@@ -373,15 +378,14 @@ public class OtherTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(outcome);
 	}
+	
 	public L1 l;
 	public void paramTransferTest(){
 		ConnectionManager cm = new ConnectionManager();
 		String tainted = TelephonyManager.getDeviceId();
 		l = new L1();
 		taint(tainted, l);
-		
 		cm.publish(l.f);
-		
 	}
 	
 	public void taint(String e, L1 m){
@@ -397,11 +401,9 @@ public class OtherTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		IntermediateObject i1 = new IntermediateObject("123");
 		IntermediateObject i2 = new IntermediateObject(TelephonyManager.getDeviceId());
-		
 		cm.publish(i1.getValue());
-	
 	}
-
+	
 	class IntermediateObject{
 		Object1 o;
 		
@@ -494,7 +496,55 @@ public class OtherTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(data);
 	}
+
+	public void pathSkipTest4() {
+		AccountManager am = new AccountManager();
+		String deviceId = TelephonyManager.getDeviceId();
+		String data = "";
+		String data2 = "";
+		
+		data = id(deviceId);
+		System.out.println(data);
+		data2 = id(am.getPassword());
+		System.out.println(data2);
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(data);
+	}
 	
+	public void pathSkipTest5() {
+		AccountManager am = new AccountManager();
+		String deviceId = TelephonyManager.getDeviceId();
+		String data = "";
+
+		// call set() twice with different sources
+		data = id(deviceId);
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(data);
+		data = id(am.getPassword());
+		System.out.println(data);
+	}
+	
+	private String id2(String data) {
+		return id(data);
+	}
+	
+	public void pathSkipTest6() {
+		AccountManager am = new AccountManager();
+		String deviceId = TelephonyManager.getDeviceId();
+		String data = "";
+
+		// call set() twice with different sources
+		data = id(deviceId);
+		data = id(data);
+		System.out.println(data);
+
+		data = id2(am.getPassword());
+		data = id2(data);
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(data);
+	}
+
 	public void noPathsTest1() {
 		String deviceId = TelephonyManager.getDeviceId();
 		String did = id(deviceId);
@@ -502,4 +552,17 @@ public class OtherTestCode {
 		cm.publish(did);
 	}
 
+	
+	public void recursionTest1() {
+		String deviceId = TelephonyManager.getDeviceId();
+		recurse("", deviceId);
+//		recurse(deviceId, "");
+	}
+
+	private void recurse(String deviceId, String deviceId2) {
+		recurse(deviceId2, deviceId);
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(deviceId2);
+	}
+	
 }

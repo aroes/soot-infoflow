@@ -53,7 +53,8 @@ public class TypeTestCode {
 		
 		void leak() {
 			ConnectionManager cm = new ConnectionManager();
-			cm.publish("A: " + data);
+//			cm.publish("A: " + data);
+			cm.publish(data);
 		}
 		
 		@Override

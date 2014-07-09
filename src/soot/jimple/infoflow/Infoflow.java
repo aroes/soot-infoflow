@@ -525,7 +525,8 @@ public class Infoflow extends AbstractInfoflow {
 	 * @param res The data flow tracker results
 	 */
 	private void computeTaintPaths(final Set<AbstractionAtSink> res) {
-		IAbstractionPathBuilder builder = this.pathBuilderFactory.createPathBuilder(maxThreadNum);
+		IAbstractionPathBuilder builder = this.pathBuilderFactory.createPathBuilder
+				(maxThreadNum, iCfg);
     	if (computeResultPaths)
     		builder.computeTaintPaths(res);
     	else

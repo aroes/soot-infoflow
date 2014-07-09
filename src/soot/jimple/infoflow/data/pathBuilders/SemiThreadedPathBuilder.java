@@ -1,6 +1,7 @@
 package soot.jimple.infoflow.data.pathBuilders;
 
 import heros.solver.CountingThreadPoolExecutor;
+import heros.solver.Pair;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -21,13 +22,14 @@ import soot.jimple.infoflow.InfoflowResults;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.SourceContextAndPath;
+import soot.jimple.infoflow.solver.IInfoflowCFG;
 
 /**
  * Class for reconstructing abstraction paths from sinks to source
  * 
  * @author Steven Arzt
  */
-public class SemiThreadedPathBuilder implements IAbstractionPathBuilder {
+public class SemiThreadedPathBuilder extends AbstractAbstractionPathBuilder {
 	
 	private AtomicInteger propagationCount = null;
     private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -40,16 +42,29 @@ public class SemiThreadedPathBuilder implements IAbstractionPathBuilder {
 	private Map<Abstraction, Set<Abstraction>> successors = null;
 	private Map<Abstraction, Set<Abstraction>> neighbors = null;
 	
+	private boolean contextSensitiveTracking = true;
+	
 	private static int lastTaskId = 0;
 	
 	/**
 	 * Creates a new instance of the {@link SemiThreadedPathBuilder} class
 	 * @param maxThreadNum The maximum number of threads to use
 	 */
-	public SemiThreadedPathBuilder(int maxThreadNum) {
+	public SemiThreadedPathBuilder(IInfoflowCFG icfg, int maxThreadNum) {
+		super(icfg);
         int numThreads = Runtime.getRuntime().availableProcessors();
 		this.executor = createExecutor(maxThreadNum == -1 ? numThreads
 				: Math.min(maxThreadNum, numThreads));
+	}
+	
+	/**
+	 * Sets whether the paths shall be reconstructed in a context-sensitive manner.
+	 * When applied to large program graphs, this may introduce considerable delays.
+	 * @param contextSensitiveTracking True if context-sensitive path reconstruction
+	 * shall be applied, otherwise false
+	 */
+	public void setContextSensitiveTracking(boolean contextSensitiveTracking) {
+		this.contextSensitiveTracking = contextSensitiveTracking;
 	}
 	
 	/**
@@ -58,8 +73,11 @@ public class SemiThreadedPathBuilder implements IAbstractionPathBuilder {
 	 * @return The generated executor
 	 */
 	private CountingThreadPoolExecutor createExecutor(int numThreads) {
+//		return new CountingThreadPoolExecutor
+//				(numThreads, Integer.MAX_VALUE, 30, TimeUnit.SECONDS,
+//				new LinkedBlockingQueue<Runnable>());
 		return new CountingThreadPoolExecutor
-				(numThreads, Integer.MAX_VALUE, 30, TimeUnit.SECONDS,
+				(1, 1, 30, TimeUnit.SECONDS,
 				new LinkedBlockingQueue<Runnable>());
 	}
 	
@@ -120,7 +138,7 @@ public class SemiThreadedPathBuilder implements IAbstractionPathBuilder {
 			while (!abstractionQueue.isEmpty()) {
 				Abstraction abstraction = abstractionQueue.remove(0);
 				propagationCount.incrementAndGet();
-				
+								
 				if (abstraction.getPredecessor() != null)
 					addSuccessor(abstraction.getPredecessor(), abstraction);
 				if (abstraction.getNeighbors() != null)
@@ -144,7 +162,8 @@ public class SemiThreadedPathBuilder implements IAbstractionPathBuilder {
 								abstraction.getSourceContext().getStmt(),
 								abstraction.getSourceContext().getUserData()).extendPath
 										(abstraction.getSourceContext().getStmt());
-						abstraction.getOrMakePathCache().add(rootScap);				
+						rootScap = rootScap.popTopCallStackItem();
+						abstraction.addPathElement(rootScap);
 						addRoot(abstraction);
 					}
 					
@@ -170,11 +189,9 @@ public class SemiThreadedPathBuilder implements IAbstractionPathBuilder {
 	 */
 	private class ExtendPathTask implements Runnable {
 		
-		private final Object flagAbs;
 		private final Abstraction parent;
-		
-		public ExtendPathTask(Object flagAbs, Abstraction parent) {
-			this.flagAbs = flagAbs;
+				
+		public ExtendPathTask(Abstraction parent) {
 			this.parent = parent;
 		}
 		
@@ -184,42 +201,61 @@ public class SemiThreadedPathBuilder implements IAbstractionPathBuilder {
 			Set<SourceContextAndPath> parentPaths = parent.getPaths();
 			if (parentPaths == null || parentPaths.isEmpty())
 				return;
-				
+			
+			/* zu teuer, anders machen */
 			// Copy over the paths of our neighbors
 			Set<Abstraction> nbs = neighbors.get(parent);
 			if (nbs != null)
-				for (Abstraction nb : nbs) {
-					Set<SourceContextAndPath> nbPaths = nb.getPaths();
-					if (nbPaths != null)
-						parentPaths.addAll(nbPaths);
-				}
-				
+				for (Abstraction nb : nbs)
+					parent.migratePathsFrom(nb);
+			
 			// Get the children. If we have none, we can abort
 			Set<Abstraction> children = successors.get(parent);
 			if (children == null || children.isEmpty())
 				return;
-				
+			
 			for (Abstraction child : children) {
+				// Extend the paths from the parent to the source with the child
 				boolean added = false;
-				Set<SourceContextAndPath> childScaps = child.getOrMakePathCache();
 				for (SourceContextAndPath scap : parentPaths) {
+					// If we have already seen this child on this path, we skip it
+					if (!scap.putAbstractionOnCallStack(child))
+						continue;
+					
+					SourceContextAndPath extendedScap;
 					if (child.getCurrentStmt() != null) {
-						SourceContextAndPath extendedScap = scap.extendPath(child.getCurrentStmt());
-						if (childScaps.add(extendedScap))
-							added = true;
+						// Extend the path over the child statement
+						extendedScap = scap.extendPath(child.getCurrentStmt());
 					}
-					else if (childScaps.add(scap))
-						added = true;
+					else
+						// We have no current statement, so just update the call stack
+						extendedScap = scap;
+					
+					// Do we process a method return?
+					if (child.getCorrespondingCallSite() != null) {
+						Pair<Stmt, Set<Abstraction>> topCallStackItem = extendedScap.getTopCallStackItem();
+						if (topCallStackItem != null && topCallStackItem.getO1() != null) {
+							// Make sure that we don't follow an unrealizable path
+							if (topCallStackItem.getO1() != child.getCorrespondingCallSite())
+								continue;
+							
+							// We have returned from a function
+							extendedScap = extendedScap.popTopCallStackItem();
+						}
+					}
+					
+					// Add the new path
+					added = child.addPathElement(extendedScap);
 				}
 					
 				// If we have added a new path, we schedule it to be propagated
 				// down to the child's children
 				if (added) {
-					executor.execute(new ExtendPathTask(flagAbs, child));
+					executor.execute(new ExtendPathTask(child));
 					Set<Abstraction> childNbs = neighbors.get(child);
 					if (childNbs != null)
 						for (Abstraction nb : childNbs)
-						executor.execute(new ExtendPathTask(flagAbs, nb));
+							executor.execute(new ExtendPathTask(nb));
 				}
 			}
 		}
@@ -265,7 +301,7 @@ public class SemiThreadedPathBuilder implements IAbstractionPathBuilder {
     	// Start the path extensions tasks
 		logger.info("Running path extension on {} roots", roots.size());
     	for (Abstraction root : roots)
-   			executor.execute(new ExtendPathTask(new Object(), root));
+   			executor.execute(new ExtendPathTask(root));
     	
     	try {
 			executor.awaitCompletion();

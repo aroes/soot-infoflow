@@ -100,7 +100,7 @@ public class MapTestCode {
 	
 	public void entryTest(){
 		String tainted = TelephonyManager.getDeviceId();
-		HashMap<String, String> map = new HashMap<String, String>();
+		MyHashMap<String, String> map = new MyHashMap<String, String>();
 		map.put("neutral", "neutral");
 		map.put("tainted", tainted);
 		Set<Entry<String, String>> entries = map.entrySet();
@@ -144,6 +144,20 @@ public class MapTestCode {
 		
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(untaintedElement);
+	}
+	
+	private String append(String s) {
+		return s + "x";
+	}
+	
+	public void loopCallTest() {
+		String tainted = TelephonyManager.getDeviceId();
+		while (tainted.length() < 100) {
+			tainted = append(tainted);
+			tainted = append(tainted);
+		}
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(tainted);
 	}
 	
 }

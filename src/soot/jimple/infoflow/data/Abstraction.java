@@ -15,7 +15,10 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
+import java.util.concurrent.ConcurrentHashMap;
 
 import soot.NullType;
 import soot.SootMethod;
@@ -38,7 +41,7 @@ import com.google.common.collect.Sets;
  * @author Steven Arzt
  * @author Christian Fritz
  */
-public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction> {
+public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction, Unit> {
 	
 	private static boolean flowSensitiveAliasing = true;
 	
@@ -50,12 +53,14 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction>
 	private Abstraction predecessor = null;
 	private Set<Abstraction> neighbors = null;
 	private Stmt currentStmt = null;
+	private Stmt correspondingCallSite = null;
 	
 	private SourceContext sourceContext = null;
 
 	// only used in path generation
-	private Set<SourceContextAndPath> pathCache = null;
+	private Map<SourceContextAndPath, SourceContextAndPath> pathCache = null;
 	private BitSet pathFlags = null;
+	private Set<Stack<Stmt>> callSites = null;
 	
 	/**
 	 * Unit/Stmt which activates the taint when the abstraction passes it
@@ -247,20 +252,56 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction>
 	public Set<SourceContextAndPath> getPaths() {
 		if (pathCache == null)
 			return Collections.emptySet();
-		return pathCache;
+		return Collections.unmodifiableSet(pathCache.keySet());
+	}
+	
+	private static Object mergeLock = new Object();
+	
+	public void migratePathsFrom(Abstraction abs) {
+		if (abs.pathCache == null || abs.pathCache == this.pathCache)
+			return;
+		
+		synchronized (mergeLock) {			
+//			Set<SourceContextAndPath> oldThis = this.pathCache;
+//			this.pathCache = abs.pathCache;
+//			this.pathCache.addAll(oldThis);
+			
+			for (SourceContextAndPath scap : abs.pathCache.keySet()) {
+				/*
+				SourceContextAndPath oldScap = this.pathCache.get(scap);
+				if (oldScap == null)
+					this.pathCache.put(scap, scap);
+				else
+					oldScap.merge(scap);
+				 */
+				this.pathCache.put(scap, scap);
+			}
+		}
 	}
 	
 	public Set<SourceContextAndPath> getOrMakePathCache() {
 		// We're optimistic about having a path cache. If we definitely have one,
 		// we return it. Otherwise, we need to lock and create one.
 		if (this.pathCache != null)
-			return pathCache;
+			return Collections.unmodifiableSet(pathCache.keySet());
 		
-		synchronized (this) {
+		synchronized (mergeLock) {
 			if (this.pathCache == null)
-				this.pathCache = new ConcurrentHashSet<SourceContextAndPath>();
+				this.pathCache = new ConcurrentHashMap<SourceContextAndPath, SourceContextAndPath>();
 		}
-		return pathCache;
+		return Collections.unmodifiableSet(pathCache.keySet());
+	}
+	
+	public boolean addPathElement(SourceContextAndPath scap) {
+		getOrMakePathCache();
+		
+		SourceContextAndPath oldScap = this.pathCache.get(scap);
+		if (oldScap == null) {
+			this.pathCache.put(scap, scap);
+			return true;
+		}
+		
+		return oldScap.merge(scap);
 	}
 	
 	public boolean registerPathFlag(int id) {
@@ -274,7 +315,14 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction>
 		}
 		return true;
 	}
-
+	
+	public boolean registerCallSite(Stack<Stmt> callSite) {
+		if (this.callSites == null)
+			this.callSites = new ConcurrentHashSet<Stack<Stmt>>();
+		return this.callSites.add(callSite);
+		
+	}
+	
 	public boolean isAbstractionActive() {
 		return activationUnit == null;
 	}
@@ -520,6 +568,14 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction>
 			this.neighbors.add(originalAbstraction);
 		}
 	}
+	
+	public void setCorrespondingCallSite(Stmt callSite) {
+		this.correspondingCallSite = callSite;
+	}
+	
+	public Stmt getCorrespondingCallSite() {
+		return this.correspondingCallSite;
+	}
 		
 	public static Abstraction getZeroAbstraction(boolean flowSensitiveAliasing) {
 		Abstraction zeroValue = new Abstraction(new JimpleLocal("zero", NullType.v()), new SourceInfo(false),
@@ -537,6 +593,11 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction>
 	public void setCallingContext(Abstraction callingContext) {
 		// TODO Auto-generated method stub
 		
+	}
+
+	@Override
+	public void setCallSite(Unit callSite) {
+		// TODO Auto-generated method stub
 	}
 	
 }

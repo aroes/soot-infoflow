@@ -162,12 +162,10 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 	 */
 	private class ExtendPathTask implements Runnable {
 		
-		private final Object flagAbs;
 		private final Abstraction parent;
 		private final boolean extendPath;
 		
-		public ExtendPathTask(Object flagAbs, Abstraction parent, boolean extendPath) {
-			this.flagAbs = flagAbs;
+		public ExtendPathTask(Abstraction parent, boolean extendPath) {
 			this.parent = parent;
 			this.extendPath = extendPath;
 		}
@@ -209,11 +207,11 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
 				// If we have added a new path, we schedule it to be propagated
 				// down to the child's children
 				if (added) {
-					executor.execute(new ExtendPathTask(flagAbs, child, true));
+					executor.execute(new ExtendPathTask(child, true));
 					Set<Abstraction> childNbs = neighbors.get(child);
 					if (childNbs != null)
 						for (Abstraction nb : childNbs)
-							executor.execute(new ExtendPathTask(flagAbs, nb, true));
+							executor.execute(new ExtendPathTask(nb, true));
 				}
 			}
 		}
@@ -260,7 +258,7 @@ public class ThreadedPathBuilder implements IAbstractionPathBuilder {
     	// Start the path extensions tasks
 		logger.info("Running path extension on {} roots", roots.size());
     	for (Abstraction root : roots)
-   			executor.execute(new ExtendPathTask(new Object(), root, true));
+   			executor.execute(new ExtendPathTask(root, true));
     	
     	try {
 			executor.awaitCompletion();

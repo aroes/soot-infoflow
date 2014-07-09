@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import soot.jimple.infoflow.Infoflow;
@@ -256,11 +255,10 @@ public class OtherTests extends JUnitTests{
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
 		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourcePwd));
-		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));
+		Assert.assertFalse(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));
     }
 
     @Test(timeout=300000)
-    @Ignore("Work in progress")
     public void pathSkipTest3(){
     	Infoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
@@ -270,7 +268,52 @@ public class OtherTests extends JUnitTests{
 		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourcePwd));
 		Assert.assertFalse(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));
     }
+    
+    @Test(timeout=300000)
+    public void pathSkipTest4(){
+    	Infoflow infoflow = initInfoflow();
+    	List<String> epoints = new ArrayList<String>();
+    	epoints.add("<soot.jimple.infoflow.test.OtherTestCode: void pathSkipTest4()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+		Assert.assertFalse(infoflow.getResults().isPathBetweenMethods(sink, sourcePwd));
+		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));
+    }
+    
+    @Test(timeout=300000)
+    public void pathSkipTest5(){
+    	Infoflow infoflow = initInfoflow();
+    	List<String> epoints = new ArrayList<String>();
+    	epoints.add("<soot.jimple.infoflow.test.OtherTestCode: void pathSkipTest5()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+		Assert.assertFalse(infoflow.getResults().isPathBetweenMethods(sink, sourcePwd));
+		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));
+    }
+    
+    @Test(timeout=300000)
+    public void pathSkipTest6(){
+    	for (int i = 0; i < 25; i++) {
+    	Infoflow infoflow = initInfoflow();
+    	List<String> epoints = new ArrayList<String>();
+    	epoints.add("<soot.jimple.infoflow.test.OtherTestCode: void pathSkipTest6()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourcePwd));
+		Assert.assertFalse(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));
+    	}
+    }
 
+    @Test(timeout=300000)
+    public void recursionTest1(){
+    	Infoflow infoflow = initInfoflow();
+    	List<String> epoints = new ArrayList<String>();
+    	epoints.add("<soot.jimple.infoflow.test.OtherTestCode: void recursionTest1()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));
+    }
+    
     @Test(timeout=300000)
     public void noPathsTest1(){
     	Infoflow infoflow = initInfoflow();

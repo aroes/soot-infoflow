@@ -114,7 +114,7 @@ public class ListTests extends JUnitTests {
 		checkInfoflow(infoflow, 1);	
     }
     
-    @Test(timeout=300000)
+    @Test(timeout=250000)
     public void linkedListIteratorTest(){
     	Infoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
