@@ -100,7 +100,7 @@ public class DefaultEntryPointCreator extends BaseEntryPointCreator {
 						SootMethodRepresentationParser.v().parseSootMethodString(method);
 				SootMethod currentMethod = findMethod(Scene.v().getSootClass(methodAndClass.getClassName()),
 						methodAndClass.getSubSignature());
-				if (classLocal == null) {
+				if (classLocal == null && !currentMethod.isStatic()) {
 					logger.warn("Cannot call method {}, because there is no local for base object: {}", 
 							currentMethod, methodAndClass.getClassName());
 					failedMethods.add(currentMethod);
