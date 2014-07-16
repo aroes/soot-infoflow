@@ -11,6 +11,7 @@
 package soot.jimple.infoflow.util;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -78,7 +79,7 @@ public class SootMethodRepresentationParser {
        
 	}
 	//returns classname and unresolved! method names and return types and parameters
-	public HashMap<String, Set<String>> parseClassNames(List<String> methods, boolean subSignature){
+	public HashMap<String, Set<String>> parseClassNames(Collection<String> methods, boolean subSignature){
 		HashMap<String, Set<String>> result = new HashMap<String,  Set<String>>();
 		Pattern pattern = Pattern.compile("^\\s*<(.*?):\\s*(.*?)>\\s*$");
 		for(String parseString : methods){

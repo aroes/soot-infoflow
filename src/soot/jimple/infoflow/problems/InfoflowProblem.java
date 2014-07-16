@@ -16,7 +16,6 @@ import heros.TwoElementSet;
 import heros.flowfunc.Identity;
 import heros.flowfunc.KillAll;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -26,6 +25,7 @@ import java.util.Set;
 import soot.ArrayType;
 import soot.IntType;
 import soot.Local;
+import soot.NullType;
 import soot.PrimType;
 import soot.RefType;
 import soot.SootField;
@@ -74,6 +74,7 @@ import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.infoflow.util.BaseSelector;
 import soot.jimple.infoflow.util.ConcurrentHashSet;
 import soot.jimple.infoflow.util.MyConcurrentHashMap;
+import soot.jimple.infoflow.util.SystemClassHandler;
 
 public class InfoflowProblem extends AbstractInfoflowProblem {
 	
@@ -109,7 +110,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 		super(icfg, sourceSinkManager);
 		this.aliasingStrategy = aliasingStrategy;
 		this.implicitFlowAliasingStrategy = new ImplicitFlowAliasStrategy(icfg);
-		this.aliasing = new Aliasing(aliasingStrategy);
+		this.aliasing = new Aliasing(aliasingStrategy, icfg);
 	}
 
 	/**
@@ -141,8 +142,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			
 			// or one of the parameters must be tainted
 			if (!found)
-				for (Value param : iStmt.getInvokeExpr().getArgs())
-					if (aliasing.mayAlias(source.getAccessPath().getPlainValue(), param)) {
+				for (int paramIdx = 0; paramIdx < iStmt.getInvokeExpr().getArgCount(); paramIdx++)
+					if (aliasing.mayAlias(source.getAccessPath().getPlainValue(),
+							iStmt.getInvokeExpr().getArg(paramIdx))) {
 						found = true;
 						break;
 				}
@@ -365,7 +367,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			 * for the given call, otherwise false
 			 */
 			private boolean hasValidCallees(Unit call) {
-				Set<SootMethod> callees = interproceduralCFG().getCalleesOfCallAt(call);
+				Collection<SootMethod> callees = interproceduralCFG().getCalleesOfCallAt(call);
 				for (SootMethod callee : callees)
 					if (callee.isConcrete())
 						return true;
@@ -430,8 +432,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					Value left = assignStmt.getLeftOp();
 
 					final Value leftValue = BaseSelector.selectBase(left, true);
-					final Set<Value> rightVals = Collections.unmodifiableSet
-							(BaseSelector.selectBaseList(right, true));
+					final Value[] rightVals = BaseSelector.selectBaseList(right, true);
 					
 					final boolean isSink = sourceSinkManager != null
 							? sourceSinkManager.isSink(assignStmt, interproceduralCFG()) : false;
@@ -477,7 +478,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							
 							// Check whether we must activate a taint
 							final Abstraction newSource;
-							if (!source.isAbstractionActive() && src.equals(source.getActivationUnit()))
+							if (!source.isAbstractionActive() && src == source.getActivationUnit())
 								newSource = source.getActiveCopy();
 							else
 								newSource = source;
@@ -499,17 +500,22 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							
 							if(newSource.getAccessPath().isInstanceFieldRef()) {
 								//x.f = y && x.f tainted --> no taint propagated
+								// Exception: This statement activates the taint
 								if (leftValue instanceof InstanceFieldRef) {
-									InstanceFieldRef leftRef = (InstanceFieldRef) leftValue;
-									if (aliasing.mustAlias(leftRef.getBase(), newSource.getAccessPath().getPlainValue())) {
-										if (aliasing.mustAlias(leftRef.getField(), newSource.getAccessPath().getFirstField())) {
-											return Collections.emptySet();
+									if (!(newSource.isAbstractionActive() && !source.isAbstractionActive())) {
+										InstanceFieldRef leftRef = (InstanceFieldRef) leftValue;
+										if (aliasing.mustAlias((Local) leftRef.getBase(),
+												newSource.getAccessPath().getPlainValue(), assignStmt)) {
+											if (aliasing.mustAlias(leftRef.getField(), newSource.getAccessPath().getFirstField())) {
+												return Collections.emptySet();
+											}
 										}
 									}
 								}
-								//x = y && x.f tainted -> no taint propagated
+								// x = y && x.f tainted -> no taint propagated. This must only check the precise
+								// variable which gets replaced, but not any potential strong aliases
 								else if (leftValue instanceof Local){
-									if (aliasing.mustAlias(leftValue, newSource.getAccessPath().getPlainValue())) {
+									if (leftValue == newSource.getAccessPath().getPlainValue()) {
 										return Collections.emptySet();
 									}
 								}	
@@ -528,7 +534,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							// then the fields should not be tainted any more
 							//x = y && x.f tainted -> no taint propagated
 							else if (newSource.getAccessPath().isLocal()
-									&& aliasing.mustAlias(leftValue, newSource.getAccessPath().getPlainValue())){
+									&& leftValue instanceof Local
+									&& leftValue == newSource.getAccessPath().getPlainValue()){
 								return Collections.emptySet();
 							}
 														
@@ -540,7 +547,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								final AssignStmt assignStmt,
 								final Value right,
 								final Value leftValue,
-								final Set<Value> rightVals,
+								final Value[] rightVals,
 								final boolean isSink,
 								Abstraction d1,
 								final Abstraction newSource) {
@@ -574,8 +581,15 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							if (!addLeftValue && !aliasOverwritten) {
 								for (Value rightValue : rightVals) {
 									if (rightValue instanceof FieldRef) {
-										// Get the field reference and check for aliasing
+										// Get the field reference
 										FieldRef rightRef = (FieldRef) rightValue;
+
+										// If the right side references a NULL field, we kill the taint
+										if (rightRef instanceof InstanceFieldRef
+												&& ((InstanceFieldRef) rightRef).getBase().getType() instanceof NullType)
+											return null;
+										
+										// Check for aliasing
 										mappedAP = aliasing.mayAlias(newSource.getAccessPath(),
 												new AccessPath(rightRef, false));
 										
@@ -587,25 +601,26 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 												cutFirstField = true;
 											}
 										}
-										// if both are fields, we have to compare their fieldName via equals and their bases
+										// check for field references
 										//y = x.f && x tainted --> y, x tainted
 										//y = x.f && x.f tainted --> y, x tainted
 										else if (rightValue instanceof InstanceFieldRef) {								
 											Local rightBase = (Local) ((InstanceFieldRef) rightRef).getBase();
-											Local sourceBase = newSource.getAccessPath().getPlainLocal();
+											Local sourceBase = newSource.getAccessPath().getPlainValue();
+											final SootField rightField = rightRef.getField();
 											
 											// We need to compare the access path on the right side
 											// with the start of the given one
 											if (mappedAP != null) {
 												addLeftValue = true;
 												cutFirstField = (mappedAP.getFieldCount() > 0
-														&& mappedAP.getFirstField().equals(rightRef.getField()));
+														&& mappedAP.getFirstField() == rightField);
 											}
 											else if (aliasing.mayAlias(rightBase, sourceBase)
 													&& newSource.getAccessPath().getFieldCount() == 0
 													&& newSource.getAccessPath().getTaintSubFields()) {
 												addLeftValue = true;
-												targetType = rightRef.getField().getType();
+												targetType = rightField.getType();
 											}
 										}
 									}
@@ -614,7 +629,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									// y = x && x.f tainted --> y.f, x.f tainted
 									// y.g = x && x.f tainted --> y.g.f, x.f tainted
 									else if (rightValue instanceof Local && newSource.getAccessPath().isInstanceFieldRef()) {
-										Local base = newSource.getAccessPath().getPlainLocal();
+										Local base = newSource.getAccessPath().getPlainValue();
 										if (aliasing.mayAlias(rightValue, base)) {
 											addLeftValue = true;
 											targetType = newSource.getAccessPath().getBaseType();
@@ -672,7 +687,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							if (isSink && newSource.isAbstractionActive() && newSource.getAccessPath().isEmpty())
 								addResult(new AbstractionAtSink(newSource, leftValue, assignStmt));
 							
-							Abstraction targetAB = newSource.deriveNewAbstraction(mappedAP, null);
+							Abstraction targetAB = mappedAP.equals(newSource.getAccessPath()) ? newSource
+									: newSource.deriveNewAbstraction(mappedAP, null);
 							addTaintViaStmt(d1, assignStmt, leftValue, targetAB, res, cutFirstField,
 									interproceduralCFG().getMethodOf(src), targetType);
 							res.add(newSource);
@@ -722,7 +738,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									return Collections.emptySet();
 							}
 
-							if (aliasing.mayAlias(throwStmt.getOp(), source.getAccessPath().getPlainLocal()))
+							if (aliasing.mayAlias(throwStmt.getOp(), source.getAccessPath().getPlainValue()))
 								return Collections.singleton(source.deriveNewAbstractionOnThrow(throwStmt));
 
 							return Collections.singleton(source);
@@ -798,10 +814,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				final Stmt stmt = (Stmt) src;
 				final InvokeExpr ie = stmt.getInvokeExpr();
 				
-				final List<Value> callArgs = ie.getArgs();				
-				final List<Value> paramLocals = new ArrayList<Value>(dest.getParameterCount());
+				final Value[] paramLocals = new Value[dest.getParameterCount()];
 				for (int i = 0; i < dest.getParameterCount(); i++)
-					paramLocals.add(dest.getActiveBody().getParameterLocal(i));
+					paramLocals[i] = dest.getActiveBody().getParameterLocal(i);
 				
 				final SourceInfo sourceInfo = sourceSinkManager != null
 						? sourceSinkManager.getSourceInfo((Stmt) src, interproceduralCFG()) : null;
@@ -813,7 +828,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				
 				// This is not cached by Soot, so accesses are more expensive
 				// than one might think
-				final Local thisLocal = dest.isStatic() ? null : dest.getActiveBody().getThisLocal();	
+				final Local thisLocal = dest.isStatic() ? null : dest.getActiveBody().getThisLocal();
+				
+				final boolean isExecutorExecute = ie.getMethod().getSubSignature().equals("void execute(java.lang.Runnable)")
+						&& dest.getSubSignature().equals("void run()");
 
 				return new SolverCallFlowFunction() {
 
@@ -909,18 +927,24 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							res.add(source);
 						
 						//special treatment for clinit methods - no param mapping possible
-						if(!dest.getName().equals("<clinit>")) {
-							assert dest.getParameterCount() == callArgs.size();
+						if (isExecutorExecute) {
+							if (aliasing.mayAlias(ie.getArg(0), source.getAccessPath().getPlainValue())) {
+								Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
+										(dest.getActiveBody().getThisLocal()), stmt);
+								res.add(abs);
+							}
+						}
+						else if(!dest.getName().equals("<clinit>")) {
+							assert dest.getParameterCount() == ie.getArgCount();
 							// check if param is tainted:
-							for (int i = 0; i < callArgs.size(); i++) {
-								if (aliasing.mayAlias(callArgs.get(i), source.getAccessPath().getPlainLocal())) {
+							for (int i = 0; i < ie.getArgCount(); i++) {
+								if (aliasing.mayAlias(ie.getArg(i), source.getAccessPath().getPlainValue())) {
 									Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
-											(paramLocals.get(i)), stmt);
+											(paramLocals[i]), stmt);
 									res.add(abs);
 								}
 							}
 						}
-						
 						return res;
 					}
 				};
@@ -934,9 +958,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				final boolean isSink = (returnStmt != null && sourceSinkManager != null)
 						? sourceSinkManager.isSink(returnStmt, interproceduralCFG()) : false;
 				
-				final List<Value> paramLocals = new ArrayList<Value>(callee.getParameterCount());
+				final Value[] paramLocals = new Value[callee.getParameterCount()];
 				for (int i = 0; i < callee.getParameterCount(); i++)
-					paramLocals.add(callee.getActiveBody().getParameterLocal(i));
+					paramLocals[i] = callee.getActiveBody().getParameterLocal(i);
 				
 				// This is not cached by Soot, so accesses are more expensive
 				// than one might think
@@ -972,7 +996,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						Abstraction newSource = source;
 						if(!source.isAbstractionActive())
 							if(callSite != null)
-								if (callSite.equals(source.getActivationUnit())
+								if (callSite == source.getActivationUnit()
 										|| isCallSiteActivatingTaint(callSite, source.getActivationUnit()))
 									newSource = source.getActiveCopy();
 						
@@ -1023,7 +1047,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						
 						//if abstraction is not active and activeStmt was in this method, it will not get activated = it can be removed:
 						if(!newSource.isAbstractionActive() && newSource.getActivationUnit() != null)
-							if (interproceduralCFG().getMethodOf(newSource.getActivationUnit()).equals(callee))
+							if (interproceduralCFG().getMethodOf(newSource.getActivationUnit()) == callee)
 								return Collections.emptySet();
 						
 						Set<Abstraction> res = new HashSet<Abstraction>();
@@ -1055,7 +1079,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							Value leftOp = defnStmt.getLeftOp();
 							
 							if ((insideConditional && leftOp instanceof FieldRef)
-									|| aliasing.mayAlias(retLocal, newSource.getAccessPath().getPlainLocal())) {
+									|| aliasing.mayAlias(retLocal, newSource.getAccessPath().getPlainValue())) {
 								Abstraction abs = newSource.deriveNewAbstraction
 										(newSource.getAccessPath().copyWithNewValue(leftOp), (Stmt) exitStmt);
 								res.add(abs);
@@ -1091,11 +1115,13 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						// checks: this/params/fields
 						
 						// check one of the call params are tainted (not if simple type)
-						Value sourceBase = newSource.getAccessPath().getPlainLocal();
+						Value sourceBase = newSource.getAccessPath().getPlainValue();
+						boolean parameterAliases = false;
 						{
 						Value originalCallArg = null;
 						for (int i = 0; i < callee.getParameterCount(); i++) {
-							if (aliasing.mayAlias(paramLocals.get(i), sourceBase)) {
+							if (aliasing.mayAlias(paramLocals[i], sourceBase)) {
+								parameterAliases = true;
 								if (callSite instanceof Stmt) {
 									Stmt iStmt = (Stmt) callSite;
 									originalCallArg = iStmt.getInvokeExpr().getArg(i);
@@ -1131,21 +1157,14 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						{
 						if (!callee.isStatic()) {
 							if (aliasing.mayAlias(thisLocal, sourceBase)) {
-								boolean param = false;
 								// check if it is not one of the params (then we have already fixed it)
-								for (int i = 0; i < callee.getParameterCount(); i++) {
-									if (aliasing.mayAlias(paramLocals.get(i), sourceBase)) {
-										param = true;
-										break;
-									}
-								}
-								if (!param) {
+								if (!parameterAliases) {
 									if (callSite instanceof Stmt) {
 										Stmt stmt = (Stmt) callSite;
 										if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
 											InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();
 											Abstraction abs = newSource.deriveNewAbstraction
-													(newSource.getAccessPath().copyWithNewValue(iIExpr.getBase()), stmt);
+													(newSource.getAccessPath().copyWithNewValue(iIExpr.getBase()), (Stmt) exitStmt);
 											res.add(abs);
 											
 											// Aliases of implicitly tainted variables must be mapped back
@@ -1176,7 +1195,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				if (call instanceof Stmt) {
 					final Stmt iStmt = (Stmt) call;
 					final InvokeExpr invExpr = iStmt.getInvokeExpr();
-					final List<Value> callArgs = invExpr.getArgs();
+					
+					final Value[] callArgs = new Value[invExpr.getArgCount()];
+					for (int i = 0; i < invExpr.getArgCount(); i++)
+						callArgs[i] = invExpr.getArg(i);
 					
 					final SourceInfo sourceInfo = sourceSinkManager != null
 							? sourceSinkManager.getSourceInfo((Stmt) call, interproceduralCFG()) : null;
@@ -1243,7 +1265,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 
 							//check inactive elements:
 							final Abstraction newSource;
-							if (!source.isAbstractionActive() && (call.equals(source.getActivationUnit())
+							if (!source.isAbstractionActive() && (call == source.getActivationUnit()
 									|| isCallSiteActivatingTaint(call, source.getActivationUnit())))
 								newSource = source.getActiveCopy();
 							else
@@ -1266,7 +1288,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							// side, the taint is never passed on.
 							boolean passOn = !newSource.getAccessPath().isStaticFieldRef()
 									&& !(call instanceof DefinitionStmt && aliasing.mayAlias(((DefinitionStmt) call).getLeftOp(),
-											newSource.getAccessPath().getPlainLocal()));
+											newSource.getAccessPath().getPlainValue()));
 							//we only can remove the taint if we step into the call/return edges
 							//otherwise we will loose taint - see ArrayTests/arrayCopyTest
 							if (passOn && newSource.getAccessPath().isInstanceFieldRef())
@@ -1276,12 +1298,12 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 													interproceduralCFG()))) {
 										if (invExpr instanceof InstanceInvokeExpr)
 											if (aliasing.mayAlias(((InstanceInvokeExpr) invExpr).getBase(),
-													newSource.getAccessPath().getPlainLocal())) {
+													newSource.getAccessPath().getPlainValue())) {
 												passOn = false;
 											}
 											if (passOn)
-												for (int i = 0; i < callArgs.size(); i++)
-													if (aliasing.mayAlias(callArgs.get(i), newSource.getAccessPath().getPlainLocal())) {
+												for (int i = 0; i < callArgs.length; i++)
+													if (aliasing.mayAlias(callArgs[i], newSource.getAccessPath().getPlainValue())) {
 														passOn = false;
 														break;
 													}
@@ -1305,18 +1327,22 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									res.add(newSource);
 							
 							if (callee.isNative())
-								if (callArgs.contains(newSource.getAccessPath().getPlainValue())) {
-									// java uses call by value, but fields of complex objects can be changed (and tainted), so use this conservative approach:
-									Set<Abstraction> nativeAbs = ncHandler.getTaintedValues(iStmt, newSource, callArgs);
-									res.addAll(nativeAbs);
-									
-									// Compute the aliases
-									for (Abstraction abs : nativeAbs)
-										if (abs.getAccessPath().isStaticFieldRef()
-												|| triggerInaktiveTaintOrReverseFlow(iStmt, abs.getAccessPath().getPlainValue(), abs))
-											computeAliasTaints(d1, (Stmt) call, abs.getAccessPath().getPlainValue(), res,
-													interproceduralCFG().getMethodOf(call), abs);
-								}
+								for (Value callVal : callArgs)
+									if (callVal == newSource.getAccessPath().getPlainValue()) {
+										// java uses call by value, but fields of complex objects can be changed (and tainted), so use this conservative approach:
+										Set<Abstraction> nativeAbs = ncHandler.getTaintedValues(iStmt, newSource, callArgs);
+										res.addAll(nativeAbs);
+										
+										// Compute the aliases
+										for (Abstraction abs : nativeAbs)
+											if (abs.getAccessPath().isStaticFieldRef()
+													|| triggerInaktiveTaintOrReverseFlow(iStmt, abs.getAccessPath().getPlainValue(), abs))
+												computeAliasTaints(d1, (Stmt) call, abs.getAccessPath().getPlainValue(), res,
+														interproceduralCFG().getMethodOf(call), abs);
+										
+										// We only call the native code handler once per statement
+										break;
+									}
 							
 							// if we have called a sink we have to store the path from the source - in case one of the params is tainted!
 							if (isSink) {
@@ -1326,22 +1352,22 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										&& aliasing.mayAlias(interproceduralCFG().getMethodOf(call).getActiveBody().getThisLocal(),
 												newSource.getAccessPath().getPlainValue())
 										&& newSource.getAccessPath().getFirstField() == null;
-								boolean taintedParam = (newSource.getTopPostdominator() != null
-											|| newSource.getAccessPath().isEmpty()
-											|| conditionalCall)
+								boolean taintedParam = (conditionalCall
+											|| newSource.getTopPostdominator() != null
+											|| newSource.getAccessPath().isEmpty())
 										&& newSource.isAbstractionActive();
 								// If the base object is tainted, we also consider the "code" associated
 								// with the object's class as tainted.
 								if (!taintedParam) {
-									for (int i = 0; i < callArgs.size(); i++) {
-										if (aliasing.mayAlias(callArgs.get(i), newSource.getAccessPath().getPlainLocal())) {
+									for (int i = 0; i < callArgs.length; i++) {
+										if (aliasing.mayAlias(callArgs[i], newSource.getAccessPath().getPlainValue())) {
 											taintedParam = true;
 											break;
 										}
 									}
 								}
 								
-								if (newSource.isAbstractionActive() && taintedParam)
+								if (taintedParam && newSource.isAbstractionActive())
 									addResult(new AbstractionAtSink(newSource, invExpr, iStmt));
 								// if the base object which executes the method is tainted the sink is reached, too.
 								if (invExpr instanceof InstanceInvokeExpr) {
@@ -1372,6 +1398,18 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 	 * @param resultAbs The abstraction at the sink instruction
 	 */
 	private void addResult(AbstractionAtSink resultAbs) {
+		// Check whether we need to filter a result in a system package
+		if (ignoreFlowsInSystemPackages && SystemClassHandler.isClassInSystemPackage
+				(interproceduralCFG().getMethodOf(resultAbs.getSinkStmt()).getDeclaringClass().getName()))
+			return;
+		
+		// Make sure that the sink statement also appears inside the
+		// abstraction
+		resultAbs = new AbstractionAtSink
+				(resultAbs.getAbstraction().deriveNewAbstraction
+						(resultAbs.getAbstraction().getAccessPath(), resultAbs.getSinkStmt()),
+				resultAbs.getSinkValue(), resultAbs.getSinkStmt());
+		
 		Abstraction newAbs = this.results.putIfAbsentElseGet
 				(resultAbs, resultAbs.getAbstraction());
 		if (newAbs != resultAbs.getAbstraction())

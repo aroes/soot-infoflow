@@ -12,6 +12,7 @@ package soot.jimple.infoflow.test;
 
 import java.util.LinkedList;
 
+import soot.jimple.infoflow.test.android.AccountManager;
 import soot.jimple.infoflow.test.android.ConnectionManager;
 import soot.jimple.infoflow.test.android.TelephonyManager;
 import soot.jimple.infoflow.test.utilclasses.C1static;
@@ -187,10 +188,14 @@ public class OtherTestCode {
 	private class O {
 		String field;
 
+		public String get() {
+			return field;
+		}
+		
+		public void set(String data) {
+			this.field = data;
+		}
 	}
-	
-
-
 	
 	public void method2() {
 		String tainted = TelephonyManager.getDeviceId();
@@ -445,5 +450,56 @@ public class OtherTestCode {
 		
 		cm.publish((String) ll1.nextElement.nextElement.nextElement.nextElement.nextElement.element);
 	}
+
+	public void pathSkipTest() {
+		O o = new O();
+		o.field = TelephonyManager.getDeviceId();
+		o.get();
+		String x = o.get();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(x);
+	}
 		
+	public void pathSkipTest2() {
+		O o = new O();
+		AccountManager am = new AccountManager();
+		String deviceId = TelephonyManager.getDeviceId();
+
+		// make sure o.field is tainted before the first call to set()
+		o.field = TelephonyManager.getDeviceId();
+		
+		// call set() twice with different sources
+		o.set(deviceId);
+		o.set(am.getPassword());
+		
+		String x = o.get();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(x);
+	}
+	
+	private String id(String data) {
+		return data;
+	}
+	
+	public void pathSkipTest3() {
+		AccountManager am = new AccountManager();
+		String deviceId = TelephonyManager.getDeviceId();
+		String data = "";
+
+		// call set() twice with different sources
+		data = id(deviceId);
+		System.out.println(data);
+		data = id(am.getPassword());
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(data);
+	}
+	
+	public void noPathsTest1() {
+		String deviceId = TelephonyManager.getDeviceId();
+		String did = id(deviceId);
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(did);
+	}
+
 }

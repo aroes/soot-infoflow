@@ -122,62 +122,77 @@ public class InfoflowCFG implements IInfoflowCFG {
 
 	//delegate methods follow
 	
+	@Override
 	public SootMethod getMethodOf(Unit u) {
 		return delegate.getMethodOf(u);
 	}
 
+	@Override
 	public List<Unit> getSuccsOf(Unit u) {
 		return delegate.getSuccsOf(u);
 	}
 
+	@Override
 	public boolean isExitStmt(Unit u) {
 		return delegate.isExitStmt(u);
 	}
 
+	@Override
 	public boolean isStartPoint(Unit u) {
 		return delegate.isStartPoint(u);
 	}
 
+	@Override
 	public boolean isFallThroughSuccessor(Unit u, Unit succ) {
 		return delegate.isFallThroughSuccessor(u, succ);
 	}
 
+	@Override
 	public boolean isBranchTarget(Unit u, Unit succ) {
 		return delegate.isBranchTarget(u, succ);
 	}
 
+	@Override
 	public Collection<Unit> getStartPointsOf(SootMethod m) {
 		return delegate.getStartPointsOf(m);
 	}
 
+	@Override
 	public boolean isCallStmt(Unit u) {
 		return delegate.isCallStmt(u);
 	}
 
+	@Override
 	public Set<Unit> allNonCallStartNodes() {
 		return delegate.allNonCallStartNodes();
 	}
 
-	public Set<SootMethod> getCalleesOfCallAt(Unit u) {
+	@Override
+	public Collection<SootMethod> getCalleesOfCallAt(Unit u) {
 		return delegate.getCalleesOfCallAt(u);
 	}
 
-	public Set<Unit> getCallersOf(SootMethod m) {
+	@Override
+	public Collection<Unit> getCallersOf(SootMethod m) {
 		return delegate.getCallersOf(m);
 	}
 
+	@Override
 	public Collection<Unit> getReturnSitesOfCallAt(Unit u) {
 		return delegate.getReturnSitesOfCallAt(u);
 	}
 
+	@Override
 	public Set<Unit> getCallsFromWithin(SootMethod m) {
 		return delegate.getCallsFromWithin(m);
 	}
 
+	@Override
 	public List<Unit> getPredsOf(Unit u) {
 		return delegate.getPredsOf(u);
 	}
 
+	@Override
 	public Collection<Unit> getEndPointsOf(SootMethod m) {
 		return delegate.getEndPointsOf(m);
 	}

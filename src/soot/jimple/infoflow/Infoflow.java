@@ -59,6 +59,7 @@ import soot.jimple.infoflow.solver.IInfoflowCFG;
 import soot.jimple.infoflow.solver.fastSolver.InfoflowSolver;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.util.SootMethodRepresentationParser;
+import soot.jimple.infoflow.util.SystemClassHandler;
 import soot.jimple.toolkits.callgraph.ReachableMethods;
 import soot.options.Options;
 /**
@@ -71,6 +72,7 @@ public class Infoflow extends AbstractInfoflow {
     
 	private static int accessPathLength = 5;
 	private static boolean useRecursiveAccessPaths = true;
+	private static boolean pathAgnosticResults = true;
 	
 	private InfoflowResults results = null;
 	private final IPathBuilderFactory pathBuilderFactory;
@@ -183,11 +185,18 @@ public class Infoflow extends AbstractInfoflow {
 		// Configure the callgraph algorithm
 		switch (callgraphAlgorithm) {
 			case AutomaticSelection:
-				if (extraSeed == null || extraSeed.isEmpty())
+				// If we analyze a distinct entry point which is not static,
+				// SPARK fails due to the missing allocation site and we fall
+				// back to CHA.
+				if (extraSeed == null || extraSeed.isEmpty()) {
 					Options.v().setPhaseOption("cg.spark", "on");
+					Options.v().setPhaseOption("cg.spark", "string-constants:true");
+				}
 				else
-					Options.v().setPhaseOption("cg.spark", "vta:true");
-				Options.v().setPhaseOption("cg.spark", "string-constants:true");
+					Options.v().setPhaseOption("cg.cha", "on");
+				break;
+			case CHA:
+				Options.v().setPhaseOption("cg.cha", "on");
 				break;
 			case RTA:
 				Options.v().setPhaseOption("cg.spark", "on");
@@ -197,6 +206,10 @@ public class Infoflow extends AbstractInfoflow {
 			case VTA:
 				Options.v().setPhaseOption("cg.spark", "on");
 				Options.v().setPhaseOption("cg.spark", "vta:true");
+				Options.v().setPhaseOption("cg.spark", "string-constants:true");
+				break;
+			case SPARK:
+				Options.v().setPhaseOption("cg.spark", "on");
 				Options.v().setPhaseOption("cg.spark", "string-constants:true");
 				break;
 			case OnDemand:
@@ -249,18 +262,19 @@ public class Infoflow extends AbstractInfoflow {
 	@Override
 	public void computeInfoflow(String appPath, String libPath,
 			IEntryPointCreator entryPointCreator,
-			List<String> entryPoints, ISourceSinkManager sourcesSinks) {
+			ISourceSinkManager sourcesSinks) {
 		if (sourcesSinks == null) {
 			logger.error("Sources are empty!");
 			return;
 		}
 		
-		initializeSoot(appPath, libPath,
-				SootMethodRepresentationParser.v().parseClassNames(entryPoints, false).keySet());
+		Set<String> requiredClasses = SootMethodRepresentationParser.v().parseClassNames
+				(entryPointCreator.getRequiredClasses(), false).keySet();
+		initializeSoot(appPath, libPath, requiredClasses);
 
 		// entryPoints are the entryPoints required by Soot to calculate Graph - if there is no main method,
 		// we have to create a new main method and use it as entryPoint and store our real entryPoints
-		Scene.v().setEntryPoints(Collections.singletonList(entryPointCreator.createDummyMain(entryPoints)));
+		Scene.v().setEntryPoints(Collections.singletonList(entryPointCreator.createDummyMain()));
 		ipcManager.updateJimpleForICC();
 		
 		// We explicitly select the packs we want to run for performance reasons
@@ -374,6 +388,7 @@ public class Infoflow extends AbstractInfoflow {
 			forwardProblem.addTaintPropagationHandler(tp);
 		forwardProblem.setTaintWrapper(taintWrapper);
 		forwardProblem.setStopAfterFirstFlow(stopAfterFirstFlow);
+		forwardProblem.setIgnoreFlowsInSystemPackages(ignoreFlowsInSystemPackages);
 		
 		if (backProblem != null) {
 			backProblem.setForwardSolver((InfoflowSolver) forwardSolver);
@@ -384,6 +399,9 @@ public class Infoflow extends AbstractInfoflow {
 				backProblem.addTaintPropagationHandler(tp);
 			backProblem.setTaintWrapper(taintWrapper);
 			backProblem.setActivationUnitsToCallSites(forwardProblem);
+			backProblem.setIgnoreFlowsInSystemPackages(ignoreFlowsInSystemPackages);
+			backProblem.setInspectSources(inspectSources);
+			backProblem.setInspectSinks(inspectSinks);
 		}
 		
 		if (!enableStaticFields)
@@ -447,9 +465,12 @@ public class Infoflow extends AbstractInfoflow {
 			logger.info("Taint wrapper misses: " + taintWrapper.getWrapperMisses());
 		}
 		
+		Set<AbstractionAtSink> res = forwardProblem.getResults();
+
 		logger.info("IFDS problem with {} forward and {} backward edges solved, "
-				+ "processing results...", forwardSolver.propagationCount,
-				backSolver == null ? 0 : backSolver.propagationCount);
+				+ "processing {} results...", forwardSolver.propagationCount,
+				backSolver == null ? 0 : backSolver.propagationCount,
+				res == null ? 0 : res.size());
 		
 		// Force a cleanup. Everything we need is reachable through the
 		// results set, the other abstractions can be killed now.
@@ -457,12 +478,13 @@ public class Infoflow extends AbstractInfoflow {
 		if (backSolver != null) {
 			backSolver.cleanup();
 			backSolver = null;
+			backProblem = null;
 		}
 		forwardSolver = null;
+		forwardProblem = null;
 		AccessPath.clearBaseRegister();
 		Runtime.getRuntime().gc();
 		
-		Set<AbstractionAtSink> res = forwardProblem.getResults();
 		computeTaintPaths(res);
 		
 		if (results.getResults().isEmpty())
@@ -475,6 +497,7 @@ public class Infoflow extends AbstractInfoflow {
 				if (source.getPath() != null && !source.getPath().isEmpty()) {
 					logger.info("\ton Path: ");
 					for (Unit p : source.getPath()) {
+						logger.info("\t -> " + iCfg.getMethodOf(p));
 						logger.info("\t\t -> " + p);
 					}
 				}
@@ -562,6 +585,11 @@ public class Infoflow extends AbstractInfoflow {
 			SootMethod m) {
 		int sinkCount = 0;
 		if (m.hasActiveBody()) {
+			// Check whether this is a system class we need to ignore
+			final String className = m.getDeclaringClass().getName();
+			if (ignoreFlowsInSystemPackages && SystemClassHandler.isClassInSystemPackage(className))
+				return sinkCount;
+			
 			// Look for a source in the method. Also look for sinks. If we
 			// have no sink in the program, we don't need to perform any
 			// analysis
@@ -611,10 +639,37 @@ public class Infoflow extends AbstractInfoflow {
 		Infoflow.accessPathLength = accessPathLength;
 	}
 	
+	/**
+	 * Sets whether results (source-to-sink connections) that only differ in their
+	 * propagation paths shall be merged into a single result or not.
+	 * @param pathAgnosticResults True if two results shall be regarded as equal
+	 * if they connect the same source and sink, even if their propagation paths
+	 * differ, otherwise false
+	 */
+	public static void setPathAgnosticResults(boolean pathAgnosticResults) {
+		Infoflow.pathAgnosticResults = pathAgnosticResults;
+	}
+	
+	/**
+	 * Gets whether results (source-to-sink connections) that only differ in their
+	 * propagation paths shall be merged into a single result or not.
+	 * @return True if two results shall be regarded as equal if they connect the
+	 * same source and sink, even if their propagation paths differ, otherwise
+	 * false
+	 */
+	public static boolean getPathAgnosticResults() {
+		return Infoflow.pathAgnosticResults;
+	}
+	
+	/**
+	 * Gets whether recursive access paths shall be reduced, e.g. whether we
+	 * shall propagate a.[next].data instead of a.next.next.data.
+	 * @return True if recursive access paths shall be reduced, otherwise false
+	 */
 	public static boolean getUseRecursiveAccessPaths() {
 		return useRecursiveAccessPaths;
 	}
-	
+
 	/**
 	 * Sets whether recursive access paths shall be reduced, e.g. whether we
 	 * shall propagate a.[next].data instead of a.next.next.data.

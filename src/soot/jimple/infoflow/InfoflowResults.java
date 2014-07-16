@@ -93,7 +93,8 @@ public class InfoflowResults {
 
 		@Override
 		public int hashCode() {
-			return 31 * this.source.hashCode()
+			return (path != null && !Infoflow.getPathAgnosticResults() ? 31 * this.path.hashCode() : 0)
+					+ 31 * this.source.hashCode()
 					+ 7 * this.context.hashCode();
 		}
 		
@@ -104,6 +105,16 @@ public class InfoflowResults {
 			if (o == null || !(o instanceof SourceInfo))
 				return false;
 			SourceInfo si = (SourceInfo) o;
+			
+			if (!Infoflow.getPathAgnosticResults()) {
+				if (path == null) {
+					if (si.path != null)
+						return false;
+				}
+				if (!path.equals(si.path))
+					return false;
+			}
+			
 			return this.source.equals(si.source)
 					&& this.context.equals(si.context);
 		}

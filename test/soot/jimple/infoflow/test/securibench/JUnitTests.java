@@ -90,11 +90,12 @@ public abstract class JUnitTests {
     public static void setUp() throws IOException
     {
     	 File f = new File(".");
-    	 appPath = f.getCanonicalPath() + File.separator + "bin"+ System.getProperty("path.separator") + 
-    			 f.getCanonicalPath() + File.separator + "build" + File.separator + "classes";
-    	 libPath = System.getProperty("java.home")+ File.separator + "lib"+File.separator + "rt.jar"+ System.getProperty("path.separator") + 
-    			 f.getCanonicalPath()+ File.separator+ "lib"+ File.separator+ "j2ee.jar" + System.getProperty("path.separator") + 
-    			 f.getCanonicalPath()+ File.separator+ "lib"+ File.separator+ "cos.jar";
+    	 appPath = f.getCanonicalPath() + File.separator + "bin"+ System.getProperty("path.separator") 
+    			 + f.getCanonicalPath() + File.separator + "build" + File.separator + "classes"
+    			 + f.getCanonicalPath() + File.separator + "build" + File.separator + "testclasses";
+    	 libPath = System.getProperty("java.home")+ File.separator + "lib"+File.separator + "rt.jar"+ System.getProperty("path.separator") 
+    			 + f.getCanonicalPath()+ File.separator+ "lib"+ File.separator+ "j2ee.jar" + System.getProperty("path.separator")
+    			 + f.getCanonicalPath()+ File.separator+ "lib"+ File.separator+ "cos.jar";
         System.out.println("Using following locations as sources for classes: " + appPath
         		+ ", " + libPath);
     	sources = Arrays.asList(sourceArray);
@@ -156,13 +157,12 @@ public abstract class JUnitTests {
 			}
 	  }
     
-    protected Infoflow initInfoflow(){
-
+    protected Infoflow initInfoflow(List<String> entryPoints) {
     	List<String> substClasses = new LinkedList<String>();
     	substClasses.add("soot.jimple.infoflow.test.securibench.supportClasses.DummyHttpRequest");
     	substClasses.add("soot.jimple.infoflow.test.securibench.supportClasses.DummyHttpResponse");
-
-    	DefaultEntryPointCreator entryPointCreator = new DefaultEntryPointCreator();
+    	
+    	DefaultEntryPointCreator entryPointCreator = new DefaultEntryPointCreator(entryPoints);
     	entryPointCreator.setSubstituteCallParams(substituteCallParams);
     	entryPointCreator.setSubstituteClasses(substClasses);
     	this.entryPointCreator = entryPointCreator;

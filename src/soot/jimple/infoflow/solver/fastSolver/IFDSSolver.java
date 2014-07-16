@@ -9,6 +9,7 @@
  * Contributors:
  *     Eric Bodden - initial API and implementation
  *     Marc-Andre Laverdiere-Papineau - Fixed race condition
+ *     Steven Arzt - Created FastSolver implementation
  ******************************************************************************/
 package soot.jimple.infoflow.solver.fastSolver;
 
@@ -21,7 +22,6 @@ import heros.IFDSTabulationProblem;
 import heros.SynchronizedBy;
 import heros.ZeroedFlowFunctions;
 import heros.solver.CountingThreadPoolExecutor;
-import heros.solver.LinkedNode;
 import heros.solver.Pair;
 import heros.solver.PathEdge;
 
@@ -40,7 +40,6 @@ import org.slf4j.LoggerFactory;
 
 import soot.SootMethod;
 import soot.Unit;
-import soot.jimple.infoflow.solver.ChainedNode;
 import soot.jimple.infoflow.util.ConcurrentHashSet;
 import soot.jimple.infoflow.util.MyConcurrentHashMap;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
@@ -58,7 +57,7 @@ import com.google.common.cache.CacheBuilder;
  * @param <I> The type of inter-procedural control-flow graph being used.
  * @see IFDSTabulationProblem
  */
-public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterproceduralCFG<N, M>> {
+public class IFDSSolver<N,D extends FastSolverLinkedNode<D>,M,I extends BiDiInterproceduralCFG<N, M>> {
 	
 	public static CacheBuilder<Object, Object> DEFAULT_CACHE_BUILDER = CacheBuilder.newBuilder().concurrencyLevel
 			(Runtime.getRuntime().availableProcessors()).initialCapacity(10000).softValues();
@@ -135,7 +134,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 		this.zeroValue = tabulationProblem.zeroValue();
 		this.icfg = tabulationProblem.interproceduralCFG();		
 		FlowFunctions<N, D, M> flowFunctions = tabulationProblem.autoAddZero() ?
-				new ZeroedFlowFunctions<N,D,M>(tabulationProblem.flowFunctions(), tabulationProblem.zeroValue()) : tabulationProblem.flowFunctions(); 
+				new ZeroedFlowFunctions<N,D,M>(tabulationProblem.flowFunctions(), zeroValue) : tabulationProblem.flowFunctions(); 
 		if(flowFunctionCacheBuilder!=null) {
 			ffCache = new FlowFunctionCache<N,D,M>(flowFunctions, flowFunctionCacheBuilder);
 			flowFunctions = ffCache;
@@ -229,7 +228,6 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 	 * 
 	 * @param edge an edge whose target node resembles a method call
 	 */
-	@SuppressWarnings("unchecked")
 	private void processCall(PathEdge<N,D> edge) {
 		final D d1 = edge.factAtSource();
 		final N n = edge.getTarget(); // a call node; line 14...
@@ -241,7 +239,7 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 		Collection<N> returnSiteNs = icfg.getReturnSitesOfCallAt(n);
 		
 		//for each possible callee
-		Set<M> callees = icfg.getCalleesOfCallAt(n);
+		Collection<M> callees = icfg.getCalleesOfCallAt(n);
 		for(M sCalledProcN: callees) { //still line 14
 			//compute the call-flow function
 			FlowFunction<D> function = flowFunctions.getCallFlowFunction(n, sCalledProcN);
@@ -278,9 +276,19 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
 							//for each target value of the function
 							for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d2))) {
-								D d5p = setJumpPredecessors && d5 instanceof ChainedNode
-										? d5p = ((ChainedNode<D>) d5).setJumpPredecessor(d2) : d5;
-								propagate(d1, retSiteN, d5p, n, false);
+								// If we have not changed anything in the callee, we do not need the facts
+								// from there. Even if we change something: If we don't need the concrete
+								// path, we can skip the callee in the predecessor chain
+								D d5p = d5;
+								if (d5.equals(d2))
+									d5p = d2;
+								else if (setJumpPredecessors)
+									d5.setPredecessor(d2);
+								
+								// Set the calling context
+								D d5p_restoredCtx = restoreContextOnReturnedFact(d2, d5p);
+								
+								propagate(d1, retSiteN, d5p_restoredCtx, n, false);
 							}
 						}
 					}
@@ -330,7 +338,6 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 	 * 
 	 * @param edge an edge whose target node resembles a method exits
 	 */
-	@SuppressWarnings("unchecked")
 	protected void processExit(PathEdge<N,D> edge) {
 		final N n = edge.getTarget(); // an exit node; line 21...
 		M methodThatNeedsSummary = icfg.getMethodOf(n);
@@ -360,9 +367,20 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 					//for each incoming-call value
 					for(D d4: entry.getValue().keySet())
 						for(D d5: targets) {
-							D d5p = setJumpPredecessors && d5 instanceof ChainedNode
-									? d5p = ((ChainedNode<D>) d5).setJumpPredecessor(entry.getValue().get(d4)) : d5;
-							propagate(d4, retSiteC, d5p, c, false);
+							// If we have not changed anything in the callee, we do not need the facts
+							// from there. Even if we change something: If we don't need the concrete
+							// path, we can skip the callee in the predecessor chain
+							D d5p = d5;
+							D predVal = entry.getValue().get(d4);
+							if (d5.equals(predVal))
+								d5p = predVal;
+							else if (setJumpPredecessors)
+								d5.setPredecessor(predVal);
+							
+							// Set the calling context
+							D d5p_restoredCtx = restoreContextOnReturnedFact(d2, d5p);
+							
+							propagate(d4, retSiteC, d5p_restoredCtx, c, false);
 						}
 				}
 			}
@@ -370,8 +388,8 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 		//handling for unbalanced problems where we return out of a method with a fact for which we have no incoming flow
 		//note: we propagate that way only values that originate from ZERO, as conditionally generated values should only
 		//be propagated into callers that have an incoming edge for this condition
-		if(followReturnsPastSeeds && (inc == null || inc.isEmpty()) && d1.equals(zeroValue)) {
-			Set<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
+		if(followReturnsPastSeeds && d1 == zeroValue && (inc == null || inc.isEmpty())) {
+			Collection<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
 			for(N c: callers) {
 				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
 					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
@@ -434,7 +452,24 @@ public class IFDSSolver<N,D extends LinkedNode<D>,M,I extends BiDiInterprocedura
 			(FlowFunction<D> flowFunction, D d1, D d2) {
 		return flowFunction.computeTargets(d2);
 	}
-
+	
+	/**
+	 * This method will be called for each incoming edge and can be used to
+	 * transfer knowledge from the calling edge to the returning edge, without
+	 * affecting the summary edges at the callee.
+	 * 
+	 * @param d4
+	 *            Fact stored with the incoming edge, i.e., present at the
+	 *            caller side
+	 * @param d5
+	 *            Fact that originally should be propagated to the caller.
+	 * @return Fact that will be propagated to the caller.
+	 */
+	protected D restoreContextOnReturnedFact(D d4, D d5) {
+		d5.setCallingContext(d4);
+		return d5;
+	}
+	
 	/**
 	 * Propagates the flow further down the exploded super graph. 
 	 * @param sourceVal the source value of the propagated summary edge

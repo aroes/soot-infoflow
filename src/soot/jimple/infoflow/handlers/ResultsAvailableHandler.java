@@ -10,10 +10,8 @@
  ******************************************************************************/
 package soot.jimple.infoflow.handlers;
 
-import soot.SootMethod;
-import soot.Unit;
 import soot.jimple.infoflow.InfoflowResults;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
+import soot.jimple.infoflow.solver.IInfoflowCFG;
 
 /**
  * Handler that is called when information flow results become available
@@ -26,7 +24,6 @@ public interface ResultsAvailableHandler {
 	 * @param cfg The program graph
 	 * @param results The results that were computed
 	 */
-	public void onResultsAvailable(BiDiInterproceduralCFG<Unit, SootMethod> cfg,
-			InfoflowResults results);
+	public void onResultsAvailable(IInfoflowCFG cfg, InfoflowResults results);
 
 }

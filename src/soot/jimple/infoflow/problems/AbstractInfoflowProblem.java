@@ -23,6 +23,7 @@ import soot.IntType;
 import soot.Local;
 import soot.LongType;
 import soot.PrimType;
+import soot.RefType;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
@@ -67,7 +68,8 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	protected boolean enableExceptions = true;
 	protected boolean flowSensitiveAliasing = true;
 	protected boolean enableTypeChecking = true;
-
+	protected boolean ignoreFlowsInSystemPackages = true;
+	
 	protected boolean inspectSources = false;
 	protected boolean inspectSinks = false;
 
@@ -205,6 +207,16 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 		this.enableTypeChecking = enableTypeChecking;
 	}
 	
+	/**
+	 * Sets whether flows starting or ending in system packages such as Android's
+	 * support library shall be ignored.
+	 * @param ignoreFlowsInSystemPackages True if flows starting or ending in
+	 * system packages shall be ignored, otherwise false.
+	 */
+	public void setIgnoreFlowsInSystemPackages(boolean ignoreFlowsInSystemPackages) {
+		this.ignoreFlowsInSystemPackages = ignoreFlowsInSystemPackages;
+	}
+
 	/**
 	 * Gets whether the given method is an entry point, i.e. one of the initial
 	 * seeds belongs to the given method
@@ -412,6 +424,23 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 			return canCastType(type, accessPath.getFirstFieldType());
 		else
 			return canCastType(type, accessPath.getBaseType());
+	}
+	
+	/**
+	 * Checks whether the given type is java.lang.Object, java.io.Serializable,
+	 * or java.lang.Cloneable.
+	 * @param tp The type to check
+	 * @return True if the given type is one of the three "object-like" types,
+	 * otherwise false
+	 */
+	protected boolean isObjectLikeType(Type tp) {
+		if (!(tp instanceof RefType))
+			return false;
+		
+		RefType rt = (RefType) tp;
+		return rt.getSootClass().getName().equals("java.lang.Object")
+				|| rt.getSootClass().getName().equals("java.io.Serializable")
+				|| rt.getSootClass().getName().equals("java.lang.Cloneable");
 	}
 	
 	@Override

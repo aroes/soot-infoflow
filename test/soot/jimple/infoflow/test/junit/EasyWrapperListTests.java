@@ -181,4 +181,14 @@ public class EasyWrapperListTests extends JUnitTests {
 		negativeCheckInfoflow(infoflow);	
     }
 
+    @Test(timeout=300000)
+    public void listToStringTest(){
+    	Infoflow infoflow = initInfoflow();
+    	List<String> epoints = new ArrayList<String>();
+    	epoints.add("<soot.jimple.infoflow.test.ListTestCode: void listToStringTest()>");
+    	infoflow.setTaintWrapper(easyWrapper);
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);	
+    }
+
 }

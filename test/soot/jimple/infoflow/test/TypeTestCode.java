@@ -11,6 +11,8 @@
 
 package soot.jimple.infoflow.test;
 
+import java.io.Serializable;
+
 import soot.jimple.infoflow.test.android.Bundle;
 import soot.jimple.infoflow.test.android.ConnectionManager;
 import soot.jimple.infoflow.test.android.TelephonyManager;
@@ -408,6 +410,20 @@ public class TypeTestCode {
 	
 	private <T> T id(T x) {
 		return x;
+	}
+	
+	public void arrayLengthObjectTest() {
+		Serializable s = new Integer(42);
+		Object[] oArr = new Object[3];
+		int[] iArr = new int[3];
+		iArr[0] = 42;
+		int len = iArr.length;
+		oArr[1] = iArr;
+		oArr[2] = s;
+		iArr[1] = TelephonyManager.getIMEI();
+
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(len);
 	}
 
 }

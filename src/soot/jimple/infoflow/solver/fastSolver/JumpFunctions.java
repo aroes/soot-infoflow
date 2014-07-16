@@ -46,7 +46,7 @@ public class JumpFunctions<N,D> {
 	 * Removes all jump functions
 	 */
 	public synchronized void clear() {
-		this.nonEmptyReverseLookup.clear();
+		this.nonEmptyReverseLookup = new MyConcurrentHashMap<WeakPathEdge<N,D>, D>();
 	}
 
 }

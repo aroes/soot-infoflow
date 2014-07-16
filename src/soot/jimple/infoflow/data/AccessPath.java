@@ -12,6 +12,7 @@ package soot.jimple.infoflow.data;
 
 import heros.solver.Pair;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Set;
 
@@ -39,7 +40,7 @@ public class AccessPath implements Cloneable {
 	/*
 	 * tainted value, is not null for non-static values
 	 */
-	private final Value value;
+	private final Local value;
 	/**
 	 * list of fields, either they are based on a concrete @value or they indicate a static field
 	 */
@@ -110,7 +111,7 @@ public class AccessPath implements Cloneable {
 			// Set the base value and type if we have one
 			if (val instanceof InstanceFieldRef) {
 				InstanceFieldRef iref = (InstanceFieldRef) val;
-				this.value = iref.getBase();
+				this.value = (Local) iref.getBase();
 				this.baseType = value.getType();
 			}
 			else {
@@ -125,20 +126,20 @@ public class AccessPath implements Cloneable {
 				System.arraycopy(appendingFields, 0, fields, 1, appendingFields.length);
 			
 			fieldTypes = new Type[(appendingFieldTypes == null ? 0 : appendingFieldTypes.length) + 1];
-			fieldTypes[0] = valType != null ? valType : ref.getField().getType();
+			fieldTypes[0] = valType != null ? valType : fields[0].getType();
 			if (appendingFieldTypes != null)
 				System.arraycopy(appendingFieldTypes, 0, fieldTypes, 1, appendingFieldTypes.length);
 		}
 		else if (val instanceof ArrayRef) {
 			ArrayRef ref = (ArrayRef) val;
-			this.value = ref.getBase();
+			this.value = (Local) ref.getBase();
 			this.baseType = valType == null ? value.getType() : valType;
 			
 			fields = appendingFields;
 			fieldTypes = appendingFieldTypes;
 		}
 		else {
-			this.value = val;
+			this.value = (Local) val;
 			this.baseType = valType == null ? (this.value == null ? null : value.getType()) : valType;
 			
 			fields = appendingFields;
@@ -238,13 +239,13 @@ public class AccessPath implements Cloneable {
 		// Type checks
 		assert this.value == null || !(!(this.baseType instanceof ArrayType)
 				&& !(this.baseType instanceof RefType && ((RefType) this.baseType).getSootClass().getName().equals("java.lang.Object")) 
-				&& !(this.baseType instanceof RefType && ((RefType) this.baseType).getSootClass().getName().equals("java.lang.Serializable")) 
+				&& !(this.baseType instanceof RefType && ((RefType) this.baseType).getSootClass().getName().equals("java.io.Serializable")) 
 				&& !(this.baseType instanceof RefType && ((RefType) this.baseType).getSootClass().getName().equals("java.lang.Cloneable")) 
 				&& this.value.getType() instanceof ArrayType);
 		assert this.value == null || !(this.baseType instanceof ArrayType
 				&& !(this.value.getType() instanceof ArrayType)
 				&& !(this.value.getType() instanceof RefType && ((RefType) this.value.getType()).getSootClass().getName().equals("java.lang.Object"))
-				&& !(this.value.getType() instanceof RefType && ((RefType) this.value.getType()).getSootClass().getName().equals("java.lang.Serializable"))
+				&& !(this.value.getType() instanceof RefType && ((RefType) this.value.getType()).getSootClass().getName().equals("java.io.Serializable"))
 				&& !(this.value.getType() instanceof RefType && ((RefType) this.value.getType()).getSootClass().getName().equals("java.lang.Cloneable")))
 					: "Type mismatch. Type was " + this.baseType + ", value was: " + (this.value == null ? null : this.value.getType());
 		assert !isEmpty() || this.baseType == null;
@@ -304,15 +305,8 @@ public class AccessPath implements Cloneable {
 				|| val instanceof ArrayRef;
 	}
 	
-	public Value getPlainValue() {
+	public Local getPlainValue() {
 		return value;
-	}
-	
-	public Local getPlainLocal(){
-		if(value != null && value instanceof Local){
-			return (Local)value;
-		}
-		return null;
 	}
 	
 	public SootField getLastField() {
@@ -366,8 +360,8 @@ public class AccessPath implements Cloneable {
 		
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((fields == null) ? 0 : deepArrayHashCode(fields));
-		result = prime * result + ((fieldTypes == null) ? 0 : deepArrayHashCode(fieldTypes));
+		result = prime * result + ((fields == null) ? 0 : Arrays.hashCode(fields));
+		result = prime * result + ((fieldTypes == null) ? 0 : Arrays.hashCode(fieldTypes));
 		result = prime * result + ((value == null) ? 0 : value.hashCode());
 		result = prime * result + ((baseType == null) ? 0 : baseType.hashCode());
 		result = prime * result + (this.taintSubFields ? 1 : 0);
@@ -384,9 +378,9 @@ public class AccessPath implements Cloneable {
 			return false;
 		
 		AccessPath other = (AccessPath) obj;
-		if (!deepArrayEquals(fields, other.fields))
+		if (!Arrays.equals(fields, other.fields))
 			return false;
-		if (!deepArrayEquals(fieldTypes, other.fieldTypes))
+		if (!Arrays.equals(fieldTypes, other.fieldTypes))
 			return false;
 		
 		if (value == null) {
@@ -407,49 +401,6 @@ public class AccessPath implements Cloneable {
 		return true;
 	}
 	
-	private boolean deepArrayEquals(Object[] a, Object[] b) {
-		if (a == b)
-			return true;
-		if (a == null || b == null)
-			return false;
-		if (a.length != b.length)
-			return false;
-		
-		for (int i = 0; i < a.length; i++) {
-			Object aElem = a[i];
-			Object bElem = b[i];
-			
-			if (aElem == null) {
-				if (bElem != null)
-					return false;
-			}
-			else if (aElem instanceof Object[]) {
-				if (!(bElem instanceof Object[]))
-					return false;
-				if (!deepArrayEquals((Object[]) aElem, (Object[]) bElem))
-					return false;
-			}
-			else if (!aElem.equals(bElem))
-				return false;
-		}
-		return true;
-	}
-	
-	private int deepArrayHashCode(Object[] array) {
-		if (array == null)
-			return 0;
-		
-		int hashCode = 0;
-		for (Object obj : array) {
-			if (obj != null)
-				if (obj instanceof Object[])
-					hashCode += 31 * deepArrayHashCode((Object[]) obj);
-				else
-					hashCode += 31 * obj.hashCode();
-		}
-		return hashCode;
-	}
-	
 	public boolean isStaticFieldRef(){
 		return value == null && fields != null && fields.length > 0;
 	}
@@ -457,7 +408,6 @@ public class AccessPath implements Cloneable {
 	public boolean isInstanceFieldRef(){
 		return value != null && fields != null && fields.length > 0;
 	}
-	
 	
 	public boolean isLocal(){
 		return value != null && value instanceof Local && (fields == null || fields.length == 0);
@@ -563,17 +513,15 @@ public class AccessPath implements Cloneable {
 		int offset = this.fields == null ? 0 : this.fields.length;
 		SootField[] fields = new SootField[offset + (apFields == null ? 0 : apFields.length)];
 		Type[] fieldTypes = new Type[offset + (apFields == null ? 0 : apFields.length)];
-		if (this.fields != null)
-			for (int i = 0; i < this.fields.length; i++) {
-				fields[i] = this.fields[i];
-				fieldTypes[i] = this.fieldTypes[i];
-			}
+		if (this.fields != null) {
+			System.arraycopy(this.fields, 0, fields, 0, this.fields.length);
+			System.arraycopy(this.fieldTypes, 0, fieldTypes, 0, this.fieldTypes.length);
+		}
 		if (apFields != null)
-			if (apFields != null && apFields.length > 0)
-				for (int i = 0; i < apFields.length; i++) {
-					fields[offset + i] = apFields[i];
-					fieldTypes[offset + i] = apFieldTypes[i];
-				}
+			if (apFields != null && apFields.length > 0) {
+				System.arraycopy(apFields, 0, fields, offset, apFields.length);
+				System.arraycopy(apFieldTypes, 0, fieldTypes, offset, apFieldTypes.length);
+			}
 		
 		return new AccessPath(this.value, fields, baseType, fieldTypes, taintSubFields);
 	}

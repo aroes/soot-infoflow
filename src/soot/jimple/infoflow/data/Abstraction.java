@@ -11,8 +11,6 @@
 package soot.jimple.infoflow.data;
 
 
-import heros.solver.LinkedNode;
-
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
@@ -26,8 +24,8 @@ import soot.Unit;
 import soot.Value;
 import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
-import soot.jimple.infoflow.solver.ChainedNode;
 import soot.jimple.infoflow.solver.IInfoflowCFG.UnitContainer;
+import soot.jimple.infoflow.solver.fastSolver.FastSolverLinkedNode;
 import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.infoflow.util.ConcurrentHashSet;
 import soot.jimple.internal.JimpleLocal;
@@ -40,7 +38,7 @@ import com.google.common.collect.Sets;
  * @author Steven Arzt
  * @author Christian Fritz
  */
-public class Abstraction implements Cloneable, LinkedNode<Abstraction>, ChainedNode<Abstraction> {
+public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction> {
 	
 	private static boolean flowSensitiveAliasing = true;
 	
@@ -96,26 +94,21 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction>, ChainedN
 			boolean exceptionThrown,
 			boolean isImplicit){
 		this(taint, taintSubFields, new SourceContext(sourceVal, sourceStmt, userData),
-				exceptionThrown, null, isImplicit);
+				exceptionThrown, isImplicit);
 	}
 
 	protected Abstraction(Value taint, boolean taintSubFields,
 			SourceContext sourceContext,
 			boolean exceptionThrown,
-			Unit activationUnit,
 			boolean isImplicit){
 		this.sourceContext = sourceContext;
 		this.accessPath = new AccessPath(taint, taintSubFields);
-		
-		if (flowSensitiveAliasing)
-			this.activationUnit = activationUnit;
-		else
-			this.activationUnit = null;
-		
+		this.activationUnit = null;
 		this.exceptionThrown = exceptionThrown;
 		
 		this.neighbors = null;
 		this.isImplicit = isImplicit;
+		this.currentStmt = null;
 	}
 
 	/**
@@ -146,6 +139,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction>, ChainedN
 		}
 		accessPath = p;
 		neighbors = null;
+		currentStmt = null;
 	}
 	
 	public final Abstraction deriveInactiveAbstraction(Unit activationUnit){
@@ -251,6 +245,8 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction>, ChainedN
 	 * @return The path from the source to the current statement
 	 */
 	public Set<SourceContextAndPath> getPaths() {
+		if (pathCache == null)
+			return Collections.emptySet();
 		return pathCache;
 	}
 	
@@ -279,7 +275,7 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction>, ChainedN
 		return true;
 	}
 
-	public boolean isAbstractionActive(){
+	public boolean isAbstractionActive() {
 		return activationUnit == null;
 	}
 	
@@ -396,6 +392,14 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction>, ChainedN
 		if (obj == null || getClass() != obj.getClass())
 			return false;
 		Abstraction other = (Abstraction) obj;
+		
+		// If we have already computed hash codes, we can use them for
+		// comparison
+		if (this.hashCode != 0
+				&& other.hashCode != 0
+				&& this.hashCode != other.hashCode)
+			return false;
+		
 		if (accessPath == null) {
 			if (other.accessPath != null)
 				return false;
@@ -525,10 +529,14 @@ public class Abstraction implements Cloneable, LinkedNode<Abstraction>, ChainedN
 	}
 
 	@Override
-	public Abstraction setJumpPredecessor(Abstraction predecessor) {
-		Abstraction abs = clone();
-		abs.predecessor = predecessor;
-		return abs;
+	public void setPredecessor(Abstraction predecessor) {
+		this.predecessor = predecessor;
+	}
+
+	@Override
+	public void setCallingContext(Abstraction callingContext) {
+		// TODO Auto-generated method stub
+		
 	}
 	
 }

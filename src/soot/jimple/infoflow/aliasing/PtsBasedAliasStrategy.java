@@ -108,7 +108,7 @@ public class PtsBasedAliasStrategy extends AbstractBulkAliasStrategy {
 				if (invExpr instanceof InstanceInvokeExpr && !newAbs.getAccessPath().isStaticFieldRef()) {
 					InstanceInvokeExpr iinvExpr = (InstanceInvokeExpr) invExpr;
 					PointsToSet ptsBase = getPointsToSet((Local) iinvExpr.getBase());
-					PointsToSet ptsBaseOrg = getPointsToSet(newAbs.getAccessPath().getPlainLocal());
+					PointsToSet ptsBaseOrg = getPointsToSet(newAbs.getAccessPath().getPlainValue());
 					baseAliases = ptsBase.hasNonEmptyIntersection(ptsBaseOrg);
 				}
 				
@@ -204,9 +204,9 @@ public class PtsBasedAliasStrategy extends AbstractBulkAliasStrategy {
 	 */
 	private PointsToSet getPointsToSet(AccessPath accessPath) {
 		if (accessPath.isLocal())
-			return Scene.v().getPointsToAnalysis().reachingObjects(accessPath.getPlainLocal());
+			return Scene.v().getPointsToAnalysis().reachingObjects(accessPath.getPlainValue());
 		else if (accessPath.isInstanceFieldRef())
-			return Scene.v().getPointsToAnalysis().reachingObjects(accessPath.getPlainLocal(), accessPath.getFirstField());
+			return Scene.v().getPointsToAnalysis().reachingObjects(accessPath.getPlainValue(), accessPath.getFirstField());
 		else if (accessPath.isStaticFieldRef())
 			return Scene.v().getPointsToAnalysis().reachingObjects(accessPath.getFirstField());
 		else

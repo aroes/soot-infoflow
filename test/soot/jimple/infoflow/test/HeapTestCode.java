@@ -12,6 +12,7 @@ package soot.jimple.infoflow.test;
 
 import java.util.ArrayList;
 
+import soot.jimple.infoflow.test.android.AccountManager;
 import soot.jimple.infoflow.test.android.ConnectionManager;
 import soot.jimple.infoflow.test.android.TelephonyManager;
 import soot.jimple.infoflow.test.utilclasses.ClassWithField;
@@ -959,5 +960,72 @@ public class HeapTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(myTree.left.child.right.data);
 	}
+	
+	public void overwriteAliasedVariableTest() {
+		Y y1 = new Y();
+		Y y2 = y1;
+		y1.f = TelephonyManager.getDeviceId();
+		y2 = new Y();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(y1.f);
+		cm.publish(y2.f);
+	}
 
+	public void overwriteAliasedVariableTest2() {
+		Y y1 = new Y();
+		Y y2 = y1;
+		y1.f = TelephonyManager.getDeviceId();
+		y2.f = "";
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(y1.f);
+		cm.publish(y2.f);
+	}
+
+	public void overwriteAliasedVariableTest3() {
+		Y y1 = new Y();
+		Y y2 = y1;
+		y1.f = TelephonyManager.getDeviceId();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(y1.f);
+		y2.f = "";
+		cm.publish(y2.f);
+	}
+
+	public void overwriteAliasedVariableTest4() {
+		Y y1 = new Y();
+		Y y2 = y1;
+		y1.f = TelephonyManager.getDeviceId();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(y1.f);
+		cm.publish(y2.f);
+		y2.f = "";
+	}
+
+	public void overwriteAliasedVariableTest5() {
+		ConnectionManager cm = new ConnectionManager();
+		Object x = TelephonyManager.getDeviceId();
+		Object y = new AccountManager().getPassword();
+		
+		String z = "";
+		
+		z = (String) x;
+		String z2 = z;
+		
+		z = (String) y;
+		String z3 = z;
+
+		cm.publish(z2);
+		cm.publish(z3);
+	}
+
+	@SuppressWarnings("null")	// would cause an NPE
+	public void overwriteAliasedVariableTest6() {
+		Y y1 = new Y();
+		y1.f = TelephonyManager.getDeviceId();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(y1.f);
+		y1 = null;
+		cm.publish(y1.f);
+	}
+	
 }

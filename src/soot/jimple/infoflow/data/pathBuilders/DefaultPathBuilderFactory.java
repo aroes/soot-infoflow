@@ -12,7 +12,8 @@ public class DefaultPathBuilderFactory implements IPathBuilderFactory {
 	 */
 	public enum PathBuilder {
 		Recursive,
-		Threaded
+		Threaded,
+		SemiThreaded
 	}
 	
 	private final PathBuilder pathBuilder;
@@ -21,7 +22,7 @@ public class DefaultPathBuilderFactory implements IPathBuilderFactory {
 	 * Creates a new instance of the {@link DefaultPathBuilderFactory} class
 	 */
 	public DefaultPathBuilderFactory() {
-		this.pathBuilder = PathBuilder.Threaded;
+		this.pathBuilder = PathBuilder.SemiThreaded;
 	}
 
 	/**
@@ -39,6 +40,8 @@ public class DefaultPathBuilderFactory implements IPathBuilderFactory {
 			return new RecursivePathBuilder(maxThreadNum);
 		case Threaded :
 			return new ThreadedPathBuilder(maxThreadNum);
+		case SemiThreaded :
+			return new SemiThreadedPathBuilder(maxThreadNum);
 		}
 		throw new RuntimeException("Unsupported path building algorithm");
 	}

@@ -10,10 +10,11 @@
  ******************************************************************************/
 package soot.jimple.infoflow.entryPointCreators;
 
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -22,6 +23,7 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import soot.Body;
 import soot.IntType;
 import soot.Local;
 import soot.Scene;
@@ -30,6 +32,7 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
 import soot.javaToJimple.LocalGenerator;
+import soot.jimple.IfStmt;
 import soot.jimple.IntConstant;
 import soot.jimple.Jimple;
 import soot.jimple.JimpleBody;
@@ -70,7 +73,9 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 	private Local applicationLocal = null;
 	private Set<SootClass> applicationCallbackClasses = new HashSet<SootClass>();
 	
-	private List<String> androidClasses;
+	private final Collection<String> androidClasses;
+	private final Collection<String> additionalEntryPoints;
+	
 	private Map<String, List<String>> callbackFunctions;
 	private boolean modelAdditionalMethods = false;
 	
@@ -87,10 +92,15 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 	}
 	
 	/**
-	 * Creates a new instance of the {@link AndroidEntryPointCreator} class.
+	 * Creates a new instance of the {@link AndroidEntryPointCreator} class
+	 * and registers a list of classes to be automatically scanned for Android
+	 * lifecycle methods
+	 * @param androidClasses The list of classes to be automatically scanned for
+	 * Android lifecycle methods
 	 */
-	public AndroidEntryPointCreator() {
-		this.androidClasses = new ArrayList<String>();
+	public AndroidEntryPointCreator(Collection<String> androidClasses) {
+		this.androidClasses = androidClasses;
+		this.additionalEntryPoints = Collections.emptySet();
 		this.callbackFunctions = new HashMap<String, List<String>>();
 	}
 	
@@ -100,9 +110,14 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 	 * lifecycle methods
 	 * @param androidClasses The list of classes to be automatically scanned for
 	 * Android lifecycle methods
+	 * @param additionalEntryPoints Additional entry points to be called during
+	 * the running phase of the respective component. These values must be valid
+	 * Soot method signatures.
 	 */
-	public AndroidEntryPointCreator(List<String> androidClasses) {
+	public AndroidEntryPointCreator(Collection<String> androidClasses,
+			Collection<String> additionalEntryPoints) {
 		this.androidClasses = androidClasses;
+		this.additionalEntryPoints = additionalEntryPoints;
 		this.callbackFunctions = new HashMap<String, List<String>>();
 	}
 	
@@ -127,41 +142,12 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 	public Map<String, List<String>> getCallbackFunctions() {
 		return callbackFunctions;
 	}
-
-	/**
-	 * Creates a new dummy main method based only on the Android classes and
-	 * the automatic detection of the Android lifecycle methods
-	 * @return The generated dummy main method
-	 */
-	public SootMethod createDummyMain() {
-		return createDummyMain(new ArrayList<String>());
-	}
 	
-	/**
-	 * Creates a new dummy main method based only on the Android classes and
-	 * the automatic detection of the Android lifecycle methods
-	 * @param emptySootMethod an empty soot method
-	 * @return The generated dummy main method
-	 */
-	public SootMethod createDummyMain(SootMethod emptySootMethod)
-	{
-		return createDummyMain(new ArrayList<String>(), emptySootMethod);
-	}
-
-	/**
-	 * default createDummyMaiInternal create a dummyMainMethod for all component calsses and 
-	 * the dummyMainClass is belong to dummyMainClass, we want to provide a interface to generate
-	 * a dummyMainMethod for each component class.
-	 * 
-	 * @param methods
-	 * @param emptySootMethod
-	 * @return The generated dummy main method
-	 */
 	@Override
-	protected SootMethod createDummyMainInternal(List<String> methods, SootMethod emptySootMethod)
+	protected SootMethod createDummyMainInternal(SootMethod emptySootMethod)
 	{
-		Map<String, Set<String>> classMap =
-				SootMethodRepresentationParser.v().parseClassNames(methods, false);
+		Map<String, Set<String>> classMap = SootMethodRepresentationParser.v().parseClassNames
+				(additionalEntryPoints, false);
 		for (String androidClass : this.androidClasses)
 			if (!classMap.containsKey(androidClass))
 				classMap.put(androidClass, new HashSet<String>());
@@ -179,8 +165,8 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		body.getUnits().add(assignStmt);
 
 		// Resolve all requested classes
-		for (Entry<String, Set<String>> entry : classMap.entrySet())
-			Scene.v().forceResolve(entry.getKey(), SootClass.SIGNATURES);
+		for (String className : classMap.keySet())
+			Scene.v().forceResolve(className, SootClass.SIGNATURES);
 		
 		// For some weird reason unknown to anyone except the flying spaghetti
 		// monster, the onCreate() methods of content providers run even before
@@ -399,6 +385,8 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		// Optimize and check the generated main method
 		NopEliminator.v().transform(body);
 		eliminateSelfLoops(body);
+		eliminateFallthroughIfs(body);
+		
 		if (DEBUG || Options.v().validate())
 			mainMethod.getActiveBody().validate();
 		
@@ -406,6 +394,24 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		return mainMethod;
 	}
 	
+	/**
+	 * Removes if statements that jump to the fall-through successor
+	 * @param body The body from which to remove unnecessary if statements
+	 */
+	private void eliminateFallthroughIfs(Body body) {
+		IfStmt ifs = null;
+		Iterator<Unit> unitIt = body.getUnits().snapshotIterator();
+		while (unitIt.hasNext()) {
+			Unit u = unitIt.next();
+			if (ifs != null && ifs.getTarget() == u) {
+				body.getUnits().remove(ifs);
+				ifs = null;
+			}
+			if (u instanceof IfStmt)
+				ifs = (IfStmt) u;
+		}
+	}
+
 	/**
 	 *  Soot requires a main method, so we create a dummy method which calls all entry functions. 
 	 *  Android's components are detected and treated according to their lifecycles. This
@@ -551,12 +557,8 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 			SootClass currentClass,
 			JNopStmt endClassStmt,
 			Local classLocal) {
-		// As we don't know the order in which the different Android lifecycles
-		// run, we allow for each single one of them to be skipped
-//		createIfStmt(endClassStmt);
-
 		// 1. onCreate:
-		Stmt onCreateStmt = searchAndBuildMethod(AndroidEntryPointConstants.SERVICE_ONCREATE, currentClass, entryPoints, classLocal);
+		searchAndBuildMethod(AndroidEntryPointConstants.SERVICE_ONCREATE, currentClass, entryPoints, classLocal);
 		
 		//service has two different lifecycles:
 		//lifecycle1:
@@ -629,8 +631,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		searchAndBuildMethod(AndroidEntryPointConstants.SERVICE_ONDESTROY, currentClass, entryPoints, classLocal);
 		
 		//either begin or end or next class:
-		createIfStmt(onCreateStmt);
-//		createIfStmt(endClassStmt);
+		// createIfStmt(onCreateStmt);	// no, the process gets killed in between
 	}
 
 	/**
@@ -742,7 +743,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		//goTo Stop, Resume or Create:
 		// (to stop is fall-through, no need to add)
 		createIfStmt(onResumeStmt);
-		createIfStmt(onCreateStmt);
+		// createIfStmt(onCreateStmt);		// no, the process gets killed in between
 		
 		//5. onStop:
 		Stmt onStop = searchAndBuildMethod(AndroidEntryPointConstants.ACTIVITY_ONSTOP, currentClass, entryPoints, classLocal);
@@ -755,7 +756,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		// (to restart is fall-through, no need to add)
 		JNopStmt stopToDestroyStmt = new JNopStmt();
 		createIfStmt(stopToDestroyStmt);
-		createIfStmt(onCreateStmt);
+		// createIfStmt(onCreateStmt);	// no, the process gets killed in between
 		
 		//6. onRestart:
 		searchAndBuildMethod(AndroidEntryPointConstants.ACTIVITY_ONRESTART, currentClass, entryPoints, classLocal);
@@ -1004,6 +1005,14 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 	 */
 	public boolean getModelAdditionalMethods() {
 		return this.modelAdditionalMethods;
+	}
+	
+	@Override
+	public Collection<String> getRequiredClasses() {
+		Set<String> requiredClasses = new HashSet<String>(androidClasses);
+		requiredClasses.addAll(SootMethodRepresentationParser.v().parseClassNames
+				(additionalEntryPoints, false).keySet());
+		return requiredClasses;
 	}
 	
 }

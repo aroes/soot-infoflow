@@ -30,8 +30,10 @@ public interface IInfoflow {
 	 */
 	public enum CallgraphAlgorithm {
 		AutomaticSelection,
+		CHA,
 		VTA,
 		RTA,
+		SPARK,
 		OnDemand
 	}
 	
@@ -89,13 +91,12 @@ public interface IInfoflow {
 	 * @param libPath The path to the main folder of the (unpacked) library class files
 	 * @param entryPointCreator the entry point creator to use for generating the dummy
 	 * main method
-	 * @param entryPoints the entryPoints (string conforms to SootMethod representation)
 	 * @param sources list of source class+method (as string conforms to SootMethod representation)
 	 * @param sinks list of sink class+method (as string conforms to SootMethod representation)
 	 */
 	public void computeInfoflow(String appPath, String libPath,
 			IEntryPointCreator entryPointCreator,
-			List<String> entryPoints, List<String> sources, List<String> sinks);
+			List<String> sources, List<String> sinks);
 	
 	/**
 	 * Computes the information flow on a list of entry point methods. This list
@@ -108,7 +109,8 @@ public interface IInfoflow {
 	 * @param sources list of source class+method (as string conforms to SootMethod representation)
 	 * @param sinks list of sink class+method (as string conforms to SootMethod representation)
 	 */
-	public void computeInfoflow(String appPath, String libPath, List<String> entryPoints,
+	public void computeInfoflow(String appPath, String libPath,
+			List<String> entryPoints, 
 			List<String> sources, List<String> sinks);
 
 	/**
@@ -133,12 +135,11 @@ public interface IInfoflow {
 	 * @param libPath the path to the main folder of the (unpacked) library class files
 	 * @param entryPointCreator the entry point creator to use for generating the dummy
 	 * main method
-	 * @param entryPoints the entryPoints (string conforms to SootMethod representation)
 	 * @param sourcesSinks manager class for identifying sources and sinks in the source code
 	 */
 	public void computeInfoflow(String appPath, String libPath,
 			IEntryPointCreator entryPointCreator,
-			List<String> entryPoints, ISourceSinkManager sourcesSinks);
+			ISourceSinkManager sourcesSinks);
 
 	/**
 	 * Computes the information flow on a single method. This method is
@@ -236,5 +237,15 @@ public interface IInfoflow {
 	 * or -1 for an unlimited number of threads.
 	 */
 	public void setMaxThreadNum(int threadNum);
+	
 	public void setIPCManager(IIPCManager ipcManager);
+	
+	/**
+	 * Sets whether flows starting or ending in system packages such as Android's
+	 * support library shall be ignored.
+	 * @param ignoreFlowsInSystemPackages True if flows starting or ending in
+	 * system packages shall be ignored, otherwise false.
+	 */
+	public void setIgnoreFlowsInSystemPackages(boolean ignoreFlowsInSystemPackages);
+	
 }
