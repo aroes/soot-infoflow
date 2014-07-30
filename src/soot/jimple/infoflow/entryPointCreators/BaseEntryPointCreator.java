@@ -69,6 +69,14 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 	private boolean substituteCallParams = false;
 	private List<String> substituteClasses;
 	
+	/**
+	 * Returns a copy of all classes that could not be instantiated properly
+	 * @return The classes where the constructor could not be generated
+	 */
+	public Set<SootClass> getFailedClasses(){
+		return new HashSet<SootClass>(failedClasses);
+	}
+	
 	public void setSubstituteCallParams(boolean b){
 		substituteCallParams = b;
 	}
@@ -569,7 +577,5 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 			}
 		}
 	}
-
-	
 
 }
