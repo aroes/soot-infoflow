@@ -44,16 +44,6 @@ public class DefaultEntryPointCreator extends BaseEntryPointCreator {
     
     private final Collection<String> methodsToCall;
     
-    private final Set<SootMethod> failedMethods = new HashSet<>();
-    
-    /**
-     * Returns all methods from from methodsToCall, where no call was possible
-     * @return A Set of methods that were not called in the main method
-     */
-    public Set<SootMethod> getFailedMethods(){
-    	return new HashSet<SootMethod>(failedMethods);
-    }
-    
     /**
      * Creates a new instanceof the {@link DefaultEntryPointCreator} class
      * @param methodsToCall A collection containing the methofs to be called
@@ -100,12 +90,6 @@ public class DefaultEntryPointCreator extends BaseEntryPointCreator {
 						SootMethodRepresentationParser.v().parseSootMethodString(method);
 				SootMethod currentMethod = findMethod(Scene.v().getSootClass(methodAndClass.getClassName()),
 						methodAndClass.getSubSignature());
-				if (classLocal == null && !currentMethod.isStatic()) {
-					logger.warn("Cannot call method {}, because there is no local for base object: {}", 
-							currentMethod, methodAndClass.getClassName());
-					failedMethods.add(currentMethod);
-					continue;
-				}
 				if (currentMethod == null) {
 					logger.warn("Entry point not found: {}", method);
 					continue;
