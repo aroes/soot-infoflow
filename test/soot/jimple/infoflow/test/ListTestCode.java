@@ -257,4 +257,12 @@ public class ListTestCode {
         cm.publish(secretList.toString());
 	}
 	
+	public void iteratorHasNextTest() {
+		List<String> list = new ArrayList<String>();
+		list.add(TelephonyManager.getDeviceId());
+		boolean b = list.iterator().hasNext();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(b);
+	}
+
 }

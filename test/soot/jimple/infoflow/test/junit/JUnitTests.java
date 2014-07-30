@@ -32,14 +32,15 @@ import soot.jimple.infoflow.taintWrappers.EasyTaintWrapper;
  *
  */
 public abstract class JUnitTests {
-
-
+	
     protected static String appPath, libPath;
     
     protected static List<String> sinks;
 
     protected static final String sink = "<soot.jimple.infoflow.test.android.ConnectionManager: void publish(java.lang.String)>";
     protected static final String sinkInt = "<soot.jimple.infoflow.test.android.ConnectionManager: void publish(int)>";
+    protected static final String sinkBoolean = "<soot.jimple.infoflow.test.android.ConnectionManager: void publish(boolean)>";
+    protected static final String sinkDouble = "<soot.jimple.infoflow.test.android.ConnectionManager: void publish(java.lang.Double)>";
 
     protected static List<String> sources;
     protected static final String sourceDeviceId = "<soot.jimple.infoflow.test.android.TelephonyManager: java.lang.String getDeviceId()>";
@@ -48,6 +49,7 @@ public abstract class JUnitTests {
     protected static final String sourcePwd = "<soot.jimple.infoflow.test.android.AccountManager: java.lang.String getPassword()>";
     protected static final String sourceUserData = "<soot.jimple.infoflow.test.android.AccountManager: java.lang.String[] getUserData(java.lang.String)>";
     protected static final String sourceBundleGet = "<soot.jimple.infoflow.test.android.Bundle: java.lang.Object get(java.lang.String)>";
+    protected static final String sourceLongitude = "<soot.jimple.infoflow.test.android.LocationManager: double getLongitude()>";
     
     @BeforeClass
     public static void setUp() throws IOException
@@ -74,10 +76,13 @@ public abstract class JUnitTests {
         sources.add(sourceIMEI);
         sources.add(sourceIMSI);
         sources.add(sourceBundleGet);
+        sources.add(sourceLongitude);
         
         sinks = new ArrayList<String>();
         sinks.add(sink);
         sinks.add(sinkInt);
+        sinks.add(sinkBoolean);
+        sinks.add(sinkDouble);
     }
     
     @Before
@@ -91,30 +96,24 @@ public abstract class JUnitTests {
     	 if(infoflow.isResultAvailable()){
 				InfoflowResults map = infoflow.getResults();
 				assertEquals(resultCount, map.size());
-				assertTrue(map.containsSinkMethod(sink) || map.containsSinkMethod(sinkInt));
+				assertTrue(map.containsSinkMethod(sink)
+						|| map.containsSinkMethod(sinkInt)
+						|| map.containsSinkMethod(sinkBoolean)
+						|| map.containsSinkMethod(sinkDouble));
 				assertTrue(map.isPathBetweenMethods(sink, sourceDeviceId)
 						|| map.isPathBetweenMethods(sink, sourceIMEI)	// implicit flows
 						|| map.isPathBetweenMethods(sink, sourcePwd)
 						|| map.isPathBetweenMethods(sink, sourceBundleGet)
 						|| map.isPathBetweenMethods(sinkInt, sourceDeviceId)
 						|| map.isPathBetweenMethods(sinkInt, sourceIMEI)
-						|| map.isPathBetweenMethods(sinkInt, sourceIMSI));
+						|| map.isPathBetweenMethods(sinkInt, sourceIMSI)
+						|| map.isPathBetweenMethods(sinkBoolean, sourceDeviceId)
+						|| map.isPathBetweenMethods(sinkDouble, sourceLongitude));
 			}else{
 				fail("result is not available");
 			}
     	
     }
-    
-//    protected void checkInfoflow(Infoflow infoflow){
-//		  if(infoflow.isResultAvailable()){
-//				InfoflowResults map = infoflow.getResults();
-//				assertTrue(map.containsSinkMethod(sink) || map.containsSinkMethod(sinkInt));
-//				assertTrue(map.isPathBetweenMethods(sink, sourceDeviceId)
-//						|| map.isPathBetweenMethods(sinkInt, sourceDeviceId));
-//			}else{
-//				fail("result is not available");
-//			}
-//	  }
     
     protected void negativeCheckInfoflow(Infoflow infoflow){
     	if(infoflow.isResultAvailable()){
