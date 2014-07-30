@@ -434,12 +434,20 @@ public class TypeTestCode {
 		cm.publish(len);
 	}
 	
-	public void doubleBoxingTest() {
+	public void doubleBoxingTest1() {
 		double longitude = LocationManager.getLongitude();
 		Double dblLong = longitude;
 		
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(dblLong);		
+	}
+
+	public void doubleBoxingTest2() {
+		double longitude = LocationManager.getLongitude();
+		Double dblLong = (Double) longitude;
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish((Double) dblLong);		
 	}
 
 }

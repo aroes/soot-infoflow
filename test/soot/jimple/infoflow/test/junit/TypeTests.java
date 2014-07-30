@@ -268,10 +268,19 @@ public class TypeTests extends JUnitTests {
 	}
 	
 	@Test(timeout=300000)
-	public void doubleBoxingTest(){
+	public void doubleBoxingTest1(){
 		Infoflow infoflow = initInfoflow();
 		List<String> epoints = new ArrayList<String>();
-		epoints.add("<soot.jimple.infoflow.test.TypeTestCode: void doubleBoxingTest()>");
+		epoints.add("<soot.jimple.infoflow.test.TypeTestCode: void doubleBoxingTest1()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+	}
+
+	@Test(timeout=300000)
+	public void doubleBoxingTest2(){
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.TypeTestCode: void doubleBoxingTest2()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
 	}
