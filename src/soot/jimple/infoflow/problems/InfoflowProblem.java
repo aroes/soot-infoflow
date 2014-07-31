@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Set;
 
 import soot.ArrayType;
+import soot.BooleanType;
 import soot.IntType;
 import soot.Local;
 import soot.NullType;
@@ -45,6 +46,7 @@ import soot.jimple.IdentityStmt;
 import soot.jimple.IfStmt;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
+import soot.jimple.InstanceOfExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.LengthExpr;
 import soot.jimple.LookupSwitchStmt;
@@ -316,8 +318,15 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				if (!enableStaticFields && leftValue instanceof StaticFieldRef)
 					return;
 
+				Abstraction newAbs = null;
 				if (!source.getAccessPath().isEmpty()) {
-					// Special type handling for certain operations
+					// Special handling for array (de)construction
+					if (assignStmt.getLeftOp() instanceof ArrayRef && targetType != null)
+						targetType = buildArrayOrAddDimension(targetType);							
+					else if (assignStmt.getRightOp() instanceof ArrayRef && targetType != null)
+						targetType = ((ArrayType) targetType).getElementType();
+					
+					// If this is an unrealizable typecast, drop the abstraction
 					if (assignStmt.getRightOp() instanceof CastExpr) {
 						// If we cast java.lang.Object to an array type,
 						// we must update our typing information
@@ -327,25 +336,26 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							targetType = cast.getType();
 						}
 					}
-					
-					// Special handling for array (de)construction
-					if (targetType != null) {
-						if (assignStmt.getLeftOp() instanceof ArrayRef)
-							targetType = buildArrayOrAddDimension(targetType);
-						else if (assignStmt.getRightOp() instanceof ArrayRef)
-							targetType = ((ArrayType) targetType).getElementType();
+					// Special type handling for certain operations
+					else if (assignStmt.getRightOp() instanceof LengthExpr) {
+						assert source.getAccessPath().getBaseType() instanceof ArrayType;
+						newAbs = source.deriveNewAbstraction(new AccessPath(leftValue, null,
+								IntType.v(), (Type[]) null, true), assignStmt);
 					}
+					else if (assignStmt.getRightOp() instanceof InstanceOfExpr)
+						newAbs = source.deriveNewAbstraction(new AccessPath(leftValue, null,
+								BooleanType.v(), (Type[]) null, true), assignStmt);
 				}
 				else
 					// For implicit taints, we have no type information
 					assert targetType == null;
 				
 				// also taint the target of the assignment
-				final Abstraction newAbs;
-				if (source.getAccessPath().isEmpty())
-					newAbs = source.deriveNewAbstraction(new AccessPath(leftValue, true), assignStmt, true);
-				else
-					newAbs = source.deriveNewAbstraction(leftValue, cutFirstField, assignStmt, targetType);
+				if (newAbs == null)
+					if (source.getAccessPath().isEmpty())
+						newAbs = source.deriveNewAbstraction(new AccessPath(leftValue, true), assignStmt, true);
+					else
+						newAbs = source.deriveNewAbstraction(leftValue, cutFirstField, assignStmt, targetType);
 				taintSet.add(newAbs);
 				
 				if (triggerInaktiveTaintOrReverseFlow(assignStmt, leftValue, newAbs))
