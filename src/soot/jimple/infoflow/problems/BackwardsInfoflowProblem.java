@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import soot.ArrayType;
+import soot.BooleanType;
 import soot.IntType;
 import soot.Local;
 import soot.RefType;
@@ -39,6 +40,7 @@ import soot.jimple.FieldRef;
 import soot.jimple.IdentityStmt;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
+import soot.jimple.InstanceOfExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.LengthExpr;
 import soot.jimple.ReturnStmt;
@@ -188,15 +190,16 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							// Special type handling for certain operations
 							else if (defStmt.getRightOp() instanceof LengthExpr) {
 								assert source.getAccessPath().getBaseType() instanceof ArrayType;
-								newType = IntType.v();
-								
 								newLeftAbs = source.deriveNewAbstraction(new AccessPath(leftValue, null,
 										IntType.v(), (Type[]) null, true), defStmt);
 							}
-							else {
+							else if (defStmt.getRightOp() instanceof InstanceOfExpr)
+								newLeftAbs = source.deriveNewAbstraction(new AccessPath(leftValue, null,
+										BooleanType.v(), (Type[]) null, true), defStmt);
+							
+							if (newLeftAbs == null)
 								newLeftAbs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
 										(leftValue, newType, false), defStmt);
-							}
 						}
 						if (newLeftAbs != null) {
 							res.add(newLeftAbs);

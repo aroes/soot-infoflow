@@ -15,6 +15,7 @@ import java.io.Serializable;
 
 import soot.jimple.infoflow.test.android.Bundle;
 import soot.jimple.infoflow.test.android.ConnectionManager;
+import soot.jimple.infoflow.test.android.LocationManager;
 import soot.jimple.infoflow.test.android.TelephonyManager;
 
 /**
@@ -145,6 +146,13 @@ public class TypeTestCode {
 			C c = (C) o;
 			cm.publish(c.data);
 		}
+	}
+	
+	public void instanceofTest2() {
+		String tainted = TelephonyManager.getDeviceId();
+		boolean isString = tainted instanceof String;
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(isString);
 	}
 	
 	private void callIt(A a) {
@@ -425,6 +433,22 @@ public class TypeTestCode {
 
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(len);
+	}
+	
+	public void doubleBoxingTest1() {
+		double longitude = LocationManager.getLongitude();
+		Double dblLong = longitude;
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(dblLong);		
+	}
+
+	public void doubleBoxingTest2() {
+		double longitude = LocationManager.getLongitude();
+		Double dblLong = (Double) longitude;
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish((Double) dblLong);		
 	}
 
 }

@@ -13,6 +13,7 @@ package soot.jimple.infoflow.util;
 import soot.Value;
 import soot.jimple.ArrayRef;
 import soot.jimple.BinopExpr;
+import soot.jimple.InstanceOfExpr;
 import soot.jimple.UnopExpr;
 import soot.jimple.internal.JCastExpr;
 
@@ -61,7 +62,12 @@ public class BaseSelector {
 			set[1] = expr.getOp2();
 			return set;
 		}
-		return new Value[] { selectBase(val, keepArrayRef) };
+		else if (val instanceof InstanceOfExpr) {
+			Value[] set = new Value[] { ((InstanceOfExpr) val).getOp() };
+			return set;
+		}
+		else
+			return new Value[] { selectBase(val, keepArrayRef) };
 	}
 	
 }

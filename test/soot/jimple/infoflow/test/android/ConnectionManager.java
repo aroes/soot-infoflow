@@ -21,4 +21,15 @@ public class ConnectionManager {
 		System.out.println(i + "");
 		//publish on internet...
 	}
+
+	public void publish(boolean b){
+		System.out.println(b + "");
+		//publish on internet...
+	}
+
+	public void publish(Double dbl){
+		System.out.println(dbl + "");
+		//publish on internet...
+	}
+	
 }

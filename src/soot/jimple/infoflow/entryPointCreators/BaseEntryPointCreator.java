@@ -68,8 +68,26 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 	private final Set<SootClass> failedClasses = new HashSet<SootClass>();
 	private boolean substituteCallParams = false;
 	private List<String> substituteClasses;
+
+	private final Set<SootMethod> failedMethods = new HashSet<>();
 	
-	public void setSubstituteCallParams(boolean b){
+	/**
+	 * Returns a copy of all classes that could not be instantiated properly
+	 * @return The classes where the constructor could not be generated
+	 */
+	public Set<SootClass> getFailedClasses(){
+		return new HashSet<SootClass>(failedClasses);
+	}
+	
+    /**
+     * Returns all methods from from methodsToCall, where no call was possible
+     * @return A Set of methods that were not called in the main method
+     */
+    public Set<SootMethod> getFailedMethods(){
+    	return new HashSet<SootMethod>(failedMethods);
+    }
+    
+    public void setSubstituteCallParams(boolean b){
 		substituteCallParams = b;
 	}
 	
@@ -138,15 +156,22 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 		assert body != null : "Body was null";
 		assert gen != null : "Local generator was null";
 		
-		InvokeExpr invokeExpr;
+		if (classLocal == null && !currentMethod.isStatic()) {
+			logger.warn("Cannot call method {}, because there is no local for base object: {}", 
+					currentMethod, currentMethod.getDeclaringClass());
+			failedMethods.add(currentMethod);
+			return null;
+		}
+		
+		final InvokeExpr invokeExpr;
 		List<Value> args = new LinkedList<Value>();
 		if(currentMethod.getParameterCount()>0){
-			for(Type tp :currentMethod.getParameterTypes()){
+			for (Type tp : currentMethod.getParameterTypes())
 				args.add(getValueForType(body, gen, tp, new HashSet<SootClass>(), parentClasses));
-			}
-			if(currentMethod.isStatic()){
+			
+			if(currentMethod.isStatic())
 				invokeExpr = Jimple.v().newStaticInvokeExpr(currentMethod.makeRef(), args);
-			}else{
+			else {
 				assert classLocal != null : "Class local method was null for non-static method call";
 				if (currentMethod.isConstructor())
 					invokeExpr = Jimple.v().newSpecialInvokeExpr(classLocal, currentMethod.makeRef(),args);
@@ -329,6 +354,7 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 		// constructor information for them
 		if (createdClass.isPhantom() || createdClass.isPhantomClass()) {
 			logger.warn("Cannot generate constructor for phantom class {}", createdClass.getName());
+			failedClasses.add(createdClass);
 			return null;
 		}
 
@@ -569,7 +595,5 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 			}
 		}
 	}
-
-	
 
 }
