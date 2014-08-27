@@ -10,10 +10,10 @@
  ******************************************************************************/
 package soot.jimple.infoflow.solver;
 
-import gnu.trove.set.hash.THashSet;
 import heros.solver.IDESolver;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -190,12 +190,12 @@ public class InfoflowCFG implements IInfoflowCFG {
 	
 	@Override
 	public boolean isStaticFieldRead(SootMethod method, SootField variable) {
-		return isStaticFieldUsed(method, variable, new THashSet<SootMethod>(), true);
+		return isStaticFieldUsed(method, variable, new HashSet<SootMethod>(), true);
 	}
 	
 	@Override
 	public boolean isStaticFieldUsed(SootMethod method, SootField variable) {
-		return isStaticFieldUsed(method, variable, new THashSet<SootMethod>(), false);
+		return isStaticFieldUsed(method, variable, new HashSet<SootMethod>(), false);
 	}
 	
 	private boolean isStaticFieldUsed(SootMethod method, SootField variable,
