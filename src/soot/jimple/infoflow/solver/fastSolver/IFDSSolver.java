@@ -167,7 +167,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D>,M,I extends BiDiInte
 			N startPoint = seed.getKey();
 			for(D val: seed.getValue())
 				propagate(zeroValue, startPoint, val, null, false);
-			jumpFn.addFunction(new WeakPathEdge<N, D>(zeroValue, startPoint, zeroValue));
+			jumpFn.addFunction(new PathEdge<N, D>(zeroValue, startPoint, zeroValue));
 		}
 	}
 
@@ -203,7 +203,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D>,M,I extends BiDiInte
 		}
 		Throwable exception = executor.getException();
 		if(exception!=null) {
-			throw new RuntimeException("There were exceptions during IDE analysis. Exiting.",exception);
+			throw new RuntimeException("There were exceptions during IFDS analysis. Exiting.",exception);
 		}
 	}
 
@@ -505,7 +505,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D>,M,I extends BiDiInte
 			boolean forceRegister) {
 		final PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
 		final D existingVal = (forceRegister || !enableMergePointChecking || isMergePoint(target)) ?
-				jumpFn.addFunction(new WeakPathEdge<N, D>(sourceVal, target, targetVal)) : null;
+				jumpFn.addFunction(edge) : null;
 		if (existingVal != null) {
 			if (existingVal != targetVal)
 				existingVal.addNeighbor(targetVal);
@@ -514,7 +514,6 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D>,M,I extends BiDiInte
 			scheduleEdgeProcessing(edge);
 			if(targetVal!=zeroValue)
 				logger.trace("EDGE: <{},{}> -> <{},{}>", icfg.getMethodOf(target), sourceVal, target, targetVal);
-//				logger.info("EDGE: <{},{}> -> <{},{}>", icfg.getMethodOf(target), sourceVal, target, targetVal);
 		}
 	}
 	

@@ -383,6 +383,12 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								interproceduralCFG()))
 							return Collections.emptySet();
 						
+						// Only propagate the taint if the target field is actually read
+						if (enableStaticFields && source.getAccessPath().isStaticFieldRef())
+							if (!interproceduralCFG().isStaticFieldRead(dest,
+									source.getAccessPath().getFirstField()))
+								return Collections.emptySet();
+						
 						Set<Abstraction> res = new HashSet<Abstraction>();
 						
 						// if the returned value is tainted - taint values from return statements
@@ -578,10 +584,13 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 			@Override
 			public FlowFunction<Abstraction> getCallToReturnFlowFunction(final Unit call, final Unit returnSite) {
 				final Stmt iStmt = (Stmt) call;
+				final InvokeExpr invExpr = iStmt.getInvokeExpr();
 				
 				final Value[] callArgs = new Value[iStmt.getInvokeExpr().getArgCount()];
 				for (int i = 0; i < iStmt.getInvokeExpr().getArgCount(); i++)
 					callArgs[i] = iStmt.getInvokeExpr().getArg(i);
+				
+				final SootMethod callee = invExpr.getMethod();
 				
 				return new SolverCallToReturnFlowFunction() {
 					@Override
@@ -590,9 +599,13 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							return Collections.emptySet();
 						assert source.isAbstractionActive() || flowSensitiveAliasing;
 						
-						// We never pass static taints over the call-to-return edge
-						if (source.getAccessPath().isStaticFieldRef())
-							return Collections.emptySet();
+						// If the callee does not read the given value, we also need to pass it on
+						// since we do not propagate it into the callee.
+						if (enableStaticFields && source.getAccessPath().isStaticFieldRef()) {
+							if (interproceduralCFG().isStaticFieldUsed(callee,
+									source.getAccessPath().getFirstField()))
+								return Collections.emptySet();
+						}
 						
 						// We may not pass on a taint if it is overwritten by this call
 						if (iStmt instanceof DefinitionStmt && ((DefinitionStmt) iStmt).getLeftOp()

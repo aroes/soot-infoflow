@@ -12,7 +12,6 @@ package soot.jimple.infoflow.entryPointCreators;
 
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;

@@ -79,7 +79,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	
 	protected boolean stopAfterFirstFlow = false;
 	
-	protected Set<TaintPropagationHandler> taintPropagationHandlers = new HashSet<TaintPropagationHandler>();
+	protected Set<TaintPropagationHandler> taintPropagationHandlers = null;
 
 	private MyConcurrentHashMap<Unit, Set<Unit>> activationUnitsToCallSites =
 			new MyConcurrentHashMap<Unit, Set<Unit>>();
@@ -394,6 +394,8 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	 * @param handler The handler to be invoked when propagating taints
 	 */
 	public void addTaintPropagationHandler(TaintPropagationHandler handler) {
+		if (this.taintPropagationHandlers == null)
+			this.taintPropagationHandlers = new HashSet<>();
 		this.taintPropagationHandlers.add(handler);
 	}
 	

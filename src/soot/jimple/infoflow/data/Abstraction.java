@@ -387,7 +387,7 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction>
 	
 	@Override
 	public boolean equals(Object obj) {
-		if (super.equals(obj))
+		if (this == obj)
 			return true;
 		if (obj == null || getClass() != obj.getClass())
 			return false;
