@@ -318,7 +318,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				// Do not taint static fields unless the option is enabled
 				if (!enableStaticFields && leftValue instanceof StaticFieldRef)
 					return;
-
+				
 				Abstraction newAbs = null;
 				if (!source.getAccessPath().isEmpty()) {
 					// Special handling for array (de)construction
@@ -334,6 +334,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						CastExpr cast = (CastExpr) assignStmt.getRightOp();
 						if (cast.getType() instanceof ArrayType && !(targetType instanceof ArrayType)) {
 							assert canCastType(targetType, cast.getType());
+							
+							// If the cast was realizable, we can assume that we had the
+							// type to which we cast.
 							targetType = cast.getType();
 						}
 					}

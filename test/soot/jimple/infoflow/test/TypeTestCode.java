@@ -185,6 +185,25 @@ public class TypeTestCode {
 		cm.publish(a.data);
 	}
 	
+	public void arrayObjectCastTest3() {
+		Object obj = Bundle.get("foo");
+		objArr = (Object[]) obj;
+		doMagic(objArr);
+	}
+	
+	private Object[] objArr;
+	
+	private void doMagic(Object obj) {
+		if (obj instanceof Object[]) {
+			Object[] arr = (Object[]) obj;
+			int i = arr.length;
+			System.out.println("Length: " + i);
+			obj = arr[0];
+		}
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(obj == null ? "null" : (String) obj);
+	}
+
 	public void callTypeTest() {
 		String[] x = new String[1];
 		x[0] = TelephonyManager.getDeviceId();

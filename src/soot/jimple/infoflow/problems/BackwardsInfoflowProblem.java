@@ -26,6 +26,7 @@ import soot.BooleanType;
 import soot.IntType;
 import soot.Local;
 import soot.RefType;
+import soot.Scene;
 import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
@@ -186,6 +187,11 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								CastExpr ce = (CastExpr) defStmt.getRightOp();
 								if (!checkCast(source.getAccessPath(), ce.getCastType()))
 									return Collections.emptySet();
+								
+								// If the cast was realizable, we can assume that we had the
+								// type to which we cast. Do not loosen types, though.
+								if (!Scene.v().getFastHierarchy().canStoreType(newType, ce.getCastType()))
+									newType = ce.getCastType();
 							}
 							// Special type handling for certain operations
 							else if (defStmt.getRightOp() instanceof LengthExpr) {

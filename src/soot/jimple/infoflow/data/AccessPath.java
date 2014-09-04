@@ -248,6 +248,8 @@ public class AccessPath implements Cloneable {
 				&& !(this.value.getType() instanceof RefType && ((RefType) this.value.getType()).getSootClass().getName().equals("java.io.Serializable"))
 				&& !(this.value.getType() instanceof RefType && ((RefType) this.value.getType()).getSootClass().getName().equals("java.lang.Cloneable")))
 					: "Type mismatch. Type was " + this.baseType + ", value was: " + (this.value == null ? null : this.value.getType());
+		assert this.value == null || !(this.value.getType() instanceof ArrayType && !(this.baseType instanceof ArrayType))
+				: "Type mismatch. Type was " + this.baseType + ", value was: " + (this.value == null ? null : this.value.getType());
 		assert !isEmpty() || this.baseType == null;
 	}
 	
@@ -440,7 +442,8 @@ public class AccessPath implements Cloneable {
 	 * @return
 	 */
 	public AccessPath copyWithNewValue(Value val, Type newType, boolean cutFirstField){
-		if (this.value != null && this.value.equals(val))
+		if (this.value != null && this.value.equals(val)
+				&& this.baseType.equals(newType))
 			return this;
 		
 		return new AccessPath(val, fields, newType, fieldTypes, this.taintSubFields,
