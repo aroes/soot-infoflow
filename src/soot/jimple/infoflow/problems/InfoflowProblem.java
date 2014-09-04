@@ -276,9 +276,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						return Collections.emptySet();
 												
 					// Notify the handler if we have one
-					for (TaintPropagationHandler tp : taintPropagationHandlers)
-						tp.notifyFlowIn(stmt, Collections.singleton(source),
-								interproceduralCFG(), FlowFunctionType.NormalFlowFunction);
+					if (taintPropagationHandlers != null)
+						for (TaintPropagationHandler tp : taintPropagationHandlers)
+							tp.notifyFlowIn(stmt, Collections.singleton(source),
+									interproceduralCFG(), FlowFunctionType.NormalFlowFunction);
 					
 					// Compute the new abstractions
 					Set<Abstraction> res = computeTargetsInternal(d1, source);
@@ -288,12 +289,12 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				public abstract Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source);
 
 			}
-
+			
 			private Set<Abstraction> notifyOutFlowHandlers(Unit stmt, Set<Abstraction> res,
 					FlowFunctionType functionType) {
-				if (res != null && !res.isEmpty())
-					for (TaintPropagationHandler tp : taintPropagationHandlers)
-						tp.notifyFlowOut(stmt, res, interproceduralCFG(), functionType);
+				if (taintPropagationHandlers != null && res != null && !res.isEmpty())
+						for (TaintPropagationHandler tp : taintPropagationHandlers)
+							tp.notifyFlowOut(stmt, res, interproceduralCFG(), functionType);
 				return res;
 			}
 			
@@ -317,7 +318,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				// Do not taint static fields unless the option is enabled
 				if (!enableStaticFields && leftValue instanceof StaticFieldRef)
 					return;
-
+				
 				Abstraction newAbs = null;
 				if (!source.getAccessPath().isEmpty()) {
 					// Special handling for array (de)construction
@@ -333,6 +334,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						CastExpr cast = (CastExpr) assignStmt.getRightOp();
 						if (cast.getType() instanceof ArrayType && !(targetType instanceof ArrayType)) {
 							assert canCastType(targetType, cast.getType());
+							
+							// If the cast was realizable, we can assume that we had the
+							// type to which we cast.
 							targetType = cast.getType();
 						}
 					}
@@ -360,13 +364,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				
 				if (triggerInaktiveTaintOrReverseFlow(assignStmt, leftValue, newAbs))
 					computeAliasTaints(d1, assignStmt, leftValue, taintSet, method, newAbs);
-			}
-			
-			private boolean isFieldReadByCallee(
-					final Set<SootField> fieldsReadByCallee, Abstraction source) {
-				if (fieldsReadByCallee == null)
-					return true;
-				return fieldsReadByCallee.contains(source.getAccessPath().getFirstField());
 			}
 			
 			/**
@@ -833,9 +830,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				final boolean isSink = sourceSinkManager != null
 						? sourceSinkManager.isSink(stmt, interproceduralCFG()) : false;
 				
-				final Set<SootField> fieldsReadByCallee = enableStaticFields ? interproceduralCFG().getReadVariables
-						(interproceduralCFG().getMethodOf(stmt), stmt) : null;
-				
 				// This is not cached by Soot, so accesses are more expensive
 				// than one might think
 				final Local thisLocal = dest.isStatic() ? null : dest.getActiveBody().getThisLocal();
@@ -869,9 +863,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						}
 						
 						// Notify the handler if we have one
-						for (TaintPropagationHandler tp : taintPropagationHandlers)
-							tp.notifyFlowIn(stmt, Collections.singleton(source),
-									interproceduralCFG(), FlowFunctionType.CallFlowFunction);
+						if (taintPropagationHandlers != null)
+							for (TaintPropagationHandler tp : taintPropagationHandlers)
+								tp.notifyFlowIn(stmt, Collections.singleton(source),
+										interproceduralCFG(), FlowFunctionType.CallFlowFunction);
 						
 						// If we have an exclusive taint wrapper for the target
 						// method, we do not perform an own taint propagation. 
@@ -912,10 +907,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						// there is no point in tracking explicit ones afterwards as well.
 						if (implicitTargets.containsKey(src) && (d1 == null || implicitTargets.get(src).contains(d1)))
 							return Collections.emptySet();
-
+						
 						// Only propagate the taint if the target field is actually read
 						if (enableStaticFields && source.getAccessPath().isStaticFieldRef())
-							if (fieldsReadByCallee != null && !isFieldReadByCallee(fieldsReadByCallee, source))
+							if (!interproceduralCFG().isStaticFieldRead(dest,
+									source.getAccessPath().getFirstField()))
 								return Collections.emptySet();
 						
 						Set<Abstraction> res = new HashSet<Abstraction>();
@@ -991,9 +987,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							return Collections.emptySet();
 						
 						// Notify the handler if we have one
-						for (TaintPropagationHandler tp : taintPropagationHandlers)
-							tp.notifyFlowIn(exitStmt, Collections.singleton(source),
-									interproceduralCFG(), FlowFunctionType.ReturnFlowFunction);
+						if (taintPropagationHandlers != null)
+							for (TaintPropagationHandler tp : taintPropagationHandlers)
+								tp.notifyFlowIn(exitStmt, Collections.singleton(source),
+										interproceduralCFG(), FlowFunctionType.ReturnFlowFunction);
 						
 						boolean callerD1sConditional = false;
 						for (Abstraction d1 : callerD1s)
@@ -1030,8 +1027,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 													interproceduralCFG().getMethodOf(callSite), abs);
 									
 									// Notify the handler if we have one
-									for (TaintPropagationHandler tp : taintPropagationHandlers)
-										tp.notifyFlowOut(exitStmt, res, interproceduralCFG(), FlowFunctionType.ReturnFlowFunction);
+									if (taintPropagationHandlers != null)
+										for (TaintPropagationHandler tp : taintPropagationHandlers)
+											tp.notifyFlowOut(exitStmt, res, interproceduralCFG(), FlowFunctionType.ReturnFlowFunction);
 									return res;
 								}
 							
@@ -1218,11 +1216,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							? sourceSinkManager.getSourceInfo((Stmt) call, interproceduralCFG()) : null;
 					final boolean isSink = (sourceSinkManager != null)
 							? sourceSinkManager.isSink(iStmt, interproceduralCFG()) : false;
-
-					final Set<SootField> fieldsReadByCallee = enableStaticFields ? interproceduralCFG().getReadVariables
-							(interproceduralCFG().getMethodOf(call), iStmt) : null;
-					final Set<SootField> fieldsWrittenByCallee = enableStaticFields ? interproceduralCFG().getWriteVariables
-							(interproceduralCFG().getMethodOf(call), iStmt) : null;
 					
 					final SootMethod callee = invExpr.getMethod();
 					final boolean hasValidCallees = hasValidCallees(call);
@@ -1240,9 +1233,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								return Collections.emptySet();
 							
 							// Notify the handler if we have one
-							for (TaintPropagationHandler tp : taintPropagationHandlers)
-								tp.notifyFlowIn(call, Collections.singleton(source),
-										interproceduralCFG(), FlowFunctionType.CallToReturnFlowFunction);
+							if (taintPropagationHandlers != null)
+								for (TaintPropagationHandler tp : taintPropagationHandlers)
+									tp.notifyFlowIn(call, Collections.singleton(source),
+											interproceduralCFG(), FlowFunctionType.CallToReturnFlowFunction);
 							
 							// Check whether we must leave a conditional branch
 							if (source.isTopPostdominator(call)) {
@@ -1335,10 +1329,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							
 							// If the callee does not read the given value, we also need to pass it on
 							// since we do not propagate it into the callee.
-							if (enableStaticFields && source.getAccessPath().isStaticFieldRef())
-								if (fieldsReadByCallee != null && !isFieldReadByCallee(fieldsReadByCallee, source)
-										&& !isFieldReadByCallee(fieldsWrittenByCallee, source))
+							if (enableStaticFields && source.getAccessPath().isStaticFieldRef()) {
+								if (!interproceduralCFG().isStaticFieldUsed(callee,
+										source.getAccessPath().getFirstField()))
 									passOn = true;
+							}
 							
 							// Implicit taints are always passed over conditionally called methods
 							passOn |= source.getTopPostdominator() != null || source.getAccessPath().isEmpty();

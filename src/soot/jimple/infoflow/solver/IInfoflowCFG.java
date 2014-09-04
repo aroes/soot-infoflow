@@ -4,12 +4,9 @@
  */
 package soot.jimple.infoflow.solver;
 
-import java.util.Set;
-
 import soot.SootField;
 import soot.SootMethod;
 import soot.Unit;
-import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 public interface IInfoflowCFG extends BiDiInterproceduralCFG<Unit,SootMethod> {
@@ -93,9 +90,9 @@ public interface IInfoflowCFG extends BiDiInterproceduralCFG<Unit,SootMethod> {
      * @return The postdominator of the given unit
      */
     public UnitContainer getPostdominatorOf(Unit u);
-
-    public Set<SootField> getReadVariables(SootMethod caller, Stmt inv);
-
-    public Set<SootField> getWriteVariables(SootMethod caller, Stmt inv);
-
+    
+    public boolean isStaticFieldRead(SootMethod method, SootField variable);
+    
+    public boolean isStaticFieldUsed(SootMethod method, SootField variable);
+    
 }

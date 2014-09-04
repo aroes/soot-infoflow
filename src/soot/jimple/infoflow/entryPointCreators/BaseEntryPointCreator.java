@@ -71,6 +71,9 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 
 	private final Set<SootMethod> failedMethods = new HashSet<>();
 	
+	protected final String DUMMY_CLASS_NAME = "dummyMainClass";
+	protected final String DUMMY_METHOD_NAME = "dummyMainMethod";
+	
 	/**
 	 * Returns a copy of all classes that could not be instantiated properly
 	 * @return The classes where the constructor could not be generated
@@ -133,14 +136,27 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 	 * @return The newly generated main method
 	 */
 	protected SootMethod createEmptyMainMethod(Body body){
-		SootMethod mainMethod = new SootMethod("dummyMainMethod", new ArrayList<Type>(), VoidType.v());
+		// If we already have a main class, we need to make sure to use a fresh
+		// method name
+		final SootClass mainClass;
+		String methodName = DUMMY_METHOD_NAME;
+		if (Scene.v().containsClass(DUMMY_CLASS_NAME)) {
+			int methodIndex = 0;
+			mainClass = Scene.v().getSootClass(DUMMY_CLASS_NAME);
+			while (mainClass.declaresMethodByName(methodName))
+				methodName = DUMMY_METHOD_NAME + "_" + methodIndex++;
+		}
+		else {
+			mainClass = new SootClass(DUMMY_CLASS_NAME);
+			Scene.v().addClass(mainClass);
+		}
+		
+		SootMethod mainMethod = new SootMethod(methodName, new ArrayList<Type>(), VoidType.v());
 		body.setMethod(mainMethod);
 		mainMethod.setActiveBody(body);
-		SootClass mainClass = new SootClass("dummyMainClass");
 		mainClass.addMethod(mainMethod);
 		// First add class to scene, then make it an application class
 		// as addClass contains a call to "setLibraryClass" 
-		Scene.v().addClass(mainClass);
 		mainClass.setApplicationClass();
 		mainMethod.setModifiers(Modifier.PUBLIC | Modifier.STATIC);
 		return mainMethod;

@@ -26,6 +26,7 @@ import soot.BooleanType;
 import soot.IntType;
 import soot.Local;
 import soot.RefType;
+import soot.Scene;
 import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
@@ -186,6 +187,11 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								CastExpr ce = (CastExpr) defStmt.getRightOp();
 								if (!checkCast(source.getAccessPath(), ce.getCastType()))
 									return Collections.emptySet();
+								
+								// If the cast was realizable, we can assume that we had the
+								// type to which we cast. Do not loosen types, though.
+								if (!Scene.v().getFastHierarchy().canStoreType(newType, ce.getCastType()))
+									newType = ce.getCastType();
 							}
 							// Special type handling for certain operations
 							else if (defStmt.getRightOp() instanceof LengthExpr) {
@@ -382,6 +388,12 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						if(taintWrapper != null && taintWrapper.isExclusive(stmt, source.getAccessPath(),
 								interproceduralCFG()))
 							return Collections.emptySet();
+						
+						// Only propagate the taint if the target field is actually read
+						if (enableStaticFields && source.getAccessPath().isStaticFieldRef())
+							if (!interproceduralCFG().isStaticFieldRead(dest,
+									source.getAccessPath().getFirstField()))
+								return Collections.emptySet();
 						
 						Set<Abstraction> res = new HashSet<Abstraction>();
 						
@@ -582,10 +594,13 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 			@Override
 			public FlowFunction<Abstraction> getCallToReturnFlowFunction(final Unit call, final Unit returnSite) {
 				final Stmt iStmt = (Stmt) call;
+				final InvokeExpr invExpr = iStmt.getInvokeExpr();
 				
 				final Value[] callArgs = new Value[iStmt.getInvokeExpr().getArgCount()];
 				for (int i = 0; i < iStmt.getInvokeExpr().getArgCount(); i++)
 					callArgs[i] = iStmt.getInvokeExpr().getArg(i);
+				
+				final SootMethod callee = invExpr.getMethod();
 				
 				return new SolverCallToReturnFlowFunction() {
 					@Override
@@ -594,9 +609,13 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							return Collections.emptySet();
 						assert source.isAbstractionActive() || flowSensitiveAliasing;
 						
-						// We never pass static taints over the call-to-return edge
-						if (source.getAccessPath().isStaticFieldRef())
-							return Collections.emptySet();
+						// If the callee does not read the given value, we also need to pass it on
+						// since we do not propagate it into the callee.
+						if (enableStaticFields && source.getAccessPath().isStaticFieldRef()) {
+							if (interproceduralCFG().isStaticFieldUsed(callee,
+									source.getAccessPath().getFirstField()))
+								return Collections.emptySet();
+						}
 						
 						// We may not pass on a taint if it is overwritten by this call
 						if (iStmt instanceof DefinitionStmt && ((DefinitionStmt) iStmt).getLeftOp()
