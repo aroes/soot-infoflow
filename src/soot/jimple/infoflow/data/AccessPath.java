@@ -248,8 +248,6 @@ public class AccessPath implements Cloneable {
 				&& !(this.value.getType() instanceof RefType && ((RefType) this.value.getType()).getSootClass().getName().equals("java.io.Serializable"))
 				&& !(this.value.getType() instanceof RefType && ((RefType) this.value.getType()).getSootClass().getName().equals("java.lang.Cloneable")))
 					: "Type mismatch. Type was " + this.baseType + ", value was: " + (this.value == null ? null : this.value.getType());
-		assert this.value == null || !(this.value.getType() instanceof ArrayType && !(this.baseType instanceof ArrayType))
-				: "Type mismatch. Type was " + this.baseType + ", value was: " + (this.value == null ? null : this.value.getType());
 		assert !isEmpty() || this.baseType == null;
 	}
 	
