@@ -410,7 +410,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 												|| rStmt.getOp() instanceof FieldRef) {
 											Abstraction abs = source.deriveNewAbstraction
 													(source.getAccessPath().copyWithNewValue
-															(rStmt.getOp(), null, false), (Stmt) src);
+															(rStmt.getOp(), source.getAccessPath().getBaseType(), false), (Stmt) src);
 											res.add(abs);
 										}
 									}
