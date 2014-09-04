@@ -545,6 +545,9 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D>,M,I extends BiDiInte
 	}
 
 	private boolean addEndSummary(M m, D d1, N eP, D d2) {
+		if (d1 == zeroValue)
+			return true;
+		
 		Set<Pair<N, D>> summaries = endSummary.putIfAbsentElseGet
 				(new Pair<M, D>(m, d1), new ConcurrentHashSet<Pair<N, D>>());
 		return summaries.add(new Pair<N, D>(eP, d2));
