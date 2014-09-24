@@ -366,8 +366,10 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				// than one might think
 				final Local thisLocal = dest.isStatic() ? null : dest.getActiveBody().getThisLocal();	
 				
-				final boolean isExecutorExecute = ie.getMethod().getSubSignature().equals("void execute(java.lang.Runnable)")
-						&& dest.getSubSignature().equals("void run()");
+				final boolean isExecutorExecute = (ie.getMethod().getSubSignature().equals("void execute(java.lang.Runnable)")
+								&& dest.getSubSignature().equals("void run()"))
+						|| (ie.getMethod().getSubSignature().equals("java.lang.Object doPrivileged(java.security.PrivilegedAction)")
+								&& dest.getSubSignature().equals("java.lang.Object run()"));
 
 				return new SolverCallFlowFunction() {
 
@@ -424,7 +426,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 
 						// checks: this/fields
 						Value sourceBase = source.getAccessPath().getPlainValue();
-						if (!dest.isStatic()) {
+						if (!source.getAccessPath().isStaticFieldRef() && !dest.isStatic()) {
 							InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();
 							if (iIExpr.getBase() == sourceBase
 									&& (hasCompatibleTypesForCall(source.getAccessPath(), dest.getDeclaringClass()))) {

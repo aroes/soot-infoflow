@@ -834,8 +834,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				// than one might think
 				final Local thisLocal = dest.isStatic() ? null : dest.getActiveBody().getThisLocal();
 				
-				final boolean isExecutorExecute = ie.getMethod().getSubSignature().equals("void execute(java.lang.Runnable)")
-						&& dest.getSubSignature().equals("void run()");
+				final boolean isExecutorExecute = (ie.getMethod().getSubSignature().equals("void execute(java.lang.Runnable)")
+								&& dest.getSubSignature().equals("void run()"))
+						|| (ie.getMethod().getSubSignature().equals("java.lang.Object doPrivileged(java.security.PrivilegedAction)")
+								&& dest.getSubSignature().equals("java.lang.Object run()"));
 
 				return new SolverCallFlowFunction() {
 
