@@ -3,7 +3,6 @@ package soot.jimple.infoflow.data;
 import heros.solver.Pair;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -39,78 +38,67 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 	}
 	
 	public SourceContextAndPath extendPath(Stmt s) {
+		return extendPath(s, null);
+	}
+	
+	public SourceContextAndPath extendPath(Stmt s, Stmt correspondingCallSite) {
 		if (s == null)
 			return this;
 		
 		SourceContextAndPath scap = clone();
-		scap.path.add(s);
+		scap.path.add(0, s);
 		
 		// Extend the call stack
-		if (s.containsInvokeExpr())
-			scap.callStack.add(0, new Pair<Stmt, Set<Abstraction>>(s,
+		if (correspondingCallSite != null)
+			scap.callStack.add(0, new Pair<Stmt, Set<Abstraction>>(correspondingCallSite,
 					Sets.<Abstraction>newIdentityHashSet()));
 		
 		return scap;
 	}
-		
-	protected SourceContextAndPath extendPath(Collection<Stmt> s) {
-		SourceContextAndPath scap = clone();
-		for (Stmt stmt : s) {
-			scap.path.add(stmt);
-			if (stmt.containsInvokeExpr())
-				scap.callStack.add(0, new Pair<Stmt, Set<Abstraction>>(stmt,
-						Sets.<Abstraction>newIdentityHashSet()));
-		}
-		
-		return scap;
-	}
 	
-	public Pair<Stmt, Set<Abstraction>> getTopCallStackItem() {
-		if (callStack.isEmpty()) {
-			synchronized (this) {
-				if (callStack.isEmpty()) {
-					Pair<Stmt, Set<Abstraction>> stackTop = new Pair<Stmt, Set<Abstraction>>(null,
-							Sets.<Abstraction>newIdentityHashSet());
-					callStack.add(0, stackTop);
-				}
-			}
-		}
-		
-		return callStack.get(0);
-	}
-	
-	public synchronized boolean putAbstractionOnCallStack(Abstraction abs) {
+	public boolean putAbstractionOnCallStack(Abstraction abs) {
 		for (Pair<Stmt, Set<Abstraction>> callPair : callStack)
 			if (callPair.getO2().contains(abs))
 				return false;
-		return getTopCallStackItem().getO2().add(abs);
+
+		Pair<Stmt, Set<Abstraction>> stackTop = null;
+		synchronized (this) {
+			if (callStack.isEmpty()) {
+				stackTop = new Pair<Stmt, Set<Abstraction>>(null,
+						Sets.<Abstraction>newIdentityHashSet());
+				callStack.add(0, stackTop);
+			}
+			else
+				stackTop = callStack.get(0);
+			
+			return stackTop.getO2().add(abs);
+		}
 	}
 	
 	/**
-	 * Pops the top item off the call stack
-	 * @return The new {@link SourceContextAndPath} object
+	 * Pops the top item off the call stack.
+	 * @return The new {@link SourceContextAndPath} object as the first element
+	 * of the pair and the call stack item that was popped off as the second
+	 * element
 	 */
-	public SourceContextAndPath popTopCallStackItem() {
+	public Pair<SourceContextAndPath, Pair<Stmt, Set<Abstraction>>> popTopCallStackItem() {
 		if (callStack.isEmpty())
-			return this;
+			return new Pair<>(this, null);
+		
 		SourceContextAndPath scap = clone();
-		scap.callStack.remove(0);
-		return scap;
+		Pair<Stmt, Set<Abstraction>> csi = scap.callStack.remove(0);
+		return new Pair<>(scap, csi);
 	}
 	
-	public boolean merge(SourceContextAndPath otherScap) {
-		return false;
-		
-		/*
-		int maxSize = Math.min(this.callStack.size(), otherScap.callStack.size());
-			
-		boolean added = false;
-		for (int i = 0; i < maxSize; i++)
-			if (this.callStack.get(i).getO2().addAll(otherScap.callStack.get(i).getO2()))
-				added = true;
-		
-		return added;
-		*/
+	/**
+	 * Pops the top item off the call stack. Note that this method modifies the
+	 * state of the current object. The caller is responsible for making sure
+	 * that the object is not used anywhere and that the immutability contract
+	 * is not violated.  
+	 * @return The call stack item that was popped off
+	 */
+	public Pair<Stmt, Set<Abstraction>> _popTopCallStackItem() {
+		return callStack.isEmpty() ? null : callStack.remove(0);
 	}
 	
 	@Override
@@ -158,17 +146,6 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 		final SourceContextAndPath scap = new SourceContextAndPath(getValue(), getStmt(), getUserData());
 		scap.path.addAll(this.path);
 		scap.callStack.addAll(callStack);
-		
-		// TODO: Double-check. Doesn't seem right not to copy.
-		/*
-		for (Pair<Stmt, Set<Abstraction>> entry : this.callStack) {
-			Set<Abstraction> set = Sets.<Abstraction>newIdentityHashSet();
-			set.addAll(entry.getO2());
-			scap.callStack.add(new Pair<Stmt, Set<Abstraction>>(entry.getO1(), set));
-		}
-		*/
-		
-		assert scap.equals(this);
 		return scap;
 	}
 	

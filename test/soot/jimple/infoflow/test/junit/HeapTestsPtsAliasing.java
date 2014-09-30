@@ -249,9 +249,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void negativeMultiLevelTaint2()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
-		// PTS-based alias check is flow-insensitive
-		checkInfoflow(infoflow, 1);
-		// negativeCheckInfoflow(infoflow);
+		negativeCheckInfoflow(infoflow);
 	}
 
 	@Test(timeout = 300000)

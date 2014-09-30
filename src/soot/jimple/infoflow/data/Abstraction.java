@@ -15,10 +15,7 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.Stack;
-import java.util.concurrent.ConcurrentHashMap;
 
 import soot.NullType;
 import soot.SootMethod;
@@ -58,9 +55,8 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	private SourceContext sourceContext = null;
 
 	// only used in path generation
-	private Map<SourceContextAndPath, SourceContextAndPath> pathCache = null;
+	private Set<SourceContextAndPath> pathCache = null;
 	private BitSet pathFlags = null;
-	private Set<Stack<Stmt>> callSites = null;
 	
 	/**
 	 * Unit/Stmt which activates the taint when the abstraction passes it
@@ -250,7 +246,7 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	 * @return The path from the source to the current statement
 	 */
 	public Set<SourceContextAndPath> getPaths() {
-		return pathCache == null ? null : Collections.unmodifiableSet(pathCache.keySet());
+		return pathCache == null ? null : Collections.unmodifiableSet(pathCache);
 	}
 	
 	private static Object mergeLock = new Object();
@@ -259,28 +255,22 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 		// We're optimistic about having a path cache. If we definitely have one,
 		// we return it. Otherwise, we need to lock and create one.
 		if (this.pathCache != null)
-			return Collections.unmodifiableSet(pathCache.keySet());
+			return Collections.unmodifiableSet(pathCache);
 		
 		synchronized (mergeLock) {
 			if (this.pathCache == null)
-				this.pathCache = new ConcurrentHashMap<SourceContextAndPath, SourceContextAndPath>();
+				this.pathCache = new ConcurrentHashSet<SourceContextAndPath>();
 		}
-		return Collections.unmodifiableSet(pathCache.keySet());
+		return Collections.unmodifiableSet(pathCache);
 	}
 	
 	public boolean addPathElement(SourceContextAndPath scap) {
-		synchronized (mergeLock) {			
+		synchronized (mergeLock) {
 			if (this.pathCache == null) {
-				this.pathCache = new ConcurrentHashMap<SourceContextAndPath, SourceContextAndPath>();
+				this.pathCache = new ConcurrentHashSet<SourceContextAndPath>();
 			}
 			
-			SourceContextAndPath oldScap = this.pathCache.get(scap);
-			if (oldScap == null)
-				return this.pathCache.put(scap, scap) != scap;
-			else if (oldScap != scap)
-				return oldScap.merge(scap);
-			else
-				return false;
+			return this.pathCache.add(scap);
 		}
 	}
 	
@@ -294,13 +284,6 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 			pathFlags.set(id);
 		}
 		return true;
-	}
-	
-	public boolean registerCallSite(Stack<Stmt> callSite) {
-		if (this.callSites == null)
-			this.callSites = new ConcurrentHashSet<Stack<Stmt>>();
-		return this.callSites.add(callSite);
-		
 	}
 	
 	public boolean isAbstractionActive() {

@@ -293,7 +293,6 @@ public class OtherTests extends JUnitTests{
     
     @Test(timeout=300000)
     public void pathSkipTest6(){
-    	for (int i = 0; i < 25; i++) {
     	Infoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.OtherTestCode: void pathSkipTest6()>");
@@ -301,7 +300,6 @@ public class OtherTests extends JUnitTests{
 		checkInfoflow(infoflow, 1);
 		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourcePwd));
 		Assert.assertFalse(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));
-    	}
     }
 
     @Test(timeout=300000)
