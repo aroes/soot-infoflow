@@ -265,13 +265,14 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	}
 	
 	public boolean addPathElement(SourceContextAndPath scap) {
-		synchronized (mergeLock) {
-			if (this.pathCache == null) {
-				this.pathCache = new ConcurrentHashSet<SourceContextAndPath>();
+		if (this.pathCache == null) {
+			synchronized (mergeLock) {
+				if (this.pathCache == null) {
+					this.pathCache = new ConcurrentHashSet<SourceContextAndPath>();
+				}
 			}
-			
-			return this.pathCache.add(scap);
 		}
+		return this.pathCache.add(scap);
 	}
 	
 	public boolean registerPathFlag(int id) {

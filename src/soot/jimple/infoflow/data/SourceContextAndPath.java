@@ -60,9 +60,9 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 		for (Pair<Stmt, Set<Abstraction>> callPair : callStack)
 			if (callPair.getO2().contains(abs))
 				return false;
-
-		Pair<Stmt, Set<Abstraction>> stackTop = null;
+		
 		synchronized (this) {
+			Pair<Stmt, Set<Abstraction>> stackTop = null;
 			if (callStack.isEmpty()) {
 				stackTop = new Pair<Stmt, Set<Abstraction>>(null,
 						Sets.<Abstraction>newIdentityHashSet());

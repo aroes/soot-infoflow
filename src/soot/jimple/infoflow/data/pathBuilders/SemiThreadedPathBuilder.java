@@ -93,66 +93,64 @@ public class SemiThreadedPathBuilder extends AbstractAbstractionPathBuilder {
 					Set<SourceContextAndPath> paths = abstraction.getPaths();
 					Abstraction pred = abstraction.getPredecessor();
 					if (pred != null) {
-						// Process the predecessor
-						processPredecessor(paths, pred);
-						
-						// Process the predecessor's neighbors
-						if (pred.getNeighbors() != null)
-							for (Abstraction neighbor : pred.getNeighbors())
-								processPredecessor(paths, neighbor);
+						for (SourceContextAndPath scap : paths) {
+							// Process the predecessor
+							if (processPredecessor(scap, pred))
+								// Schedule the predecessor
+								abstractionQueue.add(pred);
+							
+							// Process the predecessor's neighbors
+							if (pred.getNeighbors() != null)
+								for (Abstraction neighbor : pred.getNeighbors())
+									if (processPredecessor(scap, neighbor))
+										// Schedule the predecessor
+										abstractionQueue.add(neighbor);
+						}
 					}
 				}
 			}
 		}
 
-		private void processPredecessor(Set<SourceContextAndPath> paths, Abstraction pred) {
-			boolean addedChild = false;
+		private boolean processPredecessor(SourceContextAndPath scap, Abstraction pred) {
+			// If we have already seen this predecessor, we skip it
+			if (!scap.putAbstractionOnCallStack(pred))
+				return false;
 			
-			for (SourceContextAndPath scap : paths) {
-				// If we have already seen this predecessor, we skip it
-				if (!scap.putAbstractionOnCallStack(pred))
-					continue;
-				
-				// If we enter a method, we put it on the stack
-				Stmt callSite = null;
-				if (pred.getCurrentStmt() != null
-						&& pred.getCorrespondingCallSite() != null
-						&& pred.getCurrentStmt() != pred.getCorrespondingCallSite()) {
-					callSite = pred.getCorrespondingCallSite();
-				}
-				
-				SourceContextAndPath extendedScap;
-				if (pred.getCurrentStmt() != null)
-					extendedScap = scap.extendPath(pred.getCurrentStmt(), callSite);
-				else
-					extendedScap = scap;
-				
-				// Do we process a method return?
-				if (pred.getCurrentStmt() != null
-						&& pred.getCorrespondingCallSite() == null
-						&& pred.getCurrentStmt().containsInvokeExpr()) {
-					// Pop the top item off the call stack. This gives us the item
-					// and the new SCAP without the item we popped off.
-					Pair<SourceContextAndPath, Pair<Stmt, Set<Abstraction>>> pathAndItem =
-							extendedScap.popTopCallStackItem();
-					Pair<Stmt, Set<Abstraction>> topCallStackItem = pathAndItem.getO2();
-					if (topCallStackItem != null && topCallStackItem.getO1() != null) {
-						// Make sure that we don't follow an unrealizable path
-						if (topCallStackItem.getO1() != pred.getCurrentStmt())
-							continue;
-						
-						// We have returned from a function
-						extendedScap = pathAndItem.getO1();
-					}
-				}
-				
-				// Add the new path
-				addedChild = pred.addPathElement(extendedScap);
+			// If we enter a method, we put it on the stack
+			Stmt callSite = null;
+			if (pred.getCurrentStmt() != null
+					&& pred.getCorrespondingCallSite() != null
+					&& pred.getCurrentStmt() != pred.getCorrespondingCallSite()) {
+				callSite = pred.getCorrespondingCallSite();
 			}
-			
-			// Schedule the predecessor
-			if (addedChild)
-				abstractionQueue.add(pred);
+				
+			SourceContextAndPath extendedScap;
+			if (pred.getCurrentStmt() != null)
+				extendedScap = scap.extendPath(pred.getCurrentStmt(), callSite);
+			else
+				extendedScap = scap;
+				
+			// Do we process a method return?
+			if (pred.getCurrentStmt() != null
+					&& pred.getCorrespondingCallSite() == null
+					&& pred.getCurrentStmt().containsInvokeExpr()) {
+				// Pop the top item off the call stack. This gives us the item
+				// and the new SCAP without the item we popped off.
+				Pair<SourceContextAndPath, Pair<Stmt, Set<Abstraction>>> pathAndItem =
+						extendedScap.popTopCallStackItem();
+				Pair<Stmt, Set<Abstraction>> topCallStackItem = pathAndItem.getO2();
+				if (topCallStackItem != null && topCallStackItem.getO1() != null) {
+					// Make sure that we don't follow an unrealizable path
+					if (topCallStackItem.getO1() != pred.getCurrentStmt())
+						return false;
+						
+					// We have returned from a function
+					extendedScap = pathAndItem.getO1();
+				}
+			}
+				
+			// Add the new path
+			return pred.addPathElement(extendedScap);
 		}
 	}
 	
