@@ -87,6 +87,8 @@ public class InFunctionTests extends JUnitTests {
     	ssm.setReturnTaintMethods(epoint);
 		
     	infoflow.computeInfoflow(appPath, libPath, new DefaultEntryPointCreator(epoint), ssm);
+    	Assert.assertFalse(infoflow.getResults().isEmpty());
+    	Assert.assertEquals(3, infoflow.getResults().getResults().entrySet().iterator().next().getValue().size());
 		Assert.assertTrue(infoflow.getResults().isPathBetween(SINK_STRING_RETURN_R5, SOURCE_STRING_PARAMETER));
 		Assert.assertTrue(infoflow.getResults().isPathBetween(SINK_STRING_RETURN_R5, SOURCE_STRING_PARAMETER2));
     }

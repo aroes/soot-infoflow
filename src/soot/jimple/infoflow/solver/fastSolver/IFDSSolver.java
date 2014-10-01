@@ -283,7 +283,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 								if (d5.equals(d2))
 									d5p = d2;
 								else if (setJumpPredecessors)
-									d5.setPredecessor(d2);
+									d5p.setPredecessor(d3);
 								propagate(d1, retSiteN, d5p, n, false);
 							}
 						}
@@ -372,7 +372,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 								d5p = predVal;
 							else {
 								if (setJumpPredecessors)
-									d5.setPredecessor(predVal);
+									d5p.setPredecessor(d1);
 							}
 							propagate(d4, retSiteC, d5p, c, false);
 						}

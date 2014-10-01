@@ -12,7 +12,6 @@ package soot.jimple.infoflow.data;
 
 
 import java.util.ArrayList;
-import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -56,7 +55,6 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 
 	// only used in path generation
 	private Set<SourceContextAndPath> pathCache = null;
-	private BitSet pathFlags = null;
 	
 	/**
 	 * Unit/Stmt which activates the taint when the abstraction passes it
@@ -254,13 +252,11 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	public Set<SourceContextAndPath> getOrMakePathCache() {
 		// We're optimistic about having a path cache. If we definitely have one,
 		// we return it. Otherwise, we need to lock and create one.
-		if (this.pathCache != null)
-			return Collections.unmodifiableSet(pathCache);
-		
-		synchronized (mergeLock) {
-			if (this.pathCache == null)
-				this.pathCache = new ConcurrentHashSet<SourceContextAndPath>();
-		}
+		if (this.pathCache == null)
+			synchronized (mergeLock) {
+				if (this.pathCache == null)
+					this.pathCache = new ConcurrentHashSet<SourceContextAndPath>();
+			}
 		return Collections.unmodifiableSet(pathCache);
 	}
 	
@@ -273,18 +269,6 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 			}
 		}
 		return this.pathCache.add(scap);
-	}
-	
-	public boolean registerPathFlag(int id) {
-		if (pathFlags != null && pathFlags.get(id))
-			return false;
-		
-		synchronized (this) {
-			if (pathFlags == null)
-				pathFlags = new BitSet();
-			pathFlags.set(id);
-		}
-		return true;
 	}
 	
 	public boolean isAbstractionActive() {
@@ -557,11 +541,6 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	public void setCallingContext(Abstraction callingContext) {
 		// TODO Auto-generated method stub
 		
-	}
-
-	@Override
-	public void setCallSite(Unit callSite) {
-		// TODO Auto-generated method stub
 	}
 	
 }

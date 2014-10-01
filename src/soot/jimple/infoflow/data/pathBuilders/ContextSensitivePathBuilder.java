@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import soot.SootMethod;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.InfoflowResults;
 import soot.jimple.infoflow.data.Abstraction;
@@ -25,19 +26,21 @@ import soot.jimple.infoflow.solver.IInfoflowCFG;
  * 
  * @author Steven Arzt
  */
-public class SemiThreadedPathBuilder extends AbstractAbstractionPathBuilder {
+public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder {
 	
 	private AtomicInteger propagationCount = null;
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final InfoflowResults results = new InfoflowResults();
 	private final CountingThreadPoolExecutor executor;
+	
+	private boolean reconstructPaths = false;
 		
 	/**
-	 * Creates a new instance of the {@link SemiThreadedPathBuilder} class
+	 * Creates a new instance of the {@link ContextSensitivePathBuilder} class
 	 * @param maxThreadNum The maximum number of threads to use
 	 */
-	public SemiThreadedPathBuilder(IInfoflowCFG icfg, int maxThreadNum) {
+	public ContextSensitivePathBuilder(IInfoflowCFG icfg, int maxThreadNum) {
 		super(icfg);
         int numThreads = Runtime.getRuntime().availableProcessors();
 		this.executor = createExecutor(maxThreadNum == -1 ? numThreads
@@ -64,7 +67,7 @@ public class SemiThreadedPathBuilder extends AbstractAbstractionPathBuilder {
 		private final Deque<Abstraction> abstractionQueue = new ArrayDeque<Abstraction>();
 		
 		public SourceFindingTask(Abstraction abstraction) {
-			this.abstractionQueue.push(abstraction);
+			this.abstractionQueue.add(abstraction);
 		}
 		
 		@Override
@@ -72,40 +75,45 @@ public class SemiThreadedPathBuilder extends AbstractAbstractionPathBuilder {
 			while (!abstractionQueue.isEmpty()) {
 				Abstraction abstraction = abstractionQueue.pop();
 				propagationCount.incrementAndGet();
+				
+				if (abstraction.getCurrentStmt() != null
+						&& abstraction.getCurrentStmt().toString().equals("$r3 = virtualinvoke $r0.<java.lang.StringBuilder: java.lang.StringBuilder append(java.lang.String)>(p1)")) {
+					SootMethod sm = icfg.getMethodOf(abstraction.getCurrentStmt());
+					System.out.println("x");
+				}
+
+				final Set<SourceContextAndPath> paths = abstraction.getPaths();
+				final Abstraction pred = abstraction.getPredecessor();
 								
-				if (abstraction.getPredecessor() == null) {
+				if (pred == null) {
 					// If we have no predecessors, this must be a source
 					assert abstraction.getSourceContext() != null;
-					Set<SourceContextAndPath> paths = abstraction.getPaths();
 					
 					// Register the result
 					for (SourceContextAndPath scap : paths) {
-						scap = scap.extendPath(abstraction.getSourceContext().getStmt());
-						results.addResult(scap.getValue(),
-								scap.getStmt(),
+						SourceContextAndPath extendedScap =
+								scap.extendPath(abstraction.getSourceContext().getStmt());
+						results.addResult(extendedScap.getValue(),
+								extendedScap.getStmt(),
 								abstraction.getSourceContext().getValue(),
 								abstraction.getSourceContext().getStmt(),
 								abstraction.getSourceContext().getUserData(),
-								scap.getPath());
+								extendedScap.getPath());
 					}
 				}
 				else {
-					Set<SourceContextAndPath> paths = abstraction.getPaths();
-					Abstraction pred = abstraction.getPredecessor();
-					if (pred != null) {
-						for (SourceContextAndPath scap : paths) {
-							// Process the predecessor
-							if (processPredecessor(scap, pred))
-								// Schedule the predecessor
-								abstractionQueue.add(pred);
-							
-							// Process the predecessor's neighbors
-							if (pred.getNeighbors() != null)
-								for (Abstraction neighbor : pred.getNeighbors())
-									if (processPredecessor(scap, neighbor))
-										// Schedule the predecessor
-										abstractionQueue.add(neighbor);
-						}
+					for (SourceContextAndPath scap : paths) {						
+						// Process the predecessor
+						if (processPredecessor(scap, pred))
+							// Schedule the predecessor
+							abstractionQueue.add(pred);
+						
+						// Process the predecessor's neighbors
+						if (pred.getNeighbors() != null)
+							for (Abstraction neighbor : pred.getNeighbors())
+								if (processPredecessor(scap, neighbor))
+									// Schedule the predecessor
+									abstractionQueue.add(neighbor);
 					}
 				}
 			}
@@ -116,36 +124,38 @@ public class SemiThreadedPathBuilder extends AbstractAbstractionPathBuilder {
 			if (!scap.putAbstractionOnCallStack(pred))
 				return false;
 			
-			// If we enter a method, we put it on the stack
-			Stmt callSite = null;
+			// Shortcut: If this a call-to-return node, we should not enter and
+			// immediately leave again for performance reasons.
 			if (pred.getCurrentStmt() != null
-					&& pred.getCorrespondingCallSite() != null
-					&& pred.getCurrentStmt() != pred.getCorrespondingCallSite()) {
-				callSite = pred.getCorrespondingCallSite();
+					&& pred.getCurrentStmt() == pred.getCorrespondingCallSite()) {
+				SourceContextAndPath extendedScap = scap.extendPath(reconstructPaths
+						? pred.getCurrentStmt() : null);
+				return pred.addPathElement(extendedScap);
 			}
-				
-			SourceContextAndPath extendedScap;
-			if (pred.getCurrentStmt() != null)
-				extendedScap = scap.extendPath(pred.getCurrentStmt(), callSite);
-			else
-				extendedScap = scap;
-				
+			
+			// If we enter a method, we put it on the stack
+			SourceContextAndPath extendedScap = scap.extendPath(reconstructPaths
+					? pred.getCurrentStmt() : null, pred.getCorrespondingCallSite());
+			
 			// Do we process a method return?
-			if (pred.getCurrentStmt() != null
-					&& pred.getCorrespondingCallSite() == null
+			if (pred.getCurrentStmt() != null 
 					&& pred.getCurrentStmt().containsInvokeExpr()) {
 				// Pop the top item off the call stack. This gives us the item
 				// and the new SCAP without the item we popped off.
 				Pair<SourceContextAndPath, Pair<Stmt, Set<Abstraction>>> pathAndItem =
 						extendedScap.popTopCallStackItem();
-				Pair<Stmt, Set<Abstraction>> topCallStackItem = pathAndItem.getO2();
-				if (topCallStackItem != null && topCallStackItem.getO1() != null) {
-					// Make sure that we don't follow an unrealizable path
-					if (topCallStackItem.getO1() != pred.getCurrentStmt())
-						return false;
+				if (pathAndItem != null) {
+					Pair<Stmt, Set<Abstraction>> topCallStackItem = pathAndItem.getO2();
+					// If we are not in any calling context, the first element
+					// in the pair is null.
+					if (topCallStackItem != null && topCallStackItem.getO1() != null) {
+						// Make sure that we don't follow an unrealizable path
+						if (topCallStackItem.getO1() != pred.getCurrentStmt())
+							return false;
 						
-					// We have returned from a function
-					extendedScap = pathAndItem.getO1();
+						// We have returned from a function
+						extendedScap = pathAndItem.getO1();
+					}
 				}
 			}
 				
@@ -156,6 +166,17 @@ public class SemiThreadedPathBuilder extends AbstractAbstractionPathBuilder {
 	
 	@Override
 	public void computeTaintSources(final Set<AbstractionAtSink> res) {
+		this.reconstructPaths = false;
+		runSourceFindingTasks(res);
+	}
+	
+	@Override
+	public void computeTaintPaths(final Set<AbstractionAtSink> res) {
+		this.reconstructPaths = true;
+		runSourceFindingTasks(res);
+	}
+	
+	private void runSourceFindingTasks(final Set<AbstractionAtSink> res) {
 		if (res.isEmpty())
 			return;
 		
@@ -166,13 +187,16 @@ public class SemiThreadedPathBuilder extends AbstractAbstractionPathBuilder {
     	// Start the propagation tasks
     	int curResIdx = 0;
     	for (final AbstractionAtSink abs : res) {
-   			SourceContextAndPath scap = new SourceContextAndPath(
-   					abs.getSinkValue(), abs.getSinkStmt());
-   			scap = scap.extendPath(abs.getSinkStmt());
-   			abs.getAbstraction().addPathElement(scap);
-    		
     		logger.info("Building path " + ++curResIdx);
-    		executor.execute(new SourceFindingTask(abs.getAbstraction()));
+   			buildPathForAbstraction(abs);
+   			
+   			// Also build paths for the neighbors of our result abstraction
+   			if (abs.getAbstraction().getNeighbors() != null)
+   				for (Abstraction neighbor : abs.getAbstraction().getNeighbors()) {
+   					AbstractionAtSink neighborAtSink = new AbstractionAtSink(neighbor,
+   							abs.getSinkValue(), abs.getSinkStmt());
+   		   			buildPathForAbstraction(neighborAtSink);
+   				}
     	}
 
     	try {
@@ -186,9 +210,17 @@ public class SemiThreadedPathBuilder extends AbstractAbstractionPathBuilder {
     			(System.nanoTime() - beforePathTracking) / 1E9, propagationCount.get());
 	}
 	
-	@Override
-	public void computeTaintPaths(final Set<AbstractionAtSink> res) {
-		computeTaintSources(res);
+	/**
+	 * Builds the path for the given abstraction that reached a sink
+	 * @param abs The abstraction that reached a sink
+	 */
+	private void buildPathForAbstraction(final AbstractionAtSink abs) {
+		SourceContextAndPath scap = new SourceContextAndPath(
+				abs.getSinkValue(), abs.getSinkStmt());
+		scap = scap.extendPath(abs.getSinkStmt());
+		abs.getAbstraction().addPathElement(scap);
+		
+		executor.execute(new SourceFindingTask(abs.getAbstraction()));
 	}
 	
 	@Override

@@ -90,7 +90,7 @@ public class SetTests extends JUnitTests {
     	
     	int oldAPLength = Infoflow.getAccessPathLength();
     	Infoflow.setAccessPathLength(1);
-
+    
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.SetTestCode: void concreteWriteReadLinkedPos0Test()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);

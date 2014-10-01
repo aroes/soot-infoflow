@@ -42,11 +42,12 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 	}
 	
 	public SourceContextAndPath extendPath(Stmt s, Stmt correspondingCallSite) {
-		if (s == null)
+		if (s == null && correspondingCallSite == null)
 			return this;
 		
 		SourceContextAndPath scap = clone();
-		scap.path.add(0, s);
+		if (s != null)
+			scap.path.add(0, s);
 		
 		// Extend the call stack
 		if (correspondingCallSite != null)
@@ -79,11 +80,11 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 	 * Pops the top item off the call stack.
 	 * @return The new {@link SourceContextAndPath} object as the first element
 	 * of the pair and the call stack item that was popped off as the second
-	 * element
+	 * element. If there is no call stack, null is returned.
 	 */
 	public Pair<SourceContextAndPath, Pair<Stmt, Set<Abstraction>>> popTopCallStackItem() {
 		if (callStack.isEmpty())
-			return new Pair<>(this, null);
+			return null;
 		
 		SourceContextAndPath scap = clone();
 		Pair<Stmt, Set<Abstraction>> csi = scap.callStack.remove(0);
