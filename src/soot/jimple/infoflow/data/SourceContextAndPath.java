@@ -6,13 +6,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 
 import soot.Value;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.Infoflow;
-
-import com.google.common.collect.Sets;
 
 /**
  * Extension of {@link SourceContext} that also allows a paths from the source
@@ -22,7 +19,7 @@ import com.google.common.collect.Sets;
  */
 public class SourceContextAndPath extends SourceContext implements Cloneable {
 	private final List<Stmt> path = new LinkedList<Stmt>();
-	private final List<Pair<Stmt, Set<Abstraction>>> callStack = new ArrayList<Pair<Stmt, Set<Abstraction>>>();
+	private final List<Stmt> callStack = new ArrayList<Stmt>();
 	private int hashCode = 0;
 	
 	public SourceContextAndPath(Value value, Stmt stmt) {
@@ -51,12 +48,12 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 		
 		// Extend the call stack
 		if (correspondingCallSite != null)
-			scap.callStack.add(0, new Pair<Stmt, Set<Abstraction>>(correspondingCallSite,
-					Sets.<Abstraction>newIdentityHashSet()));
+			scap.callStack.add(0, correspondingCallSite);
 		
 		return scap;
 	}
 	
+	/*
 	public boolean putAbstractionOnCallStack(Abstraction abs) {
 		for (Pair<Stmt, Set<Abstraction>> callPair : callStack)
 			if (callPair.getO2().contains(abs))
@@ -75,6 +72,7 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 			return stackTop.getO2().add(abs);
 		}
 	}
+	*/
 	
 	/**
 	 * Pops the top item off the call stack.
@@ -82,29 +80,19 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 	 * of the pair and the call stack item that was popped off as the second
 	 * element. If there is no call stack, null is returned.
 	 */
-	public Pair<SourceContextAndPath, Pair<Stmt, Set<Abstraction>>> popTopCallStackItem() {
+	public Pair<SourceContextAndPath, Stmt> popTopCallStackItem() {
 		if (callStack.isEmpty())
 			return null;
 		
+		/*
 		// If we only have the null item on the call stack, we keep the current
 		// object. This avoids creating unnecessary clones.
-		if (callStack.get(0).getO1() == null)
+		if (callStack.peek() == null)
 			return null;
+		*/
 		
 		SourceContextAndPath scap = clone();
-		Pair<Stmt, Set<Abstraction>> csi = scap.callStack.remove(0);
-		return new Pair<>(scap, csi);
-	}
-	
-	/**
-	 * Pops the top item off the call stack. Note that this method modifies the
-	 * state of the current object. The caller is responsible for making sure
-	 * that the object is not used anywhere and that the immutability contract
-	 * is not violated.  
-	 * @return The call stack item that was popped off
-	 */
-	public Pair<Stmt, Set<Abstraction>> _popTopCallStackItem() {
-		return callStack.isEmpty() ? null : callStack.remove(0);
+		return new Pair<>(scap, scap.callStack.remove(0));
 	}
 	
 	@Override
@@ -118,12 +106,8 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 		if (this.hashCode != 0 && scap.hashCode != 0 && this.hashCode != scap.hashCode)
 			return false;
 		
-		if (this.callStack.size() != scap.callStack.size())
+		if (!this.callStack.equals(scap.callStack))
 			return false;
-		for (int i = 0; i < scap.callStack.size(); i++)
-			if (this.callStack.get(i).getO1() != scap.callStack.get(i).getO1())
-				return false;
-		
 		if (!Infoflow.getPathAgnosticResults() && !this.path.equals(scap.path))
 			return false;
 		
@@ -136,12 +120,8 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 			return hashCode;
 		
 		synchronized(this) {
-			int callStackHash = 31 * callStack.size();
-			for (Pair<Stmt, Set<Abstraction>> entry : callStack)
-				callStackHash += 31 * (entry.getO1() == null ? 0 : entry.getO1().hashCode());
-			
 			hashCode = (!Infoflow.getPathAgnosticResults() ? 31 * path.hashCode() : 0)
-					+ 31 * callStackHash
+					+ 31 * callStack.hashCode()
 					+ 31 * super.hashCode();
 		}
 		return hashCode;

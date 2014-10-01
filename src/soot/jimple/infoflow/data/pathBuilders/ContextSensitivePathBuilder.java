@@ -13,7 +13,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import soot.SootMethod;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.InfoflowResults;
 import soot.jimple.infoflow.data.Abstraction;
@@ -116,8 +115,8 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 
 		private boolean processPredecessor(SourceContextAndPath scap, Abstraction pred) {
 			// If we have already seen this predecessor, we skip it
-			if (!scap.putAbstractionOnCallStack(pred))
-				return false;
+//			if (!scap.putAbstractionOnCallStack(pred))
+//				return false;
 			
 			// Shortcut: If this a call-to-return node, we should not enter and
 			// immediately leave again for performance reasons.
@@ -137,22 +136,16 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 					&& pred.getCurrentStmt().containsInvokeExpr()) {
 				// Pop the top item off the call stack. This gives us the item
 				// and the new SCAP without the item we popped off.
-				Pair<SourceContextAndPath, Pair<Stmt, Set<Abstraction>>> pathAndItem =
+				Pair<SourceContextAndPath, Stmt> pathAndItem =
 						extendedScap.popTopCallStackItem();
 				if (pathAndItem != null) {
-					Pair<Stmt, Set<Abstraction>> topCallStackItem = pathAndItem.getO2();
-					// If we are not in any calling context, the first element
-					// in the pair is null.
-					if (topCallStackItem != null) {
-						assert topCallStackItem.getO1() != null;
-						
-						// Make sure that we don't follow an unrealizable path
-						if (topCallStackItem.getO1() != pred.getCurrentStmt())
-							return false;
-						
-						// We have returned from a function
-						extendedScap = pathAndItem.getO1();
-					}
+					Stmt topCallStackItem = pathAndItem.getO2();
+					// Make sure that we don't follow an unrealizable path
+					if (topCallStackItem != pred.getCurrentStmt())
+						return false;
+					
+					// We have returned from a function
+					extendedScap = pathAndItem.getO1();
 				}
 			}
 				
