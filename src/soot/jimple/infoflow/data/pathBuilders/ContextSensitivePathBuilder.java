@@ -82,6 +82,7 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 				if (pred == null) {
 					// If we have no predecessors, this must be a source
 					assert abstraction.getSourceContext() != null;
+					assert abstraction.getNeighbors() == null;
 					
 					// Register the result
 					for (SourceContextAndPath scap : paths) {
@@ -142,7 +143,9 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 					Pair<Stmt, Set<Abstraction>> topCallStackItem = pathAndItem.getO2();
 					// If we are not in any calling context, the first element
 					// in the pair is null.
-					if (topCallStackItem != null && topCallStackItem.getO1() != null) {
+					if (topCallStackItem != null) {
+						assert topCallStackItem.getO1() != null;
+						
 						// Make sure that we don't follow an unrealizable path
 						if (topCallStackItem.getO1() != pred.getCurrentStmt())
 							return false;

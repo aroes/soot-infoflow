@@ -86,6 +86,11 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 		if (callStack.isEmpty())
 			return null;
 		
+		// If we only have the null item on the call stack, we keep the current
+		// object. This avoids creating unnecessary clones.
+		if (callStack.get(0).getO1() == null)
+			return null;
+		
 		SourceContextAndPath scap = clone();
 		Pair<Stmt, Set<Abstraction>> csi = scap.callStack.remove(0);
 		return new Pair<>(scap, csi);
