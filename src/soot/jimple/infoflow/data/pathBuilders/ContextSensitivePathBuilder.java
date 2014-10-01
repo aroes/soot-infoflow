@@ -76,12 +76,6 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 				Abstraction abstraction = abstractionQueue.pop();
 				propagationCount.incrementAndGet();
 				
-				if (abstraction.getCurrentStmt() != null
-						&& abstraction.getCurrentStmt().toString().equals("$r3 = virtualinvoke $r0.<java.lang.StringBuilder: java.lang.StringBuilder append(java.lang.String)>(p1)")) {
-					SootMethod sm = icfg.getMethodOf(abstraction.getCurrentStmt());
-					System.out.println("x");
-				}
-
 				final Set<SourceContextAndPath> paths = abstraction.getPaths();
 				final Abstraction pred = abstraction.getPredecessor();
 								
