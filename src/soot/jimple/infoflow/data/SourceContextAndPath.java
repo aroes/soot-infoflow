@@ -19,7 +19,7 @@ import soot.jimple.infoflow.Infoflow;
  */
 public class SourceContextAndPath extends SourceContext implements Cloneable {
 	private final List<Stmt> path = new LinkedList<Stmt>();
-	private final List<Stmt> callStack = new ArrayList<Stmt>();
+	private List<Stmt> callStack = null;
 	private int hashCode = 0;
 	
 	public SourceContextAndPath(Value value, Stmt stmt) {
@@ -47,8 +47,11 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 			scap.path.add(0, s);
 		
 		// Extend the call stack
-		if (correspondingCallSite != null)
+		if (correspondingCallSite != null) {
+			if (scap.callStack == null)
+				scap.callStack = new ArrayList<Stmt>();
 			scap.callStack.add(0, correspondingCallSite);
+		}
 		
 		return scap;
 	}
@@ -60,15 +63,8 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 	 * element. If there is no call stack, null is returned.
 	 */
 	public Pair<SourceContextAndPath, Stmt> popTopCallStackItem() {
-		if (callStack.isEmpty())
+		if (callStack == null || callStack.isEmpty())
 			return null;
-		
-		/*
-		// If we only have the null item on the call stack, we keep the current
-		// object. This avoids creating unnecessary clones.
-		if (callStack.peek() == null)
-			return null;
-		*/
 		
 		SourceContextAndPath scap = clone();
 		return new Pair<>(scap, scap.callStack.remove(0));
@@ -85,8 +81,13 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 		if (this.hashCode != 0 && scap.hashCode != 0 && this.hashCode != scap.hashCode)
 			return false;
 		
-		if (!this.callStack.equals(scap.callStack))
+		if (this.callStack == null) {
+			if (scap.callStack != null)
+				return false;
+		}
+		else if (!this.callStack.equals(scap.callStack))
 			return false;
+		
 		if (!Infoflow.getPathAgnosticResults() && !this.path.equals(scap.path))
 			return false;
 		
@@ -100,7 +101,7 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 		
 		synchronized(this) {
 			hashCode = (!Infoflow.getPathAgnosticResults() ? 31 * path.hashCode() : 0)
-					+ 31 * callStack.hashCode()
+					+ 31 * (callStack == null ? 0 : callStack.hashCode())
 					+ 31 * super.hashCode();
 		}
 		return hashCode;
@@ -110,7 +111,8 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 	public synchronized SourceContextAndPath clone() {
 		final SourceContextAndPath scap = new SourceContextAndPath(getValue(), getStmt(), getUserData());
 		scap.path.addAll(this.path);
-		scap.callStack.addAll(callStack);
+		if (callStack != null)
+			scap.callStack = new ArrayList<Stmt>(callStack);
 		return scap;
 	}
 	
