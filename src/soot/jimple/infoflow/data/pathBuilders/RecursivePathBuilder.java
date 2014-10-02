@@ -4,9 +4,8 @@ import heros.solver.CountingThreadPoolExecutor;
 import heros.solver.Pair;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
+import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.Stack;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -21,7 +20,6 @@ import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.SourceContextAndPath;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
-import soot.util.IdentityHashSet;
 
 /**
  * Recursive algorithm for reconstructing abstraction paths from sink to source
@@ -100,14 +98,8 @@ public class RecursivePathBuilder extends AbstractAbstractionPathBuilder {
 			newCallStack.addAll(callStack);
 			if (curAbs.getCorrespondingCallSite() != null/* && curAbs.isAbstractionActive()*/)
 				newCallStack.push(new Pair<Stmt, Set<Abstraction>>(curAbs.getCorrespondingCallSite(),
-						new IdentityHashSet<Abstraction>()));
+						Collections.newSetFromMap(new IdentityHashMap<Abstraction,Boolean>())));
 			
-/*			boolean isMethodEnter = curAbs.getCurrentStmt() != null
-					&& (curAbs.isAbstractionActive()
-							? curAbs.getCurrentStmt().containsInvokeExpr()
-							: false
-						);
-*/
 			boolean isMethodEnter = curAbs.getCurrentStmt() != null
 					&& curAbs.getCurrentStmt().containsInvokeExpr();
 			
@@ -163,7 +155,8 @@ public class RecursivePathBuilder extends AbstractAbstractionPathBuilder {
 				@Override
 				public void run() {
 					Stack<Pair<Stmt, Set<Abstraction>>> initialStack = new Stack<Pair<Stmt, Set<Abstraction>>>();
-					initialStack.push(new Pair<Stmt, Set<Abstraction>>(null, new IdentityHashSet<Abstraction>()));
+					initialStack.push(new Pair<Stmt, Set<Abstraction>>(null,
+							Collections.newSetFromMap(new IdentityHashMap<Abstraction,Boolean>())));
 		    		for (SourceContextAndPath context : getPaths(lastTaskId++,
 		    				abs.getAbstraction(), computeResultPaths,
 		    				initialStack))

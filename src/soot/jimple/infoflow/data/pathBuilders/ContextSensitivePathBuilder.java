@@ -21,7 +21,9 @@ import soot.jimple.infoflow.data.SourceContextAndPath;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 
 /**
- * Class for reconstructing abstraction paths from sinks to source
+ * Class for reconstructing abstraction paths from sinks to source. This builder
+ * is context-sensitive which makes it more precise than the
+ * {@link ContextInsensitivePathBuilder}, but also a bit slower.
  * 
  * @author Steven Arzt
  */
@@ -58,7 +60,7 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 	}
 	
 	/**
-	 * Task for only finding sources, not the paths towards them
+	 * Task for tracking back the path from sink to source.
 	 * 
 	 * @author Steven Arzt
 	 */
