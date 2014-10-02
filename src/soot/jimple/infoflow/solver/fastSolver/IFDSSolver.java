@@ -275,7 +275,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 							//compute return-flow function
 							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
 							//for each target value of the function
-							for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d2))) {
+							for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d1))) {
 								// If we have not changed anything in the callee, we do not need the facts
 								// from there. Even if we change something: If we don't need the concrete
 								// path, we can skip the callee in the predecessor chain
