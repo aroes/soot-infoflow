@@ -13,8 +13,22 @@ public class DefaultPathBuilderFactory implements IPathBuilderFactory {
 	 * Enumeration containing the supported path builders
 	 */
 	public enum PathBuilder {
+		/**
+		 * Simple context-insensitive, single-threaded, recursive approach to
+		 * path reconstruction. Low overhead for small examples, but does not
+		 * scale.
+		 */
 		Recursive,
-		ContextSensitive
+		/**
+		 * Highly precise context-sensitive path reconstruction approach. For
+		 * a large number of paths or complex programs, it may be slow.
+		 */
+		ContextSensitive,
+		/**
+		 * A context-insensitive path reconstruction algorithm. It scales well,
+		 * but may introduce false positives.
+		 */
+		ContextInsensitive
 	}
 	
 	private final PathBuilder pathBuilder;
@@ -42,6 +56,8 @@ public class DefaultPathBuilderFactory implements IPathBuilderFactory {
 			return new RecursivePathBuilder(icfg, maxThreadNum);
 		case ContextSensitive :
 			return new ContextSensitivePathBuilder(icfg, maxThreadNum);
+		case ContextInsensitive :
+			return new ContextInsensitivePathBuilder(icfg, maxThreadNum);
 		}
 		throw new RuntimeException("Unsupported path building algorithm");
 	}

@@ -1,7 +1,6 @@
 package soot.jimple.infoflow.data.pathBuilders;
 
 import heros.solver.CountingThreadPoolExecutor;
-import heros.solver.Pair;
 
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -11,7 +10,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import soot.jimple.Stmt;
 import soot.jimple.infoflow.InfoflowResults;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
@@ -20,12 +18,12 @@ import soot.jimple.infoflow.solver.IInfoflowCFG;
 
 /**
  * Class for reconstructing abstraction paths from sinks to source. This builder
- * is context-sensitive which makes it more precise than the
- * {@link ContextInsensitivePathBuilder}, but also a bit slower.
+ * is context-insensitive which makes it faster, but also less precise than
+ * {@link ContextSensitivePathBuilder}.
  * 
  * @author Steven Arzt
  */
-public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder {
+public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilder {
 	
 	private AtomicInteger propagationCount = null;
     private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -39,7 +37,7 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 	 * Creates a new instance of the {@link ContextSensitivePathBuilder} class
 	 * @param maxThreadNum The maximum number of threads to use
 	 */
-	public ContextSensitivePathBuilder(IInfoflowCFG icfg, int maxThreadNum) {
+	public ContextInsensitivePathBuilder(IInfoflowCFG icfg, int maxThreadNum) {
 		super(icfg);
         int numThreads = Runtime.getRuntime().availableProcessors();
 		this.executor = createExecutor(maxThreadNum == -1 ? numThreads
@@ -111,36 +109,9 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 		}
 
 		private boolean processPredecessor(SourceContextAndPath scap, Abstraction pred) {
-			// Shortcut: If this a call-to-return node, we should not enter and
-			// immediately leave again for performance reasons.
-			if (pred.getCurrentStmt() != null
-					&& pred.getCurrentStmt() == pred.getCorrespondingCallSite()) {
-				SourceContextAndPath extendedScap = scap.extendPath(reconstructPaths
-						? pred.getCurrentStmt() : null);
-				return pred.addPathElement(extendedScap);
-			}
-			
-			// If we enter a method, we put it on the stack
+			// Put the current statement on the list
 			SourceContextAndPath extendedScap = scap.extendPath(reconstructPaths
-					? pred.getCurrentStmt() : null, pred.getCorrespondingCallSite());
-			
-			// Do we process a method return?
-			if (pred.getCurrentStmt() != null 
-					&& pred.getCurrentStmt().containsInvokeExpr()) {
-				// Pop the top item off the call stack. This gives us the item
-				// and the new SCAP without the item we popped off.
-				Pair<SourceContextAndPath, Stmt> pathAndItem =
-						extendedScap.popTopCallStackItem();
-				if (pathAndItem != null) {
-					Stmt topCallStackItem = pathAndItem.getO2();
-					// Make sure that we don't follow an unrealizable path
-					if (topCallStackItem != pred.getCurrentStmt())
-						return false;
-					
-					// We have returned from a function
-					extendedScap = pathAndItem.getO1();
-				}
-			}
+					? pred.getCurrentStmt() : null);
 				
 			// Add the new path
 			return pred.addPathElement(extendedScap);
