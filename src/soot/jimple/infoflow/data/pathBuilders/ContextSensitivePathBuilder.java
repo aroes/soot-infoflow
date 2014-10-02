@@ -114,10 +114,6 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 		}
 
 		private boolean processPredecessor(SourceContextAndPath scap, Abstraction pred) {
-			// If we have already seen this predecessor, we skip it
-//			if (!scap.putAbstractionOnCallStack(pred))
-//				return false;
-			
 			// Shortcut: If this a call-to-return node, we should not enter and
 			// immediately leave again for performance reasons.
 			if (pred.getCurrentStmt() != null

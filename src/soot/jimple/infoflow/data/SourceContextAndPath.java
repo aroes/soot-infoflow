@@ -53,27 +53,6 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 		return scap;
 	}
 	
-	/*
-	public boolean putAbstractionOnCallStack(Abstraction abs) {
-		for (Pair<Stmt, Set<Abstraction>> callPair : callStack)
-			if (callPair.getO2().contains(abs))
-				return false;
-		
-		synchronized (this) {
-			Pair<Stmt, Set<Abstraction>> stackTop = null;
-			if (callStack.isEmpty()) {
-				stackTop = new Pair<Stmt, Set<Abstraction>>(null,
-						Sets.<Abstraction>newIdentityHashSet());
-				callStack.add(0, stackTop);
-			}
-			else
-				stackTop = callStack.get(0);
-			
-			return stackTop.getO2().add(abs);
-		}
-	}
-	*/
-	
 	/**
 	 * Pops the top item off the call stack.
 	 * @return The new {@link SourceContextAndPath} object as the first element
