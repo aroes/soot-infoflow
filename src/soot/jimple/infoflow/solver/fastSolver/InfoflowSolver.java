@@ -106,14 +106,6 @@ public class InfoflowSolver extends IFDSSolver<Unit, Abstraction, SootMethod, Bi
 	@Override
 	public void solve() {
 		super.solve();
-		
-		// Compute function path summaries
-		/*
-		for (Entry<Pair<SootMethod, Abstraction>, Set<Pair<Unit, Abstraction>>>
-				entry : endSummary.entrySet()) {
-			entry.
-		}
-		*/
 	}
 	
 }

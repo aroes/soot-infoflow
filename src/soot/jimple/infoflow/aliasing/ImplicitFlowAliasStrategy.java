@@ -89,7 +89,7 @@ public class ImplicitFlowAliasStrategy extends AbstractBulkAliasStrategy {
 
 	@Override
 	public void computeAliasTaints(Abstraction d1, Stmt src, Value targetValue,
-			Set<Abstraction> taintSet, SootMethod method, Abstraction newAbs) {	
+			Set<Abstraction> taintSet, SootMethod method, Abstraction newAbs) {
 		// Use global aliasing
 		Value baseValue = ((InstanceFieldRef) targetValue).getBase();
 		Set<AccessPath> aliases = methodToAliases.getUnchecked(method).get
