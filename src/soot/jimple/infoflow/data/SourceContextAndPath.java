@@ -4,7 +4,6 @@ import heros.solver.Pair;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 
 import soot.Value;
@@ -18,7 +17,7 @@ import soot.jimple.infoflow.Infoflow;
  * @author Steven Arzt
  */
 public class SourceContextAndPath extends SourceContext implements Cloneable {
-	private final List<Stmt> path = new LinkedList<Stmt>();
+	private List<Stmt> path = null;
 	private List<Stmt> callStack = null;
 	private int hashCode = 0;
 	
@@ -31,7 +30,8 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 	}
 	
 	public List<Stmt> getPath() {
-		return Collections.unmodifiableList(this.path);
+		return path == null ? Collections.<Stmt>emptyList()
+				: Collections.unmodifiableList(this.path);
 	}
 	
 	public SourceContextAndPath extendPath(Stmt s) {
@@ -43,8 +43,11 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 			return this;
 		
 		SourceContextAndPath scap = clone();
-		if (s != null)
+		if (s != null) {
+			if (scap.path == null)
+				scap.path = new ArrayList<Stmt>();
 			scap.path.add(0, s);
+		}
 		
 		// Extend the call stack
 		if (correspondingCallSite != null) {
@@ -110,7 +113,8 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 	@Override
 	public synchronized SourceContextAndPath clone() {
 		final SourceContextAndPath scap = new SourceContextAndPath(getValue(), getStmt(), getUserData());
-		scap.path.addAll(this.path);
+		if (path != null)
+			scap.path = new ArrayList<Stmt>(this.path);
 		if (callStack != null)
 			scap.callStack = new ArrayList<Stmt>(callStack);
 		return scap;
