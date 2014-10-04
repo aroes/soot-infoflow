@@ -28,7 +28,12 @@ public class DefaultPathBuilderFactory implements IPathBuilderFactory {
 		 * A context-insensitive path reconstruction algorithm. It scales well,
 		 * but may introduce false positives.
 		 */
-		ContextInsensitive
+		ContextInsensitive,
+		/**
+		 * Very fast context-insensitive implementation that only finds
+		 * source-to-sink connections, but no paths.
+		 */
+		ContextInsensitiveSourceFinder
 	}
 	
 	private final PathBuilder pathBuilder;
@@ -37,7 +42,7 @@ public class DefaultPathBuilderFactory implements IPathBuilderFactory {
 	 * Creates a new instance of the {@link DefaultPathBuilderFactory} class
 	 */
 	public DefaultPathBuilderFactory() {
-		this(PathBuilder.ContextSensitive);
+		this(PathBuilder.ContextInsensitiveSourceFinder);
 	}
 
 	/**
@@ -58,6 +63,8 @@ public class DefaultPathBuilderFactory implements IPathBuilderFactory {
 			return new ContextSensitivePathBuilder(icfg, maxThreadNum);
 		case ContextInsensitive :
 			return new ContextInsensitivePathBuilder(icfg, maxThreadNum);
+		case ContextInsensitiveSourceFinder :
+			return new ContextInsensitiveSourceFinder(maxThreadNum);
 		}
 		throw new RuntimeException("Unsupported path building algorithm");
 	}

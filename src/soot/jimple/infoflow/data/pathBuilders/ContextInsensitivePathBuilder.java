@@ -112,7 +112,7 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
 			// Put the current statement on the list
 			SourceContextAndPath extendedScap = scap.extendPath(reconstructPaths
 					? pred.getCurrentStmt() : null);
-				
+			
 			// Add the new path
 			return pred.addPathElement(extendedScap);
 		}

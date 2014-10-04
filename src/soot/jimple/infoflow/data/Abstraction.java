@@ -12,6 +12,7 @@ package soot.jimple.infoflow.data;
 
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -79,6 +80,20 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	 */
 	private boolean dependsOnCutAP = false;
 	
+	private BitSet pathFlags = null;
+
+	public boolean registerPathFlag(int id) {
+		if (pathFlags != null && pathFlags.get(id))
+			return false;
+		
+		synchronized (this) {
+			if (pathFlags == null)
+				pathFlags = new BitSet();
+			pathFlags.set(id);
+		}
+		return true;
+	}
+
 	public Abstraction(Value taint, SourceInfo sourceInfo,
 			Value sourceVal, Stmt sourceStmt,
 			boolean exceptionThrown,

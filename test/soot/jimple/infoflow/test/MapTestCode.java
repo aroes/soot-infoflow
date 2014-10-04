@@ -100,7 +100,7 @@ public class MapTestCode {
 	
 	public void entryTest(){
 		String tainted = TelephonyManager.getDeviceId();
-		MyHashMap<String, String> map = new MyHashMap<String, String>();
+		HashMap<String, String> map = new HashMap<String, String>();
 		map.put("neutral", "neutral");
 		map.put("tainted", tainted);
 		Set<Entry<String, String>> entries = map.entrySet();
