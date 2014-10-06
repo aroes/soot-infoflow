@@ -129,7 +129,8 @@ public class ContextInsensitiveSourceFinder implements IAbstractionPathBuilder {
 	
 	@Override
 	public void computeTaintPaths(final Set<AbstractionAtSink> res) {
-		throw new RuntimeException("Path reconstruction is not supported");
+		System.err.println("WARNING: Path reconstruction is not supported");
+		computeTaintSources(res);
 	}
 	
 	@Override
