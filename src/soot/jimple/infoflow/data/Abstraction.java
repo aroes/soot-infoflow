@@ -81,19 +81,7 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	private boolean dependsOnCutAP = false;
 	
 	private BitSet pathFlags = null;
-
-	public boolean registerPathFlag(int id) {
-		if (pathFlags != null && pathFlags.get(id))
-			return false;
-		
-		synchronized (this) {
-			if (pathFlags == null)
-				pathFlags = new BitSet();
-			pathFlags.set(id);
-		}
-		return true;
-	}
-
+	
 	public Abstraction(Value taint, SourceInfo sourceInfo,
 			Value sourceVal, Stmt sourceStmt,
 			boolean exceptionThrown,
@@ -554,6 +542,25 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	public void setCallingContext(Abstraction callingContext) {
 		// TODO Auto-generated method stub
 		
+	}
+	
+	/**
+	 * Registers that a worker thread with the given ID has already processed
+	 * this abstraction
+	 * @param id The ID of the worker thread
+	 * @return True if the worker thread with the given ID has not been
+	 * registered before, otherwise false
+	 */
+	public boolean registerPathFlag(int id) {
+		if (pathFlags != null && pathFlags.get(id))
+			return false;
+		
+		synchronized (this) {
+			if (pathFlags == null)
+				pathFlags = new BitSet();
+			pathFlags.set(id);
+		}
+		return true;
 	}
 	
 }
