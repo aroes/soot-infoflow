@@ -42,7 +42,7 @@ public abstract class AbstractInfoflow implements IInfoflow {
      * Creates a new instance of the abstract info flow problem
      */
     public AbstractInfoflow() {
-    	this.icfgFactory = new DefaultBiDiICFGFactory();
+    	this(null);
     }
 
     /**
@@ -50,7 +50,10 @@ public abstract class AbstractInfoflow implements IInfoflow {
      * @param icfgFactory The interprocedural CFG to be used by the InfoFlowProblem
      */
     public AbstractInfoflow(BiDirICFGFactory icfgFactory) {
-    	this.icfgFactory = icfgFactory;
+    	if (icfgFactory == null)
+    		this.icfgFactory = new DefaultBiDiICFGFactory();
+    	else
+    		this.icfgFactory = icfgFactory;
     }
 
     @Override
