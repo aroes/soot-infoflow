@@ -98,4 +98,19 @@
 		</junitreport>
 	</target>
 
+    <target name="javadoc">
+        <javadoc
+            classpath="build/classes:${soot.jar}:${heros.jar}"
+            sourcepath="src"
+			destdir="javadoc"
+            maxmemory="400m"
+            windowtitle="FlowDroid API"
+            use="true"
+            useexternalfile="true"
+        >
+            <fileset dir="src" includes="**/*.java"/>
+        </javadoc>
+		<jar basedir="javadoc" destfile="${infoflow-javadoc.jar}" />
+	</target>
+
 </project>
