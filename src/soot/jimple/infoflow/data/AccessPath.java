@@ -436,8 +436,9 @@ public class AccessPath implements Cloneable {
 	
 	/**
 	 * value val gets new base, fields are preserved.
-	 * @param val
-	 * @return
+	 * @param val The new base value
+	 * @return This access path with the base replaced by the value given in
+	 * the val parameter
 	 */
 	public AccessPath copyWithNewValue(Value val, Type newType, boolean cutFirstField){
 		if (this.value != null && this.value.equals(val)

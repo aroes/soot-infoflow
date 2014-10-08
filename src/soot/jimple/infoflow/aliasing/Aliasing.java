@@ -49,8 +49,8 @@ public class Aliasing {
 	/**
 	 * Gets whether an access path can point to the same runtime object as another
 	 * or to an object reachable through the other
-	 * @param ap1 The access path that is tainted
-	 * @param ap2 The access path that is accessed
+	 * @param taintedAP The access path that is tainted
+	 * @param referencedAP The access path that is accessed
 	 * @return True if the two access paths may potentially point to the same runtime
 	 * object, or taintedAP may point to an object reachable through referencedAP,
 	 * otherwise false
@@ -144,8 +144,8 @@ public class Aliasing {
 
 	/**
 	 * Gets whether two values may potentially point to the same runtime object
-	 * @param field1 The first value
-	 * @param field2 The second value
+	 * @param val1 The first value
+	 * @param val2 The second value
 	 * @return True if the two values may potentially point to the same runtime
 	 * object, otherwise false
 	 */

@@ -123,12 +123,15 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 	}
 
 	/**
-	 * Creates a solver for the given problem, constructing caches with the given {@link CacheBuilder}. The solver must then be started by calling
+	 * Creates a solver for the given problem, constructing caches with the
+	 * given {@link CacheBuilder}. The solver must then be started by calling
 	 * {@link #solve()}.
-	 * @param flowFunctionCacheBuilder A valid {@link CacheBuilder} or <code>null</code> if no caching is to be used for flow functions.
-	 * @param edgeFunctionCacheBuilder A valid {@link CacheBuilder} or <code>null</code> if no caching is to be used for edge functions.
+	 * @param tabulationProblem The tabulation problem to solve
+	 * @param flowFunctionCacheBuilder A valid {@link CacheBuilder} or
+	 * <code>null</code> if no caching is to be used for flow functions.
 	 */
-	public IFDSSolver(IFDSTabulationProblem<N,D,M,I> tabulationProblem, @SuppressWarnings("rawtypes") CacheBuilder flowFunctionCacheBuilder) {
+	public IFDSSolver(IFDSTabulationProblem<N,D,M,I> tabulationProblem,
+			@SuppressWarnings("rawtypes") CacheBuilder flowFunctionCacheBuilder) {
 		if(logger.isDebugEnabled())
 			flowFunctionCacheBuilder = flowFunctionCacheBuilder.recordStats();
 		this.zeroValue = tabulationProblem.zeroValue();
@@ -439,7 +442,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 	 * abstractions.
 	 * @param flowFunction The normal flow function to compute
 	 * @param d1 The abstraction at the method's start node
-	 * @param d1 The abstraction at the current node
+	 * @param d2 The abstraction at the current node
 	 * @return The set of abstractions at the successor node
 	 */
 	protected Set<D> computeNormalFlowFunction

@@ -26,7 +26,7 @@ public interface IEntryPointCreator {
 	/**
 	 * Generates a dummy main for specified method
 	 * @param dummyMainMethod The method to hold the content of generated dummy main method
-	 * @return
+	 * @return The created dummy main method
 	 */
 	public SootMethod createDummyMain(SootMethod dummyMainMethod);
 	

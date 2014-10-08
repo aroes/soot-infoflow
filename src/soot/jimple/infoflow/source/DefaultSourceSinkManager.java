@@ -78,7 +78,7 @@ public class DefaultSourceSinkManager extends MethodBasedSourceSinkManager {
 	
 	/**
 	 * Sets the list of methods to be treated as sinks
-	 * @param sources The list of methods to be treated as sinks
+	 * @param sinks The list of methods to be treated as sinks
 	 */
 	public void setSinks(List<String> sinks){
 		this.sinks = sinks;
@@ -139,7 +139,7 @@ public class DefaultSourceSinkManager extends MethodBasedSourceSinkManager {
 	/**
 	 * Sets the list of methods whose return values shall be regarded as taint
 	 * sinks
-	 * @param parameterTaintMethods The list of methods whose return values
+	 * @param returnTaintMethods The list of methods whose return values
 	 * shall be regarded as taint sinks
 	 */
 	public void setReturnTaintMethods(List<String> returnTaintMethods) {

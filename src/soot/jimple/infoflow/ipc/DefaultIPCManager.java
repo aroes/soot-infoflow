@@ -34,7 +34,7 @@ public class DefaultIPCManager extends MethodBasedIPCManager {
 	
 	/**
 	 * Sets the list of methods to be treated as IPCs
-	 * @param sources The list of methods to be treated as IPCs
+	 * @param ipcMethods The list of methods to be treated as IPCs
 	 */
 	public void setSinks(List<String> ipcMethods){
 		this.ipcMethods = ipcMethods;

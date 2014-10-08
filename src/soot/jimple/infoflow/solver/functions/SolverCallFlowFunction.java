@@ -22,7 +22,6 @@ public abstract class SolverCallFlowFunction implements FlowFunction<Abstraction
 
 	/**
 	 * Computes the call flow function for the given call-site abstraction
-	 * @param callFlowFunction The call flow function to compute
 	 * @param d1 The abstraction at the current method's start node.
 	 * @param d2 The abstraction at the call site
 	 * @return The set of caller-side abstractions at the callee's start node
