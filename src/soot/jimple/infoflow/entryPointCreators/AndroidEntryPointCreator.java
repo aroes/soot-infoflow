@@ -399,17 +399,23 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 	 * @param body The body from which to remove unnecessary if statements
 	 */
 	private void eliminateFallthroughIfs(Body body) {
-		IfStmt ifs = null;
-		Iterator<Unit> unitIt = body.getUnits().snapshotIterator();
-		while (unitIt.hasNext()) {
-			Unit u = unitIt.next();
-			if (ifs != null && ifs.getTarget() == u) {
-				body.getUnits().remove(ifs);
-				ifs = null;
+		boolean changed = false;
+		do {
+			changed = false;
+			IfStmt ifs = null;
+			Iterator<Unit> unitIt = body.getUnits().snapshotIterator();
+			while (unitIt.hasNext()) {
+				Unit u = unitIt.next();
+				if (ifs != null && ifs.getTarget() == u) {
+					body.getUnits().remove(ifs);
+					ifs = null;
+					changed = true;
+				}
+				if (u instanceof IfStmt)
+					ifs = (IfStmt) u;
 			}
-			if (u instanceof IfStmt)
-				ifs = (IfStmt) u;
 		}
+		while (changed);
 	}
 
 	/**
