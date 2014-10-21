@@ -315,7 +315,6 @@ public class OtherTests extends JUnitTests{
     @Test(timeout=300000)
     public void noPathsTest1(){
     	Infoflow infoflow = initInfoflow();
-    	infoflow.setComputeResultPaths(false);
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.OtherTestCode: void noPathsTest1()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);

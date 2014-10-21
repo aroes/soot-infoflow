@@ -38,9 +38,12 @@ public class RecursivePathBuilder extends AbstractAbstractionPathBuilder {
 	/**
      * Creates a new instance of the {@link RecursivePathBuilder} class
 	 * @param maxThreadNum The maximum number of threads to use
+	 * @param reconstructPaths True if the exact propagation path between source
+	 * and sink shall be reconstructed.
      */
-    public RecursivePathBuilder(IInfoflowCFG icfg, int maxThreadNum) {
-    	super(icfg);
+    public RecursivePathBuilder(IInfoflowCFG icfg, int maxThreadNum,
+    		boolean reconstructPaths) {
+    	super(icfg, reconstructPaths);
     	int numThreads = Runtime.getRuntime().availableProcessors();
 		this.executor = createExecutor(maxThreadNum == -1 ? numThreads
 				: Math.min(maxThreadNum, numThreads));
@@ -63,12 +66,10 @@ public class RecursivePathBuilder extends AbstractAbstractionPathBuilder {
 	 * a single path is selected randomly.
 	 * @param taskId A unique ID identifying this path search task
 	 * @param curAbs The current abstraction from which to start the search
-	 * @param reconstructPaths True if the path to the source shall be
-	 * reconstructed, false if only the source as such shall be found
 	 * @return The path from the source to the current statement
 	 */
 	private Set<SourceContextAndPath> getPaths(int taskId, Abstraction curAbs,
-			boolean reconstructPaths, Stack<Pair<Stmt, Set<Abstraction>>> callStack) {
+			Stack<Pair<Stmt, Set<Abstraction>>> callStack) {
 		Set<SourceContextAndPath> cacheData = new HashSet<SourceContextAndPath>();
 		
 		Pair<Stmt, Set<Abstraction>> stackTop = callStack.isEmpty() ? null : callStack.peek();
@@ -121,7 +122,7 @@ public class RecursivePathBuilder extends AbstractAbstractionPathBuilder {
 			if (scanPreds) {
 				// Otherwise, we have to check the predecessor
 				for (SourceContextAndPath curScap : getPaths(taskId,
-						curAbs.getPredecessor(), reconstructPaths, newCallStack)) {
+						curAbs.getPredecessor(), newCallStack)) {
 					SourceContextAndPath extendedPath = (curAbs.getCurrentStmt() == null || !reconstructPaths)
 							? curScap : curScap.extendPath(curAbs.getCurrentStmt());
 					cacheData.add(extendedPath);
@@ -131,7 +132,7 @@ public class RecursivePathBuilder extends AbstractAbstractionPathBuilder {
 		
 		if (curAbs.getNeighbors() != null)
 			for (Abstraction nb : curAbs.getNeighbors())
-				for (SourceContextAndPath path : getPaths(taskId, nb, reconstructPaths, callStack))
+				for (SourceContextAndPath path : getPaths(taskId, nb, callStack))
 					cacheData.add(path);
 		
 		return Collections.unmodifiableSet(cacheData);
@@ -139,12 +140,9 @@ public class RecursivePathBuilder extends AbstractAbstractionPathBuilder {
 	
 	/**
 	 * Computes the path of tainted data between the source and the sink
-	 * @param computeResultPaths True if the paths shall be computed as well,
-	 * false if only the sources as such shall be found
 	 * @param res The data flow tracker results
 	 */
-	private void computeTaintPathsInternal(final boolean computeResultPaths,
-			final Set<AbstractionAtSink> res) {   	
+	private void computeTaintPathsInternal(final Set<AbstractionAtSink> res) {   	
 		logger.debug("Running path reconstruction");
     	logger.info("Obtainted {} connections between sources and sinks", res.size());
     	int curResIdx = 0;
@@ -158,8 +156,7 @@ public class RecursivePathBuilder extends AbstractAbstractionPathBuilder {
 					initialStack.push(new Pair<Stmt, Set<Abstraction>>(null,
 							Collections.newSetFromMap(new IdentityHashMap<Abstraction,Boolean>())));
 		    		for (SourceContextAndPath context : getPaths(lastTaskId++,
-		    				abs.getAbstraction(), computeResultPaths,
-		    				initialStack))
+		    				abs.getAbstraction(), initialStack))
 						results.addResult(abs.getSinkValue(), abs.getSinkStmt(),
 								context.getValue(), context.getStmt(), context.getUserData(),
 								context.getPath(), abs.getSinkStmt());
@@ -178,15 +175,10 @@ public class RecursivePathBuilder extends AbstractAbstractionPathBuilder {
     	executor.shutdown();
     	logger.debug("Path reconstruction done.");
 	}
-
-	@Override
-	public void computeTaintSources(Set<AbstractionAtSink> res) {
-		computeTaintPathsInternal(false, res);
-	}
-
+	
 	@Override
 	public void computeTaintPaths(Set<AbstractionAtSink> res) {
-		computeTaintPathsInternal(true, res);
+		computeTaintPathsInternal(res);
 	}
 
 	@Override

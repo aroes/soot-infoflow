@@ -32,15 +32,17 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 
     private final InfoflowResults results = new InfoflowResults();
 	private final CountingThreadPoolExecutor executor;
-	
-	private boolean reconstructPaths = false;
-		
+			
 	/**
 	 * Creates a new instance of the {@link ContextSensitivePathBuilder} class
+	 * @param icfg The interprocedural control flow graph
 	 * @param maxThreadNum The maximum number of threads to use
+	 * @param reconstructPaths True if the exact propagation path between source
+	 * and sink shall be reconstructed.
 	 */
-	public ContextSensitivePathBuilder(IInfoflowCFG icfg, int maxThreadNum) {
-		super(icfg);
+	public ContextSensitivePathBuilder(IInfoflowCFG icfg, int maxThreadNum,
+			boolean reconstructPaths) {
+		super(icfg, reconstructPaths);
         int numThreads = Runtime.getRuntime().availableProcessors();
 		this.executor = createExecutor(maxThreadNum == -1 ? numThreads
 				: Math.min(maxThreadNum, numThreads));
@@ -148,14 +150,7 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 	}
 	
 	@Override
-	public void computeTaintSources(final Set<AbstractionAtSink> res) {
-		this.reconstructPaths = false;
-		runSourceFindingTasks(res);
-	}
-	
-	@Override
 	public void computeTaintPaths(final Set<AbstractionAtSink> res) {
-		this.reconstructPaths = true;
 		runSourceFindingTasks(res);
 	}
 	

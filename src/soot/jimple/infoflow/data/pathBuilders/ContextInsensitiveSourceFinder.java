@@ -17,13 +17,14 @@ import soot.jimple.Stmt;
 import soot.jimple.infoflow.InfoflowResults;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
+import soot.jimple.infoflow.solver.IInfoflowCFG;
 
 /**
  * Class for reconstructing abstraction paths from sinks to source
  * 
  * @author Steven Arzt
  */
-public class ContextInsensitiveSourceFinder implements IAbstractionPathBuilder {
+public class ContextInsensitiveSourceFinder extends AbstractAbstractionPathBuilder {
 	
 	private AtomicInteger propagationCount = null;
     private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -35,9 +36,11 @@ public class ContextInsensitiveSourceFinder implements IAbstractionPathBuilder {
 	
 	/**
 	 * Creates a new instance of the {@link ContextInsensitiveSourceFinder} class
+	 * @param icfg The interprocedural control flow graph
 	 * @param maxThreadNum The maximum number of threads to use
 	 */
-	public ContextInsensitiveSourceFinder(int maxThreadNum) {
+	public ContextInsensitiveSourceFinder(IInfoflowCFG icfg, int maxThreadNum) {
+		super(icfg, false);
         int numThreads = Runtime.getRuntime().availableProcessors();
 		this.executor = createExecutor(maxThreadNum == -1 ? numThreads
 				: Math.min(maxThreadNum, numThreads));
@@ -101,7 +104,7 @@ public class ContextInsensitiveSourceFinder implements IAbstractionPathBuilder {
 	}
 	
 	@Override
-	public void computeTaintSources(final Set<AbstractionAtSink> res) {
+	public void computeTaintPaths(final Set<AbstractionAtSink> res) {
 		if (res.isEmpty())
 			return;
 		
@@ -125,12 +128,6 @@ public class ContextInsensitiveSourceFinder implements IAbstractionPathBuilder {
     	
     	logger.info("Path processing took {} seconds in total for {} edges",
     			(System.nanoTime() - beforePathTracking) / 1E9, propagationCount.get());
-	}
-	
-	@Override
-	public void computeTaintPaths(final Set<AbstractionAtSink> res) {
-		System.err.println("WARNING: Path reconstruction is not supported");
-		computeTaintSources(res);
 	}
 	
 	@Override

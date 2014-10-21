@@ -190,9 +190,15 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 		//this will cause new submissions to the executor to be rejected,
 		//but at this point all tasks should have completed anyway
 		executor.shutdown();
-		//similarly here: we await termination, but this should happen instantaneously,
-		//as all tasks should have completed
-		runExecutorAndAwaitCompletion();
+		
+		// Wait for the executor to be really gone
+		while (!executor.isTerminated()) {
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	/**

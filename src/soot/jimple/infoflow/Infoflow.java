@@ -352,7 +352,7 @@ public class Infoflow extends AbstractInfoflow {
 				backProblem.setFlowSensitiveAliasing(flowSensitiveAliasing);
 				
 				backSolver = new InfoflowSolver(backProblem, executor);
-				backSolver.setJumpPredecessors(!computeResultPaths);
+				backSolver.setJumpPredecessors(!pathBuilderFactory.supportsPathReconstruction());
 //				backSolver.setEnableMergePointChecking(true);
 				
 				aliasingStrategy = new FlowSensitiveAliasStrategy(iCfg, backSolver);
@@ -376,7 +376,7 @@ public class Infoflow extends AbstractInfoflow {
 		// Set the options
 		InfoflowSolver forwardSolver = new InfoflowSolver(forwardProblem, executor);
 		aliasingStrategy.setForwardSolver(forwardSolver);
-		forwardSolver.setJumpPredecessors(!computeResultPaths);
+		forwardSolver.setJumpPredecessors(!pathBuilderFactory.supportsPathReconstruction());
 //		forwardSolver.setEnableMergePointChecking(true);
 		
 		forwardProblem.setInspectSources(inspectSources);
@@ -527,10 +527,7 @@ public class Infoflow extends AbstractInfoflow {
 	private void computeTaintPaths(final Set<AbstractionAtSink> res) {
 		IAbstractionPathBuilder builder = this.pathBuilderFactory.createPathBuilder
 				(maxThreadNum, iCfg);
-    	if (computeResultPaths)
-    		builder.computeTaintPaths(res);
-    	else
-    		builder.computeTaintSources(res);
+   		builder.computeTaintPaths(res);
     	this.results = builder.getResults();
     	builder.shutdown();
 	}

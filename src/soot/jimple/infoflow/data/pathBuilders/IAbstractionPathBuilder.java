@@ -12,13 +12,7 @@ import soot.jimple.infoflow.data.AbstractionAtSink;
  * @author Steven Arzt
  */
 public interface IAbstractionPathBuilder {
-
-	/**
-	 * Finds the sources from which data flows to the sinks
-	 * @param res The data flow tracker results
-	 */
-	public void computeTaintSources(final Set<AbstractionAtSink> res);
-
+	
 	/**
 	 * Computes the path of tainted data between the source and the sink
 	 * @param res The data flow tracker results

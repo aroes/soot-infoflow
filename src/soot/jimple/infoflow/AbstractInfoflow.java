@@ -23,7 +23,6 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	protected boolean enableImplicitFlows = false;
 	protected boolean enableStaticFields = true;
 	protected boolean enableExceptions = true;
-	protected boolean computeResultPaths = true;
 	protected boolean flowSensitiveAliasing = true;
 	protected boolean ignoreFlowsInSystemPackages = true;
 	
@@ -117,12 +116,7 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	public void setEnableStaticFieldTracking(boolean enableStaticFields) {
 		this.enableStaticFields = enableStaticFields;
 	}
-
-	@Override
-	public void setComputeResultPaths(boolean computeResultPaths) {
-		this.computeResultPaths = computeResultPaths;
-	}
-
+	
 	@Override
 	public void setFlowSensitiveAliasing(boolean flowSensitiveAliasing) {
 		this.flowSensitiveAliasing = flowSensitiveAliasing;

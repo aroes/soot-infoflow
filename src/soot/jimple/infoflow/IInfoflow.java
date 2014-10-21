@@ -197,13 +197,6 @@ public interface IInfoflow {
 	public void setEnableStaticFieldTracking(boolean enableStaticFields);
 	
 	/**
-	 * Sets whether the solver shall compute the paths between the sources and
-	 * sinks instead of just reporting if there is a path or not.
-	 * @param computeResultPaths True if paths shall be computed, otherwise false
-	 */
-	public void setComputeResultPaths(boolean computeResultPaths);
-
-	/**
 	 * Sets whether a flow sensitive aliasing algorithm shall be used
 	 * @param flowSensitiveAliasing True if a flow sensitive aliasing algorithm
 	 * shall be used, otherwise false

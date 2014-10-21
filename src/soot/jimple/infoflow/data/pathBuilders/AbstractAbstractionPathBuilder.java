@@ -11,9 +11,18 @@ public abstract class AbstractAbstractionPathBuilder implements
 		IAbstractionPathBuilder {
 
 	protected final IInfoflowCFG icfg;
+	protected final boolean reconstructPaths;
 	
-	public AbstractAbstractionPathBuilder(IInfoflowCFG icfg) {
+	/**
+	 * Creates a new instance of the {@link AbstractAbstractionPathBuilder} class
+	 * @param icfg The interprocedural control flow graph
+	 * @param reconstructPaths True if the exact propagation path between source
+	 * and sink shall be reconstructed.
+	 */
+	public AbstractAbstractionPathBuilder(IInfoflowCFG icfg,
+			boolean reconstructPaths) {
 		this.icfg = icfg;
+		this.reconstructPaths = reconstructPaths;
 	}
 
 }

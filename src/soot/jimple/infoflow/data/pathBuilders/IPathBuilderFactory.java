@@ -18,5 +18,15 @@ public interface IPathBuilderFactory {
 	 */
 	public IAbstractionPathBuilder createPathBuilder
 			(int maxThreadNum, IInfoflowCFG icfg);
+	
+	/**
+	 * Gets whether the {@link IAbstractionPathBuilder} object created by this
+	 * factory supports the reconstruction of the exact paths between source
+	 * and sink.
+	 * @return True if the {@link IAbstractionPathBuilder} object constructed
+	 * by this factory gives the exact propagation path between source and sink,
+	 * false if it only reports source-to-sink connections without paths.
+	 */
+	public boolean supportsPathReconstruction();
 
 }
