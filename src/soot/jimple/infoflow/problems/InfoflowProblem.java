@@ -1130,6 +1130,18 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						{
 						Value originalCallArg = null;
 						for (int i = 0; i < callee.getParameterCount(); i++) {
+							// If this parameter is overwritten, we cannot propagate
+							// the "old" taint over. Return value propagation must
+							// always happen explicitly.
+							if (callSite instanceof DefinitionStmt) {
+								DefinitionStmt defnStmt = (DefinitionStmt) callSite;
+								Value leftOp = defnStmt.getLeftOp();
+								originalCallArg = defnStmt.getInvokeExpr().getArg(i);
+								if (originalCallArg == leftOp)
+									continue;
+							}
+							
+							// Propagate over the parameter taint
 							if (aliasing.mayAlias(paramLocals[i], sourceBase)) {
 								parameterAliases = true;
 								if (callSite instanceof Stmt) {
