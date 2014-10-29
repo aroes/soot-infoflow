@@ -370,21 +370,22 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
 					Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, entry.getValue().keySet());
 					//for each incoming-call value
-					for(D d4: entry.getValue().keySet())
+					for(Entry<D, D> d1d2entry : entry.getValue().entrySet()) {
+						final D d4 = d1d2entry.getKey();
+						final D predVal = d1d2entry.getValue();
+						
 						for(D d5: targets) {
 							// If we have not changed anything in the callee, we do not need the facts
 							// from there. Even if we change something: If we don't need the concrete
 							// path, we can skip the callee in the predecessor chain
 							D d5p = d5;
-							D predVal = entry.getValue().get(d4);
 							if (d5.equals(predVal))
 								d5p = predVal;
-							else {
-								if (setJumpPredecessors)
-									d5p.setPredecessor(d1);
-							}
+							else if (setJumpPredecessors)
+								d5p.setPredecessor(d1);
 							propagate(d4, retSiteC, d5p, c, false);
 						}
+					}
 				}
 			}
 		
