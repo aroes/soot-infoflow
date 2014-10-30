@@ -185,7 +185,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					if (!taintedValueOverwritten && (taintsStaticField
 							|| (taintsBaseValue && newAbs.getAccessPath().getTaintSubFields())
 							|| triggerInaktiveTaintOrReverseFlow(iStmt, val.getPlainValue(), newAbs)))
-						computeAliasTaints(d1, (Stmt) iStmt, val.getPlainValue(), res,
+						computeAliasTaints(d1, iStmt, val.getPlainValue(), res,
 								interproceduralCFG().getMethodOf(iStmt), newAbs);
 				}
 			}
@@ -383,8 +383,13 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 
 			@Override
 			public FlowFunction<Abstraction> getNormalFlowFunction(final Unit src, final Unit dest) {
+				// Get the call site
+				if (!(src instanceof Stmt))
+					return KillAll.v();
+				final Stmt stmt = (Stmt) src;
+				
 				final SourceInfo sourceInfo = sourceSinkManager != null
-						? sourceSinkManager.getSourceInfo((Stmt) src, interproceduralCFG()) : null;
+						? sourceSinkManager.getSourceInfo(stmt, interproceduralCFG()) : null;
 
 				// If we compute flows on parameters, we create the initial
 				// flow fact here
@@ -758,7 +763,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					final Value condition = src instanceof IfStmt ? ((IfStmt) src).getCondition()
 							: src instanceof LookupSwitchStmt ? ((LookupSwitchStmt) src).getKey()
 							: ((TableSwitchStmt) src).getKey();
-					return new NotifyingNormalFlowFunction((Stmt) src) {
+					return new NotifyingNormalFlowFunction(stmt) {
 
 						@Override
 						public Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
@@ -798,7 +803,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									if (!(postdom.getMethod() == null
 											&& source.getTopPostdominator() != null
 											&& interproceduralCFG().getMethodOf(postdom.getUnit()) == source.getTopPostdominator().getMethod())) {
-										Abstraction newAbs = source.deriveConditionalAbstractionEnter(postdom, (Stmt) src);
+										Abstraction newAbs = source.deriveConditionalAbstractionEnter(postdom, stmt);
 										res.add(newAbs);
 										break;
 									}
@@ -826,7 +831,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					paramLocals[i] = dest.getActiveBody().getParameterLocal(i);
 				
 				final SourceInfo sourceInfo = sourceSinkManager != null
-						? sourceSinkManager.getSourceInfo((Stmt) src, interproceduralCFG()) : null;
+						? sourceSinkManager.getSourceInfo(stmt, interproceduralCFG()) : null;
 				final boolean isSink = sourceSinkManager != null
 						? sourceSinkManager.isSink(stmt, interproceduralCFG()) : false;
 				
@@ -961,6 +966,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			@Override
 			public FlowFunction<Abstraction> getReturnFlowFunction(final Unit callSite,
 					final SootMethod callee, final Unit exitStmt, final Unit retSite) {
+				// Get the call site
+				if (callSite != null && !(callSite instanceof Stmt))
+					return KillAll.v();
+				final Stmt iCallStmt = (Stmt) callSite;
 				
 				final ReturnStmt returnStmt = (exitStmt instanceof ReturnStmt) ? (ReturnStmt) exitStmt : null;
 				final boolean isSink = (returnStmt != null && sourceSinkManager != null)
@@ -1025,7 +1034,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									// we must trigger an alias analysis
 									if(triggerInaktiveTaintOrReverseFlow(def, def.getLeftOp(), abs) && !callerD1sConditional)
 										for (Abstraction d1 : callerD1s)
-											computeAliasTaints(d1, (Stmt) callSite, def.getLeftOp(), res,
+											computeAliasTaints(d1, iCallStmt, def.getLeftOp(), res,
 													interproceduralCFG().getMethodOf(callSite), abs);
 									
 									// Notify the handler if we have one
@@ -1101,7 +1110,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										&& (abs.getAccessPath().isInstanceFieldRef() || abs.getAccessPath().isStaticFieldRef())
 										&& !callerD1sConditional) || aliasingStrategy.requiresAnalysisOnReturn())
 									for (Abstraction d1 : callerD1s)
-										computeAliasTaints(d1, (Stmt) callSite, leftOp, res,
+										computeAliasTaints(d1, iCallStmt, leftOp, res,
 												interproceduralCFG().getMethodOf(callSite), abs);
 							}
 						}
@@ -1118,7 +1127,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							if ((abs.isImplicit() && !callerD1sConditional)
 									 || aliasingStrategy.requiresAnalysisOnReturn())
 								for (Abstraction d1 : callerD1s)
-									computeAliasTaints(d1, (Stmt) callSite, null, res,
+									computeAliasTaints(d1, iCallStmt, null, res,
 											interproceduralCFG().getMethodOf(callSite), abs);
 						}
 						
@@ -1144,33 +1153,30 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							// Propagate over the parameter taint
 							if (aliasing.mayAlias(paramLocals[i], sourceBase)) {
 								parameterAliases = true;
-								if (callSite instanceof Stmt) {
-									Stmt iStmt = (Stmt) callSite;
-									originalCallArg = iStmt.getInvokeExpr().getArg(i);
-									
-									// If this is a constant parameter, we can safely ignore it
-									if (!AccessPath.canContainValue(originalCallArg))
-										continue;
-									if (!checkCast(source.getAccessPath(), originalCallArg.getType()))
-										continue;
-									
-									Abstraction abs = newSource.deriveNewAbstraction
-											(newSource.getAccessPath().copyWithNewValue(originalCallArg), (Stmt) exitStmt);
-									res.add(abs);
-
-									// Aliases of implicitly tainted variables must be mapped back
-									// into the caller's context on return when we leave the last
-									// implicitly-called method
-									if (originalCallArg.getType() instanceof RefType || originalCallArg.getType() instanceof ArrayType)
-										if ((abs.isImplicit() && implicitFlowAliasingStrategy.hasProcessedMethod(callee)
-												&& !callerD1sConditional) || aliasingStrategy.requiresAnalysisOnReturn()) {
-											assert originalCallArg.getType() instanceof ArrayType
-													|| originalCallArg.getType() instanceof RefType;
-											for (Abstraction d1 : callerD1s)
-												computeAliasTaints(d1, (Stmt) callSite, originalCallArg, res,
-													interproceduralCFG().getMethodOf(callSite), abs);
-										}
-								}
+								originalCallArg = iCallStmt.getInvokeExpr().getArg(i);
+								
+								// If this is a constant parameter, we can safely ignore it
+								if (!AccessPath.canContainValue(originalCallArg))
+									continue;
+								if (!checkCast(source.getAccessPath(), originalCallArg.getType()))
+									continue;
+								
+								Abstraction abs = newSource.deriveNewAbstraction
+										(newSource.getAccessPath().copyWithNewValue(originalCallArg), (Stmt) exitStmt);
+								res.add(abs);
+								
+								// Aliases of implicitly tainted variables must be mapped back
+								// into the caller's context on return when we leave the last
+								// implicitly-called method
+								if (originalCallArg.getType() instanceof RefType || originalCallArg.getType() instanceof ArrayType)
+									if ((abs.isImplicit() && implicitFlowAliasingStrategy.hasProcessedMethod(callee)
+											&& !callerD1sConditional) || aliasingStrategy.requiresAnalysisOnReturn()) {
+										assert originalCallArg.getType() instanceof ArrayType
+												|| originalCallArg.getType() instanceof RefType;
+										for (Abstraction d1 : callerD1s)
+											computeAliasTaints(d1, iCallStmt, originalCallArg, res,
+												interproceduralCFG().getMethodOf(callSite), abs);
+									}
 							}
 						}
 						}
@@ -1181,24 +1187,21 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							if (aliasing.mayAlias(thisLocal, sourceBase)) {
 								// check if it is not one of the params (then we have already fixed it)
 								if (!parameterAliases) {
-									if (callSite instanceof Stmt) {
-										Stmt stmt = (Stmt) callSite;
-										if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
-											InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();
-											Abstraction abs = newSource.deriveNewAbstraction
-													(newSource.getAccessPath().copyWithNewValue(iIExpr.getBase()), (Stmt) exitStmt);
-											res.add(abs);
-											
-											// Aliases of implicitly tainted variables must be mapped back
-											// into the caller's context on return when we leave the last
-											// implicitly-called method
-											if ((abs.isImplicit()
-													&& triggerInaktiveTaintOrReverseFlow(stmt, iIExpr.getBase(), abs)
-													&& !callerD1sConditional) || aliasingStrategy.requiresAnalysisOnReturn())
-												for (Abstraction d1 : callerD1s)
-													computeAliasTaints(d1, (Stmt) callSite, iIExpr.getBase(), res,
-															interproceduralCFG().getMethodOf(callSite), abs);											
-										}
+									if (iCallStmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
+										InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) iCallStmt.getInvokeExpr();
+										Abstraction abs = newSource.deriveNewAbstraction
+												(newSource.getAccessPath().copyWithNewValue(iIExpr.getBase()), (Stmt) exitStmt);
+										res.add(abs);
+										
+										// Aliases of implicitly tainted variables must be mapped back
+										// into the caller's context on return when we leave the last
+										// implicitly-called method
+										if ((abs.isImplicit()
+												&& triggerInaktiveTaintOrReverseFlow(iCallStmt, iIExpr.getBase(), abs)
+												&& !callerD1sConditional) || aliasingStrategy.requiresAnalysisOnReturn())
+											for (Abstraction d1 : callerD1s)
+												computeAliasTaints(d1, iCallStmt, iIExpr.getBase(), res,
+														interproceduralCFG().getMethodOf(callSite), abs);											
 									}
 								}
 							}
@@ -1207,7 +1210,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						
 						for (Abstraction abs : res)
 							if (abs != newSource)
-								abs.setCorrespondingCallSite((Stmt) callSite);
+								abs.setCorrespondingCallSite(iCallStmt);
 						
 						return res;
 					}
@@ -1218,205 +1221,204 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			@Override
 			public FlowFunction<Abstraction> getCallToReturnFlowFunction(final Unit call, final Unit returnSite) {
 				// special treatment for native methods:
-				if (call instanceof Stmt) {
-					final Stmt iStmt = (Stmt) call;
-					final InvokeExpr invExpr = iStmt.getInvokeExpr();
-					
-					final Value[] callArgs = new Value[invExpr.getArgCount()];
-					for (int i = 0; i < invExpr.getArgCount(); i++)
-						callArgs[i] = invExpr.getArg(i);
-					
-					final SourceInfo sourceInfo = sourceSinkManager != null
-							? sourceSinkManager.getSourceInfo((Stmt) call, interproceduralCFG()) : null;
-					final boolean isSink = (sourceSinkManager != null)
-							? sourceSinkManager.isSink(iStmt, interproceduralCFG()) : false;
-					
-					final SootMethod callee = invExpr.getMethod();
-					final boolean hasValidCallees = hasValidCallees(call);
+				if (!(call instanceof Stmt))
+					return KillAll.v();
+				
+				final Stmt iCallStmt = (Stmt) call;
+				final InvokeExpr invExpr = iCallStmt.getInvokeExpr();
+				
+				final Value[] callArgs = new Value[invExpr.getArgCount()];
+				for (int i = 0; i < invExpr.getArgCount(); i++)
+					callArgs[i] = invExpr.getArg(i);
+				
+				final SourceInfo sourceInfo = sourceSinkManager != null
+						? sourceSinkManager.getSourceInfo(iCallStmt, interproceduralCFG()) : null;
+				final boolean isSink = (sourceSinkManager != null)
+						? sourceSinkManager.isSink(iCallStmt, interproceduralCFG()) : false;
+				
+				final SootMethod callee = invExpr.getMethod();
+				final boolean hasValidCallees = hasValidCallees(call);
 
-					return new SolverCallToReturnFlowFunction() {
+				return new SolverCallToReturnFlowFunction() {
 
-						@Override
-						public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
-							Set<Abstraction> res = computeTargetsInternal(d1, source);
-							return notifyOutFlowHandlers(call, res, FlowFunctionType.CallToReturnFlowFunction);
+					@Override
+					public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
+						Set<Abstraction> res = computeTargetsInternal(d1, source);
+						return notifyOutFlowHandlers(call, res, FlowFunctionType.CallToReturnFlowFunction);
+					}
+					
+					private Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
+						if (stopAfterFirstFlow && !results.isEmpty())
+							return Collections.emptySet();
+						
+						// Notify the handler if we have one
+						if (taintPropagationHandlers != null)
+							for (TaintPropagationHandler tp : taintPropagationHandlers)
+								tp.notifyFlowIn(call, Collections.singleton(source),
+										interproceduralCFG(), FlowFunctionType.CallToReturnFlowFunction);
+						
+						// Check whether we must leave a conditional branch
+						if (source.isTopPostdominator(call)) {
+							source = source.dropTopPostdominator();
+							// Have we dropped the last postdominator for an empty taint?
+							if (source.getAccessPath().isEmpty() && source.getTopPostdominator() == null)
+								return Collections.emptySet();
 						}
 						
-						private Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
-							if (stopAfterFirstFlow && !results.isEmpty())
+						Set<Abstraction> res = new HashSet<Abstraction>();
+						
+						// Sources can either be assignments like x = getSecret() or
+						// instance method calls like constructor invocations
+						if (source == getZeroValue() && sourceInfo != null) {
+							// If we have nothing to taint, we can skip this source
+							if (!(call instanceof AssignStmt || invExpr instanceof InstanceInvokeExpr))
 								return Collections.emptySet();
 							
-							// Notify the handler if we have one
-							if (taintPropagationHandlers != null)
-								for (TaintPropagationHandler tp : taintPropagationHandlers)
-									tp.notifyFlowIn(call, Collections.singleton(source),
-											interproceduralCFG(), FlowFunctionType.CallToReturnFlowFunction);
-							
-							// Check whether we must leave a conditional branch
-							if (source.isTopPostdominator(call)) {
-								source = source.dropTopPostdominator();
-								// Have we dropped the last postdominator for an empty taint?
-								if (source.getAccessPath().isEmpty() && source.getTopPostdominator() == null)
-									return Collections.emptySet();
-							}
-							
-							Set<Abstraction> res = new HashSet<Abstraction>();
-
-							// Sources can either be assignments like x = getSecret() or
-							// instance method calls like constructor invocations
-							if (source == getZeroValue() && sourceInfo != null) {
-								// If we have nothing to taint, we can skip this source
-								if (!(call instanceof AssignStmt || invExpr instanceof InstanceInvokeExpr))
-									return Collections.emptySet();
-								
-								final Value target;
-								if (call instanceof AssignStmt)
-									target = ((AssignStmt) call).getLeftOp();
-								else
-									target = ((InstanceInvokeExpr) invExpr).getBase();
-									
-								final Abstraction abs = new Abstraction(target, sourceInfo,
-										invExpr, iStmt, false, false);
-								res.add(abs);
-								
-								// Compute the aliases
-								if (triggerInaktiveTaintOrReverseFlow(iStmt, target, abs))
-									computeAliasTaints(d1, iStmt, target, res, interproceduralCFG().getMethodOf(call), abs);
-								
-								// Set the corresponding call site
-								for (Abstraction absRet : res)
-									if (absRet != source)
-										absRet.setCorrespondingCallSite(iStmt);
-								
-								return res;
-							}
-
-							//check inactive elements:
-							final Abstraction newSource;
-							if (!source.isAbstractionActive() && (call == source.getActivationUnit()
-									|| isCallSiteActivatingTaint(call, source.getActivationUnit())))
-								newSource = source.getActiveCopy();
+							final Value target;
+							if (call instanceof AssignStmt)
+								target = ((AssignStmt) call).getLeftOp();
 							else
-								newSource = source;
-							
-							// Compute the taint wrapper taints
-							res.addAll(computeWrapperTaints(d1, iStmt, newSource));
-							
-							// Implicit flows: taint return value
-							if (call instanceof DefinitionStmt && (newSource.getTopPostdominator() != null
-									|| newSource.getAccessPath().isEmpty())) {
-								Value leftVal = ((DefinitionStmt) call).getLeftOp();
-								Abstraction abs = newSource.deriveNewAbstraction(new AccessPath(leftVal, true),
-										(Stmt) call);
-								res.add(abs);
-							}
-
-							// We can only pass on a taint if it is neither a parameter nor the
-							// base object of the current call. If this call overwrites the left
-							// side, the taint is never passed on.
-							boolean passOn = !newSource.getAccessPath().isStaticFieldRef()
-									&& !(call instanceof DefinitionStmt && aliasing.mayAlias(((DefinitionStmt) call).getLeftOp(),
-											newSource.getAccessPath().getPlainValue()));
-							//we only can remove the taint if we step into the call/return edges
-							//otherwise we will loose taint - see ArrayTests/arrayCopyTest
-							if (passOn && newSource.getAccessPath().isInstanceFieldRef())
-								if (inspectSinks || !isSink)
-									if(hasValidCallees || (taintWrapper != null
-											&& taintWrapper.isExclusive(iStmt, newSource.getAccessPath(),
-													interproceduralCFG()))) {
-										if (invExpr instanceof InstanceInvokeExpr)
-											if (aliasing.mayAlias(((InstanceInvokeExpr) invExpr).getBase(),
-													newSource.getAccessPath().getPlainValue())) {
-												passOn = false;
-											}
-											if (passOn)
-												for (int i = 0; i < callArgs.length; i++)
-													if (aliasing.mayAlias(callArgs[i], newSource.getAccessPath().getPlainValue())) {
-														passOn = false;
-														break;
-													}
-											//static variables are always propagated if they are not overwritten. So if we have at least one call/return edge pair,
-											//we can be sure that the value does not get "lost" if we do not pass it on:
-											if(newSource.getAccessPath().isStaticFieldRef())
-												passOn = false;
-										}
-							
-							// If the callee does not read the given value, we also need to pass it on
-							// since we do not propagate it into the callee.
-							if (enableStaticFields && source.getAccessPath().isStaticFieldRef()) {
-								if (!interproceduralCFG().isStaticFieldUsed(callee,
-										source.getAccessPath().getFirstField()))
-									passOn = true;
-							}
-							
-							// Implicit taints are always passed over conditionally called methods
-							passOn |= source.getTopPostdominator() != null || source.getAccessPath().isEmpty();
-							if (passOn)
-								if (newSource != getZeroValue())
-									res.add(newSource);
-							
-							if (callee.isNative())
-								for (Value callVal : callArgs)
-									if (callVal == newSource.getAccessPath().getPlainValue()) {
-										// java uses call by value, but fields of complex objects can be changed (and tainted), so use this conservative approach:
-										Set<Abstraction> nativeAbs = ncHandler.getTaintedValues(iStmt, newSource, callArgs);
-										res.addAll(nativeAbs);
-										
-										// Compute the aliases
-										for (Abstraction abs : nativeAbs)
-											if (abs.getAccessPath().isStaticFieldRef()
-													|| triggerInaktiveTaintOrReverseFlow(iStmt, abs.getAccessPath().getPlainValue(), abs))
-												computeAliasTaints(d1, (Stmt) call, abs.getAccessPath().getPlainValue(), res,
-														interproceduralCFG().getMethodOf(call), abs);
-										
-										// We only call the native code handler once per statement
-										break;
-									}
-							
-							// if we have called a sink we have to store the path from the source - in case one of the params is tainted!
-							if (isSink) {
-								// If we are inside a conditional branch, we consider every sink call a leak
-								boolean conditionalCall = enableImplicitFlows 
-										&& !interproceduralCFG().getMethodOf(call).isStatic()
-										&& aliasing.mayAlias(interproceduralCFG().getMethodOf(call).getActiveBody().getThisLocal(),
-												newSource.getAccessPath().getPlainValue())
-										&& newSource.getAccessPath().getFirstField() == null;
-								boolean taintedParam = (conditionalCall
-											|| newSource.getTopPostdominator() != null
-											|| newSource.getAccessPath().isEmpty())
-										&& newSource.isAbstractionActive();
-								// If the base object is tainted, we also consider the "code" associated
-								// with the object's class as tainted.
-								if (!taintedParam) {
-									for (int i = 0; i < callArgs.length; i++) {
-										if (aliasing.mayAlias(callArgs[i], newSource.getAccessPath().getPlainValue())) {
-											taintedParam = true;
-											break;
-										}
-									}
-								}
+								target = ((InstanceInvokeExpr) invExpr).getBase();
 								
-								if (taintedParam && newSource.isAbstractionActive())
-									addResult(new AbstractionAtSink(newSource, invExpr, iStmt));
-								// if the base object which executes the method is tainted the sink is reached, too.
-								if (invExpr instanceof InstanceInvokeExpr) {
-									InstanceInvokeExpr vie = (InstanceInvokeExpr) iStmt.getInvokeExpr();
-									if (newSource.isAbstractionActive()
-											&& aliasing.mayAlias(vie.getBase(), newSource.getAccessPath().getPlainValue()))
-										addResult(new AbstractionAtSink(newSource, invExpr, iStmt));
-								}
-							}
+							final Abstraction abs = new Abstraction(target, sourceInfo,
+									invExpr, iCallStmt, false, false);
+							res.add(abs);
 							
-							for (Abstraction abs : res)
-								if (abs != newSource)
-									abs.setCorrespondingCallSite(iStmt);
+							// Compute the aliases
+							if (triggerInaktiveTaintOrReverseFlow(iCallStmt, target, abs))
+								computeAliasTaints(d1, iCallStmt, target, res, interproceduralCFG().getMethodOf(call), abs);
+							
+							// Set the corresponding call site
+							for (Abstraction absRet : res)
+								if (absRet != source)
+									absRet.setCorrespondingCallSite(iCallStmt);
 							
 							return res;
 						}
 
-					};
-				}
-				return Identity.v();
+						//check inactive elements:
+						final Abstraction newSource;
+						if (!source.isAbstractionActive() && (call == source.getActivationUnit()
+								|| isCallSiteActivatingTaint(call, source.getActivationUnit())))
+							newSource = source.getActiveCopy();
+						else
+							newSource = source;
+						
+						// Compute the taint wrapper taints
+						res.addAll(computeWrapperTaints(d1, iCallStmt, newSource));
+						
+						// Implicit flows: taint return value
+						if (call instanceof DefinitionStmt && (newSource.getTopPostdominator() != null
+								|| newSource.getAccessPath().isEmpty())) {
+							Value leftVal = ((DefinitionStmt) call).getLeftOp();
+							Abstraction abs = newSource.deriveNewAbstraction(new AccessPath(leftVal, true),
+									iCallStmt);
+							res.add(abs);
+						}
+						
+						// We can only pass on a taint if it is neither a parameter nor the
+						// base object of the current call. If this call overwrites the left
+						// side, the taint is never passed on.
+						boolean passOn = !newSource.getAccessPath().isStaticFieldRef()
+								&& !(call instanceof DefinitionStmt && aliasing.mayAlias(((DefinitionStmt) call).getLeftOp(),
+										newSource.getAccessPath().getPlainValue()));
+						//we only can remove the taint if we step into the call/return edges
+						//otherwise we will loose taint - see ArrayTests/arrayCopyTest
+						if (passOn && newSource.getAccessPath().isInstanceFieldRef())
+							if (inspectSinks || !isSink)
+								if(hasValidCallees || (taintWrapper != null
+										&& taintWrapper.isExclusive(iCallStmt, newSource.getAccessPath(),
+												interproceduralCFG()))) {
+									if (invExpr instanceof InstanceInvokeExpr)
+										if (aliasing.mayAlias(((InstanceInvokeExpr) invExpr).getBase(),
+												newSource.getAccessPath().getPlainValue())) {
+											passOn = false;
+										}
+										if (passOn)
+											for (int i = 0; i < callArgs.length; i++)
+												if (aliasing.mayAlias(callArgs[i], newSource.getAccessPath().getPlainValue())) {
+													passOn = false;
+													break;
+												}
+										//static variables are always propagated if they are not overwritten. So if we have at least one call/return edge pair,
+										//we can be sure that the value does not get "lost" if we do not pass it on:
+										if(newSource.getAccessPath().isStaticFieldRef())
+											passOn = false;
+									}
+						
+						// If the callee does not read the given value, we also need to pass it on
+						// since we do not propagate it into the callee.
+						if (enableStaticFields && source.getAccessPath().isStaticFieldRef()) {
+							if (!interproceduralCFG().isStaticFieldUsed(callee,
+									source.getAccessPath().getFirstField()))
+								passOn = true;
+						}
+						
+						// Implicit taints are always passed over conditionally called methods
+						passOn |= source.getTopPostdominator() != null || source.getAccessPath().isEmpty();
+						if (passOn)
+							if (newSource != getZeroValue())
+								res.add(newSource);
+						
+						if (callee.isNative())
+							for (Value callVal : callArgs)
+								if (callVal == newSource.getAccessPath().getPlainValue()) {
+									// java uses call by value, but fields of complex objects can be changed (and tainted), so use this conservative approach:
+									Set<Abstraction> nativeAbs = ncHandler.getTaintedValues(iCallStmt, newSource, callArgs);
+									res.addAll(nativeAbs);
+									
+									// Compute the aliases
+									for (Abstraction abs : nativeAbs)
+										if (abs.getAccessPath().isStaticFieldRef()
+												|| triggerInaktiveTaintOrReverseFlow(iCallStmt, abs.getAccessPath().getPlainValue(), abs))
+											computeAliasTaints(d1, iCallStmt, abs.getAccessPath().getPlainValue(), res,
+													interproceduralCFG().getMethodOf(call), abs);
+									
+									// We only call the native code handler once per statement
+									break;
+								}
+						
+						// if we have called a sink we have to store the path from the source - in case one of the params is tainted!
+						if (isSink) {
+							// If we are inside a conditional branch, we consider every sink call a leak
+							boolean conditionalCall = enableImplicitFlows 
+									&& !interproceduralCFG().getMethodOf(call).isStatic()
+									&& aliasing.mayAlias(interproceduralCFG().getMethodOf(call).getActiveBody().getThisLocal(),
+											newSource.getAccessPath().getPlainValue())
+									&& newSource.getAccessPath().getFirstField() == null;
+							boolean taintedParam = (conditionalCall
+										|| newSource.getTopPostdominator() != null
+										|| newSource.getAccessPath().isEmpty())
+									&& newSource.isAbstractionActive();
+							// If the base object is tainted, we also consider the "code" associated
+							// with the object's class as tainted.
+							if (!taintedParam) {
+								for (int i = 0; i < callArgs.length; i++) {
+									if (aliasing.mayAlias(callArgs[i], newSource.getAccessPath().getPlainValue())) {
+										taintedParam = true;
+										break;
+									}
+								}
+							}
+							
+							if (taintedParam && newSource.isAbstractionActive())
+								addResult(new AbstractionAtSink(newSource, invExpr, iCallStmt));
+							// if the base object which executes the method is tainted the sink is reached, too.
+							if (invExpr instanceof InstanceInvokeExpr) {
+								InstanceInvokeExpr vie = (InstanceInvokeExpr) iCallStmt.getInvokeExpr();
+								if (newSource.isAbstractionActive()
+										&& aliasing.mayAlias(vie.getBase(), newSource.getAccessPath().getPlainValue()))
+									addResult(new AbstractionAtSink(newSource, invExpr, iCallStmt));
+							}
+						}
+						
+						for (Abstraction abs : res)
+							if (abs != newSource)
+								abs.setCorrespondingCallSite(iCallStmt);
+						
+						return res;
+					}
+				};
 			}
 		};
 	}
