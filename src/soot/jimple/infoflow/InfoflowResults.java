@@ -95,7 +95,7 @@ public class InfoflowResults {
 		public int hashCode() {
 			return (path != null && !Infoflow.getPathAgnosticResults() ? 31 * this.path.hashCode() : 0)
 					+ 31 * this.source.hashCode()
-					+ 7 * this.context.hashCode();
+					+ 7 * (this.context == null ? 0 : this.context.hashCode());
 		}
 		
 		@Override
@@ -115,8 +115,14 @@ public class InfoflowResults {
 					return false;
 			}
 			
-			return this.source.equals(si.source)
-					&& this.context.equals(si.context);
+			if (this.context == null) {
+				if (si.context != null)
+					return false;
+			}
+			else if (!this.context.equals(si.context))
+				return false;
+			
+			return this.source.equals(si.source);
 		}
 	}
 	
@@ -156,7 +162,7 @@ public class InfoflowResults {
 		@Override
 		public int hashCode() {
 			return 31 * this.sink.hashCode()
-					+ 7 * this.context.hashCode();
+					+ 7 * (this.context == null ? 0 : this.context.hashCode());
 		}
 		
 		@Override
@@ -166,8 +172,15 @@ public class InfoflowResults {
 			if (o == null || !(o instanceof SinkInfo))
 				return false;
 			SinkInfo si = (SinkInfo) o;
-			return this.sink.equals(si.sink)
-					&& this.context.equals(si.context);
+			
+			if (this.context == null) {
+				if (si.context != null)
+					return false;
+			}
+			else if (!this.context.equals(si.context))
+				return false;
+			
+			return this.sink.equals(si.sink);
 		}
 	}
 	
