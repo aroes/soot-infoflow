@@ -15,6 +15,7 @@ import soot.jimple.Stmt;
 import soot.jimple.infoflow.InfoflowResults;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
+import soot.jimple.infoflow.data.SourceContext;
 import soot.jimple.infoflow.data.SourceContextAndPath;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 
@@ -78,25 +79,8 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 			final Set<SourceContextAndPath> paths = abstraction.getPaths();
 			final Abstraction pred = abstraction.getPredecessor();
 			
-			if (pred == null) {
-				// If we have no predecessors, this must be a source
-				assert abstraction.getSourceContext() != null;
-				assert abstraction.getNeighbors() == null;
-				
-				// Register the result
+			if (pred != null) {
 				for (SourceContextAndPath scap : paths) {
-					SourceContextAndPath extendedScap =
-							scap.extendPath(abstraction.getSourceContext().getStmt());
-					results.addResult(extendedScap.getValue(),
-							extendedScap.getStmt(),
-							abstraction.getSourceContext().getValue(),
-							abstraction.getSourceContext().getStmt(),
-							abstraction.getSourceContext().getUserData(),
-							extendedScap.getPath());
-				}
-			}
-			else {
-				for (SourceContextAndPath scap : paths) {						
 					// Process the predecessor
 					if (processPredecessor(scap, pred))
 						// Schedule the predecessor
@@ -119,6 +103,7 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 					&& pred.getCurrentStmt() == pred.getCorrespondingCallSite()) {
 				SourceContextAndPath extendedScap = scap.extendPath(reconstructPaths
 						? pred.getCurrentStmt() : null);
+				checkForSource(pred, extendedScap);
 				return pred.addPathElement(extendedScap);
 			}
 			
@@ -143,10 +128,40 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 					extendedScap = pathAndItem.getO1();
 				}
 			}
-				
+			
 			// Add the new path
+			checkForSource(pred, extendedScap);
 			return pred.addPathElement(extendedScap);
 		}
+		
+	}
+	
+	/**
+	 * Checks whether the given abstraction is a source. If so, a result entry
+	 * is created.
+	 * @param abs The abstraction to check
+	 * @param scap The path leading up to the current abstraction
+	 * @return True if the current abstraction is a source, otherwise false
+	 */
+	private boolean checkForSource(Abstraction abs, SourceContextAndPath scap) {
+		if (abs.getPredecessor() != null)
+			return false;
+		
+		// If we have no predecessors, this must be a source
+		assert abs.getSourceContext() != null;
+		assert abs.getNeighbors() == null;
+		
+		// Register the source that we have found
+		SourceContext sourceContext = abs.getSourceContext();
+		SourceContextAndPath extendedScap =
+				scap.extendPath(sourceContext.getStmt());
+		results.addResult(extendedScap.getValue(),
+				extendedScap.getStmt(),
+				sourceContext.getValue(),
+				sourceContext.getStmt(),
+				sourceContext.getUserData(),
+				extendedScap.getPath());
+		return true;
 	}
 	
 	@Override
@@ -165,7 +180,7 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
     	// Start the propagation tasks
     	int curResIdx = 0;
     	for (final AbstractionAtSink abs : res) {
-    		logger.info("Building path " + ++curResIdx);
+    		logger.info("Building path " + ++curResIdx);    		
    			buildPathForAbstraction(abs);
    			
    			// Also build paths for the neighbors of our result abstraction
@@ -198,7 +213,8 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 		scap = scap.extendPath(abs.getSinkStmt());
 		abs.getAbstraction().addPathElement(scap);
 		
-		executor.execute(new SourceFindingTask(abs.getAbstraction()));
+		if (!checkForSource(abs.getAbstraction(), scap))
+			executor.execute(new SourceFindingTask(abs.getAbstraction()));
 	}
 	
 	@Override

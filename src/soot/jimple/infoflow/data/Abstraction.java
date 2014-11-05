@@ -272,6 +272,10 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 		return this.pathCache.add(scap);
 	}
 	
+	public void clearPathCache() {
+		this.pathCache = null;
+	}
+	
 	public boolean isAbstractionActive() {
 		return activationUnit == null;
 	}

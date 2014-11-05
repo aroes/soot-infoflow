@@ -162,53 +162,66 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 		return mainMethod;
 	}
 	
-	protected Stmt buildMethodCall(SootMethod currentMethod, Body body, Local classLocal, LocalGenerator gen){
-		return buildMethodCall(currentMethod, body, classLocal, gen, Collections.<SootClass>emptySet());
+	/**
+	 * Builds a new invocation statement that invokes the given method
+	 * @param methodToCall The method to call
+	 * @param body The body in which to create the invocation statement
+	 * @param classLocal The local containing an instance of the class on which
+	 * to invoke the method
+	 * @param gen The local generator to be used for generating locals that hold
+	 * any additional values required for the call parameters
+	 * @return The newly created invocation statement
+	 */
+	protected Stmt buildMethodCall(SootMethod methodToCall, Body body,
+			Local classLocal, LocalGenerator gen) {
+		return buildMethodCall(methodToCall, body, classLocal, gen,
+				Collections.<SootClass>emptySet());
 	}
 
-	protected Stmt buildMethodCall(SootMethod currentMethod, Body body, Local classLocal, LocalGenerator gen,
+	protected Stmt buildMethodCall(SootMethod methodToCall, Body body,
+			Local classLocal, LocalGenerator gen,
 			Set<SootClass> parentClasses){
-		assert currentMethod != null : "Current method was null";
+		assert methodToCall != null : "Current method was null";
 		assert body != null : "Body was null";
 		assert gen != null : "Local generator was null";
 		
-		if (classLocal == null && !currentMethod.isStatic()) {
+		if (classLocal == null && !methodToCall.isStatic()) {
 			logger.warn("Cannot call method {}, because there is no local for base object: {}", 
-					currentMethod, currentMethod.getDeclaringClass());
-			failedMethods.add(currentMethod);
+					methodToCall, methodToCall.getDeclaringClass());
+			failedMethods.add(methodToCall);
 			return null;
 		}
 		
 		final InvokeExpr invokeExpr;
 		List<Value> args = new LinkedList<Value>();
-		if(currentMethod.getParameterCount()>0){
-			for (Type tp : currentMethod.getParameterTypes())
+		if(methodToCall.getParameterCount()>0){
+			for (Type tp : methodToCall.getParameterTypes())
 				args.add(getValueForType(body, gen, tp, new HashSet<SootClass>(), parentClasses));
 			
-			if(currentMethod.isStatic())
-				invokeExpr = Jimple.v().newStaticInvokeExpr(currentMethod.makeRef(), args);
+			if(methodToCall.isStatic())
+				invokeExpr = Jimple.v().newStaticInvokeExpr(methodToCall.makeRef(), args);
 			else {
 				assert classLocal != null : "Class local method was null for non-static method call";
-				if (currentMethod.isConstructor())
-					invokeExpr = Jimple.v().newSpecialInvokeExpr(classLocal, currentMethod.makeRef(),args);
+				if (methodToCall.isConstructor())
+					invokeExpr = Jimple.v().newSpecialInvokeExpr(classLocal, methodToCall.makeRef(),args);
 				else
-					invokeExpr = Jimple.v().newVirtualInvokeExpr(classLocal, currentMethod.makeRef(),args);
+					invokeExpr = Jimple.v().newVirtualInvokeExpr(classLocal, methodToCall.makeRef(),args);
 			}
 		}else{
-			if(currentMethod.isStatic()){
-				invokeExpr = Jimple.v().newStaticInvokeExpr(currentMethod.makeRef());
+			if(methodToCall.isStatic()){
+				invokeExpr = Jimple.v().newStaticInvokeExpr(methodToCall.makeRef());
 			}else{
 				assert classLocal != null : "Class local method was null for non-static method call";
-				if (currentMethod.isConstructor())
-					invokeExpr = Jimple.v().newSpecialInvokeExpr(classLocal, currentMethod.makeRef());
+				if (methodToCall.isConstructor())
+					invokeExpr = Jimple.v().newSpecialInvokeExpr(classLocal, methodToCall.makeRef());
 				else
-					invokeExpr = Jimple.v().newVirtualInvokeExpr(classLocal, currentMethod.makeRef());
+					invokeExpr = Jimple.v().newVirtualInvokeExpr(classLocal, methodToCall.makeRef());
 			}
 		}
 		 
 		Stmt stmt;
-		if (!(currentMethod.getReturnType() instanceof VoidType)) {
-			Local returnLocal = gen.generateLocal(currentMethod.getReturnType());
+		if (!(methodToCall.getReturnType() instanceof VoidType)) {
+			Local returnLocal = gen.generateLocal(methodToCall.getReturnType());
 			stmt = Jimple.v().newAssignStmt(returnLocal, invokeExpr);
 			
 		} else {

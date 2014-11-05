@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import soot.jimple.infoflow.InfoflowResults;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
+import soot.jimple.infoflow.data.SourceContext;
 import soot.jimple.infoflow.data.SourceContextAndPath;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 
@@ -75,24 +76,7 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
 			final Set<SourceContextAndPath> paths = abstraction.getPaths();
 			final Abstraction pred = abstraction.getPredecessor();
 			
-			if (pred == null) {
-				// If we have no predecessors, this must be a source
-				assert abstraction.getSourceContext() != null;
-				assert abstraction.getNeighbors() == null;
-				
-				// Register the result
-				for (SourceContextAndPath scap : paths) {
-					SourceContextAndPath extendedScap =
-							scap.extendPath(abstraction.getSourceContext().getStmt());
-					results.addResult(extendedScap.getValue(),
-							extendedScap.getStmt(),
-							abstraction.getSourceContext().getValue(),
-							abstraction.getSourceContext().getStmt(),
-							abstraction.getSourceContext().getUserData(),
-							extendedScap.getPath());
-				}
-			}
-			else {
+			if (pred != null) {
 				for (SourceContextAndPath scap : paths) {						
 					// Process the predecessor
 					if (processPredecessor(scap, pred))
@@ -115,10 +99,39 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
 					? pred.getCurrentStmt() : null);
 			
 			// Add the new path
+			checkForSource(pred, extendedScap);
 			return pred.addPathElement(extendedScap);
 		}
 	}
+	
+	/**
+	 * Checks whether the given abstraction is a source. If so, a result entry
+	 * is created.
+	 * @param abs The abstraction to check
+	 * @param scap The path leading up to the current abstraction
+	 * @return True if the current abstraction is a source, otherwise false
+	 */
+	private boolean checkForSource(Abstraction abs, SourceContextAndPath scap) {
+		if (abs.getPredecessor() != null)
+			return false;
 		
+		// If we have no predecessors, this must be a source
+		assert abs.getSourceContext() != null;
+		assert abs.getNeighbors() == null;
+		
+		// Register the source that we have found
+		SourceContext sourceContext = abs.getSourceContext();
+		SourceContextAndPath extendedScap =
+				scap.extendPath(sourceContext.getStmt());
+		results.addResult(extendedScap.getValue(),
+				extendedScap.getStmt(),
+				sourceContext.getValue(),
+				sourceContext.getStmt(),
+				sourceContext.getUserData(),
+				extendedScap.getPath());
+		return true;
+	}
+	
 	@Override
 	public void computeTaintPaths(final Set<AbstractionAtSink> res) {
 		runSourceFindingTasks(res);
@@ -168,7 +181,8 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
 		scap = scap.extendPath(abs.getSinkStmt());
 		abs.getAbstraction().addPathElement(scap);
 		
-		executor.execute(new SourceFindingTask(abs.getAbstraction()));
+		if (!checkForSource(abs.getAbstraction(), scap))
+			executor.execute(new SourceFindingTask(abs.getAbstraction()));
 	}
 	
 	@Override

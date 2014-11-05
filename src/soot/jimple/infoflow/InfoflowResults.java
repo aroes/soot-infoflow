@@ -151,9 +151,10 @@ public class InfoflowResults {
 		
 		@Override
 		public String toString() {
-            StringBuilder sb = new StringBuilder(context.toString());
+            StringBuilder sb = new StringBuilder(context == null
+            		? sink.toString() : context.toString());
 
-            if (context.hasTag("LineNumberTag"))
+            if (context != null && context.hasTag("LineNumberTag"))
                 sb.append(" on line ").append(((LineNumberTag)context.getTag("LineNumberTag")).getLineNumber());
 
 			return sb.toString();
@@ -388,9 +389,14 @@ public class InfoflowResults {
 	
 	@Override
 	public String toString() {
+		boolean isFirst = true;
 		StringBuilder sb = new StringBuilder();
 		for (SinkInfo sink : this.results.keySet())
 			for (SourceInfo source : this.results.get(sink)) {
+				if (!isFirst)
+					sb.append(", ");
+				isFirst = false;
+				
 				sb.append(source);
 				sb.append(" -> ");
 				sb.append(sink);
