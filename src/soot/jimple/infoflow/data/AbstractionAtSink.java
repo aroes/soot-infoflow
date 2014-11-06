@@ -10,24 +10,20 @@
  ******************************************************************************/
 package soot.jimple.infoflow.data;
 
-import soot.Value;
 import soot.jimple.Stmt;
 
 public class AbstractionAtSink {
 	
 	private final Abstraction abstraction;
-	private final Value sinkValue;
 	private final Stmt sinkStmt;
 	
 	/**
 	 * Creates a new instance of the {@link AbstractionAtSink} class
 	 * @param abstraction The abstraction with which the sink has been reached
-	 * @param sinkValue The value that triggered the sink, e.g, the InvokeExpr
 	 * @param sinkStmt The statement that triggered the sink
 	 */
-	public AbstractionAtSink(Abstraction abstraction, Value sinkValue, Stmt sinkStmt) {
+	public AbstractionAtSink(Abstraction abstraction, Stmt sinkStmt) {
 		this.abstraction = abstraction;
-		this.sinkValue = sinkValue;
 		this.sinkStmt = sinkStmt;
 	}
 	
@@ -37,14 +33,6 @@ public class AbstractionAtSink {
 	 */
 	public Abstraction getAbstraction() {
 		return this.abstraction;
-	}
-	
-	/**
-	 * Gets the value that has triggered the sink, e.g., the InvokeExpr
-	 * @return The value that has triggered the sink, e.g., the InvokeExpr
-	 */
-	public Value getSinkValue() {
-		return this.sinkValue;
 	}
 	
 	/**
@@ -63,8 +51,6 @@ public class AbstractionAtSink {
 				+ ((abstraction == null) ? 0 : abstraction.hashCode());
 		result = prime * result
 				+ ((sinkStmt == null) ? 0 : sinkStmt.hashCode());
-		result = prime * result
-				+ ((sinkValue == null) ? 0 : sinkValue.hashCode());
 		return result;
 	}
 
@@ -86,11 +72,6 @@ public class AbstractionAtSink {
 			if (other.sinkStmt != null)
 				return false;
 		} else if (!sinkStmt.equals(other.sinkStmt))
-			return false;
-		if (sinkValue == null) {
-			if (other.sinkValue != null)
-				return false;
-		} else if (!sinkValue.equals(other.sinkValue))
 			return false;
 		return true;
 	}

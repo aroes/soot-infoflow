@@ -479,17 +479,27 @@ public class AccessPath implements Cloneable {
 		if (this.isEmpty() || a2.isEmpty())
 			return false;
 		
+		// If one of the access paths refers to an instance object and the other
+		// one doesn't, there can't be an entailment
 		if ((this.value != null && a2.value == null)
 				|| (this.value == null && a2.value != null))
 			return false;
+		
+		// There cannot be an entailment for two instance references with
+		// different base objects
 		if (this.value != null && !this.value.equals(a2.value))
 			return false;
 		
-		if (this.fields.length > a2.fields.length)
-			return false;
-		for (int i = 0; i < this.fields.length; i++)
-			if (!this.fields[i].equals(a2.fields[i]))
+		if (this.fields != null && a2.fields != null) {
+			// If this access path is deeper than the other one, it cannot entail it
+			if (this.fields.length > a2.fields.length)
 				return false;
+			
+			// Check the fields in detail
+			for (int i = 0; i < this.fields.length; i++)
+				if (!this.fields[i].equals(a2.fields[i]))
+					return false;
+		}
 		return true;
 	}
 	

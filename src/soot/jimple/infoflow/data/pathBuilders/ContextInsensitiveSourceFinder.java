@@ -81,7 +81,7 @@ public class ContextInsensitiveSourceFinder extends AbstractAbstractionPathBuild
 								
 				if (abstraction.getSourceContext() != null) {
 					// Register the result
-					results.addResult(flagAbs.getSinkValue(),
+					results.addResult(flagAbs.getAbstraction().getAccessPath(),
 							flagAbs.getSinkStmt(),
 							abstraction.getSourceContext().getValue(),
 							abstraction.getSourceContext().getStmt(),

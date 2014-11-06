@@ -155,7 +155,7 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
    			if (abs.getAbstraction().getNeighbors() != null)
    				for (Abstraction neighbor : abs.getAbstraction().getNeighbors()) {
    					AbstractionAtSink neighborAtSink = new AbstractionAtSink(neighbor,
-   							abs.getSinkValue(), abs.getSinkStmt());
+   							abs.getSinkStmt());
    		   			buildPathForAbstraction(neighborAtSink);
    				}
     	}
@@ -177,7 +177,7 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
 	 */
 	private void buildPathForAbstraction(final AbstractionAtSink abs) {
 		SourceContextAndPath scap = new SourceContextAndPath(
-				abs.getSinkValue(), abs.getSinkStmt());
+				abs.getAbstraction().getAccessPath(), abs.getSinkStmt());
 		scap = scap.extendPath(abs.getSinkStmt());
 		abs.getAbstraction().addPathElement(scap);
 		

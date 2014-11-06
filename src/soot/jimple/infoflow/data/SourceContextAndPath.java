@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import soot.Value;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.Infoflow;
 
@@ -21,11 +20,11 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 	private List<Stmt> callStack = null;
 	private int hashCode = 0;
 	
-	public SourceContextAndPath(Value value, Stmt stmt) {
+	public SourceContextAndPath(AccessPath value, Stmt stmt) {
 		this(value, stmt, null);
 	}
 	
-	public SourceContextAndPath(Value value, Stmt stmt, Object userData) {
+	public SourceContextAndPath(AccessPath value, Stmt stmt, Object userData) {
 		super(value, stmt, userData);
 	}
 	

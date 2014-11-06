@@ -13,7 +13,6 @@ package soot.jimple.infoflow;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -24,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import soot.Value;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.util.ConcurrentHashSet;
 import soot.jimple.infoflow.util.MyConcurrentHashMap;
 import soot.tagkit.LineNumberTag;
@@ -42,35 +42,35 @@ public class InfoflowResults {
 	 * @author Steven Arzt
 	 */
 	public class SourceInfo {
-		private final Value source;
-		private final Stmt context;
+		private final AccessPath accessPath;
+		private final Stmt source;
 		private final Object userData;
 		private final List<Stmt> path;
 		
-		public SourceInfo(Value source, Stmt context) {
+		public SourceInfo(AccessPath source, Stmt context) {
 			assert source != null;
 			
-			this.source = source;
-			this.context = context;
+			this.accessPath = source;
+			this.source = context;
 			this.userData = null;
 			this.path = null;
 		}
 		
-		public SourceInfo(Value source, Stmt context, Object userData, List<Stmt> path) {
+		public SourceInfo(AccessPath source, Stmt context, Object userData, List<Stmt> path) {
 			assert source != null;
 
-			this.source = source;
-			this.context = context;
+			this.accessPath = source;
+			this.source = context;
 			this.userData = userData;
 			this.path = path;
 		}
 
-		public Value getSource() {
-			return this.source;
+		public AccessPath getAccessPath() {
+			return this.accessPath;
 		}
 		
-		public Stmt getContext() {
-			return this.context;
+		public Stmt getSource() {
+			return this.source;
 		}
 		
 		public Object getUserData() {
@@ -83,10 +83,10 @@ public class InfoflowResults {
 
         @Override
         public String toString(){
-            StringBuilder sb = new StringBuilder(context.toString());
+            StringBuilder sb = new StringBuilder(source.toString());
 
-            if (context.hasTag("LineNumberTag"))
-                sb.append(" on line ").append(((LineNumberTag) context.getTag("LineNumberTag")).getLineNumber());
+            if (source.hasTag("LineNumberTag"))
+                sb.append(" on line ").append(((LineNumberTag) source.getTag("LineNumberTag")).getLineNumber());
 
             return sb.toString();
         }
@@ -94,8 +94,9 @@ public class InfoflowResults {
 		@Override
 		public int hashCode() {
 			return (path != null && !Infoflow.getPathAgnosticResults() ? 31 * this.path.hashCode() : 0)
-					+ 31 * this.source.hashCode()
-					+ 7 * (this.context == null ? 0 : this.context.hashCode());
+					+ (Infoflow.getOneResultPerAccessPath() ?
+							31 * this.accessPath.hashCode() : 0)
+					+ 7 * (this.source == null ? 0 : this.source.hashCode());
 		}
 		
 		@Override
@@ -115,14 +116,15 @@ public class InfoflowResults {
 					return false;
 			}
 			
-			if (this.context == null) {
-				if (si.context != null)
+			if (this.source == null) {
+				if (si.source != null)
 					return false;
 			}
-			else if (!this.context.equals(si.context))
+			else if (!this.source.equals(si.source))
 				return false;
 			
-			return this.source.equals(si.source);
+			return !Infoflow.getOneResultPerAccessPath()
+					|| this.accessPath.equals(si.accessPath);
 		}
 	}
 	
@@ -131,39 +133,39 @@ public class InfoflowResults {
 	 * @author Steven Arzt
 	 */
 	public class SinkInfo {
-		private final Value sink;
-		private final Stmt context;
+		private final AccessPath accessPath;
+		private final Stmt sink;
 		
-		public SinkInfo(Value sink, Stmt context) {
+		public SinkInfo(AccessPath sink, Stmt context) {
 			assert sink != null;
 
-			this.sink = sink;
-			this.context = context;
+			this.accessPath = sink;
+			this.sink = context;
 		}
 		
-		public Value getSink() {
+		public AccessPath getAccessPath() {
+			return this.accessPath;
+		}
+		
+		public Stmt getSink() {
 			return this.sink;
-		}
-		
-		public Stmt getContext() {
-			return this.context;
 		}
 		
 		@Override
 		public String toString() {
-            StringBuilder sb = new StringBuilder(context == null
-            		? sink.toString() : context.toString());
+            StringBuilder sb = new StringBuilder(sink == null
+            		? accessPath.toString() : sink.toString());
 
-            if (context != null && context.hasTag("LineNumberTag"))
-                sb.append(" on line ").append(((LineNumberTag)context.getTag("LineNumberTag")).getLineNumber());
+            if (sink != null && sink.hasTag("LineNumberTag"))
+                sb.append(" on line ").append(((LineNumberTag)sink.getTag("LineNumberTag")).getLineNumber());
 
 			return sb.toString();
 		}
 
 		@Override
 		public int hashCode() {
-			return 31 * this.sink.hashCode()
-					+ 7 * (this.context == null ? 0 : this.context.hashCode());
+			return (Infoflow.getOneResultPerAccessPath() ? 31 * this.accessPath.hashCode() : 0)
+					+ 7 * (this.sink == null ? 0 : this.sink.hashCode());
 		}
 		
 		@Override
@@ -174,14 +176,15 @@ public class InfoflowResults {
 				return false;
 			SinkInfo si = (SinkInfo) o;
 			
-			if (this.context == null) {
-				if (si.context != null)
+			if (this.sink == null) {
+				if (si.sink != null)
 					return false;
 			}
-			else if (!this.context.equals(si.context))
+			else if (!this.sink.equals(si.sink))
 				return false;
 			
-			return this.sink.equals(si.sink);
+			return !Infoflow.getOneResultPerAccessPath()
+					|| this.accessPath.equals(si.accessPath);
 		}
 	}
 	
@@ -234,23 +237,19 @@ public class InfoflowResults {
 		return !findSinkByMethodSignature(sinkSignature).isEmpty();
 	}
 
-	public void addResult(Value sink, Stmt sinkStmt, Value source, Stmt sourceStmt) {
+	public void addResult(AccessPath sink, Stmt sinkStmt,
+			AccessPath source, Stmt sourceStmt) {
 		this.addResult(new SinkInfo(sink, sinkStmt), new SourceInfo(source, sourceStmt));
 	}
 	
-	public void addResult(Value sink, Stmt sinkStmt, Value source,
-			Stmt sourceStmt, Object userData, List<Stmt> propagationPath) {
-		this.addResult(new SinkInfo(sink, sinkStmt), new SourceInfo(source, sourceStmt, userData, propagationPath));
+	public void addResult(AccessPath sink, Stmt sinkStmt,
+			AccessPath source, Stmt sourceStmt,
+			Object userData,
+			List<Stmt> propagationPath) {
+		this.addResult(new SinkInfo(sink, sinkStmt),
+				new SourceInfo(source, sourceStmt, userData, propagationPath));
 	}
-
-	public void addResult(Value sink, Stmt sinkContext, Value source,
-			Stmt sourceStmt, Object userData, List<Stmt> propagationPath, Stmt stmt) {
-		List<Stmt> newPropPath = new LinkedList<Stmt>(propagationPath);
-		newPropPath.add(stmt);
-		this.addResult(new SinkInfo(sink, sinkContext),
-				new SourceInfo(source, sourceStmt, userData, newPropPath));
-	}
-
+	
 	public void addResult(SinkInfo sink, SourceInfo source) {
 		assert sink != null;
 		assert source != null;
@@ -286,7 +285,7 @@ public class InfoflowResults {
 		if (sources == null)
 			return false;
 		for (SourceInfo src : sources)
-			if (src.source.equals(source))
+			if (src.accessPath.equals(source))
 				return true;
 		return false;
 	}
@@ -300,10 +299,10 @@ public class InfoflowResults {
 	 */
 	public boolean isPathBetween(String sink, String source) {
 		for (SinkInfo si : this.results.keySet())
-			if (si.getSink().toString().equals(sink)) {
+			if (si.getAccessPath().getPlainValue().toString().equals(sink)) {
 				Set<SourceInfo> sources = this.results.get(si);
 				for (SourceInfo src : sources)
-					if (src.source.toString().equals(source))
+					if (src.source.toString().contains(source))
 						return true;
 		}
 		return false;
@@ -324,8 +323,8 @@ public class InfoflowResults {
 			if (sources == null)
 				return false;
 			for (SourceInfo src : sources)
-				if (src.source instanceof InvokeExpr) {
-					InvokeExpr expr = (InvokeExpr) src.source;
+				if (src.source.containsInvokeExpr()) {
+					InvokeExpr expr = src.source.getInvokeExpr();
 					if (expr.getMethod().getSignature().equals(sourceSignature))
 						return true;
 				}
@@ -342,8 +341,8 @@ public class InfoflowResults {
 	private List<SinkInfo> findSinkByMethodSignature(String sinkSignature) {
 		List<SinkInfo> sinkVals = new ArrayList<SinkInfo>();
 		for (SinkInfo si : this.results.keySet())
-			if (si.getSink() instanceof InvokeExpr) {
-				InvokeExpr expr = (InvokeExpr) si.getSink();
+			if (si.getSink().containsInvokeExpr()) {
+				InvokeExpr expr = si.getSink().getInvokeExpr();
 				if (expr.getMethod().getSignature().equals(sinkSignature))
 					sinkVals.add(si);
 			}

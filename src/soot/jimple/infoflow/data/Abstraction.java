@@ -22,7 +22,6 @@ import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
 import soot.Value;
-import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.solver.IInfoflowCFG.UnitContainer;
 import soot.jimple.infoflow.solver.fastSolver.FastSolverLinkedNode;
@@ -82,8 +81,10 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	
 	private BitSet pathFlags = null;
 	
-	public Abstraction(Value taint, SourceInfo sourceInfo,
-			Value sourceVal, Stmt sourceStmt,
+	public Abstraction(Value taint,
+			SourceInfo sourceInfo,
+			AccessPath sourceVal,
+			Stmt sourceStmt,
 			boolean exceptionThrown,
 			boolean isImplicit) {
 		this(taint, sourceInfo.getTaintSubFields(),
@@ -91,11 +92,15 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 				exceptionThrown, isImplicit);
 	}
 
-	protected Abstraction(Value taint, boolean taintSubFields,
-			Value sourceVal, Stmt sourceStmt, Object userData,
+	protected Abstraction(Value taint,
+			boolean taintSubFields,
+			AccessPath sourceVal,
+			Stmt sourceStmt,
+			Object userData,
 			boolean exceptionThrown,
 			boolean isImplicit){
-		this(taint, taintSubFields, new SourceContext(sourceVal, sourceStmt, userData),
+		this(taint, taintSubFields,
+				new SourceContext(sourceVal, sourceStmt, userData),
 				exceptionThrown, isImplicit);
 	}
 
@@ -531,8 +536,10 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	}
 		
 	public static Abstraction getZeroAbstraction(boolean flowSensitiveAliasing) {
-		Abstraction zeroValue = new Abstraction(new JimpleLocal("zero", NullType.v()), new SourceInfo(false),
-				NullConstant.v(), null, false, false);
+		Abstraction zeroValue = new Abstraction(new JimpleLocal("zero", NullType.v()),
+				new SourceInfo(false),
+				new AccessPath(new JimpleLocal("zero", NullType.v()), false),
+				null, false, false);
 		Abstraction.flowSensitiveAliasing = flowSensitiveAliasing;
 		return zeroValue;
 	}
@@ -544,8 +551,6 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 
 	@Override
 	public void setCallingContext(Abstraction callingContext) {
-		// TODO Auto-generated method stub
-		
 	}
 	
 	/**
@@ -565,6 +570,16 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 			pathFlags.set(id);
 		}
 		return true;
+	}
+	
+	public Abstraction injectSourceContext(SourceContext sourceContext) {
+		if (this.sourceContext != null && this.sourceContext.equals(sourceContext))
+			return this;
+		
+		Abstraction abs = clone();
+		abs.predecessor = null;
+		abs.sourceContext = sourceContext;
+		return abs;
 	}
 	
 }

@@ -278,24 +278,41 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					// Notify the handler if we have one
 					if (taintPropagationHandlers != null)
 						for (TaintPropagationHandler tp : taintPropagationHandlers)
-							tp.notifyFlowIn(stmt, Collections.singleton(source),
-									interproceduralCFG(), FlowFunctionType.NormalFlowFunction);
+							tp.notifyFlowIn(stmt, source, interproceduralCFG(),
+									FlowFunctionType.NormalFlowFunction);
 					
 					// Compute the new abstractions
 					Set<Abstraction> res = computeTargetsInternal(d1, source);
-					return notifyOutFlowHandlers(stmt, res, FlowFunctionType.NormalFlowFunction);
+					return notifyOutFlowHandlers(stmt, source, res,
+							FlowFunctionType.NormalFlowFunction);
 				}
 				
 				public abstract Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source);
 
 			}
 			
-			private Set<Abstraction> notifyOutFlowHandlers(Unit stmt, Set<Abstraction> res,
+			/**
+			 * Notifies the outbound flow handlers, if any, about the computed
+			 * result abstractions for the current flow function
+			 * @param stmt The statement that has just been processed
+			 * @param incoming The incoming abstraction from which the outbound
+			 * ones were computed
+			 * @param outgoing The outbound abstractions to be propagated on
+			 * @param functionType The type of flow function that was computed
+			 * @return The outbound flow abstracions, potentially changed by the
+			 * flow handlers
+			 */
+			private Set<Abstraction> notifyOutFlowHandlers(Unit stmt,
+					Abstraction incoming,
+					Set<Abstraction> outgoing,
 					FlowFunctionType functionType) {
-				if (taintPropagationHandlers != null && res != null && !res.isEmpty())
-						for (TaintPropagationHandler tp : taintPropagationHandlers)
-							tp.notifyFlowOut(stmt, res, interproceduralCFG(), functionType);
-				return res;
+				if (taintPropagationHandlers != null
+						&& outgoing != null
+						&& !outgoing.isEmpty())
+					for (TaintPropagationHandler tp : taintPropagationHandlers)
+						outgoing = tp.notifyFlowOut(stmt, incoming, outgoing,
+								interproceduralCFG(), functionType);
+				return outgoing;
 			}
 			
 			/**
@@ -412,7 +429,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							Set<Abstraction> res = new HashSet<Abstraction>();
 							if (source == getZeroValue() && sourceInfo != null) {
 								Abstraction abs = new Abstraction(is.getLeftOp(), sourceInfo,
-										is.getRightOp(), is, false, false);
+										new AccessPath(is.getLeftOp(), true), is, false, false);
 								res.add(abs);
 								
 								// Compute the aliases
@@ -465,7 +482,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
                             if (source == getZeroValue() && sourceInfo != null) {
     							Set<Abstraction> res = new HashSet<Abstraction>();
                                 final Abstraction abs = new Abstraction(assignStmt.getLeftOp(),
-                                		sourceInfo, assignStmt.getRightOp(), assignStmt,
+                                		sourceInfo,
+                                		new AccessPath(assignStmt.getRightOp(), true),
+                                		assignStmt,
                                 		false, false);
                                 res.add(abs);
                                 
@@ -693,14 +712,15 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								return new TwoElementSet<Abstraction>(newSource, lenAbs);
 							}
 								
-							Set<Abstraction> res = new HashSet<Abstraction>();
-							
 							// If this is a sink, we need to report the finding
-							if (isSink && newSource.isAbstractionActive() && newSource.getAccessPath().isEmpty())
-								addResult(new AbstractionAtSink(newSource, leftValue, assignStmt));
+							if (isSink
+									&& newSource.isAbstractionActive()
+									&& newSource.getAccessPath().isEmpty())
+								addResult(new AbstractionAtSink(newSource, assignStmt));
 							
-							Abstraction targetAB = mappedAP.equals(newSource.getAccessPath()) ? newSource
-									: newSource.deriveNewAbstraction(mappedAP, null);
+							Set<Abstraction> res = new HashSet<Abstraction>();
+							Abstraction targetAB = mappedAP.equals(newSource.getAccessPath())
+									? newSource : newSource.deriveNewAbstraction(mappedAP, null);							
 							addTaintViaStmt(d1, assignStmt, leftValue, targetAB, res, cutFirstField,
 									interproceduralCFG().getMethodOf(src), targetType);
 							res.add(newSource);
@@ -730,7 +750,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									&& source.isAbstractionActive()
 									&& sourceSinkManager.isSink(returnStmt, interproceduralCFG())
 									&& source.getAccessPath().isEmpty())
-								addResult(new AbstractionAtSink(source, returnStmt.getOp(), returnStmt));
+								addResult(new AbstractionAtSink(source, returnStmt));
 
 							return Collections.singleton(source);
 						}
@@ -852,7 +872,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (!res.isEmpty())
 							for (Abstraction abs : res)
 								aliasingStrategy.injectCallingContext(abs, solver, dest, src, source, d1);
-						return notifyOutFlowHandlers(stmt, res, FlowFunctionType.CallFlowFunction);
+						return notifyOutFlowHandlers(stmt, source, res,
+								FlowFunctionType.CallFlowFunction);
 					}
 					
 					private Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
@@ -872,8 +893,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						// Notify the handler if we have one
 						if (taintPropagationHandlers != null)
 							for (TaintPropagationHandler tp : taintPropagationHandlers)
-								tp.notifyFlowIn(stmt, Collections.singleton(source),
-										interproceduralCFG(), FlowFunctionType.CallFlowFunction);
+								tp.notifyFlowIn(stmt, source, interproceduralCFG(),
+										FlowFunctionType.CallFlowFunction);
 						
 						// If we have an exclusive taint wrapper for the target
 						// method, we do not perform an own taint propagation. 
@@ -988,7 +1009,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					@Override
 					public Set<Abstraction> computeTargets(Abstraction source, Collection<Abstraction> callerD1s) {
 						Set<Abstraction> res = computeTargetsInternal(source, callerD1s);
-						return notifyOutFlowHandlers(exitStmt, res, FlowFunctionType.ReturnFlowFunction);
+						return notifyOutFlowHandlers(exitStmt, source, res,
+								FlowFunctionType.ReturnFlowFunction);
 					}
 					
 					private Set<Abstraction> computeTargetsInternal(Abstraction source, Collection<Abstraction> callerD1s) {
@@ -1000,8 +1022,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						// Notify the handler if we have one
 						if (taintPropagationHandlers != null)
 							for (TaintPropagationHandler tp : taintPropagationHandlers)
-								tp.notifyFlowIn(exitStmt, Collections.singleton(source),
-										interproceduralCFG(), FlowFunctionType.ReturnFlowFunction);
+								tp.notifyFlowIn(exitStmt, source, interproceduralCFG(),
+										FlowFunctionType.ReturnFlowFunction);
 						
 						boolean callerD1sConditional = false;
 						for (Abstraction d1 : callerD1s)
@@ -1027,7 +1049,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									Abstraction abs = newSource.deriveNewAbstraction
 											(newSource.getAccessPath().copyWithNewValue(def.getLeftOp()), (Stmt) exitStmt);
 
-									HashSet<Abstraction> res = new HashSet<Abstraction>();
+									Set<Abstraction> res = new HashSet<Abstraction>();
 									res.add(abs);
 									
 									// If we taint a return value because it is implicit,
@@ -1036,11 +1058,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										for (Abstraction d1 : callerD1s)
 											computeAliasTaints(d1, iCallStmt, def.getLeftOp(), res,
 													interproceduralCFG().getMethodOf(callSite), abs);
-									
-									// Notify the handler if we have one
-									if (taintPropagationHandlers != null)
-										for (TaintPropagationHandler tp : taintPropagationHandlers)
-											tp.notifyFlowOut(exitStmt, res, interproceduralCFG(), FlowFunctionType.ReturnFlowFunction);
 									return res;
 								}
 							
@@ -1083,7 +1100,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									&& aliasing.mayAlias(newSource.getAccessPath().getPlainValue(), returnStmt.getOp());
 							if (mustTaintSink && isSink
 									&& newSource.isAbstractionActive())
-								addResult(new AbstractionAtSink(newSource, returnStmt.getOp(), returnStmt));
+								addResult(new AbstractionAtSink(newSource, returnStmt));
 						}
 						
 						// If we have no caller, we have nowhere to propagate. This
@@ -1244,7 +1261,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					@Override
 					public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
 						Set<Abstraction> res = computeTargetsInternal(d1, source);
-						return notifyOutFlowHandlers(call, res, FlowFunctionType.CallToReturnFlowFunction);
+						return notifyOutFlowHandlers(call, source, res,
+								FlowFunctionType.CallToReturnFlowFunction);
 					}
 					
 					private Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
@@ -1254,8 +1272,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						// Notify the handler if we have one
 						if (taintPropagationHandlers != null)
 							for (TaintPropagationHandler tp : taintPropagationHandlers)
-								tp.notifyFlowIn(call, Collections.singleton(source),
-										interproceduralCFG(), FlowFunctionType.CallToReturnFlowFunction);
+								tp.notifyFlowIn(call, source, interproceduralCFG(),
+										FlowFunctionType.CallToReturnFlowFunction);
 						
 						// Check whether we must leave a conditional branch
 						if (source.isTopPostdominator(call)) {
@@ -1281,7 +1299,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								target = ((InstanceInvokeExpr) invExpr).getBase();
 								
 							final Abstraction abs = new Abstraction(target, sourceInfo,
-									invExpr, iCallStmt, false, false);
+									new AccessPath(target, true), iCallStmt, false, false);
 							res.add(abs);
 							
 							// Compute the aliases
@@ -1402,13 +1420,14 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							}
 							
 							if (taintedParam && newSource.isAbstractionActive())
-								addResult(new AbstractionAtSink(newSource, invExpr, iCallStmt));
+								addResult(new AbstractionAtSink(newSource, iCallStmt));
+							
 							// if the base object which executes the method is tainted the sink is reached, too.
 							if (invExpr instanceof InstanceInvokeExpr) {
 								InstanceInvokeExpr vie = (InstanceInvokeExpr) iCallStmt.getInvokeExpr();
 								if (newSource.isAbstractionActive()
 										&& aliasing.mayAlias(vie.getBase(), newSource.getAccessPath().getPlainValue()))
-									addResult(new AbstractionAtSink(newSource, invExpr, iCallStmt));
+									addResult(new AbstractionAtSink(newSource, iCallStmt));
 							}
 						}
 						
@@ -1443,7 +1462,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 		resultAbs = new AbstractionAtSink
 				(resultAbs.getAbstraction().deriveNewAbstraction
 						(resultAbs.getAbstraction().getAccessPath(), resultAbs.getSinkStmt()),
-				resultAbs.getSinkValue(), resultAbs.getSinkStmt());
+				resultAbs.getSinkStmt());
 		resultAbs.getAbstraction().setCorrespondingCallSite(resultAbs.getSinkStmt());
 		
 		Abstraction newAbs = this.results.putIfAbsentElseGet

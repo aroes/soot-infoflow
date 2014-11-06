@@ -73,6 +73,7 @@ public class Infoflow extends AbstractInfoflow {
 	private static int accessPathLength = 5;
 	private static boolean useRecursiveAccessPaths = true;
 	private static boolean pathAgnosticResults = true;
+	private static boolean oneResultPerAccessPath = false;
 	
 	private InfoflowResults results = null;
 	private final IPathBuilderFactory pathBuilderFactory;
@@ -466,6 +467,18 @@ public class Infoflow extends AbstractInfoflow {
 		}
 		
 		Set<AbstractionAtSink> res = forwardProblem.getResults();
+		
+		// We need to prune access paths that are entailed by another one
+		for (Iterator<AbstractionAtSink> absAtSinkIt = res.iterator(); absAtSinkIt.hasNext(); ) {
+			AbstractionAtSink curAbs = absAtSinkIt.next();
+			for (AbstractionAtSink checkAbs : res)
+				if (checkAbs != curAbs)
+					if (checkAbs.getAbstraction().getAccessPath().entails(
+							curAbs.getAbstraction().getAccessPath())) {
+						absAtSinkIt.remove();
+						break;
+					}
+		}
 
 		logger.info("IFDS problem with {} forward and {} backward edges solved, "
 				+ "processing {} results...", forwardSolver.propagationCount,
@@ -491,9 +504,9 @@ public class Infoflow extends AbstractInfoflow {
 			logger.warn("No results found.");
 		else for (Entry<SinkInfo, Set<SourceInfo>> entry : results.getResults().entrySet()) {
 			logger.info("The sink {} in method {} was called with values from the following sources:",
-                    entry.getKey(), iCfg.getMethodOf(entry.getKey().getContext()).getSignature() );
+                    entry.getKey(), iCfg.getMethodOf(entry.getKey().getSink()).getSignature() );
 			for (SourceInfo source : entry.getValue()) {
-				logger.info("- {} in method {}",source, iCfg.getMethodOf(source.getContext()).getSignature());
+				logger.info("- {} in method {}",source, iCfg.getMethodOf(source.getSource()).getSignature());
 				if (source.getPath() != null && !source.getPath().isEmpty()) {
 					logger.info("\ton Path: ");
 					for (Unit p : source.getPath()) {
@@ -676,6 +689,25 @@ public class Infoflow extends AbstractInfoflow {
 	 */
 	public static void setUseRecursiveAccessPaths(boolean useRecursiveAccessPaths) {
 		Infoflow.useRecursiveAccessPaths = useRecursiveAccessPaths;
+	}
+	
+	/**
+	 * Gets whether different results shall be reported if they only differ in
+	 * the access path the reached the sink or left the source
+	 * @return True if results shall also be distinguished based on access paths
+	 */
+	public static boolean getOneResultPerAccessPath() {
+		return oneResultPerAccessPath;
+	}
+	
+	/**
+	 * Gets whether different results shall be reported if they only differ in
+	 * the access path the reached the sink or left the source
+	 * @param oneResultPerAP True if results shall also be distinguished based
+	 * on access paths
+	 */
+	public static void setOneResultPerAccessPath(boolean oneResultPerAP) {
+		oneResultPerAccessPath = oneResultPerAP;
 	}
 	
 	/**

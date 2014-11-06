@@ -1,6 +1,5 @@
 package soot.jimple.infoflow.data;
 
-import soot.Value;
 import soot.jimple.Stmt;
 
 /**
@@ -9,13 +8,13 @@ import soot.jimple.Stmt;
  * @author Steven Arzt
  */
 public class SourceContext implements Cloneable {
-	private final Value value;
+	private final AccessPath value;
 	private final Stmt stmt;
 	private final Object userData;
 	
 	private int hashCode = 0;
 	
-	public SourceContext(Value value, Stmt stmt) {
+	public SourceContext(AccessPath value, Stmt stmt) {
 		assert value != null;
 		
 		this.value = value;
@@ -23,7 +22,7 @@ public class SourceContext implements Cloneable {
 		this.userData = null;
 	}
 	
-	public SourceContext(Value value, Stmt stmt, Object userData) {
+	public SourceContext(AccessPath value, Stmt stmt, Object userData) {
 		assert value != null;
 
 		this.value = value;
@@ -31,7 +30,7 @@ public class SourceContext implements Cloneable {
 		this.userData = userData;
 	}
 	
-	public Value getValue() {
+	public AccessPath getValue() {
 		return this.value;
 	}
 	
