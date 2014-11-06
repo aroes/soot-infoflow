@@ -111,7 +111,7 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 	
 	@Override
 	public synchronized SourceContextAndPath clone() {
-		final SourceContextAndPath scap = new SourceContextAndPath(getValue(), getStmt(), getUserData());
+		final SourceContextAndPath scap = new SourceContextAndPath(getAccessPath(), getStmt(), getUserData());
 		if (path != null)
 			scap.path = new ArrayList<Stmt>(this.path);
 		if (callStack != null)

@@ -85,7 +85,7 @@ public class RecursivePathBuilder extends AbstractAbstractionPathBuilder {
 		if (curAbs.getSourceContext() != null) {
 			// Construct the path root
 			SourceContextAndPath sourceAndPath = new SourceContextAndPath
-					(curAbs.getSourceContext().getValue(),
+					(curAbs.getSourceContext().getAccessPath(),
 							curAbs.getSourceContext().getStmt(),
 							curAbs.getSourceContext().getUserData()).extendPath
 									(curAbs.getSourceContext().getStmt());
@@ -163,7 +163,7 @@ public class RecursivePathBuilder extends AbstractAbstractionPathBuilder {
 		    			newPath.add(abs.getSinkStmt());
 						results.addResult(abs.getAbstraction().getAccessPath(),
 								abs.getSinkStmt(),
-								context.getValue(), context.getStmt(), context.getUserData(),
+								context.getAccessPath(), context.getStmt(), context.getUserData(),
 								newPath);
 		    		}
 				}

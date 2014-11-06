@@ -8,30 +8,30 @@ import soot.jimple.Stmt;
  * @author Steven Arzt
  */
 public class SourceContext implements Cloneable {
-	private final AccessPath value;
+	private final AccessPath accessPath;
 	private final Stmt stmt;
 	private final Object userData;
 	
 	private int hashCode = 0;
 	
-	public SourceContext(AccessPath value, Stmt stmt) {
-		assert value != null;
+	public SourceContext(AccessPath accessPath, Stmt stmt) {
+		assert accessPath != null;
 		
-		this.value = value;
+		this.accessPath = accessPath;
 		this.stmt = stmt;
 		this.userData = null;
 	}
 	
-	public SourceContext(AccessPath value, Stmt stmt, Object userData) {
-		assert value != null;
+	public SourceContext(AccessPath accessPath, Stmt stmt, Object userData) {
+		assert accessPath != null;
 
-		this.value = value;
+		this.accessPath = accessPath;
 		this.stmt = stmt;
 		this.userData = userData;
 	}
 	
-	public AccessPath getValue() {
-		return this.value;
+	public AccessPath getAccessPath() {
+		return this.accessPath;
 	}
 	
 	public Stmt getStmt() {
@@ -50,7 +50,7 @@ public class SourceContext implements Cloneable {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((stmt == null) ? 0 : stmt.hashCode());
-		result = prime * result + ((value == null) ? 0 : value.hashCode());
+		result = prime * result + ((accessPath == null) ? 0 : accessPath.hashCode());
 		result = prime * result + ((userData == null) ? 0 : userData.hashCode());
 		hashCode = result;
 		
@@ -73,10 +73,10 @@ public class SourceContext implements Cloneable {
 				return false;
 		} else if (!stmt.equals(other.stmt))
 			return false;
-		if (value == null) {
-			if (other.value != null)
+		if (accessPath == null) {
+			if (other.accessPath != null)
 				return false;
-		} else if (!value.equals(other.value))
+		} else if (!accessPath.equals(other.accessPath))
 			return false;
 		if (userData == null) {
 			if (other.userData != null)
@@ -88,13 +88,13 @@ public class SourceContext implements Cloneable {
 	
 	@Override
 	public SourceContext clone() {
-		SourceContext sc = new SourceContext(value, stmt, userData);
+		SourceContext sc = new SourceContext(accessPath, stmt, userData);
 		assert sc.equals(this);
 		return sc;
 	}
 
 	@Override
 	public String toString() {
-		return value.toString();
+		return accessPath.toString();
 	}
 }
