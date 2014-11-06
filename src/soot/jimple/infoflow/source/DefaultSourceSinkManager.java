@@ -12,6 +12,7 @@ package soot.jimple.infoflow.source;
 
 import heros.InterproceduralCFG;
 
+import java.util.Collection;
 import java.util.List;
 
 import soot.SootMethod;
@@ -28,11 +29,11 @@ import soot.jimple.Stmt;
  */
 public class DefaultSourceSinkManager extends MethodBasedSourceSinkManager {
 
-	private List<String> sources;
-	private List<String> sinks;
+	private Collection<String> sources;
+	private Collection<String> sinks;
 	
-	private List<String> parameterTaintMethods;
-	private List<String> returnTaintMethods;
+	private Collection<String> parameterTaintMethods;
+	private Collection<String> returnTaintMethods;
 	
 	private static final SourceInfo sourceInfo = new SourceInfo(true);
 	
@@ -41,7 +42,8 @@ public class DefaultSourceSinkManager extends MethodBasedSourceSinkManager {
 	 * @param sources The list of methods to be treated as sources
 	 * @param sinks The list of methods to be treated as sins
 	 */
-	public DefaultSourceSinkManager(List<String> sources, List<String> sinks) {
+	public DefaultSourceSinkManager(Collection<String> sources,
+			Collection<String> sinks) {
 		this.sources = sources;
 		this.sinks = sinks;
 		this.parameterTaintMethods = null;
@@ -58,10 +60,10 @@ public class DefaultSourceSinkManager extends MethodBasedSourceSinkManager {
 	 * be regarded as sinks
 	 */
 	public DefaultSourceSinkManager
-			(List<String> sources,
-			List<String> sinks,
-			List<String> parameterTaintMethods,
-			List<String> returnTaintMethods) {
+			(Collection<String> sources,
+			Collection<String> sinks,
+			Collection<String> parameterTaintMethods,
+			Collection<String> returnTaintMethods) {
 		this.sources = sources;
 		this.sinks = sinks;
 		this.parameterTaintMethods = parameterTaintMethods;

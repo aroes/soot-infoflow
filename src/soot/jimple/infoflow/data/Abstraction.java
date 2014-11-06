@@ -578,7 +578,9 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 		
 		Abstraction abs = clone();
 		abs.predecessor = null;
+		abs.neighbors = null;
 		abs.sourceContext = sourceContext;
+		abs.currentStmt = this.currentStmt;
 		return abs;
 	}
 	

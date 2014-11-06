@@ -1052,4 +1052,29 @@ public class HeapTestCode {
 		cm.publish(a.attr.b);
 	}
 	
+	private class Data {
+		public Data next;
+	}
+	
+	private Data getSecretData() {
+		return new Data();
+	}
+	
+	private void leakData(Data e) {
+		System.out.println(e);
+	}
+	
+	public void aliasStrongUpdateTest() {
+		Data d = getSecretData();
+		d = d.next;
+		Data e = d;
+		
+		Data x = new Data();
+		x.next = e;
+		Data y = x;
+		e = y.next;
+		e = e.next;
+		leakData(e);
+	}
+	
 }

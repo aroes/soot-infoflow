@@ -110,8 +110,9 @@ public interface IInfoflow {
 	 * @param sinks list of sink class+method (as string conforms to SootMethod representation)
 	 */
 	public void computeInfoflow(String appPath, String libPath,
-			List<String> entryPoints, 
-			List<String> sources, List<String> sinks);
+			Collection<String> entryPoints, 
+			Collection<String> sources,
+			Collection<String> sinks);
 
 	/**
 	 * Computes the information flow on a single method. This method is
@@ -124,8 +125,8 @@ public interface IInfoflow {
 	 * @param sinks list of sink class+method (as string conforms to SootMethod representation)
 	 */
 	public void computeInfoflow(String appPath, String libPath, String entryPoint,
-			List<String> sources, List<String> sinks);
-
+			Collection<String> sources, Collection<String> sinks);
+	
 	/**
 	 * Computes the information flow on a list of entry point methods. This list
 	 * is used to construct an artificial main method following the Android

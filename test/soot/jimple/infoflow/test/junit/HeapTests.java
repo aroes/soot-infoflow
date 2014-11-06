@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -27,6 +28,7 @@ import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.IInfoflow.AliasingAlgorithm;
 import soot.jimple.infoflow.Infoflow;
+import soot.jimple.infoflow.InfoflowResults;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 import soot.jimple.infoflow.taintWrappers.AbstractTaintWrapper;
@@ -881,5 +883,30 @@ public class HeapTests extends JUnitTests {
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		negativeCheckInfoflow(infoflow);
 	}
-
+	
+	@Test(timeout = 300000)
+	public void aliasStrongUpdateTest() {
+		final String sinkMethod = "<soot.jimple.infoflow.test.HeapTestCode: "
+				+ "void leakData(soot.jimple.infoflow.test.HeapTestCode$Data)>";
+		final String sourceMethod = "<soot.jimple.infoflow.test.HeapTestCode: "
+				+ "soot.jimple.infoflow.test.HeapTestCode$Data getSecretData()>";
+		
+		Infoflow infoflow = initInfoflow();
+		infoflow.setInspectSources(false);
+		infoflow.setInspectSinks(false);
+		infoflow.setEnableImplicitFlows(false);
+		
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void aliasStrongUpdateTest()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints,
+				Collections.singleton(sourceMethod),
+				Collections.singleton(sinkMethod));
+		
+   	 	Assert.assertTrue(infoflow.isResultAvailable());
+   	 	InfoflowResults map = infoflow.getResults();
+		Assert.assertEquals(1, map.size());
+		Assert.assertTrue(map.containsSinkMethod(sinkMethod));
+		Assert.assertTrue(map.isPathBetweenMethods(sinkMethod, sourceMethod));
+	}
+	
 }
