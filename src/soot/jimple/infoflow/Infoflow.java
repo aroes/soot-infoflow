@@ -472,7 +472,7 @@ public class Infoflow extends AbstractInfoflow {
 		for (Iterator<AbstractionAtSink> absAtSinkIt = res.iterator(); absAtSinkIt.hasNext(); ) {
 			AbstractionAtSink curAbs = absAtSinkIt.next();
 			for (AbstractionAtSink checkAbs : res)
-				if (checkAbs != curAbs)
+				if (checkAbs != curAbs && checkAbs.getSinkStmt() == curAbs.getSinkStmt())
 					if (checkAbs.getAbstraction().getAccessPath().entails(
 							curAbs.getAbstraction().getAccessPath())) {
 						absAtSinkIt.remove();
