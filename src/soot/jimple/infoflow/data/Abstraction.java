@@ -162,6 +162,7 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 		Abstraction a = deriveNewAbstractionMutable(accessPath, null);
 		a.postdominators = null;
 		a.activationUnit = activationUnit;
+		a.dependsOnCutAP |= a.getAccessPath().isCutOffApproximation();
 		return a;
 	}
 

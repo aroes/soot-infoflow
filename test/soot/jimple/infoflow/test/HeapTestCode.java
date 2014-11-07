@@ -102,6 +102,14 @@ public class HeapTestCode {
 		cm.publish(str);
 	}
 	
+	public void methodTest0b(){
+		String taint = TelephonyManager.getDeviceId();
+		A a = new A();
+		String str = a.b;
+		a.b = taint;
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(str);
+	}
 	
 	class A{
 		public String b = "Y";
@@ -1072,6 +1080,19 @@ public class HeapTestCode {
 		Data x = new Data();
 		x.next = e;
 		Data y = x;
+		e = y.next;
+		e = e.next;
+		leakData(e);
+	}
+	
+	public void aliasStrongUpdateTest2() {
+		Data d = getSecretData();
+		d = d.next;
+		Data e = d;
+		
+		Data x = new Data();
+		Data y = x;
+		x.next = e;
 		e = y.next;
 		e = e.next;
 		leakData(e);

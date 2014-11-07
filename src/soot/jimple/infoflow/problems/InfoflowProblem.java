@@ -601,7 +601,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							// If we have a = x with the taint "x" being inactive,
 							// we must not taint the left side. We can only taint
 							// the left side if the tainted value is some "x.y".
-							boolean aliasOverwritten = !addLeftValue && !newSource.isAbstractionActive()
+							boolean aliasOverwritten = !addLeftValue
+									&& !newSource.isAbstractionActive()
 									&& baseMatchesStrict(right, newSource)
 									&& right.getType() instanceof RefType
 									&& !newSource.dependsOnCutAP();

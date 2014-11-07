@@ -113,7 +113,16 @@ public class HeapTests extends JUnitTests {
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		negativeCheckInfoflow(infoflow);
 	}
-
+	
+	@Test(timeout = 300000)
+	public void heapTest0b() {
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void methodTest0b()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		negativeCheckInfoflow(infoflow);
+	}
+	
 	@Test(timeout = 300000)
 	public void heapTest1() {
 		Infoflow infoflow = initInfoflow();
@@ -898,6 +907,31 @@ public class HeapTests extends JUnitTests {
 		
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void aliasStrongUpdateTest()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints,
+				Collections.singleton(sourceMethod),
+				Collections.singleton(sinkMethod));
+		
+   	 	Assert.assertTrue(infoflow.isResultAvailable());
+   	 	InfoflowResults map = infoflow.getResults();
+		Assert.assertEquals(1, map.size());
+		Assert.assertTrue(map.containsSinkMethod(sinkMethod));
+		Assert.assertTrue(map.isPathBetweenMethods(sinkMethod, sourceMethod));
+	}
+	
+	@Test(timeout = 300000)
+	public void aliasStrongUpdateTest2() {
+		final String sinkMethod = "<soot.jimple.infoflow.test.HeapTestCode: "
+				+ "void leakData(soot.jimple.infoflow.test.HeapTestCode$Data)>";
+		final String sourceMethod = "<soot.jimple.infoflow.test.HeapTestCode: "
+				+ "soot.jimple.infoflow.test.HeapTestCode$Data getSecretData()>";
+		
+		Infoflow infoflow = initInfoflow();
+		infoflow.setInspectSources(false);
+		infoflow.setInspectSinks(false);
+		infoflow.setEnableImplicitFlows(false);
+		
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void aliasStrongUpdateTest2()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints,
 				Collections.singleton(sourceMethod),
 				Collections.singleton(sinkMethod));
