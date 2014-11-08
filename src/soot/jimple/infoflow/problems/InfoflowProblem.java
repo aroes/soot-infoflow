@@ -530,16 +530,18 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								return Collections.singleton(newSource);
 							
 							if(newSource.getAccessPath().isInstanceFieldRef()) {
-								//x.f = y && x.f tainted --> no taint propagated
-								// Exception: This statement activates the taint
+								// Data Propagation: x.f = y && x.f tainted --> no taint propagated
+								// Alias Propagation: Only kill the alias if we directly overwrite it,
+								// otherwise it might just be the creation of yet another alias
 								if (leftValue instanceof InstanceFieldRef) {
-									if (!(newSource.isAbstractionActive() && !source.isAbstractionActive())) {
-										InstanceFieldRef leftRef = (InstanceFieldRef) leftValue;
-										if (aliasing.mustAlias((Local) leftRef.getBase(),
-												newSource.getAccessPath().getPlainValue(), assignStmt)) {
-											if (aliasing.mustAlias(leftRef.getField(), newSource.getAccessPath().getFirstField())) {
-												return Collections.emptySet();
-											}
+									InstanceFieldRef leftRef = (InstanceFieldRef) leftValue;
+									boolean baseAliases = source.isAbstractionActive()
+											&& aliasing.mustAlias((Local) leftRef.getBase(),
+													newSource.getAccessPath().getPlainValue(), assignStmt);
+									if (baseAliases
+											|| leftRef.getBase() == newSource.getAccessPath().getPlainValue()) {
+										if (aliasing.mustAlias(leftRef.getField(), newSource.getAccessPath().getFirstField())) {
+											return Collections.emptySet();
 										}
 									}
 								}
@@ -1409,6 +1411,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										|| newSource.getTopPostdominator() != null
 										|| newSource.getAccessPath().isEmpty())
 									&& newSource.isAbstractionActive();
+							
 							// If the base object is tainted, we also consider the "code" associated
 							// with the object's class as tainted.
 							if (!taintedParam) {

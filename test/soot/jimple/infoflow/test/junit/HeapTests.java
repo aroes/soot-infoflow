@@ -167,7 +167,19 @@ public class HeapTests extends JUnitTests {
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
 	}
-
+	
+	@Test(timeout = 300000)
+	public void multiAliasNoRecusiveAPTest() {
+		Infoflow infoflow = initInfoflow();
+		boolean oldRecAPI = Infoflow.getUseRecursiveAccessPaths();
+		Infoflow.setUseRecursiveAccessPaths(false);
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void multiAliasTest()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		Infoflow.setUseRecursiveAccessPaths(oldRecAPI);
+		checkInfoflow(infoflow, 1);
+	}
+	
 	@Test(timeout = 300000)
 	public void overwriteAliasTest() {
 		boolean oldUseRecAP = Infoflow.getUseRecursiveAccessPaths();
