@@ -10,11 +10,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import soot.jimple.infoflow.InfoflowResults;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.SourceContext;
 import soot.jimple.infoflow.data.SourceContextAndPath;
+import soot.jimple.infoflow.results.InfoflowResults;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 
 /**
@@ -95,8 +95,7 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
 
 		private boolean processPredecessor(SourceContextAndPath scap, Abstraction pred) {
 			// Put the current statement on the list
-			SourceContextAndPath extendedScap = scap.extendPath(reconstructPaths
-					? pred.getCurrentStmt() : null);
+			SourceContextAndPath extendedScap = scap.extendPath(pred, reconstructPaths);
 			
 			// Add the new path
 			checkForSource(pred, extendedScap);
@@ -121,14 +120,12 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
 		
 		// Register the source that we have found
 		SourceContext sourceContext = abs.getSourceContext();
-		SourceContextAndPath extendedScap =
-				scap.extendPath(sourceContext.getStmt());
-		results.addResult(extendedScap.getAccessPath(),
-				extendedScap.getStmt(),
+		results.addResult(scap.getAccessPath(),
+				scap.getStmt(),
 				sourceContext.getAccessPath(),
 				sourceContext.getStmt(),
 				sourceContext.getUserData(),
-				extendedScap.getPath());
+				scap.getPath());
 		return true;
 	}
 	
@@ -178,7 +175,7 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
 	private void buildPathForAbstraction(final AbstractionAtSink abs) {
 		SourceContextAndPath scap = new SourceContextAndPath(
 				abs.getAbstraction().getAccessPath(), abs.getSinkStmt());
-		scap = scap.extendPath(abs.getSinkStmt());
+		scap = scap.extendPath(abs.getAbstraction());
 		abs.getAbstraction().addPathElement(scap);
 		
 		if (!checkForSource(abs.getAbstraction(), scap))

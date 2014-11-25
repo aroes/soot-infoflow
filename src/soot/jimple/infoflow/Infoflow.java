@@ -36,8 +36,6 @@ import soot.SootMethod;
 import soot.Transform;
 import soot.Unit;
 import soot.jimple.Stmt;
-import soot.jimple.infoflow.InfoflowResults.SinkInfo;
-import soot.jimple.infoflow.InfoflowResults.SourceInfo;
 import soot.jimple.infoflow.aliasing.FlowSensitiveAliasStrategy;
 import soot.jimple.infoflow.aliasing.IAliasingStrategy;
 import soot.jimple.infoflow.aliasing.PtsBasedAliasStrategy;
@@ -54,6 +52,9 @@ import soot.jimple.infoflow.ipc.DefaultIPCManager;
 import soot.jimple.infoflow.ipc.IIPCManager;
 import soot.jimple.infoflow.problems.BackwardsInfoflowProblem;
 import soot.jimple.infoflow.problems.InfoflowProblem;
+import soot.jimple.infoflow.results.InfoflowResults;
+import soot.jimple.infoflow.results.ResultSinkInfo;
+import soot.jimple.infoflow.results.ResultSourceInfo;
 import soot.jimple.infoflow.solver.BackwardsInfoflowCFG;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 import soot.jimple.infoflow.solver.fastSolver.InfoflowSolver;
@@ -502,10 +503,10 @@ public class Infoflow extends AbstractInfoflow {
 		
 		if (results.getResults().isEmpty())
 			logger.warn("No results found.");
-		else for (Entry<SinkInfo, Set<SourceInfo>> entry : results.getResults().entrySet()) {
+		else for (Entry<ResultSinkInfo, Set<ResultSourceInfo>> entry : results.getResults().entrySet()) {
 			logger.info("The sink {} in method {} was called with values from the following sources:",
                     entry.getKey(), iCfg.getMethodOf(entry.getKey().getSink()).getSignature() );
-			for (SourceInfo source : entry.getValue()) {
+			for (ResultSourceInfo source : entry.getValue()) {
 				logger.info("- {} in method {}",source, iCfg.getMethodOf(source.getSource()).getSignature());
 				if (source.getPath() != null && !source.getPath().isEmpty()) {
 					logger.info("\ton Path: ");

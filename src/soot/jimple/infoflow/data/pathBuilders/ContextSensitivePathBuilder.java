@@ -12,11 +12,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import soot.jimple.Stmt;
-import soot.jimple.infoflow.InfoflowResults;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.SourceContext;
 import soot.jimple.infoflow.data.SourceContextAndPath;
+import soot.jimple.infoflow.results.InfoflowResults;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 
 /**
@@ -101,15 +101,13 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 			// immediately leave again for performance reasons.
 			if (pred.getCurrentStmt() != null
 					&& pred.getCurrentStmt() == pred.getCorrespondingCallSite()) {
-				SourceContextAndPath extendedScap = scap.extendPath(reconstructPaths
-						? pred.getCurrentStmt() : null);
+				SourceContextAndPath extendedScap = scap.extendPath(pred, reconstructPaths);
 				checkForSource(pred, extendedScap);
 				return pred.addPathElement(extendedScap);
 			}
 			
 			// If we enter a method, we put it on the stack
-			SourceContextAndPath extendedScap = scap.extendPath(reconstructPaths
-					? pred.getCurrentStmt() : null, pred.getCorrespondingCallSite());
+			SourceContextAndPath extendedScap = scap.extendPath(pred, reconstructPaths);
 			
 			// Do we process a method return?
 			if (pred.getCurrentStmt() != null 
@@ -143,7 +141,7 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 	 * @param scap The path leading up to the current abstraction
 	 * @return True if the current abstraction is a source, otherwise false
 	 */
-	private boolean checkForSource(Abstraction abs, SourceContextAndPath scap) {
+	protected boolean checkForSource(Abstraction abs, SourceContextAndPath scap) {
 		if (abs.getPredecessor() != null)
 			return false;
 		
@@ -153,14 +151,12 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 		
 		// Register the source that we have found
 		SourceContext sourceContext = abs.getSourceContext();
-		SourceContextAndPath extendedScap =
-				scap.extendPath(sourceContext.getStmt());
-		results.addResult(extendedScap.getAccessPath(),
-				extendedScap.getStmt(),
+		results.addResult(scap.getAccessPath(),
+				scap.getStmt(),
 				sourceContext.getAccessPath(),
 				sourceContext.getStmt(),
 				sourceContext.getUserData(),
-				extendedScap.getPath());
+				scap.getPath());
 		return true;
 	}
 	
@@ -210,7 +206,7 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 	private void buildPathForAbstraction(final AbstractionAtSink abs) {
 		SourceContextAndPath scap = new SourceContextAndPath(
 				abs.getAbstraction().getAccessPath(), abs.getSinkStmt());
-		scap = scap.extendPath(abs.getSinkStmt());
+		scap = scap.extendPath(abs.getAbstraction());
 		abs.getAbstraction().addPathElement(scap);
 		
 		if (!checkForSource(abs.getAbstraction(), scap))

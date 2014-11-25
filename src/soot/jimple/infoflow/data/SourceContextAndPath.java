@@ -16,7 +16,7 @@ import soot.jimple.infoflow.Infoflow;
  * @author Steven Arzt
  */
 public class SourceContextAndPath extends SourceContext implements Cloneable {
-	private List<Stmt> path = null;
+	private List<Abstraction> path = null;
 	private List<Stmt> callStack = null;
 	private int hashCode = 0;
 	
@@ -28,31 +28,42 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 		super(value, stmt, userData);
 	}
 	
+	public List<Abstraction> getAbstractionPath() {
+		return path == null ? Collections.<Abstraction>emptyList()
+				: Collections.unmodifiableList(this.path);		
+	}
+	
 	public List<Stmt> getPath() {
-		return path == null ? Collections.<Stmt>emptyList()
-				: Collections.unmodifiableList(this.path);
+		if (path == null)
+			return Collections.<Stmt>emptyList();
+		List<Stmt> stmtPath = new ArrayList<Stmt>(this.path.size());
+		for (Abstraction abs : this.path)
+			if (abs.getCurrentStmt() != null)
+				stmtPath.add(abs.getCurrentStmt());
+		return stmtPath;
 	}
 	
-	public SourceContextAndPath extendPath(Stmt s) {
-		return extendPath(s, null);
+	public SourceContextAndPath extendPath(Abstraction abs) {
+		return extendPath(abs, true);
 	}
 	
-	public SourceContextAndPath extendPath(Stmt s, Stmt correspondingCallSite) {
-		if (s == null && correspondingCallSite == null)
+	public SourceContextAndPath extendPath(Abstraction abs, boolean trackPath) {
+		if (abs == null || (abs.getCurrentStmt() == null
+				&& abs.getCorrespondingCallSite() == null))
 			return this;
 		
 		SourceContextAndPath scap = clone();
-		if (s != null) {
+		if (trackPath && abs.getCurrentStmt() != null) {
 			if (scap.path == null)
-				scap.path = new ArrayList<Stmt>();
-			scap.path.add(0, s);
+				scap.path = new ArrayList<Abstraction>();
+			scap.path.add(0, abs);
 		}
 		
 		// Extend the call stack
-		if (correspondingCallSite != null) {
+		if (abs.getCorrespondingCallSite() != null) {
 			if (scap.callStack == null)
 				scap.callStack = new ArrayList<Stmt>();
-			scap.callStack.add(0, correspondingCallSite);
+			scap.callStack.add(0, abs.getCorrespondingCallSite());
 		}
 		
 		return scap;
@@ -113,7 +124,7 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 	public synchronized SourceContextAndPath clone() {
 		final SourceContextAndPath scap = new SourceContextAndPath(getAccessPath(), getStmt(), getUserData());
 		if (path != null)
-			scap.path = new ArrayList<Stmt>(this.path);
+			scap.path = new ArrayList<Abstraction>(this.path);
 		if (callStack != null)
 			scap.callStack = new ArrayList<Stmt>(callStack);
 		return scap;

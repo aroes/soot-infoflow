@@ -2,8 +2,8 @@ package soot.jimple.infoflow.data.pathBuilders;
 
 import java.util.Set;
 
-import soot.jimple.infoflow.InfoflowResults;
 import soot.jimple.infoflow.data.AbstractionAtSink;
+import soot.jimple.infoflow.results.InfoflowResults;
 
 /**
  * An empty implementation of {@link IAbstractionPathBuilder} that always

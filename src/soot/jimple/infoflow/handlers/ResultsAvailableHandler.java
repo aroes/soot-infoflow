@@ -10,7 +10,7 @@
  ******************************************************************************/
 package soot.jimple.infoflow.handlers;
 
-import soot.jimple.infoflow.InfoflowResults;
+import soot.jimple.infoflow.results.InfoflowResults;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 
 /**
