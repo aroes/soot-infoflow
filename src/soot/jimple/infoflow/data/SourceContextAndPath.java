@@ -43,13 +43,35 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 		return stmtPath;
 	}
 	
+	/**
+	 * Extends the taint propagation path with the given abstraction
+	 * @param abs The abstraction to put on the taint propagation path
+	 * @return The new taint propagation path
+	 */
 	public SourceContextAndPath extendPath(Abstraction abs) {
 		return extendPath(abs, true);
 	}
 	
+	/**
+	 * Extends the taint propagation path with the given abstraction
+	 * @param abs The abstraction to put on the taint propagation path
+	 * @param trackPath True if the abstraction shall be put on the propagation
+	 * path even if does not change the call stack. This is for instance useful
+	 * if all statements involved in the taint propagation shall later be
+	 * reported.
+	 * @return The new taint propagation path
+	 */
 	public SourceContextAndPath extendPath(Abstraction abs, boolean trackPath) {
-		if (abs == null || (abs.getCurrentStmt() == null
-				&& abs.getCorrespondingCallSite() == null))
+		if (abs == null)
+			return this;
+		
+		// If we have no data at all, there is nothing we can do here
+		if (abs.getCurrentStmt() == null && abs.getCorrespondingCallSite() == null)
+			return this;
+		
+		// If we don't track paths and have nothing to put on the stack, there
+		// is no need to create a new object
+		if (abs.getCorrespondingCallSite() == null && !trackPath)
 			return this;
 		
 		SourceContextAndPath scap = clone();
@@ -60,7 +82,8 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 		}
 		
 		// Extend the call stack
-		if (abs.getCorrespondingCallSite() != null) {
+		if (abs.getCorrespondingCallSite() != null
+				&& abs.getCorrespondingCallSite() != abs.getCurrentStmt()) {
 			if (scap.callStack == null)
 				scap.callStack = new ArrayList<Stmt>();
 			scap.callStack.add(0, abs.getCorrespondingCallSite());
