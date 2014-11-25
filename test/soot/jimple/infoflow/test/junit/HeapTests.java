@@ -10,6 +10,8 @@
  ******************************************************************************/
 package soot.jimple.infoflow.test.junit;
 
+import heros.InterproceduralCFG;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -23,6 +25,9 @@ import org.junit.Test;
 import soot.RefType;
 import soot.Scene;
 import soot.SootField;
+import soot.SootMethod;
+import soot.Unit;
+import soot.jimple.AssignStmt;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.Stmt;
@@ -30,7 +35,10 @@ import soot.jimple.infoflow.IInfoflow.AliasingAlgorithm;
 import soot.jimple.infoflow.Infoflow;
 import soot.jimple.infoflow.InfoflowResults;
 import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.entryPointCreators.DefaultEntryPointCreator;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
+import soot.jimple.infoflow.source.ISourceSinkManager;
+import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.infoflow.taintWrappers.AbstractTaintWrapper;
 import soot.jimple.infoflow.test.utilclasses.TestWrapper;
 
@@ -953,6 +961,47 @@ public class HeapTests extends JUnitTests {
 		Assert.assertEquals(1, map.size());
 		Assert.assertTrue(map.containsSinkMethod(sinkMethod));
 		Assert.assertTrue(map.isPathBetweenMethods(sinkMethod, sourceMethod));
+	}
+	
+	@Test(timeout = 300000)
+	public void aliasStrongUpdateTest3() {
+		final String sinkMethod = "<soot.jimple.infoflow.test.HeapTestCode: "
+				+ "void leakData(soot.jimple.infoflow.test.HeapTestCode$Data)>";
+		
+		Infoflow infoflow = initInfoflow();
+		infoflow.setInspectSources(false);
+		infoflow.setInspectSinks(false);
+		infoflow.setEnableImplicitFlows(false);
+		
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void aliasStrongUpdateTest3()>");
+		infoflow.computeInfoflow(appPath, libPath, new DefaultEntryPointCreator(epoints),
+				new ISourceSinkManager() {
+			
+			@Override
+			public boolean isSink(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg) {
+				return sCallSite.containsInvokeExpr()
+						&& sCallSite.getInvokeExpr().getMethod().getSignature().equals(sinkMethod);
+			}
+			
+			@Override
+			public SourceInfo getSourceInfo(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg) {
+				if (sCallSite instanceof AssignStmt) {
+					AssignStmt assignStmt = (AssignStmt) sCallSite;
+					if (assignStmt.getRightOp().toString().contains("taintedBySourceSinkManager"))
+						return new SourceInfo(true);
+					else
+						return null;
+				}
+				return null;
+			}
+			
+		});
+		
+   	 	Assert.assertTrue(infoflow.isResultAvailable());
+   	 	InfoflowResults map = infoflow.getResults();
+		Assert.assertEquals(1, map.size());
+		Assert.assertTrue(map.containsSinkMethod(sinkMethod));
 	}
 	
 }

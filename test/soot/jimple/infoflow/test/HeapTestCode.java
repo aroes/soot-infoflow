@@ -1098,4 +1098,19 @@ public class HeapTestCode {
 		leakData(e);
 	}
 	
+	private Data taintedBySourceSinkManager = null;
+	
+	public void aliasStrongUpdateTest3() {
+		Data d = taintedBySourceSinkManager;
+		d = d.next;
+		Data e = d;
+		
+		Data x = new Data();
+		Data y = x;
+		x.next = e;
+		e = y.next;
+		e = e.next;
+		leakData(y.next);
+	}
+	
 }
