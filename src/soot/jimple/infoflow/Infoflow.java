@@ -319,7 +319,11 @@ public class Infoflow extends AbstractInfoflow {
 			return;
 		
 		// Create a field for storing the runnable
-		SootField fldTarget = new SootField("target", runnable.getType());
+		int fieldIdx = 0;
+		SootField fldTarget = null;
+		while ((fldTarget = sc.getFieldByNameUnsafe("target" + fieldIdx)) != null)
+			fieldIdx++;
+		fldTarget = new SootField("target" + fieldIdx, runnable.getType());
 		sc.addField(fldTarget);
 		
 		// Create a new constructor
