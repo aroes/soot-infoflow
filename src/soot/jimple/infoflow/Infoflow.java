@@ -27,14 +27,19 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import soot.Body;
+import soot.Local;
 import soot.MethodOrMethodContext;
 import soot.PackManager;
 import soot.PatchingChain;
 import soot.Scene;
 import soot.SootClass;
+import soot.SootField;
 import soot.SootMethod;
 import soot.Transform;
 import soot.Unit;
+import soot.jimple.Jimple;
+import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.aliasing.FlowSensitiveAliasStrategy;
 import soot.jimple.infoflow.aliasing.IAliasingStrategy;
@@ -279,6 +284,9 @@ public class Infoflow extends AbstractInfoflow {
 		Scene.v().setEntryPoints(Collections.singletonList(entryPointCreator.createDummyMain()));
 		ipcManager.updateJimpleForICC();
 		
+		// Patch the java.lang.Thread implementation
+		patchThreadImplementation();
+		
 		// We explicitly select the packs we want to run for performance reasons
 		if (callgraphAlgorithm != CallgraphAlgorithm.OnDemand) {
 	        PackManager.v().getPack("wjpp").apply();
@@ -288,8 +296,106 @@ public class Infoflow extends AbstractInfoflow {
 		if (logger.isDebugEnabled())
 			PackManager.v().writeOutput();
 	}
+	
+	/**
+	 * Creates a synthetic minimal implementation of the java.lang.Thread class
+	 * to model threading correctly even if we don't have a real implementation.
+	 */
+	private void patchThreadImplementation() {
+		SootClass sc = Scene.v().getSootClassUnsafe("java.lang.Thread");
+		if (sc == null)
+			return;
+		
+		SootMethod smRun = sc.getMethodUnsafe("void run()");
+		if (smRun == null || smRun.hasActiveBody())
+			return;
+		
+		SootMethod smCons = sc.getMethodUnsafe("void <init>(java.lang.Runnable)");
+		if (smCons == null || smCons.hasActiveBody())
+			return;
+		
+		SootClass runnable = Scene.v().getSootClassUnsafe("java.lang.Runnable");
+		if (runnable == null)
+			return;
+		
+		// Create a field for storing the runnable
+		SootField fldTarget = new SootField("target", runnable.getType());
+		sc.addField(fldTarget);
+		
+		// Create a new constructor
+		patchThreadConstructor(smCons, runnable, fldTarget);
+		
+		// Create a new Thread.start() method
+		patchThreadRunMethod(smRun, runnable, fldTarget);
+	}
+	
+	/**
+	 * Creates a synthetic "java.lang.Thread.run()" method implementation that
+	 * calls the target previously passed in when the constructor was called
+	 * @param smRun The run() method for which to create a synthetic
+	 * implementation
+	 * @param runnable The "java.lang.Runnable" interface
+	 * @param fldTarget The field containing the target object
+	 */
+	private void patchThreadRunMethod(SootMethod smRun, SootClass runnable,
+			SootField fldTarget) {
+		SootClass sc = smRun.getDeclaringClass();
+		Body b = Jimple.v().newBody(smRun);
+		smRun.setActiveBody(b);
+		
+		Local thisLocal = Jimple.v().newLocal("this", sc.getType());
+		b.getLocals().add(thisLocal);
+		b.getUnits().add(Jimple.v().newIdentityStmt(thisLocal,
+				Jimple.v().newThisRef(sc.getType())));
+		
+		Local targetLocal = Jimple.v().newLocal("target", runnable.getType());
+		b.getLocals().add(targetLocal);
+		b.getUnits().add(Jimple.v().newAssignStmt(targetLocal,
+				Jimple.v().newInstanceFieldRef(thisLocal, fldTarget.makeRef())));
+		
+		Unit retStmt = Jimple.v().newReturnVoidStmt();
+		
+		// If (this.target == null) return;
+		b.getUnits().add(Jimple.v().newIfStmt(Jimple.v().newEqExpr(targetLocal,
+				NullConstant.v()), retStmt));
+		
+		// Invoke target.run()
+		b.getUnits().add(Jimple.v().newInvokeStmt(Jimple.v().newInterfaceInvokeExpr(targetLocal,
+				runnable.getMethod("void run()").makeRef())));
+		
+		b.getUnits().add(retStmt);
+	}
 
-
+	/**
+	 * Creates a synthetic "<init>(java.lang.Runnable)" method implementation
+	 * that stores the given runnable into a field for later use
+	 * @param smCons The <init>() method for which to create a synthetic
+	 * implementation
+	 * @param runnable The "java.lang.Runnable" interface
+	 * @param fldTarget The field receiving the Runnable
+	 */
+	private void patchThreadConstructor(SootMethod smCons, SootClass runnable,
+			SootField fldTarget) {
+		SootClass sc = smCons.getDeclaringClass();
+		Body b = Jimple.v().newBody(smCons);
+		smCons.setActiveBody(b);
+		
+		Local thisLocal = Jimple.v().newLocal("this", sc.getType());
+		b.getLocals().add(thisLocal);
+		b.getUnits().add(Jimple.v().newIdentityStmt(thisLocal,
+				Jimple.v().newThisRef(sc.getType())));
+		
+		Local param0Local = Jimple.v().newLocal("p0", runnable.getType());
+		b.getLocals().add(param0Local);
+		b.getUnits().add(Jimple.v().newIdentityStmt(param0Local,
+				Jimple.v().newParameterRef(runnable.getType(), 0)));
+		
+		b.getUnits().add(Jimple.v().newAssignStmt(Jimple.v().newInstanceFieldRef(thisLocal,
+				fldTarget.makeRef()), param0Local));
+		
+		b.getUnits().add(Jimple.v().newReturnVoidStmt());
+	}
+	
 	@Override
 	public void computeInfoflow(String appPath, String libPath, String entryPoint,
 			ISourceSinkManager sourcesSinks) {
