@@ -187,7 +187,8 @@ public class Infoflow extends AbstractInfoflow {
 			}
 		}
 		else
-			Options.v().set_soot_classpath(appPath + File.pathSeparator + libPath);
+			Options.v().set_soot_classpath(appPath
+					+ (libPath != null && !libPath.isEmpty() ? File.pathSeparator + libPath : ""));
 		
 		// Configure the callgraph algorithm
 		switch (callgraphAlgorithm) {
