@@ -213,6 +213,10 @@
 <java.math.BigInteger: java.math.BigInteger valueOf(long)>
 
 <java.io.FileInputStream: void <init>(java.io.File)>
+<java.io.FileOutputStream: void <init>(java.lang.String)>
+
+<java.io.File: void <init>(java.lang.String)>
+<java.io.File: void <init>(java.lang.String,java.lang.String)>
 
 <java.text.MessageFormat: void <init>(java.lang.String)>
 <java.text.MessageFormat: void <init>(java.lang.String,java.util.Locale)>
