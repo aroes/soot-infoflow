@@ -326,12 +326,14 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			private void addTaintViaStmt
 					(final Abstraction d1,
 					final AssignStmt assignStmt,
-					final Value leftValue,
 					Abstraction source,
 					Set<Abstraction> taintSet,
 					boolean cutFirstField,
 					SootMethod method,
 					Type targetType) {
+				final Value leftValue = assignStmt.getLeftOp();
+				final Value rightValue = assignStmt.getRightOp();
+				
 				// Do not taint static fields unless the option is enabled
 				if (!enableStaticFields && leftValue instanceof StaticFieldRef)
 					return;
@@ -339,13 +341,13 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				Abstraction newAbs = null;
 				if (!source.getAccessPath().isEmpty()) {
 					// Special handling for array (de)construction
-					if (assignStmt.getLeftOp() instanceof ArrayRef && targetType != null)
+					if (leftValue instanceof ArrayRef && targetType != null)
 						targetType = buildArrayOrAddDimension(targetType);
 					else if (assignStmt.getRightOp() instanceof ArrayRef && targetType != null)
 						targetType = ((ArrayType) targetType).getElementType();
 					
 					// If this is an unrealizable typecast, drop the abstraction
-					if (assignStmt.getRightOp() instanceof CastExpr) {
+					if (rightValue instanceof CastExpr) {
 						// If we cast java.lang.Object to an array type,
 						// we must update our typing information
 						CastExpr cast = (CastExpr) assignStmt.getRightOp();
@@ -358,12 +360,12 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						}
 					}
 					// Special type handling for certain operations
-					else if (assignStmt.getRightOp() instanceof LengthExpr) {
+					else if (rightValue instanceof LengthExpr) {
 						assert source.getAccessPath().getBaseType() instanceof ArrayType;
 						newAbs = source.deriveNewAbstraction(new AccessPath(leftValue, null,
 								IntType.v(), (Type[]) null, true), assignStmt);
 					}
-					else if (assignStmt.getRightOp() instanceof InstanceOfExpr)
+					else if (rightValue instanceof InstanceOfExpr)
 						newAbs = source.deriveNewAbstraction(new AccessPath(leftValue, null,
 								BooleanType.v(), (Type[]) null, true), assignStmt);
 				}
@@ -458,9 +460,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				else if (src instanceof AssignStmt) {
 					final AssignStmt assignStmt = (AssignStmt) src;
 					final Value right = assignStmt.getRightOp();
-					Value left = assignStmt.getLeftOp();
-
-					final Value leftValue = BaseSelector.selectBase(left, true);
+					
+					final Value leftValue = assignStmt.getLeftOp();
 					final Value[] rightVals = BaseSelector.selectBaseList(right, true);
 					
 					final boolean isSink = sourceSinkManager != null
@@ -481,7 +482,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							// Fields can be sources in some cases
                             if (source == getZeroValue() && sourceInfo != null) {
     							Set<Abstraction> res = new HashSet<Abstraction>();
-                                final Abstraction abs = new Abstraction(assignStmt.getLeftOp(),
+                                final Abstraction abs = new Abstraction(leftValue,
                                 		sourceInfo,
                                 		new AccessPath(assignStmt.getRightOp(), true),
                                 		assignStmt,
@@ -489,8 +490,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
                                 res.add(abs);
                                 
                                 // Compute the aliases
-								if (triggerInaktiveTaintOrReverseFlow(assignStmt, assignStmt.getLeftOp(), abs))
-									computeAliasTaints(d1, assignStmt, assignStmt.getLeftOp(), res,
+								if (triggerInaktiveTaintOrReverseFlow(assignStmt, leftValue, abs))
+									computeAliasTaints(d1, assignStmt, leftValue, res,
 											interproceduralCFG().getMethodOf(assignStmt), abs);
                                 return res;
                             }
@@ -515,8 +516,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								newSource = source;
 							
 							// Create the new taints that may be created by this assignment
-							Set<Abstraction> res = createNewTaintOnAssignment(src, assignStmt, right,
-									leftValue, rightVals, isSink, d1, newSource);
+							Set<Abstraction> res = createNewTaintOnAssignment(src, assignStmt,
+									rightVals, isSink, d1, newSource);
 							if (res != null)
 								return res;
 							
@@ -578,13 +579,14 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 
 						private Set<Abstraction> createNewTaintOnAssignment(final Unit src,
 								final AssignStmt assignStmt,
-								final Value right,
-								final Value leftValue,
 								final Value[] rightVals,
 								final boolean isSink,
 								Abstraction d1,
 								final Abstraction newSource) {
+							final Value leftValue = assignStmt.getLeftOp();
+							final Value rightValue = assignStmt.getRightOp();
 							boolean addLeftValue = false;
+							
 							// If we have a non-empty postdominator stack, we taint
 							// every assignment target
 							if (newSource.getTopPostdominator() != null || newSource.getAccessPath().isEmpty()) {
@@ -605,18 +607,18 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							// the left side if the tainted value is some "x.y".
 							boolean aliasOverwritten = !addLeftValue
 									&& !newSource.isAbstractionActive()
-									&& baseMatchesStrict(right, newSource)
-									&& right.getType() instanceof RefType
+									&& baseMatchesStrict(rightValue, newSource)
+									&& rightValue.getType() instanceof RefType
 									&& !newSource.dependsOnCutAP();
 							
 							boolean cutFirstField = false;
 							AccessPath mappedAP = newSource.getAccessPath();
 							Type targetType = null;
 							if (!addLeftValue && !aliasOverwritten) {
-								for (Value rightValue : rightVals) {
-									if (rightValue instanceof FieldRef) {
+								for (Value rightVal : rightVals) {
+									if (rightVal instanceof FieldRef) {
 										// Get the field reference
-										FieldRef rightRef = (FieldRef) rightValue;
+										FieldRef rightRef = (FieldRef) rightVal;
 
 										// If the right side references a NULL field, we kill the taint
 										if (rightRef instanceof InstanceFieldRef
@@ -629,7 +631,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										
 										// check if static variable is tainted (same name, same class)
 										//y = X.f && X.f tainted --> y, X.f tainted
-										if (rightValue instanceof StaticFieldRef) {
+										if (rightVal instanceof StaticFieldRef) {
 											if (enableStaticFields && mappedAP != null) {
 												addLeftValue = true;
 												cutFirstField = true;
@@ -638,7 +640,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										// check for field references
 										//y = x.f && x tainted --> y, x tainted
 										//y = x.f && x.f tainted --> y, x tainted
-										else if (rightValue instanceof InstanceFieldRef) {								
+										else if (rightVal instanceof InstanceFieldRef) {								
 											Local rightBase = (Local) ((InstanceFieldRef) rightRef).getBase();
 											Local sourceBase = newSource.getAccessPath().getPlainValue();
 											final SootField rightField = rightRef.getField();
@@ -662,16 +664,16 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									// if rightvalue is local and source is instancefield of this local:
 									// y = x && x.f tainted --> y.f, x.f tainted
 									// y.g = x && x.f tainted --> y.g.f, x.f tainted
-									else if (rightValue instanceof Local && newSource.getAccessPath().isInstanceFieldRef()) {
+									else if (rightVal instanceof Local && newSource.getAccessPath().isInstanceFieldRef()) {
 										Local base = newSource.getAccessPath().getPlainValue();
-										if (aliasing.mayAlias(rightValue, base)) {
+										if (aliasing.mayAlias(rightVal, base)) {
 											addLeftValue = true;
 											targetType = newSource.getAccessPath().getBaseType();
 										}
 									}
 									//y = x[i] && x tainted -> x, y tainted
-									else if (rightValue instanceof ArrayRef) {
-										Local rightBase = (Local) ((ArrayRef) rightValue).getBase();
+									else if (rightVal instanceof ArrayRef) {
+										Local rightBase = (Local) ((ArrayRef) rightVal).getBase();
 										if (aliasing.mayAlias(rightBase, newSource.getAccessPath().getPlainValue())) {
 											addLeftValue = true;
 											
@@ -681,7 +683,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									}
 									// generic case, is true for Locals, ArrayRefs that are equal etc..
 									//y = x && x tainted --> y, x tainted
-									else if (aliasing.mayAlias(rightValue, newSource.getAccessPath().getPlainValue())) {
+									else if (aliasing.mayAlias(rightVal, newSource.getAccessPath().getPlainValue())) {
 										addLeftValue = true;
 										targetType = newSource.getAccessPath().getBaseType();
 									}
@@ -698,14 +700,13 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							
 							// If the right side is a typecast, it must be compatible,
 							// or this path is not realizable
-							if (assignStmt.getRightOp() instanceof CastExpr) {
-								CastExpr ce = (CastExpr) assignStmt.getRightOp();
+							if (rightValue instanceof CastExpr) {
+								CastExpr ce = (CastExpr) rightValue;
 								if (!checkCast(newSource.getAccessPath(), ce.getCastType()))
 									return Collections.emptySet();
 							}
-							
 							// Special handling for certain operations
-							if (assignStmt.getRightOp() instanceof LengthExpr) {
+							else if (rightValue instanceof LengthExpr) {
 								assert newSource.getAccessPath().isEmpty()
 										|| newSource.getAccessPath().getBaseType() instanceof ArrayType;
 								assert leftValue instanceof Local;
@@ -724,7 +725,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							Set<Abstraction> res = new HashSet<Abstraction>();
 							Abstraction targetAB = mappedAP.equals(newSource.getAccessPath())
 									? newSource : newSource.deriveNewAbstraction(mappedAP, null);							
-							addTaintViaStmt(d1, assignStmt, leftValue, targetAB, res, cutFirstField,
+							addTaintViaStmt(d1, assignStmt, targetAB, res, cutFirstField,
 									interproceduralCFG().getMethodOf(src), targetType);
 							res.add(newSource);
 							return res;
