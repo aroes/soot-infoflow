@@ -323,10 +323,10 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 	private void compactAbstractionChain(D d3, D d2) {
 		// If the flow function gave us a chain of abstractions, we can
 		// compact it
-		if (d3.getPredecessor() != null
-				&& d3.getPredecessor() != d2
-				&& d3 != d2) {
-			d3.setPredecessor(d2);
+		if (d3 != d2) {
+			D pred = d3.getPredecessor();
+			if (pred != null && pred != d2)
+				d3.setPredecessor(d2);
 		}
 	}
 
