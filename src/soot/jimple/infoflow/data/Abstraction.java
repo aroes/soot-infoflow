@@ -498,6 +498,7 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 		return dependsOnCutAP;
 	}
 	
+	@Override
 	public Abstraction getPredecessor() {
 		return this.predecessor;
 	}
@@ -517,6 +518,8 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 		// We should not register ourselves as a neighbor
 		if (originalAbstraction == this)
 			return;
+		
+		// We should not add identical nodes as neighbors
 		if (this.predecessor == originalAbstraction.predecessor
 				&& this.currentStmt == originalAbstraction.currentStmt)
 			return;
@@ -524,6 +527,14 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 		synchronized (this) {
 			if (neighbors == null)
 				neighbors = Sets.newIdentityHashSet();
+			else {
+				// Check if we already have an identical neighbor
+				for (Abstraction nb : neighbors)
+					if (originalAbstraction.predecessor == nb.predecessor
+							&& originalAbstraction.currentStmt == nb.currentStmt) {
+						return;
+					}
+			}
 			this.neighbors.add(originalAbstraction);
 		}
 	}

@@ -15,5 +15,11 @@ public interface FastSolverLinkedNode<D, N> extends LinkedNode<D> {
 	 * @param predecessor The predecessor node to set
 	 */
 	public void setPredecessor(D predecessor);
-		
+	
+	/**
+	 * Gets the predecessor of this node
+	 * @return The predecessor of this node is applicable, null for source nodes
+	 */
+	public D getPredecessor();
+	
 }
