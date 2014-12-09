@@ -13,9 +13,9 @@ package soot.jimple.infoflow.util;
 import soot.Value;
 import soot.jimple.ArrayRef;
 import soot.jimple.BinopExpr;
+import soot.jimple.CastExpr;
 import soot.jimple.InstanceOfExpr;
 import soot.jimple.UnopExpr;
-import soot.jimple.internal.JCastExpr;
 
 /**
  * BaseSelector removes unnecessary information from a value such as casts
@@ -35,8 +35,8 @@ public class BaseSelector {
 			return selectBase(((ArrayRef) val).getBase(), keepArrayRef);
 		}
 		
-		if (val instanceof JCastExpr) {
-			return selectBase(((JCastExpr) val).getOpBox().getValue(), keepArrayRef);
+		if (val instanceof CastExpr) {
+			return selectBase(((CastExpr) val).getOp(), keepArrayRef);
 		}
 		
 		// Check for unary operators like "not" or "length"
