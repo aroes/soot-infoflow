@@ -74,6 +74,10 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 		if (abs.getCorrespondingCallSite() == null && !trackPath)
 			return this;
 		
+		// Do not add the very same abstraction over and over again
+		if (this.path != null && this.path.get(0) == abs)
+			return this;
+		
 		SourceContextAndPath scap = clone();
 		if (trackPath && abs.getCurrentStmt() != null) {
 			if (scap.path == null)
