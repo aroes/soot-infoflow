@@ -162,6 +162,7 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 	
 	@Override
 	public void computeTaintPaths(final Set<AbstractionAtSink> res) {
+		logger.info("Context-sensitive path reconstructor started");
 		runSourceFindingTasks(res);
 	}
 	
