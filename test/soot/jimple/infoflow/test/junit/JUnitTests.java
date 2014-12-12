@@ -116,14 +116,14 @@ public abstract class JUnitTests {
     }
     
     protected void negativeCheckInfoflow(Infoflow infoflow){
-    	if(infoflow.isResultAvailable()){
+    	// If the result is available, it must be empty. Otherwise, it is
+    	// implicitly ok since we don't expect to find anything anyway.
+    	if(infoflow.isResultAvailable()) {
 			InfoflowResults map = infoflow.getResults();
 			assertEquals(0, map.size());
 			assertFalse(map.containsSinkMethod(sink));
 			assertFalse(map.containsSinkMethod(sinkInt));
-		}else{
-				fail("result is not available");
-			}
+    	}
 	  }
     
     protected Infoflow initInfoflow(){

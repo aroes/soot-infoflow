@@ -64,10 +64,14 @@ import soot.jimple.infoflow.solver.BackwardsInfoflowCFG;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 import soot.jimple.infoflow.solver.fastSolver.InfoflowSolver;
 import soot.jimple.infoflow.source.ISourceSinkManager;
+import soot.jimple.infoflow.util.InterproceduralConstantValuePropagator;
 import soot.jimple.infoflow.util.SootMethodRepresentationParser;
 import soot.jimple.infoflow.util.SystemClassHandler;
 import soot.jimple.toolkits.callgraph.ReachableMethods;
+import soot.jimple.toolkits.scalar.ConditionalBranchFolder;
+import soot.jimple.toolkits.scalar.UnreachableCodeEliminator;
 import soot.options.Options;
+import soot.util.queue.QueueReader;
 /**
  * main infoflow class which triggers the analysis and offers method to customize it.
  *
@@ -283,19 +287,9 @@ public class Infoflow extends AbstractInfoflow {
 		// entryPoints are the entryPoints required by Soot to calculate Graph - if there is no main method,
 		// we have to create a new main method and use it as entryPoint and store our real entryPoints
 		Scene.v().setEntryPoints(Collections.singletonList(entryPointCreator.createDummyMain()));
-		ipcManager.updateJimpleForICC();
 		
-		// Patch the java.lang.Thread implementation
-		patchThreadImplementation();
-		
-		// We explicitly select the packs we want to run for performance reasons
-		if (callgraphAlgorithm != CallgraphAlgorithm.OnDemand) {
-	        PackManager.v().getPack("wjpp").apply();
-	        PackManager.v().getPack("cg").apply();
-		}
+		// Run the analysis
         runAnalysis(sourcesSinks, null);
-		if (logger.isDebugEnabled())
-			PackManager.v().writeOutput();
 	}
 	
 	/**
@@ -431,27 +425,38 @@ public class Infoflow extends AbstractInfoflow {
 		Set<String> seeds = Collections.emptySet();
 		if (entryPoint != null && !entryPoint.isEmpty())
 			seeds = Collections.singleton(entryPoint);
-
 		ipcManager.updateJimpleForICC();
+		
+		// Run the analysis
+        runAnalysis(sourcesSinks, seeds);
+	}
+
+	private void runAnalysis(final ISourceSinkManager sourcesSinks, final Set<String> additionalSeeds) {
+		ipcManager.updateJimpleForICC();
+		
+		// Patch the java.lang.Thread implementation
+		patchThreadImplementation();
+				
 		// We explicitly select the packs we want to run for performance reasons
 		if (callgraphAlgorithm != CallgraphAlgorithm.OnDemand) {
 	        PackManager.v().getPack("wjpp").apply();
 	        PackManager.v().getPack("cg").apply();
 		}
-        runAnalysis(sourcesSinks, seeds);
-		if (logger.isDebugEnabled())
-			PackManager.v().writeOutput();
-	}
-
-	private void runAnalysis(final ISourceSinkManager sourcesSinks, final Set<String> additionalSeeds) {
+		
 		// Run the preprocessors
         for (Transform tr : preProcessors)
             tr.apply();
-
+        
         if (callgraphAlgorithm != CallgraphAlgorithm.OnDemand)
         	logger.info("Callgraph has {} edges", Scene.v().getCallGraph().size());
         iCfg = icfgFactory.buildBiDirICFG(callgraphAlgorithm);
         
+        // Perform constant propagation and remove dead code
+		long currentMillis = System.nanoTime();
+		eliminateDeadCode(iCfg, sourcesSinks);
+		logger.info("Dead code elimination took " + (System.nanoTime() - currentMillis) / 1E9
+				+ " seconds");
+		        
         int numThreads = Runtime.getRuntime().availableProcessors();
 		CountingThreadPoolExecutor executor = createExecutor(numThreads);
 		
@@ -631,8 +636,41 @@ public class Infoflow extends AbstractInfoflow {
 		
 		for (ResultsAvailableHandler handler : onResultsAvailable)
 			handler.onResultsAvailable(iCfg, results);
+		
+		if (logger.isDebugEnabled())
+			PackManager.v().writeOutput();
 	}
 	
+	/**
+	 * Performs an interprocedural dead-code elimination on all application
+	 * classes
+	 * @param icfg The interprocedural control flow graph to use
+	 * @param sourcesSinks The SourceSinkManager to make sure that sources
+	 * remain intact during constant propagation
+	 */
+	private void eliminateDeadCode(IInfoflowCFG icfg,
+			ISourceSinkManager sourcesSinks) {
+		InterproceduralConstantValuePropagator ipcvp =
+				new InterproceduralConstantValuePropagator(icfg,
+						Scene.v().getEntryPoints(), sourcesSinks);
+		ipcvp.transform();
+		
+		// Get rid of all dead code
+		for (QueueReader<MethodOrMethodContext> rdr =
+				Scene.v().getReachableMethods().listener(); rdr.hasNext(); ) {
+			MethodOrMethodContext sm = rdr.next();
+			
+			if (sm.method() == null || !sm.method().hasActiveBody())
+				continue;
+			if (SystemClassHandler.isClassInSystemPackage(sm.method()
+					.getDeclaringClass().getName()))
+				continue;
+			
+			ConditionalBranchFolder.v().transform(sm.method().getActiveBody());
+			UnreachableCodeEliminator.v().transform(sm.method().getActiveBody());
+		}
+	}
+
 	/**
 	 * Creates a new executor object for spawning worker threads
 	 * @param numThreads The number of threads to use

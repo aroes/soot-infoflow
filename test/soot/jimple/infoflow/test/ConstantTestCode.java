@@ -73,5 +73,81 @@ public class ConstantTestCode {
 			e = TelephonyManager.getDeviceId();
 		}
 	}
+	
+	public void fpConstIntraproceduralTest1() {
+		int i = 3;
+		if (i > 5) {
+			String tainted =  TelephonyManager.getDeviceId();
+			ConnectionManager cm = new ConnectionManager();
+			cm.publish(tainted);
+		}
+	}
+	
+	public void fpConstInterproceduralTest1() {
+		int i = 3;
+		leakIfGreaterThan(i, 5);
+	}
 
+	private void leakIfGreaterThan(int i, int j) {
+		if (i > j) {			
+			String tainted =  TelephonyManager.getDeviceId();
+			ConnectionManager cm = new ConnectionManager();
+			cm.publish(tainted);
+		}
+	}
+
+	public void fpConstInterproceduralTest2() {
+		int i = 3;
+		indirectLeakIfGreaterThan(i);
+	}
+
+	private void indirectLeakIfGreaterThan(int i) {
+		leakIfGreaterThan(i, 5);
+	}
+
+	public void fpConstInterproceduralTest3() {
+		int i = 3;
+		indirectLeakIfGreaterThan2(i);
+	}
+	
+	private void indirectLeakIfGreaterThan2(int i) {
+		int j = i;
+		leakIfGreaterThan(j, 5);
+	}
+	
+	public void fpConstInterproceduralTest4() {
+		int i = 3;
+		indirectLeakIfGreaterThan2(i);
+		indirectLeakIfGreaterThan2(7);
+	}
+	
+	public void fpConstInterproceduralTest5() {
+		int i = 3;
+		indirectLeakIfGreaterThan2(i);
+		indirectLeakIfGreaterThan2(3);
+	}
+	
+	public void constRecursiveTest1() {
+		leakRecursive(0);
+	}
+	
+	private void leakRecursive(int i) {
+		if (i > 0) {			
+			String tainted =  TelephonyManager.getDeviceId();
+			ConnectionManager cm = new ConnectionManager();
+			cm.publish(tainted);
+			return;
+		}
+		leakRecursive(0);
+	}
+	
+	public void fpConstInterproceduralTest6() {
+		int i = 3;
+		leakIfGreaterThan(i, get5());
+	}
+	
+	private int get5() {
+		return 5;
+	}
+	
 }
