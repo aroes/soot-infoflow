@@ -13,6 +13,7 @@ package soot.jimple.infoflow.taintWrappers;
 import java.util.Collections;
 import java.util.Set;
 
+import soot.SootMethod;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.AccessPath;
@@ -53,6 +54,11 @@ public class ListExampleWrapper extends AbstractTaintWrapper {
 	@Override
 	public boolean isExclusiveInternal(Stmt stmt, AccessPath taintedPath,
 			IInfoflowCFG icfg) {
+		return false;
+	}
+
+	@Override
+	public boolean supportsCallee(SootMethod method) {
 		return false;
 	}
 }

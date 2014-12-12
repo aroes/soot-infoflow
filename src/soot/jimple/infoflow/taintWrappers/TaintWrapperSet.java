@@ -13,6 +13,7 @@ package soot.jimple.infoflow.taintWrappers;
 import java.util.HashSet;
 import java.util.Set;
 
+import soot.SootMethod;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
@@ -50,6 +51,14 @@ public class TaintWrapperSet extends AbstractTaintWrapper {
 			IInfoflowCFG icfg) {
 		for (ITaintPropagationWrapper w : this.wrappers)
 			if (w.isExclusive(stmt, taintedPath, icfg))
+				return true;
+		return false;
+	}
+
+	@Override
+	public boolean supportsCallee(SootMethod method) {
+		for (ITaintPropagationWrapper w : this.wrappers)
+			if (w.supportsCallee(method))
 				return true;
 		return false;
 	}

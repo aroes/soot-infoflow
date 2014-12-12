@@ -70,10 +70,27 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 	private boolean aggressiveMode = false;
 	private boolean alwaysModelEqualsHashCode = true;
 	
+	/**
+	 * The possible effects this taint wrapper can have on a method invocation
+	 */
 	private enum MethodWrapType {
+		/**
+		 * This method can create a new taint
+		 */
 		CreateTaint,
+		/**
+		 * This method can kill a taint
+		 */
 		KillTaint,
+		/**
+		 * This method has been explicitly excluded from taint wrapping, i.e.,
+		 * it neither creates nor kills taints even if the same method in the
+		 * parent class or an interfaces does. 
+		 */
 		Exclude,
+		/**
+		 * This method has not been named in the taint wrapper configuration
+		 */
 		NotRegistered
 	}
 	
@@ -447,6 +464,13 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 	@Override
 	public EasyTaintWrapper clone() {
 		return new EasyTaintWrapper(this);
+	}
+
+	@Override
+	public boolean supportsCallee(SootMethod method) {
+		return aggressiveMode
+				|| getMethodWrapType(method.getSubSignature(), method.getDeclaringClass()) 
+						== MethodWrapType.CreateTaint;
 	}
 
 }

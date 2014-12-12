@@ -40,7 +40,6 @@ import soot.jimple.infoflow.solver.IInfoflowCFG;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.infoflow.taintWrappers.AbstractTaintWrapper;
-import soot.jimple.infoflow.test.utilclasses.TestWrapper;
 
 /**
  * tests aliasing of heap references
@@ -50,7 +49,6 @@ public class HeapTests extends JUnitTests {
 	@Test(timeout = 300000)
 	public void testForEarlyTermination() {
 		Infoflow infoflow = initInfoflow();
-		infoflow.setTaintWrapper(new TestWrapper());
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void testForEarlyTermination()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
@@ -60,7 +58,6 @@ public class HeapTests extends JUnitTests {
 	@Test(timeout = 300000)
 	public void testForLoop() {
 		Infoflow infoflow = initInfoflow();
-		infoflow.setTaintWrapper(new TestWrapper());
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void testForLoop()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
@@ -70,7 +67,6 @@ public class HeapTests extends JUnitTests {
 	@Test(timeout = 300000)
 	public void testForWrapper() {
 		Infoflow infoflow = initInfoflow();
-		infoflow.setTaintWrapper(new TestWrapper());
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void testForWrapper()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
@@ -470,6 +466,11 @@ public class HeapTests extends JUnitTests {
 				}
 
 				return res;
+			}
+
+			@Override
+			public boolean supportsCallee(SootMethod method) {
+				return false;
 			}
 		});
 

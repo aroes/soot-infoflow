@@ -12,6 +12,7 @@ package soot.jimple.infoflow.taintWrappers;
 
 import java.util.Set;
 
+import soot.SootMethod;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
@@ -47,6 +48,16 @@ public interface ITaintPropagationWrapper {
 	 * @return True if this taint wrapper is exclusive, otherwise false. 
 	 */
 	public boolean isExclusive(Stmt stmt, AccessPath taintedPath, IInfoflowCFG icfg);
+	
+	/**
+	 * Checks whether this taint wrapper can in general produce artificial taints
+	 * for the given callee. If an implementation returns "false" for a callee,
+	 * the call sites for this callee might be removed if not needed elsewhere.
+	 * @param method The method to check
+	 * @return True if this taint wrapper can in general produce taints for the
+	 * given method.
+	 */
+	public boolean supportsCallee(SootMethod method);
 	
 	/**
 	 * Gets the number of times in which the taint wrapper was able to

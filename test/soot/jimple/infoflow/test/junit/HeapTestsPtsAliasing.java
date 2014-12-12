@@ -21,6 +21,7 @@ import org.junit.Test;
 import soot.RefType;
 import soot.Scene;
 import soot.SootField;
+import soot.SootMethod;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.Stmt;
@@ -29,7 +30,6 @@ import soot.jimple.infoflow.Infoflow;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 import soot.jimple.infoflow.taintWrappers.AbstractTaintWrapper;
-import soot.jimple.infoflow.test.utilclasses.TestWrapper;
 
 /**
  * tests aliasing of heap references
@@ -40,7 +40,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 	public void testForEarlyTermination() {
 		Infoflow infoflow = initInfoflow();
 		infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
-		infoflow.setTaintWrapper(new TestWrapper());
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void testForEarlyTermination()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
@@ -51,7 +50,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 	public void testForLoop() {
 		Infoflow infoflow = initInfoflow();
 		infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
-		infoflow.setTaintWrapper(new TestWrapper());
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void testForLoop()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
@@ -62,7 +60,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 	public void testForWrapper() {
 		Infoflow infoflow = initInfoflow();
 		infoflow.setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
-		infoflow.setTaintWrapper(new TestWrapper());
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void testForWrapper()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
@@ -510,6 +507,11 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 				}
 
 				return res;
+			}
+
+			@Override
+			public boolean supportsCallee(SootMethod method) {
+				return false;
 			}
 		});
 

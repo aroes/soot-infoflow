@@ -652,7 +652,9 @@ public class Infoflow extends AbstractInfoflow {
 			ISourceSinkManager sourcesSinks) {
 		InterproceduralConstantValuePropagator ipcvp =
 				new InterproceduralConstantValuePropagator(icfg,
-						Scene.v().getEntryPoints(), sourcesSinks);
+						Scene.v().getEntryPoints(),
+						sourcesSinks,
+						taintWrapper);
 		ipcvp.transform();
 		
 		// Get rid of all dead code

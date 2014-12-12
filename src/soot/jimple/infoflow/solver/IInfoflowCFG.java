@@ -91,8 +91,24 @@ public interface IInfoflowCFG extends BiDiInterproceduralCFG<Unit,SootMethod> {
      */
     public UnitContainer getPostdominatorOf(Unit u);
     
+    /**
+     * Checks whether the given static field is read inside the given method or
+     * one of its transitive callees.
+     * @param method The method to check
+     * @param variable The static field to check
+     * @return True if the given static field is read inside the given method,
+     * otherwise false
+     */
     public boolean isStaticFieldRead(SootMethod method, SootField variable);
     
+    /**
+     * Checks whether the given static field is used (read or written) inside the
+     * given method or one of its transitive callees.
+     * @param method The method to check
+     * @param variable The static field to check
+     * @return True if the given static field is used inside the given method,
+     * otherwise false
+     */
     public boolean isStaticFieldUsed(SootMethod method, SootField variable);
     
 }

@@ -32,6 +32,7 @@ import soot.jimple.Stmt;
 import soot.jimple.ThisRef;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 import soot.jimple.infoflow.source.ISourceSinkManager;
+import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
 import soot.jimple.toolkits.scalar.ConstantPropagatorAndFolder;
 import soot.util.queue.QueueReader;
 
@@ -40,6 +41,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 	private final IInfoflowCFG icfg;
 	private final Set<SootMethod> excludedMethods;
 	private final ISourceSinkManager sourceSinkManager;
+	private final ITaintPropagationWrapper taintWrapper;
 	
 	/**
 	 * Creates a new instance of the {@link InterproceduralConstantValuePropagator}
@@ -50,6 +52,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 		this.icfg = icfg;
 		this.excludedMethods = null;
 		this.sourceSinkManager = null;
+		this.taintWrapper = null;
 	}
 	
 	/**
@@ -61,13 +64,17 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 	 * not be propagated into the callee.
 	 * @param sourceSinkManager The SourceSinkManager to be used for not
 	 * propagating constants out of source methods
+	 * @param taintWrapper The taint wrapper to be used for not breaking dummy
+	 * values that will later be replaced by artificial taints
 	 */
 	public InterproceduralConstantValuePropagator(IInfoflowCFG icfg,
 			Collection<SootMethod> excludedMethods,
-			ISourceSinkManager sourceSinkManager) {
+			ISourceSinkManager sourceSinkManager,
+			ITaintPropagationWrapper taintWrapper) {
 		this.icfg = icfg;
 		this.excludedMethods = new HashSet<SootMethod>(excludedMethods);
 		this.sourceSinkManager = sourceSinkManager;
+		this.taintWrapper = taintWrapper;
 	}
 	
 	@Override
@@ -125,7 +132,12 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 		// If this callee is excluded, we do not propagate out of it
 		if (excludedMethods != null && excludedMethods.contains(sm))
 			return;
-				
+		
+		// If we have a taint wrapper, we need keep the stub untouched since we
+		// don't the artificial taint the wrapper will come up with
+		if (taintWrapper != null && taintWrapper.supportsCallee(sm))
+			return;
+
 		// We need to make sure that all exit nodes agree on the same
 		// constant value
 		Constant value = null;
@@ -144,17 +156,20 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 			if (callSite instanceof AssignStmt) {
 				AssignStmt assign = (AssignStmt) callSite;
 				
-				// If this is a source method, we do not propagate constants out of it
-				// for not destroying data flows
+				// If this is a call to a source method, we do not propagate
+				// constants out of the callee for not destroying data flows
 				if (sourceSinkManager != null
 						&& sourceSinkManager.getSourceInfo(assign, icfg) != null)
 					continue;
-				
+								
 				SootMethod caller = icfg.getMethodOf(assign);
 				Unit assignConst = Jimple.v().newAssignStmt(assign.getLeftOp(), value);
 				caller.getActiveBody().getUnits().insertAfter(assignConst, assign);
 				
 				ConstantPropagatorAndFolder.v().transform(caller.getActiveBody());
+	
+				// TODO: side effects
+//				icfg.hasSideEffects(sm)
 				
 				caller.getActiveBody().getUnits().remove(assignConst);
 			}
@@ -166,14 +181,17 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 	 * are propagated into the callee.
 	 * @param sm The method for which to look for call sites.
 	 */
-	private void propagateConstantsIntoCallee(SootMethod sm) {
+	private void propagateConstantsIntoCallee(SootMethod sm) {		
+		Collection<Unit> callSites = icfg.getCallersOf(sm);
+		if (callSites.isEmpty())
+			return;
+		
 		boolean[] isConstant = new boolean[sm.getParameterCount()];
 		Constant[] values = new Constant[sm.getParameterCount()];
 		for (int i = 0; i < isConstant.length; i++)
 			isConstant[i] = true;
 		
-		// Do all of our callees agree on one constant value?
-		Collection<Unit> callSites = icfg.getCallersOf(sm);
+		// Do all of our callees agree on one constant value?		
 		for (Unit callSite : callSites) {
 			// If this call site is in an excluded method, we ignore it
 			if (excludedMethods != null && excludedMethods.contains(icfg.getMethodOf(callSite)))
