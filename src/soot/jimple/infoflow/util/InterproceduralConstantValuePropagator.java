@@ -161,17 +161,18 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 				if (sourceSinkManager != null
 						&& sourceSinkManager.getSourceInfo(assign, icfg) != null)
 					continue;
-								
+				
+				// If the call has no side effects, we can remove it altogether,
+				// otherwise we can just propagate the return value
 				SootMethod caller = icfg.getMethodOf(assign);
 				Unit assignConst = Jimple.v().newAssignStmt(assign.getLeftOp(), value);
-				caller.getActiveBody().getUnits().insertAfter(assignConst, assign);
-				
-				ConstantPropagatorAndFolder.v().transform(caller.getActiveBody());
-	
-				// TODO: side effects
-//				icfg.hasSideEffects(sm)
-				
-				caller.getActiveBody().getUnits().remove(assignConst);
+//				if (icfg.hasSideEffects(sm))
+//					caller.getActiveBody().getUnits().swapWith(assign, assignConst);
+//				else {
+					caller.getActiveBody().getUnits().insertAfter(assignConst, assign);
+					ConstantPropagatorAndFolder.v().transform(caller.getActiveBody());
+					caller.getActiveBody().getUnits().remove(assignConst);
+//				}				
 			}
 	}
 
@@ -191,13 +192,15 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 		for (int i = 0; i < isConstant.length; i++)
 			isConstant[i] = true;
 		
-		// Do all of our callees agree on one constant value?		
+		// Do all of our callees agree on one constant value?
+		boolean hasCallSites = false;
 		for (Unit callSite : callSites) {
 			// If this call site is in an excluded method, we ignore it
 			if (excludedMethods != null && excludedMethods.contains(icfg.getMethodOf(callSite)))
 				continue;
 			
 			InvokeExpr iiExpr = ((Stmt) callSite).getInvokeExpr();
+			hasCallSites = true;
 			
 			// Check whether we have constant parameter values
 			for (int i = 0; i < iiExpr.getArgCount(); i++) {
@@ -216,27 +219,29 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 			}
 		}
 		
-		// Get the constant parameters
-		List<Unit> inserted = null;
-		for (int i = 0; i < isConstant.length; i++) {
-			if (isConstant[i]) {
-				// Propagate the constant into the callee
-				Local paramLocal = sm.getActiveBody().getParameterLocal(i);
-				Unit point = getFirstNonIdentityStmt(sm);
-				Unit assignConst = Jimple.v().newAssignStmt(paramLocal, values[i]);
-				sm.getActiveBody().getUnits().insertBefore(assignConst, point);
-				
-				if (inserted == null)
-					inserted = new ArrayList<Unit>();
-				inserted.add(assignConst);
+		if (hasCallSites) {
+			// Get the constant parameters
+			List<Unit> inserted = null;
+			for (int i = 0; i < isConstant.length; i++) {
+				if (isConstant[i]) {
+					// Propagate the constant into the callee
+					Local paramLocal = sm.getActiveBody().getParameterLocal(i);
+					Unit point = getFirstNonIdentityStmt(sm);
+					Unit assignConst = Jimple.v().newAssignStmt(paramLocal, values[i]);
+					sm.getActiveBody().getUnits().insertBefore(assignConst, point);
+					
+					if (inserted == null)
+						inserted = new ArrayList<Unit>();
+					inserted.add(assignConst);
+				}
 			}
-		}
-		
-		// Propagate the constant inside the callee
-		if (inserted != null) {
-			ConstantPropagatorAndFolder.v().transform(sm.getActiveBody());
-			for (Unit u : inserted)
-				sm.getActiveBody().getUnits().remove(u);
+			
+			// Propagate the constant inside the callee
+			if (inserted != null) {
+				ConstantPropagatorAndFolder.v().transform(sm.getActiveBody());
+				for (Unit u : inserted)
+					sm.getActiveBody().getUnits().remove(u);
+			}
 		}
 	}
 	

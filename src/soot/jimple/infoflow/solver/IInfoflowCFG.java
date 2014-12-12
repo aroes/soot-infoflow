@@ -111,4 +111,13 @@ public interface IInfoflowCFG extends BiDiInterproceduralCFG<Unit,SootMethod> {
      */
     public boolean isStaticFieldUsed(SootMethod method, SootField variable);
     
+    /**
+     * Checks whether the given method or any of its transitive callees has side
+     * effects
+     * @param method The method to check
+     * @return True if the given method or one of its transitive callees has
+     * side effects, otherwise false
+     */
+    public boolean hasSideEffects(SootMethod method);
+    
 }
