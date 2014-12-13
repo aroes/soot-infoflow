@@ -120,4 +120,11 @@ public interface IInfoflowCFG extends BiDiInterproceduralCFG<Unit,SootMethod> {
      */
     public boolean hasSideEffects(SootMethod method);
     
+    /**
+     * Re-initializes the mapping betwween statements and owning methods after a
+     * method has changed.
+     * @param m The method for which to re-initialize the mapping
+     */
+	public void notifyMethodChanged(SootMethod m);
+	
 }

@@ -142,6 +142,10 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 		// constant value
 		Constant value = null;
 		for (Unit retSite : icfg.getEndPointsOf(sm)) {
+			// Skip exceptional exits
+			if (!(retSite instanceof ReturnStmt))
+				continue;
+			
 			ReturnStmt retStmt = (ReturnStmt) retSite;
 			if (!(retStmt.getOp() instanceof Constant))
 				return;
@@ -152,28 +156,35 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 		}
 		
 		// Propagate the return value into the callers
-		for (Unit callSite : icfg.getCallersOf(sm))
-			if (callSite instanceof AssignStmt) {
-				AssignStmt assign = (AssignStmt) callSite;
-				
-				// If this is a call to a source method, we do not propagate
-				// constants out of the callee for not destroying data flows
-				if (sourceSinkManager != null
-						&& sourceSinkManager.getSourceInfo(assign, icfg) != null)
-					continue;
-				
-				// If the call has no side effects, we can remove it altogether,
-				// otherwise we can just propagate the return value
-				SootMethod caller = icfg.getMethodOf(assign);
-				Unit assignConst = Jimple.v().newAssignStmt(assign.getLeftOp(), value);
-//				if (icfg.hasSideEffects(sm))
-//					caller.getActiveBody().getUnits().swapWith(assign, assignConst);
-//				else {
-					caller.getActiveBody().getUnits().insertAfter(assignConst, assign);
-					ConstantPropagatorAndFolder.v().transform(caller.getActiveBody());
-					caller.getActiveBody().getUnits().remove(assignConst);
-//				}				
-			}
+		if (value != null)
+			for (Unit callSite : icfg.getCallersOf(sm))
+				if (callSite instanceof AssignStmt) {
+					AssignStmt assign = (AssignStmt) callSite;
+					
+					// If this is a call to a source method, we do not propagate
+					// constants out of the callee for not destroying data flows
+					if (sourceSinkManager != null
+							&& sourceSinkManager.getSourceInfo(assign, icfg) != null)
+						continue;
+					
+					// Make sure that we don't access anything we have already removed
+					SootMethod caller = icfg.getMethodOf(assign);
+					if (!caller.getActiveBody().getUnits().contains(assign))
+						continue;
+						
+					// If the call has no side effects, we can remove it altogether,
+					// otherwise we can just propagate the return value
+					Unit assignConst = Jimple.v().newAssignStmt(assign.getLeftOp(), value);
+					if (!icfg.hasSideEffects(sm)) {
+						caller.getActiveBody().getUnits().swapWith(assign, assignConst);
+						System.out.println("SWAPPED");
+					}
+					else {
+						caller.getActiveBody().getUnits().insertAfter(assignConst, assign);
+						ConstantPropagatorAndFolder.v().transform(caller.getActiveBody());
+						caller.getActiveBody().getUnits().remove(assignConst);
+					}					
+				}
 	}
 
 	/**
@@ -241,6 +252,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 				ConstantPropagatorAndFolder.v().transform(sm.getActiveBody());
 				for (Unit u : inserted)
 					sm.getActiveBody().getUnits().remove(u);
+				icfg.notifyMethodChanged(sm);
 			}
 		}
 	}

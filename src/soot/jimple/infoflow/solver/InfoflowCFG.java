@@ -80,7 +80,7 @@ public class InfoflowCFG implements IInfoflowCFG {
 		this(new JimpleBasedInterproceduralCFG());
 	}
 	
-	public InfoflowCFG(BiDiInterproceduralCFG<Unit,SootMethod> delegate) {
+	public InfoflowCFG(BiDiInterproceduralCFG<Unit, SootMethod> delegate) {
 		this.delegate = delegate;
 	}
 	
@@ -338,4 +338,9 @@ public class InfoflowCFG implements IInfoflowCFG {
 		return false;
 	}
 	
+	@Override
+	public void notifyMethodChanged(SootMethod m) {
+		if (delegate instanceof JimpleBasedInterproceduralCFG)
+			((JimpleBasedInterproceduralCFG) delegate).initializeUnitToOwner(m);
+	}
 }

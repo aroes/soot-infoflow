@@ -62,6 +62,7 @@ import soot.jimple.infoflow.results.ResultSinkInfo;
 import soot.jimple.infoflow.results.ResultSourceInfo;
 import soot.jimple.infoflow.solver.BackwardsInfoflowCFG;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
+import soot.jimple.infoflow.solver.InfoflowCFG;
 import soot.jimple.infoflow.solver.fastSolver.InfoflowSolver;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.util.InterproceduralConstantValuePropagator;
@@ -446,16 +447,16 @@ public class Infoflow extends AbstractInfoflow {
 		// Run the preprocessors
         for (Transform tr : preProcessors)
             tr.apply();
-        
+                
+        // Perform constant propagation and remove dead code
+		long currentMillis = System.nanoTime();
+		eliminateDeadCode(sourcesSinks);
+		logger.info("Dead code elimination took " + (System.nanoTime() - currentMillis) / 1E9
+				+ " seconds");
+		
         if (callgraphAlgorithm != CallgraphAlgorithm.OnDemand)
         	logger.info("Callgraph has {} edges", Scene.v().getCallGraph().size());
         iCfg = icfgFactory.buildBiDirICFG(callgraphAlgorithm);
-        
-        // Perform constant propagation and remove dead code
-		long currentMillis = System.nanoTime();
-		eliminateDeadCode(iCfg, sourcesSinks);
-		logger.info("Dead code elimination took " + (System.nanoTime() - currentMillis) / 1E9
-				+ " seconds");
 		        
         int numThreads = Runtime.getRuntime().availableProcessors();
 		CountingThreadPoolExecutor executor = createExecutor(numThreads);
@@ -644,14 +645,13 @@ public class Infoflow extends AbstractInfoflow {
 	/**
 	 * Performs an interprocedural dead-code elimination on all application
 	 * classes
-	 * @param icfg The interprocedural control flow graph to use
 	 * @param sourcesSinks The SourceSinkManager to make sure that sources
 	 * remain intact during constant propagation
 	 */
-	private void eliminateDeadCode(IInfoflowCFG icfg,
-			ISourceSinkManager sourcesSinks) {
+	private void eliminateDeadCode(ISourceSinkManager sourcesSinks) {
 		InterproceduralConstantValuePropagator ipcvp =
-				new InterproceduralConstantValuePropagator(icfg,
+				new InterproceduralConstantValuePropagator(
+						new InfoflowCFG(),
 						Scene.v().getEntryPoints(),
 						sourcesSinks,
 						taintWrapper);
