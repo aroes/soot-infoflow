@@ -36,7 +36,8 @@ import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
 import soot.jimple.toolkits.scalar.ConstantPropagatorAndFolder;
 import soot.util.queue.QueueReader;
 
-public class InterproceduralConstantValuePropagator extends SceneTransformer {
+public class 
+ extends SceneTransformer {
 	
 	private final IInfoflowCFG icfg;
 	private final Set<SootMethod> excludedMethods;
@@ -92,7 +93,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 			
 			// If this callee is excluded, we do not propagate out of it
 			if (excludedMethods != null && excludedMethods.contains(sm))
-				return;
+				continue;
 			
 			// Make sure that we get constants as often as possible
 			ConstantPropagatorAndFolder.v().transform(sm.getActiveBody());
