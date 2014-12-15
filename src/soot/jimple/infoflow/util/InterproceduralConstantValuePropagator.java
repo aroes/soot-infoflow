@@ -36,8 +36,8 @@ import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
 import soot.jimple.toolkits.scalar.ConstantPropagatorAndFolder;
 import soot.util.queue.QueueReader;
 
-public class 
- extends SceneTransformer {
+
+public class InterproceduralConstantValuePropagator extends SceneTransformer {
 	
 	private final IInfoflowCFG icfg;
 	private final Set<SootMethod> excludedMethods;
