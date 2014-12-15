@@ -90,6 +90,10 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 			if (SystemClassHandler.isClassInSystemPackage(sm.getDeclaringClass().getName()))
 				continue;
 			
+			// If this callee is excluded, we do not propagate out of it
+			if (excludedMethods != null && excludedMethods.contains(sm))
+				return;
+			
 			// Make sure that we get constants as often as possible
 			ConstantPropagatorAndFolder.v().transform(sm.getActiveBody());
 			
@@ -128,11 +132,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 	 * if the value is constant
 	 * @param sm The method whose value to propagate
 	 */
-	private void propagateReturnValueIntoCallers(SootMethod sm) {
-		// If this callee is excluded, we do not propagate out of it
-		if (excludedMethods != null && excludedMethods.contains(sm))
-			return;
-		
+	private void propagateReturnValueIntoCallers(SootMethod sm) {		
 		// If we have a taint wrapper, we need keep the stub untouched since we
 		// don't the artificial taint the wrapper will come up with
 		if (taintWrapper != null && taintWrapper.supportsCallee(sm))
