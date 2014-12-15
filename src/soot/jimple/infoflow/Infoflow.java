@@ -669,8 +669,34 @@ public class Infoflow extends AbstractInfoflow {
 				continue;
 			
 			ConditionalBranchFolder.v().transform(sm.method().getActiveBody());
+			
+			// Delete all dead code. We need to be careful and patch the cfg so
+			// that it does not retain edges for call statements we have deleted
+			List<Unit> callSites = getCallsInMethod(sm.method());
 			UnreachableCodeEliminator.v().transform(sm.method().getActiveBody());
+			List<Unit> newCallSites = getCallsInMethod(sm.method());
+			if (callSites != null)
+				for (Unit u : callSites)
+					if (newCallSites == null ||  !newCallSites.contains(u))
+						Scene.v().getCallGraph().removeAllEdgesOutOf(u);
 		}
+	}
+	
+	/**
+	 * Gets a list of all units that invoke other methods in the given method
+	 * @param method The method from which to get all invocations
+	 * @return The list of units calling other methods in the given method if
+	 * there is at least one such unit. Otherwise null.
+	 */
+	private List<Unit> getCallsInMethod(SootMethod method) {
+		List<Unit> callSites = null;
+		for (Unit u : method.getActiveBody().getUnits())
+			if (((Stmt) u).containsInvokeExpr()) {
+				if (callSites == null)
+					callSites = new ArrayList<Unit>();
+				callSites.add(u);
+			}
+		return callSites;
 	}
 
 	/**

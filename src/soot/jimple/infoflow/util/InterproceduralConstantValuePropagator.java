@@ -90,7 +90,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 			if (SystemClassHandler.isClassInSystemPackage(sm.getDeclaringClass().getName()))
 				continue;
 			
-			// Make sure that we get constant as often as possible
+			// Make sure that we get constants as often as possible
 			ConstantPropagatorAndFolder.v().transform(sm.getActiveBody());
 			
 			if (sm.getReturnType() != VoidType.v() || sm.getParameterCount() > 0) {
@@ -177,13 +177,13 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 					Unit assignConst = Jimple.v().newAssignStmt(assign.getLeftOp(), value);
 					if (!icfg.hasSideEffects(sm)) {
 						caller.getActiveBody().getUnits().swapWith(assign, assignConst);
-						System.out.println("SWAPPED");
+						ConstantPropagatorAndFolder.v().transform(caller.getActiveBody());
 					}
 					else {
 						caller.getActiveBody().getUnits().insertAfter(assignConst, assign);
 						ConstantPropagatorAndFolder.v().transform(caller.getActiveBody());
 						caller.getActiveBody().getUnits().remove(assignConst);
-					}					
+					}
 				}
 	}
 
@@ -252,7 +252,6 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 				ConstantPropagatorAndFolder.v().transform(sm.getActiveBody());
 				for (Unit u : inserted)
 					sm.getActiveBody().getUnits().remove(u);
-				icfg.notifyMethodChanged(sm);
 			}
 		}
 	}

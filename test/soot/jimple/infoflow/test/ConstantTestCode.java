@@ -90,7 +90,7 @@ public class ConstantTestCode {
 
 	private void leakIfGreaterThan(int i, int j) {
 		if (i > j) {			
-			String tainted =  TelephonyManager.getDeviceId();
+			String tainted = TelephonyManager.getDeviceId();
 			ConnectionManager cm = new ConnectionManager();
 			cm.publish(tainted);
 		}
@@ -148,6 +148,34 @@ public class ConstantTestCode {
 	
 	private int get5() {
 		return 5;
+	}
+	
+	private class MyException extends RuntimeException {
+
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 3653915262998567435L;
+		
+	}
+	
+	public void constantExceptionTest1() {
+		try {
+			String secret = getSecretAndThrow();
+			ConnectionManager cm = new ConnectionManager();
+			cm.publish(secret);			
+		}
+		catch (MyException ex) {
+			ConnectionManager cm = new ConnectionManager();
+			cm.publish(ex + TelephonyManager.getDeviceId());			
+		}
+	}
+
+	private String getSecretAndThrow() {
+		if (Math.random() < 0.5)
+			return "foo";
+		else
+			throw new MyException();
 	}
 	
 }
