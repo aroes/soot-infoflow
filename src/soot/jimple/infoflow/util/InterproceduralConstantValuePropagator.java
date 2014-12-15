@@ -178,6 +178,8 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 					Unit assignConst = Jimple.v().newAssignStmt(assign.getLeftOp(), value);
 					if (!icfg.hasSideEffects(sm)) {
 						caller.getActiveBody().getUnits().swapWith(assign, assignConst);
+						if (Scene.v().hasCallGraph())
+							Scene.v().getCallGraph().removeAllEdgesOutOf(assign);
 						ConstantPropagatorAndFolder.v().transform(caller.getActiveBody());
 					}
 					else {
