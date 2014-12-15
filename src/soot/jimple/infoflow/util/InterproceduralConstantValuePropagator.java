@@ -3,9 +3,11 @@ package soot.jimple.infoflow.util;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import soot.DoubleType;
 import soot.FloatType;
@@ -23,6 +25,7 @@ import soot.Value;
 import soot.VoidType;
 import soot.jimple.AssignStmt;
 import soot.jimple.Constant;
+import soot.jimple.FieldRef;
 import soot.jimple.IdentityStmt;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Jimple;
@@ -33,6 +36,7 @@ import soot.jimple.ThisRef;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
+import soot.jimple.toolkits.callgraph.Edge;
 import soot.jimple.toolkits.scalar.ConstantPropagatorAndFolder;
 import soot.util.queue.QueueReader;
 
@@ -43,6 +47,9 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 	private final Set<SootMethod> excludedMethods;
 	private final ISourceSinkManager sourceSinkManager;
 	private final ITaintPropagationWrapper taintWrapper;
+	
+	protected final Map<SootMethod, Boolean> methodSideEffects =
+			new ConcurrentHashMap<SootMethod, Boolean>();
 	
 	/**
 	 * Creates a new instance of the {@link InterproceduralConstantValuePropagator}
@@ -176,20 +183,85 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 					// If the call has no side effects, we can remove it altogether,
 					// otherwise we can just propagate the return value
 					Unit assignConst = Jimple.v().newAssignStmt(assign.getLeftOp(), value);
-					if (!icfg.hasSideEffects(sm)) {
+					if (!hasSideEffectsOrCallsSink(sm, new HashSet<SootMethod>())) {
+						// We don't have side effects, so we can just change
+						// a = b.foo() into a = 0.
 						caller.getActiveBody().getUnits().swapWith(assign, assignConst);
+						ConstantPropagatorAndFolder.v().transform(caller.getActiveBody());
+						
+						// Fix the callgraph
 						if (Scene.v().hasCallGraph())
 							Scene.v().getCallGraph().removeAllEdgesOutOf(assign);
-						ConstantPropagatorAndFolder.v().transform(caller.getActiveBody());
 					}
 					else {
+						// We have side effects, so we need to keep the method call. Change
+						// a = b.foo() into b.foo(); a = 0;
 						caller.getActiveBody().getUnits().insertAfter(assignConst, assign);
 						ConstantPropagatorAndFolder.v().transform(caller.getActiveBody());
 						caller.getActiveBody().getUnits().remove(assignConst);
+						
+						Stmt inv = Jimple.v().newInvokeStmt(assign.getInvokeExpr());
+						caller.getActiveBody().getUnits().swapWith(assign, inv);
+						
+						// Fix the callgraph
+						if (Scene.v().hasCallGraph())
+							Scene.v().getCallGraph().swapEdgesOutOf(assign, inv);
 					}
 				}
 	}
-
+	
+	/**
+	 * Checks whether the given method or one of its transitive callees has
+	 * side-effects or calls a sink method
+	 * @param method The method to check
+	 * @param runList A set to receive all methods that have already been
+	 * processed
+	 * @return True if the given method or one of its transitive callees has
+	 * side-effects or calls a sink method, otherwise false.
+	 */
+	private boolean hasSideEffectsOrCallsSink(SootMethod method, Set<SootMethod> runList) {
+		// Without a body, we cannot say much
+		if (!method.hasActiveBody())
+			return false;
+		
+		// Do not process the same method twice
+		if (!runList.add(method))
+			return false;
+		
+		// Do we already have an entry?
+		Boolean hasSideEffects = methodSideEffects.get(method);
+		if (hasSideEffects != null)
+			return hasSideEffects;
+		
+		// Scan for references to this variable
+		for (Unit u : method.getActiveBody().getUnits()) {
+			if (u instanceof AssignStmt) {
+				AssignStmt assign = (AssignStmt) u;
+				
+				if (assign.getLeftOp() instanceof FieldRef) {
+					methodSideEffects.put(method, true);
+					return true;
+				}
+			}
+						
+			if (((Stmt) u).containsInvokeExpr())
+				if (sourceSinkManager.isSink((Stmt) u, icfg)) {
+					methodSideEffects.put(method, true);
+					return true;
+				}
+					
+				for (Iterator<Edge> edgeIt = Scene.v().getCallGraph().edgesOutOf(u); edgeIt.hasNext(); ) {
+					Edge e = edgeIt.next();
+					if (hasSideEffectsOrCallsSink(e.getTgt().method(), runList))
+						return true;
+				}
+		}
+		
+		// Variable is not read
+		methodSideEffects.put(method, false);
+		return false;
+	}
+	
 	/**
 	 * Checks whether all call sites for a specific callee agree on the same
 	 * constant value for one or more arguments. If so, these constant values
