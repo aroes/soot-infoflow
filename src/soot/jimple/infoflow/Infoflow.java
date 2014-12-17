@@ -38,8 +38,6 @@ import soot.SootField;
 import soot.SootMethod;
 import soot.Transform;
 import soot.Unit;
-import soot.jimple.AssignStmt;
-import soot.jimple.Constant;
 import soot.jimple.Jimple;
 import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
@@ -661,6 +659,10 @@ public class Infoflow extends AbstractInfoflow {
 			if (sm.method() == null || !sm.method().hasActiveBody())
 				continue;
 			
+			// Exclude the dummy main method
+			if (Scene.v().getEntryPoints().contains(sm.method()))
+				continue;
+			
 			List<Unit> callSites = getCallsInMethod(sm.method());
 			
 			ConstantPropagatorAndFolder.v().transform(sm.method().getActiveBody());
@@ -706,18 +708,6 @@ public class Infoflow extends AbstractInfoflow {
 				for (Unit u : callSites)
 					if (newCallSites == null ||  !newCallSites.contains(u))
 						Scene.v().getCallGraph().removeAllEdgesOutOf(u);
-			
-			// Remove constant assignments since they have no influence on the
-			// data flow tracking.
-			for (Iterator<Unit> unitIt = sm.method().getActiveBody()
-					.getUnits().snapshotIterator(); unitIt.hasNext(); ) {
-				Unit u = unitIt.next();
-				if (u instanceof AssignStmt) {
-					AssignStmt assign = (AssignStmt) u;
-					if (assign.getRightOp() instanceof Constant)
-						unitIt.remove();
-				}
-			}
 		}
 	}
 	
