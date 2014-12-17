@@ -52,12 +52,22 @@ public interface ITaintPropagationWrapper {
 	/**
 	 * Checks whether this taint wrapper can in general produce artificial taints
 	 * for the given callee. If an implementation returns "false" for a callee,
-	 * the call sites for this callee might be removed if not needed elsewhere.
+	 * all call sites for this callee might be removed if not needed elsewhere.
 	 * @param method The method to check
 	 * @return True if this taint wrapper can in general produce taints for the
 	 * given method.
 	 */
 	public boolean supportsCallee(SootMethod method);
+	
+	/**
+	 * Checks whether this taint wrapper can in general produce artificial taints
+	 * for the given call site. If an implementation returns "false" for a call
+	 * site, this call sites might be removed if not needed elsewhere.
+	 * @param callSite The call site to check
+	 * @return True if this taint wrapper can in general produce taints for the
+	 * given call site.
+	 */
+	public boolean supportsCallee(Stmt callSite);
 	
 	/**
 	 * Gets the number of times in which the taint wrapper was able to

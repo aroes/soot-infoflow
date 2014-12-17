@@ -84,4 +84,9 @@ public class IdentityTaintWrapper extends AbstractTaintWrapper {
 		return true;
 	}
 
+	@Override
+	public boolean supportsCallee(Stmt callSite) {
+		return true;
+	}
+	
 }

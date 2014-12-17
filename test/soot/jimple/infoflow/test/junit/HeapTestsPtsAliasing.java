@@ -513,6 +513,11 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 			public boolean supportsCallee(SootMethod method) {
 				return false;
 			}
+
+			@Override
+			public boolean supportsCallee(Stmt callSite) {
+				return false;
+			}
 		});
 
 		infoflow.setInspectSources(false);

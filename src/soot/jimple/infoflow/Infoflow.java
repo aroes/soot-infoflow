@@ -38,6 +38,8 @@ import soot.SootField;
 import soot.SootMethod;
 import soot.Transform;
 import soot.Unit;
+import soot.jimple.AssignStmt;
+import soot.jimple.Constant;
 import soot.jimple.Jimple;
 import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
@@ -70,6 +72,8 @@ import soot.jimple.infoflow.util.SootMethodRepresentationParser;
 import soot.jimple.infoflow.util.SystemClassHandler;
 import soot.jimple.toolkits.callgraph.ReachableMethods;
 import soot.jimple.toolkits.scalar.ConditionalBranchFolder;
+import soot.jimple.toolkits.scalar.ConstantPropagatorAndFolder;
+import soot.jimple.toolkits.scalar.DeadAssignmentEliminator;
 import soot.jimple.toolkits.scalar.UnreachableCodeEliminator;
 import soot.options.Options;
 import soot.util.queue.QueueReader;
@@ -649,12 +653,35 @@ public class Infoflow extends AbstractInfoflow {
 	 * remain intact during constant propagation
 	 */
 	private void eliminateDeadCode(ISourceSinkManager sourcesSinks) {
+		// Perform an intra-procedural constant propagation to prepare for the
+		// inter-procedural one
+		for (QueueReader<MethodOrMethodContext> rdr =
+				Scene.v().getReachableMethods().listener(); rdr.hasNext(); ) {
+			MethodOrMethodContext sm = rdr.next();
+			if (sm.method() == null || !sm.method().hasActiveBody())
+				continue;
+			
+			List<Unit> callSites = getCallsInMethod(sm.method());
+			
+			ConstantPropagatorAndFolder.v().transform(sm.method().getActiveBody());
+			DeadAssignmentEliminator.v().transform(sm.method().getActiveBody());
+			
+			// Remove the dead callgraph edges
+			List<Unit> newCallSites = getCallsInMethod(sm.method());
+			if (callSites != null)
+				for (Unit u : callSites)
+					if (newCallSites == null ||  !newCallSites.contains(u))
+						Scene.v().getCallGraph().removeAllEdgesOutOf(u);
+		}
+		
+		// Perform an inter-procedural constant propagation and code cleanup
 		InterproceduralConstantValuePropagator ipcvp =
 				new InterproceduralConstantValuePropagator(
 						new InfoflowCFG(),
 						Scene.v().getEntryPoints(),
 						sourcesSinks,
 						taintWrapper);
+		ipcvp.setRemoveSideEffectFreeMethods(!enableImplicitFlows);
 		ipcvp.transform();
 		
 		// Get rid of all dead code
@@ -679,6 +706,18 @@ public class Infoflow extends AbstractInfoflow {
 				for (Unit u : callSites)
 					if (newCallSites == null ||  !newCallSites.contains(u))
 						Scene.v().getCallGraph().removeAllEdgesOutOf(u);
+			
+			// Remove constant assignments since they have no influence on the
+			// data flow tracking.
+			for (Iterator<Unit> unitIt = sm.method().getActiveBody()
+					.getUnits().snapshotIterator(); unitIt.hasNext(); ) {
+				Unit u = unitIt.next();
+				if (u instanceof AssignStmt) {
+					AssignStmt assign = (AssignStmt) u;
+					if (assign.getRightOp() instanceof Constant)
+						unitIt.remove();
+				}
+			}
 		}
 	}
 	

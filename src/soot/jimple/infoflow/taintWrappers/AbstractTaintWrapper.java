@@ -49,5 +49,5 @@ public abstract class AbstractTaintWrapper implements ITaintPropagationWrapper {
 	public int getWrapperMisses() {
 		return wrapperMisses.get();
 	}
-
+	
 }

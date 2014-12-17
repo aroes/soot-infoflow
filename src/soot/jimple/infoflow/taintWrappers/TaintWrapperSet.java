@@ -62,4 +62,13 @@ public class TaintWrapperSet extends AbstractTaintWrapper {
 				return true;
 		return false;
 	}
+	
+	@Override
+	public boolean supportsCallee(Stmt callSite) {
+		for (ITaintPropagationWrapper w : this.wrappers)
+			if (w.supportsCallee(callSite))
+				return true;
+		return false;
+	}
+	
 }

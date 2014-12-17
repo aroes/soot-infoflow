@@ -29,6 +29,7 @@ import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Value;
+import soot.jimple.Constant;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.Stmt;
@@ -472,5 +473,18 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 				|| getMethodWrapType(method.getSubSignature(), method.getDeclaringClass()) 
 						== MethodWrapType.CreateTaint;
 	}
-
+	
+	@Override
+	public boolean supportsCallee(Stmt callSite) {
+		if (!callSite.containsInvokeExpr()
+				|| !supportsCallee(callSite.getInvokeExpr().getMethod()))
+			return false;
+		
+		// We need at least one non-constant argument
+		for (Value val : callSite.getInvokeExpr().getArgs())
+			if (!(val instanceof Constant))
+				return true;
+		return false;
+	}
+		
 }
