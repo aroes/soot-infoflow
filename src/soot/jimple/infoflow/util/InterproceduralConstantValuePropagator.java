@@ -26,6 +26,7 @@ import soot.Type;
 import soot.Unit;
 import soot.Value;
 import soot.VoidType;
+import soot.JastAddJ.DivExpr;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
 import soot.jimple.Constant;
@@ -37,6 +38,7 @@ import soot.jimple.InvokeStmt;
 import soot.jimple.Jimple;
 import soot.jimple.NewExpr;
 import soot.jimple.ParameterRef;
+import soot.jimple.RemExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.ThisRef;
@@ -61,8 +63,6 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 	private boolean removeSideEffectFreeMethods = true;
 	
 	protected final Map<SootMethod, Boolean> methodSideEffects =
-			new ConcurrentHashMap<SootMethod, Boolean>();
-	protected final Map<SootMethod, Boolean> methodSideEffectsArrays =
 			new ConcurrentHashMap<SootMethod, Boolean>();
 	
 	/**
@@ -132,7 +132,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 			// call a sink, we can remove it altogether.
 			if (removeSideEffectFreeMethods
 					&& sm.getReturnType() == VoidType.v()
-					&& !hasSideEffectsOrCallsSink(sm, true)
+					&& !hasSideEffectsOrCallsSink(sm)
 					&& !isSinkOrTaintWrapped(sm)) {
 				removeAllCallers(sm);
 				continue;
@@ -295,22 +295,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 	 * side-effects or calls a sink method, otherwise false.
 	 */
 	private boolean hasSideEffectsOrCallsSink(SootMethod method) {
-		return hasSideEffectsOrCallsSink(method, new HashSet<SootMethod>(), false);
-	}
-	
-	/**
-	 * Checks whether the given method or one of its transitive callees has
-	 * side-effects or calls a sink method
-	 * @param method The method to check
-	 * @param arraysAsSideEffects True if array write accesses shall be treated
-	 * as possible side-effects, otherwise false
-	 * @return True if the given method or one of its transitive callees has
-	 * side-effects or calls a sink method, otherwise false.
-	 */
-	private boolean hasSideEffectsOrCallsSink(SootMethod method,
-			boolean arraysAsSideEffects) {
-		return hasSideEffectsOrCallsSink(method, new HashSet<SootMethod>(),
-				arraysAsSideEffects);
+		return hasSideEffectsOrCallsSink(method, new HashSet<SootMethod>());
 	}
 	
 	/**
@@ -319,14 +304,12 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 	 * @param method The method to check
 	 * @param runList A set to receive all methods that have already been
 	 * processed
-	 * @param arraysAsSideEffects True if array write accesses shall be treated
-	 * as possible side-effects, otherwise false
 	 * @param cache The cache in which to store the results
 	 * @return True if the given method or one of its transitive callees has
 	 * side-effects or calls a sink method, otherwise false.
 	 */
 	private boolean hasSideEffectsOrCallsSink(SootMethod method,
-			Set<SootMethod> runList, boolean arraysAsSideEffects) {		
+			Set<SootMethod> runList) {		
 		// Without a body, we cannot say much
 		if (!method.hasActiveBody())
 			return false;
@@ -335,11 +318,6 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 		Boolean hasSideEffects = methodSideEffects.get(method);
 		if (hasSideEffects != null)
 			return hasSideEffects;
-		if (arraysAsSideEffects) {
-			hasSideEffects = methodSideEffectsArrays.get(method);
-			if (hasSideEffects != null)
-				return hasSideEffects;
-		}
 		
 		// Do not process the same method twice
 		if (!runList.add(method))
@@ -360,13 +338,13 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 			}
 			else if (u instanceof AssignStmt) {
 				AssignStmt assign = (AssignStmt) u;
-				if (assign.getLeftOp() instanceof FieldRef) {
+				if (assign.getLeftOp() instanceof FieldRef
+						|| assign.getLeftOp() instanceof ArrayRef
+						|| assign.getRightOp() instanceof FieldRef
+						|| assign.getRightOp() instanceof ArrayRef
+						|| assign.getRightOp() instanceof DivExpr
+						|| assign.getRightOp() instanceof RemExpr) {
 					methodSideEffects.put(method, true);
-					return true;
-				}
-				else if (arraysAsSideEffects
-						&& assign.getLeftOp() instanceof ArrayRef) {
-					methodSideEffectsArrays.put(method, true);
 					return true;
 				}
 			}
@@ -391,8 +369,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 				// Check the callees
 				for (Iterator<Edge> edgeIt = Scene.v().getCallGraph().edgesOutOf(u); edgeIt.hasNext(); ) {
 					Edge e = edgeIt.next();
-						if (hasSideEffectsOrCallsSink(e.getTgt().method(), runList,
-								arraysAsSideEffects))
+						if (hasSideEffectsOrCallsSink(e.getTgt().method(), runList))
 							return true;
 				}
 			}

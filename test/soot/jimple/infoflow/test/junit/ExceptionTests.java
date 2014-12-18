@@ -62,4 +62,22 @@ public class ExceptionTests extends JUnitTests {
 		checkInfoflow(infoflow, 1);
 	}
 
+	@Test
+	public void exceptionControlFlowTest2() {
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.ExceptionTestCode: void exceptionControlFlowTest2()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+	}
+	
+	@Test
+	public void exceptionControlFlowTest3() {
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.ExceptionTestCode: void exceptionControlFlowTest3()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+	}
+	
 }
