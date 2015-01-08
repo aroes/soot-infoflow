@@ -340,3 +340,5 @@
 <java.nio.ByteBuffer: java.nio.ByteBuffer putLong(int,long)>
 <java.nio.ByteBuffer: java.nio.ByteBuffer putShort(short)>
 <java.nio.ByteBuffer: java.nio.ByteBuffer putShort(int,short)>
+
+~<android.content.ContextWrapper: android.content.Context getApplicationContext()>
