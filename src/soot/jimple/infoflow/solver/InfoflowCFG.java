@@ -231,14 +231,14 @@ public class InfoflowCFG implements IInfoflowCFG {
 				if (assign.getLeftOp() instanceof StaticFieldRef) {
 					SootField sf = ((StaticFieldRef) assign.getLeftOp()).getField();
 					registerStaticVariableUse(method, sf, StaticFieldUse.Write);
-					if (!readOnly && variable.equals(variable))
+					if (!readOnly && variable.equals(sf))
 						return true;
 				}
 				
 				if (assign.getRightOp() instanceof StaticFieldRef) {
 					SootField sf = ((StaticFieldRef) assign.getRightOp()).getField();
 					registerStaticVariableUse(method, sf, StaticFieldUse.Read);
-					if (variable.equals(variable))
+					if (variable.equals(sf))
 						return true;
 				}
 			}
