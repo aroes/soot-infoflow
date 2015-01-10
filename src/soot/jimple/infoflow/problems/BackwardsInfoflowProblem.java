@@ -385,6 +385,12 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						if (!inspectSinks && isSink)
 							return Collections.emptySet();
 						
+						// Do not propagate in inactive taints that will be
+						// activated there since they already came out of the
+						// callee
+						if (isCallSiteActivatingTaint(stmt, source.getActivationUnit()))
+							return Collections.emptySet();
+						
 						// taint is propagated in CallToReturnFunction, so we do not
 						// need any taint here if the taint wrapper is exclusive:
 						if(taintWrapper != null && taintWrapper.isExclusive(stmt, source.getAccessPath(),
