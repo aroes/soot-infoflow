@@ -226,6 +226,11 @@ public class Infoflow extends AbstractInfoflow {
 			case SPARK:
 				Options.v().setPhaseOption("cg.spark", "on");
 				Options.v().setPhaseOption("cg.spark", "string-constants:true");
+				
+				if (this.aliasingAlgorithm == AliasingAlgorithm.FlowSensitive) {
+//					Options.v().setPhaseOption("cg.spark", "types-for-sites:true");
+				}
+				
 				break;
 			case OnDemand:
 				// nothing to set here

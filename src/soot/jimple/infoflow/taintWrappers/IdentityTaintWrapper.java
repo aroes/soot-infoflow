@@ -85,7 +85,7 @@ public class IdentityTaintWrapper extends AbstractTaintWrapper {
 	}
 
 	@Override
-	public boolean supportsCallee(Stmt callSite) {
+	public boolean supportsCallee(Stmt callSite, IInfoflowCFG icfg) {
 		return true;
 	}
 	

@@ -515,7 +515,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 			}
 
 			@Override
-			public boolean supportsCallee(Stmt callSite) {
+			public boolean supportsCallee(Stmt callSite, IInfoflowCFG icfg) {
 				return false;
 			}
 		});

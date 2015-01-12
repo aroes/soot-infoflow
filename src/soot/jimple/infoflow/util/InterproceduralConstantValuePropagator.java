@@ -354,7 +354,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 			// If this method calls another method for which we have a taint
 			// wrapper, we need to conservatively assume that the taint wrapper
 			// can do anything
-			if (taintWrapper != null && taintWrapper.supportsCallee(s)) {
+			if (taintWrapper != null && taintWrapper.supportsCallee(s, icfg)) {
 				methodSideEffects.put(method, true);
 				return true;
 			}

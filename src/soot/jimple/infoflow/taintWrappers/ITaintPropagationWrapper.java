@@ -64,10 +64,11 @@ public interface ITaintPropagationWrapper {
 	 * for the given call site. If an implementation returns "false" for a call
 	 * site, this call sites might be removed if not needed elsewhere.
 	 * @param callSite The call site to check
+	 * @param icfg The interprocedural control flow graph 
 	 * @return True if this taint wrapper can in general produce taints for the
 	 * given call site.
 	 */
-	public boolean supportsCallee(Stmt callSite);
+	public boolean supportsCallee(Stmt callSite, IInfoflowCFG icfg);
 	
 	/**
 	 * Gets the number of times in which the taint wrapper was able to

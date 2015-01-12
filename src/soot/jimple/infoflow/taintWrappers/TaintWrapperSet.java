@@ -64,9 +64,9 @@ public class TaintWrapperSet extends AbstractTaintWrapper {
 	}
 	
 	@Override
-	public boolean supportsCallee(Stmt callSite) {
+	public boolean supportsCallee(Stmt callSite, IInfoflowCFG icfg) {
 		for (ITaintPropagationWrapper w : this.wrappers)
-			if (w.supportsCallee(callSite))
+			if (w.supportsCallee(callSite, icfg))
 				return true;
 		return false;
 	}

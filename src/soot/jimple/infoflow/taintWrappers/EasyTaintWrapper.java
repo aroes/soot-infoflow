@@ -475,7 +475,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 	}
 	
 	@Override
-	public boolean supportsCallee(Stmt callSite) {
+	public boolean supportsCallee(Stmt callSite, IInfoflowCFG icfg) {
 		if (!callSite.containsInvokeExpr()
 				|| !supportsCallee(callSite.getInvokeExpr().getMethod()))
 			return false;
