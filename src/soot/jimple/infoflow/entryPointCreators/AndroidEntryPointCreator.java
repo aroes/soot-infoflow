@@ -489,6 +489,8 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		JNopStmt startWhileStmt = new JNopStmt();
 		JNopStmt endWhileStmt = new JNopStmt();
 		body.getUnits().add(startWhileStmt);
+		createIfStmt(endWhileStmt);
+		
 		boolean hasAdditionalMethods = false;
 		if (modelAdditionalMethods) {
 			for(SootMethod currentMethod : currentClass.getMethods()){
@@ -531,6 +533,8 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		JNopStmt startWhileStmt = new JNopStmt();
 		JNopStmt endWhileStmt = new JNopStmt();
 		body.getUnits().add(startWhileStmt);
+		createIfStmt(endWhileStmt);
+		
 		boolean hasAdditionalMethods = false;
 		if (modelAdditionalMethods) {
 			for(SootMethod currentMethod : currentClass.getMethods()){
@@ -576,6 +580,8 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		JNopStmt startWhileStmt = new JNopStmt();
 		JNopStmt endWhileStmt = new JNopStmt();
 		body.getUnits().add(startWhileStmt);
+		createIfStmt(endWhileStmt);
+		
 		boolean hasAdditionalMethods = false;
 		if (modelAdditionalMethods) {
 			for(SootMethod currentMethod : currentClass.getMethods()){
