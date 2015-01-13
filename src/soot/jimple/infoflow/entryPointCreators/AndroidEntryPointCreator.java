@@ -717,6 +717,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 			JNopStmt startWhileStmt = new JNopStmt();
 			JNopStmt endWhileStmt = new JNopStmt();
 			body.getUnits().add(startWhileStmt);
+			createIfStmt(endWhileStmt);
 
 			// Add the callbacks
 			addCallbackMethods(currentClass);
