@@ -256,7 +256,12 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 					SootMethod caller = icfg.getMethodOf(assign);
 					if (!caller.getActiveBody().getUnits().contains(assign))
 						continue;
-						
+					
+					// If the call site has multiple callees, we cannot propagate a
+					// single constant
+					if (icfg.getCalleesOfCallAt(callSite).size() > 1)
+						continue;
+					
 					// If the call has no side effects, we can remove it altogether,
 					// otherwise we can just propagate the return value
 					Unit assignConst = Jimple.v().newAssignStmt(assign.getLeftOp(), value);
