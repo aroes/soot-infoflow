@@ -574,7 +574,17 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		//lifecycle1:
 		//2. onStart:
 		searchAndBuildMethod(AndroidEntryPointConstants.SERVICE_ONSTART1, currentClass, entryPoints, classLocal);
+		
+		// onStartCommand can be called an arbitrary number of times, or never
+		JNopStmt beforeStartCommand = new JNopStmt();
+		JNopStmt afterStartCommand = new JNopStmt();		
+		body.getUnits().add(beforeStartCommand);
+		createIfStmt(afterStartCommand);
+		
 		searchAndBuildMethod(AndroidEntryPointConstants.SERVICE_ONSTART2, currentClass, entryPoints, classLocal);
+		createIfStmt(beforeStartCommand);
+		body.getUnits().add(afterStartCommand);
+		
 		//methods: 
 		//all other entryPoints of this class:
 		JNopStmt startWhileStmt = new JNopStmt();

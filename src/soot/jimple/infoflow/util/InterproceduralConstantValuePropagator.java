@@ -269,7 +269,8 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 						// We don't have side effects, so we can just change
 						// a = b.foo() into a = 0.
 						caller.getActiveBody().getUnits().swapWith(assign, assignConst);
-						ConstantPropagatorAndFolder.v().transform(caller.getActiveBody());
+						if (!excludedMethods.contains(caller))
+							ConstantPropagatorAndFolder.v().transform(caller.getActiveBody());
 						
 						// Fix the callgraph
 						if (Scene.v().hasCallGraph())
@@ -279,7 +280,8 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 						// We have side effects, so we need to keep the method call. Change
 						// a = b.foo() into b.foo(); a = 0;
 						caller.getActiveBody().getUnits().insertAfter(assignConst, assign);
-						ConstantPropagatorAndFolder.v().transform(caller.getActiveBody());
+						if (!excludedMethods.contains(caller))
+							ConstantPropagatorAndFolder.v().transform(caller.getActiveBody());
 						caller.getActiveBody().getUnits().remove(assignConst);
 						
 						Stmt inv = Jimple.v().newInvokeStmt(assign.getInvokeExpr());
