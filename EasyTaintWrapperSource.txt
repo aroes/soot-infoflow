@@ -392,3 +392,8 @@
 <android.os.Parcel: void writeTypedList(java.util.List)>
 <android.os.Parcel: void writeValue(java.lang.Object)>
 <android.os.Parcel: void unmarshall(byte[],int,int)>
+
+<android.graphics.Point: void <init>(int,int)>
+<android.graphics.Point: void <init>(android.graphics.Point)>
+<android.graphics.PointF: void <init>(float,float)>
+<android.graphics.PointF: void <init>(android.graphics.Point)>
