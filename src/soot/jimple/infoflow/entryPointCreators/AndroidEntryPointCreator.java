@@ -408,9 +408,9 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 				Unit u = unitIt.next();
 				if (ifs != null && ifs.getTarget() == u) {
 					body.getUnits().remove(ifs);
-					ifs = null;
 					changed = true;
 				}
+				ifs = null;
 				if (u instanceof IfStmt)
 					ifs = (IfStmt) u;
 			}
