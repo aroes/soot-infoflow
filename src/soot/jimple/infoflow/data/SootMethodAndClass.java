@@ -115,5 +115,24 @@ public class SootMethodAndClass {
 		// The parameter list is available from the outside, so we can't cache it
 		return this.hashCode + this.parameters.hashCode() * 7;
 	}
+	
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("<");
+		sb.append(className);
+		sb.append(": ");
+		sb.append(returnType);
+		sb.append(" ");
+		sb.append("methodName(");
+		boolean isFirst = true;
+		for (String param : parameters) {
+			if (!isFirst)
+				sb.append(",");
+			sb.append(param);
+		}
+		sb.append(")>");
+		return sb.toString();
+	}
 
 }

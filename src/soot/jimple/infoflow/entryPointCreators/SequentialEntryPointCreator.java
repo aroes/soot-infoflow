@@ -64,7 +64,10 @@ public class SequentialEntryPointCreator extends BaseEntryPointCreator {
 						SootMethodRepresentationParser.v().parseSootMethodString(method);
 				SootMethod methodToInvoke = findMethod(Scene.v().getSootClass(
 						methodAndClass.getClassName()), methodAndClass.getSubSignature());
-				buildMethodCall(methodToInvoke, body, localVal, generator);
+				if (methodToInvoke == null)
+					System.err.println("Method " + methodAndClass + " not found, skipping");
+				else
+					buildMethodCall(methodToInvoke, body, localVal, generator);
 			}
 		}
 		
