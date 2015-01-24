@@ -25,6 +25,7 @@ import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
 import soot.Value;
+import soot.ValueBox;
 import soot.VoidType;
 import soot.JastAddJ.DivExpr;
 import soot.jimple.ArrayRef;
@@ -63,6 +64,8 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 	private boolean removeSideEffectFreeMethods = true;
 	
 	protected final Map<SootMethod, Boolean> methodSideEffects =
+			new ConcurrentHashMap<SootMethod, Boolean>();
+	protected final Map<SootMethod, Boolean> methodFieldReads =
 			new ConcurrentHashMap<SootMethod, Boolean>();
 	
 	/**
@@ -127,7 +130,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 				continue;
 			if (SystemClassHandler.isClassInSystemPackage(sm.getDeclaringClass().getName()))
 				continue;
-			
+						
 			// If this method returns nothing, is side-effect free and does not
 			// call a sink, we can remove it altogether.
 			if (removeSideEffectFreeMethods
@@ -144,6 +147,16 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 				
 				if (typeSupportsConstants(sm.getReturnType()))
 					propagateReturnValueIntoCallers(sm);
+			}
+			
+			// If this method does not call a source, does not have any
+			// parameters, and does not read any fields, we can remove it.
+			if (removeSideEffectFreeMethods
+					&& sm.getParameterCount() == 0
+					&& !hasFieldReadsOrCallsSource(sm)
+					&& !isSourceOrTaintWrapped(sm)) {
+				removeAllCallers(sm);
+				continue;
 			}
 		}
 	}
@@ -173,14 +186,46 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 	}
 
 	/**
+	 * Checks whether the given method is a source or is accepted by the taint
+	 * wrapper
+	 * @param method The method to check
+	 * @return True if the given method is a source or is accepted by the taint
+	 * wrapper, otherwise false
+	 */
+	private boolean isSourceOrTaintWrapped(SootMethod method) {
+		// If this method is a sink on its own, we must keep it
+		for (Unit callSite : icfg.getCallersOf(method))
+			if (sourceSinkManager.getSourceInfo((Stmt) callSite, icfg) != null) {
+				methodFieldReads.put(method, true);
+				return true;
+			}
+		
+		// If this method is wrapped, we need to keep it
+		if (taintWrapper != null && taintWrapper.supportsCallee(method)) {
+			methodFieldReads.put(method, true);
+			return true;
+		}
+		
+		return false;
+	}
+
+	 /**
 	 * Removes all statements calling the given method
 	 * @param sm The method that shall no longer be called
 	 */
 	private void removeAllCallers(SootMethod sm) {
+		// Do not remove static initializers
+		if (sm.getName().equals("<clinit>"))
+			return;
+		
 		for (Unit callSite : icfg.getCallersOf(sm)) {
 			// Make sure that we don't access anything we have already removed
 			SootMethod caller = icfg.getMethodOf(callSite);
 			if (!caller.getActiveBody().getUnits().contains(callSite))
+				continue;
+			
+			// Only remove actual call sites
+			if (!((Stmt) callSite).containsInvokeExpr())
 				continue;
 			
 			// Remove the call
@@ -336,7 +381,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 			methodSideEffects.put(method, false);
 			return false;
 		}
-				
+		
 		// Scan for references to this variable
 		for (Unit u : method.getActiveBody().getUnits()) {
 			if (u instanceof ThrowStmt) {
@@ -387,6 +432,92 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 		return false;
 	}
 	
+	/**
+	 * Checks whether the given method or one of its transitive callees reads
+	 * fields or calls a source method
+	 * @param method The method to check
+	 * @return True if the given method or one of its transitive callees reads
+	 * fields or calls a source method, otherwise false.
+	 */
+	private boolean hasFieldReadsOrCallsSource(SootMethod method) {
+		return hasFieldReadsOrCallsSource(method, new HashSet<SootMethod>());
+	}
+	
+	/**
+	 * Checks whether the given method or one of its transitive callees reads
+	 * fields or calls a source method
+	 * @param method The method to check
+	 * @param runList A set to receive all methods that have already been
+	 * processed
+	 * @param cache The cache in which to store the results
+	 * @return True if the given method or one of its transitive callees reads
+	 * fields or calls a source method, otherwise false.
+	 */
+	private boolean hasFieldReadsOrCallsSource(SootMethod method,
+			Set<SootMethod> runList) {		
+		// Without a body, we cannot say much
+		if (!method.hasActiveBody())
+			return false;
+		
+		// Do we already have an entry?
+		Boolean hasSideEffects = methodFieldReads.get(method);
+		if (hasSideEffects != null)
+			return hasSideEffects;
+		
+		// Do not process the same method twice
+		if (!runList.add(method))
+			return false;
+		
+		// If this is an Android stub method that just throws a stub exception,
+		// this will never happen in practice and can be removed
+		if (methodIsAndroidStub(method)) {
+			methodFieldReads.put(method, false);
+			return false;
+		}
+		
+		// Scan for references to this variable
+		for (Unit u : method.getActiveBody().getUnits()) {
+			if (u instanceof ThrowStmt) {
+				methodFieldReads.put(method, true);
+				return true;
+			}
+			else for (ValueBox vb : u.getUseBoxes())
+				if (vb.getValue() instanceof FieldRef) {
+					methodFieldReads.put(method, true);
+					return true;					
+				}
+			
+			Stmt s = (Stmt) u;
+			
+			// If this method calls another method for which we have a taint
+			// wrapper, we need to conservatively assume that the taint wrapper
+			// can do anything
+			if (taintWrapper != null && taintWrapper.supportsCallee(s, icfg)) {
+				methodFieldReads.put(method, true);
+				return true;
+			}
+			
+			if (s.containsInvokeExpr()) {
+				// If this method calls a sink, we need to keep it
+				if (sourceSinkManager.getSourceInfo((Stmt) u, icfg) != null) {
+					methodFieldReads.put(method, true);
+					return true;
+				}
+				
+				// Check the callees
+				for (Iterator<Edge> edgeIt = Scene.v().getCallGraph().edgesOutOf(u); edgeIt.hasNext(); ) {
+					Edge e = edgeIt.next();
+						if (hasSideEffectsOrCallsSink(e.getTgt().method(), runList))
+							return true;
+				}
+			}
+		}
+		
+		// Variable is not read
+		methodFieldReads.put(method, false);
+		return false;
+	}
+
 	/**
 	 * Checks whether the given method is a library stub method
 	 * @param method The method to check
