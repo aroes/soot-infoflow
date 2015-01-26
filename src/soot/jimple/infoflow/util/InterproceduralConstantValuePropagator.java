@@ -224,6 +224,14 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 			if (!caller.getActiveBody().getUnits().contains(callSite))
 				continue;
 			
+			// If this call could affect other callees than the given one, we
+			// must keep the call site intact and can only remove that single
+			// edge
+			if (icfg.getCalleesOfCallAt(callSite).size() > 1) {
+				Scene.v().getCallGraph().removeEdge(new Edge(caller, (Stmt) callSite, sm));
+				continue;
+			}
+			
 			// Only remove actual call sites
 			if (!((Stmt) callSite).containsInvokeExpr())
 				continue;
