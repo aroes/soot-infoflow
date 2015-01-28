@@ -411,6 +411,10 @@ public class AccessPath implements Cloneable {
 		return value != null && fields != null && fields.length > 0;
 	}
 	
+	public boolean isFieldRef() {
+		return fields != null && fields.length > 0;
+	}
+	
 	public boolean isLocal(){
 		return value != null && value instanceof Local && (fields == null || fields.length == 0);
 	}
