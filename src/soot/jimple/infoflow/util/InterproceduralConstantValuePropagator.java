@@ -25,13 +25,12 @@ import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
 import soot.Value;
-import soot.ValueBox;
 import soot.VoidType;
-import soot.JastAddJ.DivExpr;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
 import soot.jimple.Constant;
 import soot.jimple.DefinitionStmt;
+import soot.jimple.DivExpr;
 import soot.jimple.FieldRef;
 import soot.jimple.IdentityStmt;
 import soot.jimple.InvokeExpr;
@@ -130,16 +129,6 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 				continue;
 			if (SystemClassHandler.isClassInSystemPackage(sm.getDeclaringClass().getName()))
 				continue;
-						
-			// If this method returns nothing, is side-effect free and does not
-			// call a sink, we can remove it altogether.
-			if (removeSideEffectFreeMethods
-					&& sm.getReturnType() == VoidType.v()
-					&& !hasSideEffectsOrCallsSink(sm)
-					&& !isSinkOrTaintWrapped(sm)) {
-				removeAllCallers(sm);
-				continue;
-			}
 			
 			if (sm.getReturnType() != VoidType.v() || sm.getParameterCount() > 0) {
 				if (sm.getParameterCount() > 0)
@@ -148,33 +137,107 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 				if (typeSupportsConstants(sm.getReturnType()))
 					propagateReturnValueIntoCallers(sm);
 			}
-			
-			// If this method does not call a source, does not have any
-			// parameters, and does not read any fields, we can remove it.
-			if (removeSideEffectFreeMethods
-					&& sm.getParameterCount() == 0
-					&& !hasFieldReadsOrCallsSource(sm)
-					&& !isSourceOrTaintWrapped(sm)) {
-				removeAllCallers(sm);
-				continue;
+		}
+		
+		// Check for calls we can remove altogether
+		if (removeSideEffectFreeMethods) {
+			int callEdgesRemoved = 0;
+			for (QueueReader<MethodOrMethodContext> rdr = Scene.v().getReachableMethods().listener();
+					rdr.hasNext(); ) {
+				MethodOrMethodContext mom = rdr.next();
+				SootMethod sm = mom.method();
+				if (sm == null || !sm.hasActiveBody())
+					continue;
+				
+				// Do not touch excluded methods
+				if (excludedMethods != null && excludedMethods.contains(sm))
+					continue;
+				
+				// Check for call sites
+				for (Iterator<Unit> unitIt = sm.getActiveBody().getUnits().snapshotIterator();
+						unitIt.hasNext(); ) {
+					Stmt s = (Stmt) unitIt.next();
+					if (!sm.getActiveBody().getUnits().contains(s))
+						continue;
+					if (!s.containsInvokeExpr())
+						continue;
+					
+					if (isSourceSinkOrTaintWrapped(s))
+						continue;
+					
+					// If none of our pre-conditions are satisfied, there is no
+					// need to look at concrete callees
+					if (s.getInvokeExpr().getMethod().getReturnType() != VoidType.v()
+							&& getNonConstParamCount(s) > 0)
+						continue;
+					
+					boolean allCalleesRemoved = true;
+					for (Iterator<Edge> edgeIt = Scene.v().getCallGraph().edgesOutOf(s);
+							edgeIt.hasNext(); ) {
+						Edge edge = edgeIt.next();
+						SootMethod callee = edge.tgt();
+						
+						// If this method returns nothing, is side-effect free and does not
+						// call a sink, we can remove it altogether. No data can ever flow
+						// out of it.
+						if (callee.getReturnType() == VoidType.v()
+								&& !hasSideEffectsOrCallsSink(callee)) {
+							Scene.v().getCallGraph().removeEdge(edge);
+							callEdgesRemoved++;
+							continue;
+						}
+						
+						if (!sm.getName().equals("<clinit>"))
+							allCalleesRemoved = false;
+					}
+					
+					// If all call edges have been removed from a call site, we can
+					// kill the call site altogether
+					if (allCalleesRemoved)
+						removeCallSite(s, sm);
+				}
 			}
+			System.out.println("Removed " + callEdgesRemoved + " call edges");
 		}
 	}
 	
 	/**
-	 * Checks whether the given method is a sink or is accepted by the taint
-	 * wrapper
-	 * @param method The method to check
-	 * @return True if the given method is a sink or is accepted by the taint
-	 * wrapper, otherwise false
+	 * Gets the number of non-constant arguments to the given method call
+	 * @param s A call site
+	 * @return The number of non-constant arguments in the given call site
 	 */
-	private boolean isSinkOrTaintWrapped(SootMethod method) {
-		// If this method is a sink on its own, we must keep it
-		for (Unit callSite : icfg.getCallersOf(method))
-			if (sourceSinkManager.isSink((Stmt) callSite, icfg)) {
-				methodSideEffects.put(method, true);
-				return true;
-			}
+	private int getNonConstParamCount(Stmt s) {
+		int cnt = 0;
+		for (Value val : s.getInvokeExpr().getArgs())
+			if (!(val instanceof Constant))
+				cnt++;
+		return cnt;
+	}
+
+	/**
+	 * Checks whether the given method is a source, a sink or is accepted by the
+	 * taint wrapper
+	 * @param callSite The call site to check
+	 * @return True if the given method is a source, a sink or is accepted by
+	 * the taint wrapper, otherwise false
+	 */
+	private boolean isSourceSinkOrTaintWrapped(Stmt callSite) {
+		if (!callSite.containsInvokeExpr())
+			return false;
+		
+		SootMethod method = callSite.getInvokeExpr().getMethod();
+		
+		// If this method is a source on its own, we must keep it
+		if (sourceSinkManager.getSourceInfo((Stmt) callSite, icfg) != null) {
+			methodFieldReads.put(method, true);
+			return true;
+		}
+		
+		// If this method is a sink, we must keep it as well
+		if (sourceSinkManager.isSink((Stmt) callSite, icfg)) {
+			methodSideEffects.put(method, true);
+			return true;
+		}
 		
 		// If this method is wrapped, we need to keep it
 		if (taintWrapper != null && taintWrapper.supportsCallee(method)) {
@@ -184,65 +247,27 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 		
 		return false;
 	}
-
-	/**
-	 * Checks whether the given method is a source or is accepted by the taint
-	 * wrapper
-	 * @param method The method to check
-	 * @return True if the given method is a source or is accepted by the taint
-	 * wrapper, otherwise false
-	 */
-	private boolean isSourceOrTaintWrapped(SootMethod method) {
-		// If this method is a sink on its own, we must keep it
-		for (Unit callSite : icfg.getCallersOf(method))
-			if (sourceSinkManager.getSourceInfo((Stmt) callSite, icfg) != null) {
-				methodFieldReads.put(method, true);
-				return true;
-			}
-		
-		// If this method is wrapped, we need to keep it
-		if (taintWrapper != null && taintWrapper.supportsCallee(method)) {
-			methodFieldReads.put(method, true);
-			return true;
-		}
-		
-		return false;
-	}
-
+	
 	 /**
-	 * Removes all statements calling the given method
-	 * @param sm The method that shall no longer be called
+	 * Removes a given call site
+	 * @param callSite The call site to be removed
+	 * @param caller The method containing the call site
 	 */
-	private void removeAllCallers(SootMethod sm) {
-		// Do not remove static initializers
-		if (sm.getName().equals("<clinit>"))
+	private void removeCallSite(Stmt callSite, SootMethod caller) {
+		// Make sure that we don't access anything we have already removed
+		if (!caller.getActiveBody().getUnits().contains(callSite))
 			return;
 		
-		for (Unit callSite : icfg.getCallersOf(sm)) {
-			// Make sure that we don't access anything we have already removed
-			SootMethod caller = icfg.getMethodOf(callSite);
-			if (!caller.getActiveBody().getUnits().contains(callSite))
-				continue;
-			
-			// If this call could affect other callees than the given one, we
-			// must keep the call site intact and can only remove that single
-			// edge
-			if (icfg.getCalleesOfCallAt(callSite).size() > 1) {
-				Scene.v().getCallGraph().removeEdge(new Edge(caller, (Stmt) callSite, sm));
-				continue;
-			}
-			
-			// Only remove actual call sites
-			if (!((Stmt) callSite).containsInvokeExpr())
-				continue;
-			
-			// Remove the call
-			caller.getActiveBody().getUnits().remove(callSite);
-
-			// Fix the callgraph
-			if (Scene.v().hasCallGraph())
-				Scene.v().getCallGraph().removeAllEdgesOutOf(callSite);
-		}
+		// Only remove actual call sites
+		if (!((Stmt) callSite).containsInvokeExpr())
+			return;
+		
+		// Remove the call
+		caller.getActiveBody().getUnits().remove(callSite);
+		
+		// Fix the callgraph
+		if (Scene.v().hasCallGraph())
+			Scene.v().getCallGraph().removeAllEdgesOutOf(callSite);
 	}
 
 	/**
@@ -333,7 +358,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 						// We have side effects, so we need to keep the method call. Change
 						// a = b.foo() into b.foo(); a = 0;
 						caller.getActiveBody().getUnits().insertAfter(assignConst, assign);
-						if (!excludedMethods.contains(caller))
+						if (!excludedMethods.contains(caller)) 
 							ConstantPropagatorAndFolder.v().transform(caller.getActiveBody());
 						caller.getActiveBody().getUnits().remove(assignConst);
 						
@@ -440,92 +465,6 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 		return false;
 	}
 	
-	/**
-	 * Checks whether the given method or one of its transitive callees reads
-	 * fields or calls a source method
-	 * @param method The method to check
-	 * @return True if the given method or one of its transitive callees reads
-	 * fields or calls a source method, otherwise false.
-	 */
-	private boolean hasFieldReadsOrCallsSource(SootMethod method) {
-		return hasFieldReadsOrCallsSource(method, new HashSet<SootMethod>());
-	}
-	
-	/**
-	 * Checks whether the given method or one of its transitive callees reads
-	 * fields or calls a source method
-	 * @param method The method to check
-	 * @param runList A set to receive all methods that have already been
-	 * processed
-	 * @param cache The cache in which to store the results
-	 * @return True if the given method or one of its transitive callees reads
-	 * fields or calls a source method, otherwise false.
-	 */
-	private boolean hasFieldReadsOrCallsSource(SootMethod method,
-			Set<SootMethod> runList) {		
-		// Without a body, we cannot say much
-		if (!method.hasActiveBody())
-			return false;
-		
-		// Do we already have an entry?
-		Boolean hasSideEffects = methodFieldReads.get(method);
-		if (hasSideEffects != null)
-			return hasSideEffects;
-		
-		// Do not process the same method twice
-		if (!runList.add(method))
-			return false;
-		
-		// If this is an Android stub method that just throws a stub exception,
-		// this will never happen in practice and can be removed
-		if (methodIsAndroidStub(method)) {
-			methodFieldReads.put(method, false);
-			return false;
-		}
-		
-		// Scan for references to this variable
-		for (Unit u : method.getActiveBody().getUnits()) {
-			if (u instanceof ThrowStmt) {
-				methodFieldReads.put(method, true);
-				return true;
-			}
-			else for (ValueBox vb : u.getUseBoxes())
-				if (vb.getValue() instanceof FieldRef) {
-					methodFieldReads.put(method, true);
-					return true;					
-				}
-			
-			Stmt s = (Stmt) u;
-			
-			// If this method calls another method for which we have a taint
-			// wrapper, we need to conservatively assume that the taint wrapper
-			// can do anything
-			if (taintWrapper != null && taintWrapper.supportsCallee(s, icfg)) {
-				methodFieldReads.put(method, true);
-				return true;
-			}
-			
-			if (s.containsInvokeExpr()) {
-				// If this method calls a sink, we need to keep it
-				if (sourceSinkManager.getSourceInfo((Stmt) u, icfg) != null) {
-					methodFieldReads.put(method, true);
-					return true;
-				}
-				
-				// Check the callees
-				for (Iterator<Edge> edgeIt = Scene.v().getCallGraph().edgesOutOf(u); edgeIt.hasNext(); ) {
-					Edge e = edgeIt.next();
-						if (hasSideEffectsOrCallsSink(e.getTgt().method(), runList))
-							return true;
-				}
-			}
-		}
-		
-		// Variable is not read
-		methodFieldReads.put(method, false);
-		return false;
-	}
-
 	/**
 	 * Checks whether the given method is a library stub method
 	 * @param method The method to check
