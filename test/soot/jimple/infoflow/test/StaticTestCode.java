@@ -104,4 +104,31 @@ public class StaticTestCode {
 		cm.publish(im);
 	}
 	
+	private class ClinitTestClass {
+		
+		final String s = TelephonyManager.getDeviceId();
+		
+		public String id(String s) {
+			return s;
+		}
+		
+	}
+	
+	public void clinitTest1() {
+		ClinitTestClass ctc = new ClinitTestClass();
+		String t = ctc.id("foo");
+		System.out.println(t);
+
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(ctc.s);
+	}
+	
+	public void clinitTest2() {
+		String s = TelephonyManager.getDeviceId();
+		ClinitTestClass ctc = new ClinitTestClass();
+		String t = ctc.id(s);
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(t);
+	}
+
 }

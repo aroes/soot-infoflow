@@ -941,10 +941,14 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							return Collections.emptySet();
 						
 						// Only propagate the taint if the target field is actually read
-						if (enableStaticFields && source.getAccessPath().isStaticFieldRef())
+						if (source.getAccessPath().isStaticFieldRef()) {
+							if (!enableStaticFields)
+								return Collections.emptySet();
+							
 							if (!interproceduralCFG().isStaticFieldRead(dest,
 									source.getAccessPath().getFirstField()))
 								return Collections.emptySet();
+						}
 						
 						Set<Abstraction> res = new HashSet<Abstraction>();
 						
@@ -961,7 +965,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								}
 						}
 						// staticfieldRefs must be analyzed even if they are not part of the params:
-						else if (enableStaticFields && source.getAccessPath().isStaticFieldRef())
+						else if (source.getAccessPath().isStaticFieldRef())
 							res.add(source.deriveNewAbstraction(source.getAccessPath(), stmt));
 						
 						//special treatment for clinit methods - no param mapping possible
@@ -1090,6 +1094,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							if (interproceduralCFG().getMethodOf(newSource.getActivationUnit()) == callee)
 								return Collections.emptySet();
 						
+						// Static field tracking can be disabled
+						if (!enableStaticFields && newSource.getAccessPath().isStaticFieldRef())
+							return Collections.emptySet();
+						
 						Set<Abstraction> res = new HashSet<Abstraction>();
 						
 						// Check whether this return is treated as a sink
@@ -1137,7 +1145,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						}
 
 						// easy: static
-						if (enableStaticFields && newSource.getAccessPath().isStaticFieldRef()) {
+						if (newSource.getAccessPath().isStaticFieldRef()) {
 							// Simply pass on the taint
 							Abstraction abs = newSource;
 							res.add(abs);
@@ -1287,6 +1295,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								return Collections.emptySet();
 						}
 						
+						// Static field tracking can be disabled
+						if (!enableStaticFields && source.getAccessPath().isStaticFieldRef())
+							return Collections.emptySet();
+						
 						Set<Abstraction> res = new HashSet<Abstraction>();
 						
 						// Sources can either be assignments like x = getSecret() or
@@ -1370,7 +1382,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						
 						// If the callee does not read the given value, we also need to pass it on
 						// since we do not propagate it into the callee.
-						if (enableStaticFields && source.getAccessPath().isStaticFieldRef()) {
+						if (source.getAccessPath().isStaticFieldRef()) {
 							if (!interproceduralCFG().isStaticFieldUsed(callee,
 									source.getAccessPath().getFirstField()))
 								passOn = true;
