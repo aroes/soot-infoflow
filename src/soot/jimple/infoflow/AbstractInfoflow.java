@@ -16,7 +16,7 @@ import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
  *
  */
 public abstract class AbstractInfoflow implements IInfoflow {
-
+	
 	protected ITaintPropagationWrapper taintWrapper;
 
 	protected boolean stopAfterFirstFlow = false;
@@ -36,6 +36,8 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	protected AliasingAlgorithm aliasingAlgorithm = AliasingAlgorithm.FlowSensitive;
 	
 	protected Collection<Transform> preProcessors = Collections.emptyList();
+	
+	protected CodeEliminationMode codeEliminationMode = CodeEliminationMode.RemoveSideEffectFreeCode;
     
     /**
      * Creates a new instance of the abstract info flow problem
@@ -146,6 +148,11 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	@Override
 	public void setIgnoreFlowsInSystemPackages(boolean ignoreFlowsInSystemPackages) {
 		this.ignoreFlowsInSystemPackages = ignoreFlowsInSystemPackages;
+	}
+	
+	@Override
+	public void setCodeEliminationMode(CodeEliminationMode mode) {
+		this.codeEliminationMode = mode;
 	}
 	
 }

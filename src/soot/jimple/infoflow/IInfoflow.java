@@ -53,6 +53,28 @@ public interface IInfoflow {
 	}
 
 	/**
+	 * Enumeration containing all possible modes of dead and irrelevant code
+	 * elimination
+	 */
+	public enum CodeEliminationMode {
+		/**
+		 * Do not perform any code elimination before running the taint analysis
+		 */
+		NoCodeElimination,
+		/**
+		 * Perform an inter-procedural constant propagation and folding and then
+		 * remove all code that is unreachable
+		 */
+		PropagateConstants,
+		/**
+		 * In addition to the inter-procedural constant propagation and folding,
+		 * also remove live code that cannot potentially influence the outcome
+		 * of the taint analysis
+		 */
+		RemoveSideEffectFreeCode
+	}
+	
+	/**
 	 * Sets the taint wrapper for deciding on taint propagation through black-box
 	 * methods
 	 * @param wrapper The taint wrapper object that decides on how information is
@@ -243,4 +265,12 @@ public interface IInfoflow {
 	 */
 	public void setIgnoreFlowsInSystemPackages(boolean ignoreFlowsInSystemPackages);
 	
+	/**
+	 * Sets whether and how FlowDroid shall eliminate irrelevant code before
+	 * running the taint propagation
+	 * @param Mode the mode of dead and irrelevant code eliminiation to be
+	 * used
+	 */
+	public void setCodeEliminationMode(CodeEliminationMode mode);
+
 }

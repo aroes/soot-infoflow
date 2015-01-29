@@ -94,7 +94,6 @@ public class Infoflow extends AbstractInfoflow {
 	private final String androidPath;
 	private final boolean forceAndroidJar;
 	private IInfoflowConfig sootConfig;
-	private boolean enableCodeElimination = true;
 	
 	private IIPCManager ipcManager = new DefaultIPCManager(new ArrayList<String>());
 	
@@ -460,7 +459,7 @@ public class Infoflow extends AbstractInfoflow {
             tr.apply();
                 
         // Perform constant propagation and remove dead code
-        if (enableCodeElimination) {
+        if (codeEliminationMode != CodeEliminationMode.NoCodeElimination) {
 			long currentMillis = System.nanoTime();
 			eliminateDeadCode(sourcesSinks);
 			logger.info("Dead code elimination took " + (System.nanoTime() - currentMillis) / 1E9
@@ -707,7 +706,8 @@ public class Infoflow extends AbstractInfoflow {
 						Scene.v().getEntryPoints(),
 						sourcesSinks,
 						taintWrapper);
-		ipcvp.setRemoveSideEffectFreeMethods(!enableImplicitFlows);
+		ipcvp.setRemoveSideEffectFreeMethods(codeEliminationMode
+				== CodeEliminationMode.RemoveSideEffectFreeCode);
 		ipcvp.transform();
 		
 		// Get rid of all dead code
@@ -968,16 +968,6 @@ public class Infoflow extends AbstractInfoflow {
 	@Override
 	public void setIPCManager(IIPCManager ipcManager) {
 	    this.ipcManager = ipcManager;
-	}
-	
-	/**
-	 * Sets whether FlowDroid shall eliminate irrelevant code before running the
-	 * taint propagation
-	 * @param enableCodeElimination True if irrelevant code shall be removed
-	 * before performing the taint propagation, otherwise false
-	 */
-	public void setEnableCodeElimination(boolean enableCodeElimination) {
-		this.enableCodeElimination = enableCodeElimination;
 	}
 	
 	/**
