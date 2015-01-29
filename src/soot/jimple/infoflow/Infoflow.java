@@ -983,7 +983,7 @@ public class Infoflow extends AbstractInfoflow {
 	/**
 	 * Gets the maximum memory consumption during the last analysis run
 	 * @return The maximum memory consumption during the last analysis run if
-	 * available, otherwise false
+	 * available, otherwise -1
 	 */
 	public long getMaxMemoryConsumption() {
 		return this.maxMemoryConsumption;
