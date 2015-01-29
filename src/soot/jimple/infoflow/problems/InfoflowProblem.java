@@ -1361,9 +1361,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						
 						// If one of the callers does not read the value, we pass it on
 						if (!source.getAccessPath().isStaticFieldRef() && !source.isImplicit()) {
-							boolean atLeastOneCallee = false;
-							for (SootMethod callee : interproceduralCFG().getCalleesOfCallAt(call)) {
-								atLeastOneCallee = true;
+							outer : for (SootMethod callee : interproceduralCFG().getCalleesOfCallAt(call)) {
 								if (callee.isConcrete() && callee.hasActiveBody()) {
 									Local[] paramLocals = callee.getActiveBody().getParameterLocals().toArray(
 											new Local[callee.getParameterCount()]);
@@ -1374,11 +1372,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 											source.getAccessPath()))
 										if (!interproceduralCFG().methodReadsValue(callee, ap.getPlainValue())) {
 											passOn = true;
-											break;
+											break outer;
 										}
 									}
 							}
-							passOn |= !atLeastOneCallee;
 						}
 						
 						// Implicit taints are always passed over conditionally called methods
