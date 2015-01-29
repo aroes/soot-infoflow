@@ -941,12 +941,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								return Collections.emptySet();
 						}
 						
-						// If the variable is never read in the callee, there is no
-						// need to propagate it through
-//						if (!source.getAccessPath().isStaticFieldRef()
-//								&& !interproceduralCFG().methodReadsValue(dest, source.getAccessPath().getPlainValue()))
-//							return Collections.emptySet();
-						
 						// Map the source access path into the callee
 						Set<AccessPath> res = mapAccessPathToCallee(dest, ie, paramLocals,
 								thisLocal, source.getAccessPath());
@@ -954,9 +948,16 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						// Translate the access paths into abstractions
 						Set<Abstraction> resAbs = new HashSet<Abstraction>();
 						for (AccessPath ap : res)
-							if (!ap.isStaticFieldRef()
-									|| interproceduralCFG().isStaticFieldRead(dest, ap.getFirstField()))
-								resAbs.add(source.deriveNewAbstraction(ap, stmt));
+							if (ap.isStaticFieldRef()) {
+								// Do not propagate static fields that are not read inside the callee 
+								if (interproceduralCFG().isStaticFieldRead(dest, ap.getFirstField()))
+									resAbs.add(source.deriveNewAbstraction(ap, stmt));
+							}
+							// If the variable is never read in the callee, there is no
+							// need to propagate it through
+							else if (source.isImplicit() || interproceduralCFG().methodReadsValue(dest, ap.getPlainValue()))
+									resAbs.add(source.deriveNewAbstraction(ap, stmt));
+						
 						return resAbs;
 					}
 				};
@@ -1359,22 +1360,26 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						}
 						
 						// If one of the callers does not read the value, we pass it on
-//						if (!source.getAccessPath().isStaticFieldRef()) {
-//							for (SootMethod callee : interproceduralCFG().getCalleesOfCallAt(call))
-//								if (callee.isConcrete() && callee.hasActiveBody()) {
-//									Local[] paramLocals = callee.getActiveBody().getParameterLocals().toArray(
-//											new Local[callee.getParameterCount()]);
-//									
-//									for (AccessPath ap : mapAccessPathToCallee(callee,
-//											invExpr, paramLocals,
-//											callee.isStatic() ? null : callee.getActiveBody().getThisLocal(),
-//											source))
-//										if (!interproceduralCFG().methodReadsValue(callee, ap.getPlainValue())) {
-//											passOn = true;
-//											break;
-//										}
-//									}
-//						}
+						if (!source.getAccessPath().isStaticFieldRef() && !source.isImplicit()) {
+							boolean atLeastOneCallee = false;
+							for (SootMethod callee : interproceduralCFG().getCalleesOfCallAt(call)) {
+								atLeastOneCallee = true;
+								if (callee.isConcrete() && callee.hasActiveBody()) {
+									Local[] paramLocals = callee.getActiveBody().getParameterLocals().toArray(
+											new Local[callee.getParameterCount()]);
+									
+									for (AccessPath ap : mapAccessPathToCallee(callee,
+											invExpr, paramLocals,
+											callee.isStatic() ? null : callee.getActiveBody().getThisLocal(),
+											source.getAccessPath()))
+										if (!interproceduralCFG().methodReadsValue(callee, ap.getPlainValue())) {
+											passOn = true;
+											break;
+										}
+									}
+							}
+							passOn |= !atLeastOneCallee;
+						}
 						
 						// Implicit taints are always passed over conditionally called methods
 						passOn |= source.getTopPostdominator() != null || source.getAccessPath().isEmpty();
@@ -1456,7 +1461,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			 * given caller-side access path
 			 */
 			private Set<AccessPath> mapAccessPathToCallee(final SootMethod callee, final InvokeExpr ie,
-					final Value[] paramLocals, final Local thisLocal, AccessPath ap) {				
+					final Value[] paramLocals, final Local thisLocal, AccessPath ap) {
+				// We do not transfer empty access paths
+				if (ap.isEmpty())
+					return Collections.emptySet();
+				
 				// Android executor methods are handled specially
 				final String ieSubSig = ie.getMethod().getSubSignature();
 				final String calleeSubSig = callee.getSubSignature();

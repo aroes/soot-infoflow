@@ -12,6 +12,7 @@ package soot.jimple.infoflow.solver;
 
 import heros.solver.IDESolver;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -20,6 +21,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import soot.Local;
 import soot.Scene;
 import soot.SootField;
 import soot.SootMethod;
@@ -33,7 +35,13 @@ import soot.jimple.toolkits.callgraph.Edge;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import soot.toolkits.graph.DirectedGraph;
+import soot.toolkits.graph.ExceptionalUnitGraph;
 import soot.toolkits.graph.MHGPostDominatorsFinder;
+import soot.toolkits.graph.UnitGraph;
+import soot.toolkits.scalar.LocalDefs;
+import soot.toolkits.scalar.SimpleLiveLocals;
+import soot.toolkits.scalar.SimpleLocalUses;
+import soot.toolkits.scalar.SmartLocalDefs;
 
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -73,6 +81,32 @@ public class InfoflowCFG implements IInfoflowCFG {
 						return new UnitContainer(method);
 					else
 						return new UnitContainer(postdom);
+				}
+			});
+	
+	protected final LoadingCache<SootMethod,Local[]> methodToUsedLocals =
+			IDESolver.DEFAULT_CACHE_BUILDER.build( new CacheLoader<SootMethod,Local[]>() {
+				@Override
+				public Local[] load(SootMethod method) throws Exception {
+					if (!method.isConcrete() || !method.hasActiveBody())
+						return null;
+					
+					UnitGraph ug = new ExceptionalUnitGraph(method.getActiveBody());
+					LocalDefs localDefs = new SmartLocalDefs(ug, new SimpleLiveLocals(ug));
+					SimpleLocalUses slu = new SimpleLocalUses(method.getActiveBody(), localDefs);
+					Set<Local> locals = slu.getUsedVariables();
+					
+					// Only store those locals that we actually need
+					List<Local> lcs = new ArrayList<Local>(method.getParameterCount() + (method.isStatic() ? 0 : 1));
+					for (int i = 0; i < method.getParameterCount(); i++) {
+						Local paramLocal = method.getActiveBody().getParameterLocal(i);
+						if (locals.contains(paramLocal))
+							lcs.add(paramLocal);
+					}
+					if (!method.isStatic())
+						lcs.add(method.getActiveBody().getThisLocal());
+					
+					return lcs.toArray(new Local[lcs.size()]);
 				}
 			});
 	
@@ -343,4 +377,15 @@ public class InfoflowCFG implements IInfoflowCFG {
 		if (delegate instanceof JimpleBasedInterproceduralCFG)
 			((JimpleBasedInterproceduralCFG) delegate).initializeUnitToOwner(m);
 	}
+	
+	@Override
+	public boolean methodReadsValue(SootMethod m, Value v) {
+		Local[] reads = methodToUsedLocals.getUnchecked(m);
+		if (reads != null)
+			for (Local l : reads)
+				if (l == v)
+					return true;
+		return false;
+	}
+	
 }

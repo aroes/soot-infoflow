@@ -7,6 +7,7 @@ package soot.jimple.infoflow.solver;
 import soot.SootField;
 import soot.SootMethod;
 import soot.Unit;
+import soot.Value;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 public interface IInfoflowCFG extends BiDiInterproceduralCFG<Unit,SootMethod> {
@@ -126,5 +127,13 @@ public interface IInfoflowCFG extends BiDiInterproceduralCFG<Unit,SootMethod> {
      * @param m The method for which to re-initialize the mapping
      */
 	public void notifyMethodChanged(SootMethod m);
+	
+	/**
+	 * Checks whether the given method reads the given value
+	 * @param m The method to check
+	 * @param v The value to check
+	 * @return True if the given method reads the given value, otherwise false
+	 */
+	public boolean methodReadsValue(SootMethod m, Value v);
 	
 }

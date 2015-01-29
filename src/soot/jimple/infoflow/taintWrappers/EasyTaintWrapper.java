@@ -495,18 +495,41 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 
 	@Override
 	public boolean supportsCallee(SootMethod method) {
-		return aggressiveMode
-				|| getMethodWrapType(method.getSubSignature(), method.getDeclaringClass()) 
-						== MethodWrapType.CreateTaint;
+		// Be conservative in aggressive mode
+		if (aggressiveMode)
+			return true;
+		
+		// Check for special models
+		final String subSig = method.getSubSignature();
+		if (alwaysModelEqualsHashCode
+				&& (subSig.equals("boolean equals(java.lang.Object)") || subSig.equals("int hashCode()")))
+			return true;
+
+		for (String supportedClass : this.includeList)
+			if (method.getDeclaringClass().getName().startsWith(supportedClass))
+				return true;
+		return false;
 	}
 	
 	@Override
 	public boolean supportsCallee(Stmt callSite, IInfoflowCFG icfg) {
-		if (!callSite.containsInvokeExpr()
-				|| !supportsCallee(callSite.getInvokeExpr().getMethod()))
+		// We need an invocation expression
+		if (!callSite.containsInvokeExpr())
+			return false;
+
+		SootMethod method = callSite.getInvokeExpr().getMethod();
+		if (!supportsCallee(method))
+			return false;
+				
+		// We need a method that can create a taint
+		if (!aggressiveMode
+				&& getMethodWrapType(method.getSubSignature(), method.getDeclaringClass()) 
+						!= MethodWrapType.CreateTaint)
 			return false;
 		
-		// We need at least one non-constant argument
+		// We need at least one non-constant argument or a tainted base
+		if (callSite.getInvokeExpr() instanceof InstanceInvokeExpr)
+			return true;
 		for (Value val : callSite.getInvokeExpr().getArgs())
 			if (!(val instanceof Constant))
 				return true;

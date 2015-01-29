@@ -159,16 +159,12 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 					Stmt s = (Stmt) unitIt.next();
 					if (!sm.getActiveBody().getUnits().contains(s))
 						continue;
-					if (!s.containsInvokeExpr())
+					if (!(s instanceof InvokeStmt))
 						continue;
-					
-					if (isSourceSinkOrTaintWrapped(s))
-						continue;
-					
+										
 					// If none of our pre-conditions are satisfied, there is no
 					// need to look at concrete callees
-					if (s.getInvokeExpr().getMethod().getReturnType() != VoidType.v()
-							&& getNonConstParamCount(s) > 0)
+					if (getNonConstParamCount(s) > 0)
 						continue;
 					
 					boolean allCalleesRemoved = true;
@@ -180,8 +176,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 						// If this method returns nothing, is side-effect free and does not
 						// call a sink, we can remove it altogether. No data can ever flow
 						// out of it.
-						if (callee.getReturnType() == VoidType.v()
-								&& !hasSideEffectsOrCallsSink(callee)) {
+						if (!hasSideEffectsOrCallsSink(callee)) {
 							Scene.v().getCallGraph().removeEdge(edge);
 							callEdgesRemoved++;
 							continue;
@@ -193,7 +188,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 					
 					// If all call edges have been removed from a call site, we can
 					// kill the call site altogether
-					if (allCalleesRemoved)
+					if (allCalleesRemoved && !isSourceSinkOrTaintWrapped(s))
 						removeCallSite(s, sm);
 				}
 			}
@@ -296,11 +291,6 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 	 * @param sm The method whose value to propagate
 	 */
 	private void propagateReturnValueIntoCallers(SootMethod sm) {		
-		// If we have a taint wrapper, we need keep the stub untouched since we
-		// don't the artificial taint the wrapper will come up with
-		if (taintWrapper != null && taintWrapper.supportsCallee(sm))
-			return;
-
 		// We need to make sure that all exit nodes agree on the same
 		// constant value
 		Constant value = null;
@@ -323,6 +313,11 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 			for (Unit callSite : icfg.getCallersOf(sm))
 				if (callSite instanceof AssignStmt) {
 					AssignStmt assign = (AssignStmt) callSite;
+					
+					// If we have a taint wrapper, we need to keep the stub untouched since we
+					// don't the artificial taint the wrapper will come up with
+					if (taintWrapper != null && taintWrapper.supportsCallee(assign, icfg))
+						continue;
 					
 					// If this is a call to a source method, we do not propagate
 					// constants out of the callee for not destroying data flows
