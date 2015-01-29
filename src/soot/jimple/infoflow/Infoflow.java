@@ -102,6 +102,8 @@ public class Infoflow extends AbstractInfoflow {
     
     private Set<ResultsAvailableHandler> onResultsAvailable = new HashSet<ResultsAvailableHandler>();
     private Set<TaintPropagationHandler> taintPropagationHandlers = new HashSet<TaintPropagationHandler>();
+    
+    private long maxMemoryConsumption = -1;
 
 	/**
 	 * Creates a new instance of the InfoFlow class for analyzing plain Java code without any references to APKs or the Android SDK.
@@ -441,6 +443,7 @@ public class Infoflow extends AbstractInfoflow {
 	}
 
 	private void runAnalysis(final ISourceSinkManager sourcesSinks, final Set<String> additionalSeeds) {
+		maxMemoryConsumption = -1;
 		ipcManager.updateJimpleForICC();
 		
 		// Patch the java.lang.Thread implementation
@@ -567,6 +570,7 @@ public class Infoflow extends AbstractInfoflow {
 				sinkCount);
 		
 		forwardSolver.solve();
+		maxMemoryConsumption = Math.max(maxMemoryConsumption, getUsedMemory());
 		
 		// Not really nice, but sometimes Heros returns before all
 		// executor tasks are actually done. This way, we give it a
@@ -615,6 +619,7 @@ public class Infoflow extends AbstractInfoflow {
 		
 		// Force a cleanup. Everything we need is reachable through the
 		// results set, the other abstractions can be killed now.
+		maxMemoryConsumption = Math.max(maxMemoryConsumption, getUsedMemory());
 		forwardSolver.cleanup();
 		if (backSolver != null) {
 			backSolver.cleanup();
@@ -650,8 +655,19 @@ public class Infoflow extends AbstractInfoflow {
 		
 		if (logger.isDebugEnabled())
 			PackManager.v().writeOutput();
+		
+		maxMemoryConsumption = Math.max(maxMemoryConsumption, getUsedMemory());
 	}
 	
+	/**
+	 * Gets the memory used by FlowDroid at the moment
+	 * @return FlowDroid's current memory consumption in bytes
+	 */
+	private long getUsedMemory() {
+		Runtime runtime = Runtime.getRuntime();
+		return runtime.totalMemory() - runtime.freeMemory();
+	}
+
 	/**
 	 * Performs an interprocedural dead-code elimination on all application
 	 * classes
@@ -962,6 +978,15 @@ public class Infoflow extends AbstractInfoflow {
 	 */
 	public void setEnableCodeElimination(boolean enableCodeElimination) {
 		this.enableCodeElimination = enableCodeElimination;
+	}
+	
+	/**
+	 * Gets the maximum memory consumption during the last analysis run
+	 * @return The maximum memory consumption during the last analysis run if
+	 * available, otherwise false
+	 */
+	public long getMaxMemoryConsumption() {
+		return this.maxMemoryConsumption;
 	}
 	
 }
