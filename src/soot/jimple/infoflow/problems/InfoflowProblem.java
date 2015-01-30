@@ -129,7 +129,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			Abstraction source) {
 		assert inspectSources || source != getZeroValue();
 		
-		Set<Abstraction> res = new HashSet<Abstraction>();
 		if(taintWrapper == null)
 			return Collections.emptySet();
 		
@@ -156,9 +155,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				return Collections.emptySet();
 		}
 		
+		Set<Abstraction> res = null;
 		Set<AccessPath> vals = taintWrapper.getTaintsForMethod(iStmt, source.getAccessPath(),
 				interproceduralCFG());
 		if(vals != null) {
+			res = new HashSet<Abstraction>();
 			for (AccessPath val : vals) {
 				// The new abstraction gets activated where it was generated
 				if (val.equals(source.getAccessPath()))
@@ -944,9 +945,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						// Map the source access path into the callee
 						Set<AccessPath> res = mapAccessPathToCallee(dest, ie, paramLocals,
 								thisLocal, source.getAccessPath());
+						if (res == null)
+							return Collections.emptySet();
 						
 						// Translate the access paths into abstractions
-						Set<Abstraction> resAbs = new HashSet<Abstraction>();
+						Set<Abstraction> resAbs = new HashSet<Abstraction>(res.size());
 						for (AccessPath ap : res)
 							if (ap.isStaticFieldRef()) {
 								// Do not propagate static fields that are not read inside the callee 
@@ -956,7 +959,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							// If the variable is never read in the callee, there is no
 							// need to propagate it through
 							else if (source.isImplicit() || interproceduralCFG().methodReadsValue(dest, ap.getPlainValue()))
-									resAbs.add(source.deriveNewAbstraction(ap, stmt));
+								resAbs.add(source.deriveNewAbstraction(ap, stmt));
 						
 						return resAbs;
 					}
@@ -1068,9 +1071,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						// Static field tracking can be disabled
 						if (!enableStaticFields && newSource.getAccessPath().isStaticFieldRef())
 							return Collections.emptySet();
-						
-						Set<Abstraction> res = new HashSet<Abstraction>();
-						
+												
 						// Check whether this return is treated as a sink
 						if (returnStmt != null) {
 							assert returnStmt.getOp() == null
@@ -1090,6 +1091,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						// can happen when leaving the main method.
 						if (callSite == null)
 							return Collections.emptySet();
+						
+						Set<Abstraction> res = new HashSet<Abstraction>();
 						
 						// if we have a returnStmt we have to look at the returned value:
 						if (returnStmt != null && callSite instanceof DefinitionStmt) {
@@ -1327,29 +1330,49 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						boolean passOn = !newSource.getAccessPath().isStaticFieldRef()
 								&& !(call instanceof DefinitionStmt && aliasing.mayAlias(((DefinitionStmt) call).getLeftOp(),
 										newSource.getAccessPath().getPlainValue()));
+						
 						//we only can remove the taint if we step into the call/return edges
 						//otherwise we will loose taint - see ArrayTests/arrayCopyTest
-						if (passOn && newSource.getAccessPath().isInstanceFieldRef())
-							if (inspectSinks || !isSink)
-								if(hasValidCallees || (taintWrapper != null
-										&& taintWrapper.isExclusive(iCallStmt, newSource.getAccessPath(),
-												interproceduralCFG()))) {
-									if (invExpr instanceof InstanceInvokeExpr)
-										if (aliasing.mayAlias(((InstanceInvokeExpr) invExpr).getBase(),
-												newSource.getAccessPath().getPlainValue())) {
-											passOn = false;
+						if (passOn
+								&& invExpr instanceof InstanceInvokeExpr
+								&& newSource.getAccessPath().isInstanceFieldRef()
+								&& (inspectSinks || !isSink)
+								&& (hasValidCallees
+									|| (taintWrapper != null && taintWrapper.isExclusive(iCallStmt,
+											newSource.getAccessPath(), interproceduralCFG())))) {
+							// If one of the callers does not read the value, we must pass it on
+							// in any case
+							boolean allCalleesRead = true;
+							outer : for (SootMethod callee : interproceduralCFG().getCalleesOfCallAt(call)) {
+								if (callee.isConcrete() && callee.hasActiveBody()) {
+									Set<AccessPath> calleeAPs = mapAccessPathToCallee(callee,
+											invExpr, null, null, source.getAccessPath());
+									if (calleeAPs != null)
+										for (AccessPath ap : calleeAPs)
+											if (!interproceduralCFG().methodReadsValue(callee, ap.getPlainValue())) {
+												allCalleesRead = false;
+												break outer;
+											}
 										}
-										if (passOn)
-											for (int i = 0; i < callArgs.length; i++)
-												if (aliasing.mayAlias(callArgs[i], newSource.getAccessPath().getPlainValue())) {
-													passOn = false;
-													break;
-												}
-										//static variables are always propagated if they are not overwritten. So if we have at least one call/return edge pair,
-										//we can be sure that the value does not get "lost" if we do not pass it on:
-										if(newSource.getAccessPath().isStaticFieldRef())
+							}
+							
+							if (allCalleesRead) {
+								if (aliasing.mayAlias(((InstanceInvokeExpr) invExpr).getBase(),
+										newSource.getAccessPath().getPlainValue())) {
+									passOn = false;
+								}
+								if (passOn)
+									for (int i = 0; i < callArgs.length; i++)
+										if (aliasing.mayAlias(callArgs[i], newSource.getAccessPath().getPlainValue())) {
 											passOn = false;
-									}
+											break;
+										}
+								//static variables are always propagated if they are not overwritten. So if we have at least one call/return edge pair,
+								//we can be sure that the value does not get "lost" if we do not pass it on:
+								if(newSource.getAccessPath().isStaticFieldRef())
+									passOn = false;
+							}
+						}
 						
 						// If the callee does not read the given value, we also need to pass it on
 						// since we do not propagate it into the callee.
@@ -1358,26 +1381,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									source.getAccessPath().getFirstField()))
 								passOn = true;
 						}
-						
-						// If one of the callers does not read the value, we pass it on
-						if (!source.getAccessPath().isStaticFieldRef() && !source.isImplicit()) {
-							outer : for (SootMethod callee : interproceduralCFG().getCalleesOfCallAt(call)) {
-								if (callee.isConcrete() && callee.hasActiveBody()) {
-									Local[] paramLocals = callee.getActiveBody().getParameterLocals().toArray(
-											new Local[callee.getParameterCount()]);
-									
-									for (AccessPath ap : mapAccessPathToCallee(callee,
-											invExpr, paramLocals,
-											callee.isStatic() ? null : callee.getActiveBody().getThisLocal(),
-											source.getAccessPath()))
-										if (!interproceduralCFG().methodReadsValue(callee, ap.getPlainValue())) {
-											passOn = true;
-											break outer;
-										}
-									}
-							}
-						}
-						
+												
 						// Implicit taints are always passed over conditionally called methods
 						passOn |= source.getTopPostdominator() != null || source.getAccessPath().isEmpty();
 						if (passOn)
@@ -1458,20 +1462,26 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			 * given caller-side access path
 			 */
 			private Set<AccessPath> mapAccessPathToCallee(final SootMethod callee, final InvokeExpr ie,
-					final Value[] paramLocals, final Local thisLocal, AccessPath ap) {
+					Value[] paramLocals, Local thisLocal, AccessPath ap) {
 				// We do not transfer empty access paths
 				if (ap.isEmpty())
 					return Collections.emptySet();
 				
-				// Android executor methods are handled specially
-				final String ieSubSig = ie.getMethod().getSubSignature();
-				final String calleeSubSig = callee.getSubSignature();
-				final boolean isExecutorExecute = (ieSubSig.equals("void execute(java.lang.Runnable)")
-								&& calleeSubSig.equals("void run()"))
-						|| (ieSubSig.equals("java.lang.Object doPrivileged(java.security.PrivilegedAction)")
-								&& calleeSubSig.equals("java.lang.Object run()"));
+				// Android executor methods are handled specially. getSubSignature()
+				// is slow, so we try to avoid it whenever we can
+				boolean isExecutorExecute = false; 
+				SootMethod ieMethod = ie.getMethod();
+				if (ieMethod.getName().equals("execute")
+						|| ieMethod.getName().equals("doPrivileged")) {
+					final String ieSubSig = ieMethod.getSubSignature();
+					final String calleeSubSig = callee.getSubSignature();
+					isExecutorExecute = (ieSubSig.equals("void execute(java.lang.Runnable)")
+									&& calleeSubSig.equals("void run()"))
+							|| (ieSubSig.equals("java.lang.Object doPrivileged(java.security.PrivilegedAction)")
+									&& calleeSubSig.equals("java.lang.Object run()"));
+				}
 				
-				Set<AccessPath> res = new HashSet<AccessPath>();
+				Set<AccessPath> res = null;
 				
 				// check if whole object is tainted (happens with strings, for example:)
 				if (!ap.isStaticFieldRef() && !callee.isStatic()) {
@@ -1479,24 +1489,43 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					InstanceInvokeExpr vie = (InstanceInvokeExpr) ie;
 					// this might be enough because every call must happen with a local variable which is tainted itself:
 					if (aliasing.mayAlias(vie.getBase(), ap.getPlainValue()))
-						if (hasCompatibleTypesForCall(ap, callee.getDeclaringClass()))
+						if (hasCompatibleTypesForCall(ap, callee.getDeclaringClass())) {
+							if (res == null) res = new HashSet<AccessPath>();
+							
+							// Get the "this" local if we don't have it yet
+							if (thisLocal == null)
+								thisLocal = callee.isStatic() ? null : callee.getActiveBody().getThisLocal();
+							
 							res.add(ap.copyWithNewValue(thisLocal));
+						}
 				}
 				// staticfieldRefs must be analyzed even if they are not part of the params:
-				else if (ap.isStaticFieldRef())
+				else if (ap.isStaticFieldRef()) {
+					if (res == null) res = new HashSet<AccessPath>();
 					res.add(ap);
+				}
 				
 				//special treatment for clinit methods - no param mapping possible
 				if (isExecutorExecute) {
-					if (aliasing.mayAlias(ie.getArg(0), ap.getPlainValue()))
+					if (aliasing.mayAlias(ie.getArg(0), ap.getPlainValue())) {
+						if (res == null) res = new HashSet<AccessPath>();
 						res.add(ap.copyWithNewValue(callee.getActiveBody().getThisLocal()));
+					}
 				}
 				else if(!callee.getName().equals("<clinit>")) {
 					assert callee.getParameterCount() == ie.getArgCount();
 					// check if param is tainted:
 					for (int i = 0; i < ie.getArgCount(); i++) {
-						if (aliasing.mayAlias(ie.getArg(i), ap.getPlainValue()))
+						if (aliasing.mayAlias(ie.getArg(i), ap.getPlainValue())) {
+							if (res == null) res = new HashSet<AccessPath>();
+							
+							// Get the parameter locals if we don't have them yet
+							if (paramLocals == null)
+								paramLocals = callee.getActiveBody().getParameterLocals().toArray(
+										new Local[callee.getParameterCount()]);
+							
 							res.add(ap.copyWithNewValue(paramLocals[i]));
+						}
 					}
 				}
 				return res;

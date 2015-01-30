@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +25,6 @@ import soot.jimple.infoflow.solver.IInfoflowCFG;
  */
 public class ContextInsensitiveSourceFinder extends AbstractAbstractionPathBuilder {
 	
-	private AtomicInteger propagationCount = null;
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final InfoflowResults results = new InfoflowResults();
@@ -77,8 +75,7 @@ public class ContextInsensitiveSourceFinder extends AbstractAbstractionPathBuild
 		public void run() {
 			while (!abstractionQueue.isEmpty()) {
 				Abstraction abstraction = abstractionQueue.remove(0);
-				propagationCount.incrementAndGet();
-								
+				
 				if (abstraction.getSourceContext() != null) {
 					// Register the result
 					results.addResult(flagAbs.getAbstraction().getAccessPath(),
@@ -109,7 +106,6 @@ public class ContextInsensitiveSourceFinder extends AbstractAbstractionPathBuild
 			return;
 		
 		long beforePathTracking = System.nanoTime();
-		propagationCount = new AtomicInteger();
     	logger.info("Obtainted {} connections between sources and sinks", res.size());
     	
     	// Start the propagation tasks
@@ -126,8 +122,8 @@ public class ContextInsensitiveSourceFinder extends AbstractAbstractionPathBuild
 			ex.printStackTrace();
 		}
     	
-    	logger.info("Path processing took {} seconds in total for {} edges",
-    			(System.nanoTime() - beforePathTracking) / 1E9, propagationCount.get());
+    	logger.info("Path processing took {} seconds in total",
+    			(System.nanoTime() - beforePathTracking) / 1E9);
 	}
 	
 	@Override

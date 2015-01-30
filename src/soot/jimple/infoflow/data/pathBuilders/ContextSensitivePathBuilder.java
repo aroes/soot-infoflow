@@ -6,7 +6,6 @@ import heros.solver.Pair;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +27,6 @@ import soot.jimple.infoflow.solver.IInfoflowCFG;
  */
 public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder {
 	
-	private AtomicInteger propagationCount = null;
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final InfoflowResults results = new InfoflowResults();
@@ -74,8 +72,6 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 		
 		@Override
 		public void run() {
-			propagationCount.incrementAndGet();
-			
 			final Set<SourceContextAndPath> paths = abstraction.getPaths();
 			final Abstraction pred = abstraction.getPredecessor();
 			
@@ -171,7 +167,6 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 			return;
 		
 		long beforePathTracking = System.nanoTime();
-		propagationCount = new AtomicInteger();
     	logger.info("Obtainted {} connections between sources and sinks", res.size());
     	
     	// Start the propagation tasks
@@ -196,8 +191,8 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 			ex.printStackTrace();
 		}
     	
-    	logger.info("Path processing took {} seconds in total for {} edges",
-    			(System.nanoTime() - beforePathTracking) / 1E9, propagationCount.get());
+    	logger.info("Path processing took {} seconds in total",
+    			(System.nanoTime() - beforePathTracking) / 1E9);
 	}
 	
 	/**

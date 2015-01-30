@@ -100,13 +100,13 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					Abstraction d1,
 					Abstraction source) {
 				assert !source.getAccessPath().isEmpty();
-				
-				final Set<Abstraction> res = new MutableTwoElementSet<Abstraction>();
-				
+								
 				// A backward analysis looks for aliases of existing taints and thus
 				// cannot create new taints out of thin air
 				if (source == getZeroValue())
 					return Collections.emptySet();
+				
+				final Set<Abstraction> res = new MutableTwoElementSet<Abstraction>();
 				
 				// Check whether the left side of the assignment matches our
 				// current taint abstraction
@@ -366,10 +366,20 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				// than one might think
 				final Local thisLocal = dest.isStatic() ? null : dest.getActiveBody().getThisLocal();	
 				
-				final boolean isExecutorExecute = (ie.getMethod().getSubSignature().equals("void execute(java.lang.Runnable)")
-								&& dest.getSubSignature().equals("void run()"))
-						|| (ie.getMethod().getSubSignature().equals("java.lang.Object doPrivileged(java.security.PrivilegedAction)")
-								&& dest.getSubSignature().equals("java.lang.Object run()"));
+				// Android executor methods are handled specially. getSubSignature()
+				// is slow, so we try to avoid it whenever we can
+				boolean tmpIsExecutorExecute = false; 
+				SootMethod ieMethod = ie.getMethod();
+				if (ieMethod.getName().equals("execute")
+						|| ieMethod.getName().equals("doPrivileged")) {
+					final String ieSubSig = ieMethod.getSubSignature();
+					final String calleeSubSig = dest.getSubSignature();
+					tmpIsExecutorExecute = (ieSubSig.equals("void execute(java.lang.Runnable)")
+									&& calleeSubSig.equals("void run()"))
+							|| (ieSubSig.equals("java.lang.Object doPrivileged(java.security.PrivilegedAction)")
+									&& calleeSubSig.equals("java.lang.Object run()"));
+				}
+				final boolean isExecutorExecute = tmpIsExecutorExecute;
 
 				return new SolverCallFlowFunction() {
 

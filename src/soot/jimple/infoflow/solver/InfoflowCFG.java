@@ -27,6 +27,7 @@ import soot.SootField;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
+import soot.ValueBox;
 import soot.jimple.AssignStmt;
 import soot.jimple.FieldRef;
 import soot.jimple.StaticFieldRef;
@@ -35,13 +36,7 @@ import soot.jimple.toolkits.callgraph.Edge;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import soot.toolkits.graph.DirectedGraph;
-import soot.toolkits.graph.ExceptionalUnitGraph;
 import soot.toolkits.graph.MHGPostDominatorsFinder;
-import soot.toolkits.graph.UnitGraph;
-import soot.toolkits.scalar.LocalDefs;
-import soot.toolkits.scalar.SimpleLiveLocals;
-import soot.toolkits.scalar.SimpleLocalUses;
-import soot.toolkits.scalar.SmartLocalDefs;
 
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -89,20 +84,22 @@ public class InfoflowCFG implements IInfoflowCFG {
 				@Override
 				public Local[] load(SootMethod method) throws Exception {
 					if (!method.isConcrete() || !method.hasActiveBody())
-						return null;
+						return new Local[0];
 					
-					UnitGraph ug = new ExceptionalUnitGraph(method.getActiveBody());
-					LocalDefs localDefs = new SmartLocalDefs(ug, new SimpleLiveLocals(ug));
-					SimpleLocalUses slu = new SimpleLocalUses(method.getActiveBody(), localDefs);
-					Set<Local> locals = slu.getUsedVariables();
-					
-					// Only store those locals that we actually need
 					List<Local> lcs = new ArrayList<Local>(method.getParameterCount() + (method.isStatic() ? 0 : 1));
-					for (int i = 0; i < method.getParameterCount(); i++) {
-						Local paramLocal = method.getActiveBody().getParameterLocal(i);
-						if (locals.contains(paramLocal))
-							lcs.add(paramLocal);
-					}
+					
+					for (Unit u : method.getActiveBody().getUnits())
+						useBox : for (ValueBox vb : u.getUseBoxes()) {
+							// Check for parameters
+							for (int i = 0; i < method.getParameterCount(); i++) {
+								if (method.getActiveBody().getParameterLocal(i) == vb.getValue()) {
+									lcs.add((Local) vb.getValue());
+									continue useBox;
+								}
+							}
+						}
+					
+					// Add the "this" local
 					if (!method.isStatic())
 						lcs.add(method.getActiveBody().getThisLocal());
 					

@@ -380,10 +380,6 @@ public class AccessPath implements Cloneable {
 			return false;
 		
 		AccessPath other = (AccessPath) obj;
-		if (!Arrays.equals(fields, other.fields))
-			return false;
-		if (!Arrays.equals(fieldTypes, other.fieldTypes))
-			return false;
 		
 		if (value == null) {
 			if (other.value != null)
@@ -397,6 +393,11 @@ public class AccessPath implements Cloneable {
 			return false;
 		
 		if (this.taintSubFields != other.taintSubFields)
+			return false;
+		
+		if (!Arrays.equals(fields, other.fields))
+			return false;
+		if (!Arrays.equals(fieldTypes, other.fieldTypes))
 			return false;
 		
 		assert this.hashCode() == obj.hashCode();

@@ -315,7 +315,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 					AssignStmt assign = (AssignStmt) callSite;
 					
 					// If we have a taint wrapper, we need to keep the stub untouched since we
-					// don't the artificial taint the wrapper will come up with
+					// don't know what artificial taint the wrapper will come up with
 					if (taintWrapper != null && taintWrapper.supportsCallee(assign, icfg))
 						continue;
 					
