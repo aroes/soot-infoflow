@@ -1313,7 +1313,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							newSource = source;
 						
 						// Compute the taint wrapper taints
-						res.addAll(computeWrapperTaints(d1, iCallStmt, newSource));
+						{
+							Collection<Abstraction> wrapperTaints = computeWrapperTaints(d1, iCallStmt, newSource);
+							if (wrapperTaints != null)
+								res.addAll(wrapperTaints);
+						}
 						
 						// Implicit flows: taint return value
 						if (call instanceof DefinitionStmt && (newSource.getTopPostdominator() != null
