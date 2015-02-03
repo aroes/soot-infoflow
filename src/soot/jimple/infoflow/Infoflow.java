@@ -707,7 +707,7 @@ public class Infoflow extends AbstractInfoflow {
 						sourcesSinks,
 						taintWrapper);
 		ipcvp.setRemoveSideEffectFreeMethods(codeEliminationMode
-				== CodeEliminationMode.RemoveSideEffectFreeCode);
+				== CodeEliminationMode.RemoveSideEffectFreeCode && !enableImplicitFlows);
 		ipcvp.transform();
 		
 		// Get rid of all dead code

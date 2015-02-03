@@ -2,6 +2,8 @@ package soot.jimple.infoflow.util;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -12,43 +14,56 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import soot.Body;
 import soot.DoubleType;
 import soot.FloatType;
 import soot.IntType;
 import soot.Local;
 import soot.LongType;
 import soot.MethodOrMethodContext;
+import soot.Modifier;
 import soot.RefType;
 import soot.Scene;
 import soot.SceneTransformer;
+import soot.SootClass;
 import soot.SootMethod;
+import soot.Trap;
 import soot.Type;
 import soot.Unit;
 import soot.Value;
+import soot.ValueBox;
 import soot.VoidType;
+import soot.dexpler.DalvikThrowAnalysis;
+import soot.javaToJimple.LocalGenerator;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
 import soot.jimple.Constant;
 import soot.jimple.DefinitionStmt;
-import soot.jimple.DivExpr;
 import soot.jimple.FieldRef;
 import soot.jimple.IdentityStmt;
+import soot.jimple.IfStmt;
+import soot.jimple.IntConstant;
 import soot.jimple.InvokeExpr;
 import soot.jimple.InvokeStmt;
 import soot.jimple.Jimple;
 import soot.jimple.NewExpr;
 import soot.jimple.ParameterRef;
-import soot.jimple.RemExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.ThisRef;
 import soot.jimple.ThrowStmt;
+import soot.jimple.infoflow.entryPointCreators.BaseEntryPointCreator;
+import soot.jimple.infoflow.entryPointCreators.IEntryPointCreator;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
+import soot.jimple.internal.JAssignStmt;
 import soot.jimple.toolkits.callgraph.Edge;
 import soot.jimple.toolkits.scalar.ConstantPropagatorAndFolder;
 import soot.options.Options;
+import soot.toolkits.exceptions.ThrowAnalysis;
+import soot.toolkits.exceptions.ThrowableSet;
+import soot.toolkits.exceptions.UnitThrowAnalysis;
 import soot.util.queue.QueueReader;
 
 
@@ -64,8 +79,14 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 	
 	protected final Map<SootMethod, Boolean> methodSideEffects =
 			new ConcurrentHashMap<SootMethod, Boolean>();
+	protected final Map<SootMethod, Boolean> methodSinks =
+			new ConcurrentHashMap<SootMethod, Boolean>();
 	protected final Map<SootMethod, Boolean> methodFieldReads =
 			new ConcurrentHashMap<SootMethod, Boolean>();
+	
+	protected SootClass exceptionClass = null;
+	protected final Map<SootClass, SootMethod> exceptionThrowers =
+			new HashMap<SootClass, SootMethod>();
 	
 	/**
 	 * Creates a new instance of the {@link InterproceduralConstantValuePropagator}
@@ -152,7 +173,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 				// Do not touch excluded methods
 				if (excludedMethods != null && excludedMethods.contains(sm))
 					continue;
-				
+								
 				// Check for call sites
 				for (Iterator<Unit> unitIt = sm.getActiveBody().getUnits().snapshotIterator();
 						unitIt.hasNext(); ) {
@@ -168,6 +189,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 						continue;
 					
 					boolean allCalleesRemoved = true;
+					Set<SootClass> exceptions = new HashSet<SootClass>();
 					for (Iterator<Edge> edgeIt = Scene.v().getCallGraph().edgesOutOf(s);
 							edgeIt.hasNext(); ) {
 						Edge edge = edgeIt.next();
@@ -176,13 +198,19 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 						// If this method returns nothing, is side-effect free and does not
 						// call a sink, we can remove it altogether. No data can ever flow
 						// out of it.
-						if (!hasSideEffectsOrCallsSink(callee)) {
+						boolean remove = callee.getReturnType() == VoidType.v()
+								&& !hasSideEffectsOrReadsThis(callee);
+						remove |= !hasSideEffectsOrCallsSink(callee);
+						
+						if (remove) {
 							Scene.v().getCallGraph().removeEdge(edge);
 							callEdgesRemoved++;
-							continue;
+							
+							// If this callee threw an exception, we have to make
+							// up for it
+							fixExceptions(sm, s, exceptions);
 						}
-						
-						if (!sm.getName().equals("<clinit>"))
+						else if (!sm.getName().equals("<clinit>"))
 							allCalleesRemoved = false;
 					}
 					
@@ -193,6 +221,13 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 				}
 			}
 			System.out.println("Removed " + callEdgesRemoved + " call edges");
+		}
+		
+		// If we introduced a new class, we have to reset the hierarchy
+		if (exceptionClass != null) {
+			Scene.v().releaseActiveHierarchy();
+			Scene.v().releaseFastHierarchy();
+			Scene.v().getOrMakeFastHierarchy();
 		}
 	}
 	
@@ -230,7 +265,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 		
 		// If this method is a sink, we must keep it as well
 		if (sourceSinkManager.isSink((Stmt) callSite, icfg)) {
-			methodSideEffects.put(method, true);
+			methodSinks.put(method, true);
 			return true;
 		}
 		
@@ -348,6 +383,9 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 						// Fix the callgraph
 						if (Scene.v().hasCallGraph())
 							Scene.v().getCallGraph().removeAllEdgesOutOf(assign);
+						
+						// If this method threw an exception, we have to make up for it
+						fixExceptions(caller, callSite);
 					}
 					else {
 						// We have side effects, so we need to keep the method call. Change
@@ -367,6 +405,85 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 				}
 	}
 	
+	private void fixExceptions(SootMethod caller, Unit callSite) {
+		fixExceptions(caller, callSite, new HashSet<SootClass>());
+	}
+	
+	private void fixExceptions(SootMethod caller, Unit callSite, Set<SootClass> doneSet) {
+		ThrowAnalysis ta = Options.v().src_prec() == Options.src_prec_apk
+				? DalvikThrowAnalysis.v() : UnitThrowAnalysis.v();
+		ThrowableSet throwSet = ta.mightThrow(callSite);
+		
+		for (final Trap t : caller.getActiveBody().getTraps())
+			if (doneSet.add(t.getException())
+					&& throwSet.catchableAs(t.getException().getType())) {
+				SootMethod thrower = exceptionThrowers.get(t.getException());
+				if (thrower == null) {
+					if (exceptionClass == null) {
+						exceptionClass = new SootClass("FLOWDROID_EXCEPTIONS", Modifier.PUBLIC);
+						Scene.v().addClass(exceptionClass);
+					}
+					
+					// Create the new method
+					thrower = new SootMethod("throw" + exceptionThrowers.size(),
+							Collections.<Type>emptyList(), VoidType.v());
+					thrower.setModifiers(Modifier.PUBLIC | Modifier.STATIC);
+					
+					final Body body = Jimple.v().newBody(thrower);
+					thrower.setActiveBody(body);
+					final SootMethod meth = thrower;
+					
+					IEntryPointCreator epc = new BaseEntryPointCreator() {
+		
+						@Override
+						public Collection<String> getRequiredClasses() {
+							return Collections.emptySet();
+						}
+		
+						@Override
+						protected SootMethod createDummyMainInternal(SootMethod emptySootMethod) {
+					 		LocalGenerator generator = new LocalGenerator(body);
+							
+					 		// Create the counter used for the opaque predicate
+							int conditionCounter = 0;
+							Value intCounter = generator.generateLocal(IntType.v());
+							AssignStmt assignStmt = new JAssignStmt(intCounter, IntConstant.v(conditionCounter));
+							body.getUnits().add(assignStmt);
+							
+							Stmt afterEx = Jimple.v().newNopStmt();
+							IfStmt ifStmt = Jimple.v().newIfStmt(Jimple.v().newEqExpr(intCounter,
+									IntConstant.v(conditionCounter)), afterEx);
+							body.getUnits().add(ifStmt);
+							conditionCounter++;
+							
+							Local lcEx = generator.generateLocal(t.getException().getType());
+							AssignStmt assignNewEx = Jimple.v().newAssignStmt(lcEx,
+									Jimple.v().newNewExpr(t.getException().getType()));
+							body.getUnits().add(assignNewEx);
+	
+							InvokeStmt consNewEx = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(lcEx,
+									Scene.v().makeConstructorRef(exceptionClass, Collections.<Type>emptyList())));
+							body.getUnits().add(consNewEx);
+							
+							ThrowStmt throwNewEx = Jimple.v().newThrowStmt(lcEx);
+							body.getUnits().add(throwNewEx);
+							
+							body.getUnits().add(afterEx);
+							return meth;
+						}
+										
+					};
+					epc.createDummyMain(thrower);
+					exceptionThrowers.put(t.getException(), thrower);
+					exceptionClass.addMethod(thrower);
+				}
+				
+				// Call the exception thrower after the old call site
+				Stmt throwCall = Jimple.v().newInvokeStmt(Jimple.v().newStaticInvokeExpr(thrower.makeRef()));
+				caller.getActiveBody().getUnits().insertBefore(throwCall, callSite);
+			}
+	}
+
 	/**
 	 * Checks whether the given method or one of its transitive callees has
 	 * side-effects or calls a sink method
@@ -399,10 +516,14 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 		if (hasSideEffects != null)
 			return hasSideEffects;
 		
+		Boolean hasSink = methodSinks.get(method);
+		if (hasSink != null)
+			return hasSink;
+		
 		// Do not process the same method twice
 		if (!runList.add(method))
 			return false;
-		
+				
 		// If this is an Android stub method that just throws a stub exception,
 		// this will never happen in practice and can be removed
 		if (methodIsAndroidStub(method)) {
@@ -412,18 +533,10 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 		
 		// Scan for references to this variable
 		for (Unit u : method.getActiveBody().getUnits()) {
-			if (u instanceof ThrowStmt) {
-				methodSideEffects.put(method, true);
-				return true;
-			}
-			else if (u instanceof AssignStmt) {
+			if (u instanceof AssignStmt) {
 				AssignStmt assign = (AssignStmt) u;
 				if (assign.getLeftOp() instanceof FieldRef
-						|| assign.getLeftOp() instanceof ArrayRef
-						|| assign.getRightOp() instanceof FieldRef
-						|| assign.getRightOp() instanceof ArrayRef
-						|| assign.getRightOp() instanceof DivExpr
-						|| assign.getRightOp() instanceof RemExpr) {
+						|| assign.getLeftOp() instanceof ArrayRef) {
 					methodSideEffects.put(method, true);
 					return true;
 				}
@@ -442,7 +555,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 			if (s.containsInvokeExpr()) {
 				// If this method calls a sink, we need to keep it
 				if (sourceSinkManager.isSink((Stmt) u, icfg)) {
-					methodSideEffects.put(method, true);
+					methodSinks.put(method, true);
 					return true;
 				}
 				
@@ -461,12 +574,91 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 	}
 	
 	/**
+	 * Checks whether the given method or one of its transitive callees has
+	 * side-effects or calls a sink method
+	 * @param method The method to check
+	 * @return True if the given method or one of its transitive callees has
+	 * side-effects or calls a sink method, otherwise false.
+	 */
+	private boolean hasSideEffectsOrReadsThis(SootMethod method) {
+		return hasSideEffectsOrReadsThis(method, new HashSet<SootMethod>());
+	}
+	
+	/**
+	 * Checks whether the given method or one of its transitive callees has
+	 * side-effects or calls a sink method
+	 * @param method The method to check
+	 * @param runList A set to receive all methods that have already been
+	 * processed
+	 * @param cache The cache in which to store the results
+	 * @return True if the given method or one of its transitive callees has
+	 * side-effects or calls a sink method, otherwise false.
+	 */
+	private boolean hasSideEffectsOrReadsThis(SootMethod method,
+			Set<SootMethod> runList) {		
+		// Without a body, we cannot say much
+		if (!method.hasActiveBody())
+			return false;
+		
+		// Do we already have an entry?
+		Boolean hasSideEffects = methodSideEffects.get(method);
+		if (hasSideEffects != null)
+			return hasSideEffects;
+		
+		// Do not process the same method twice
+		if (!runList.add(method))
+			return false;
+		
+		// If this is an Android stub method that just throws a stub exception,
+		// this will never happen in practice and can be removed
+		if (methodIsAndroidStub(method)) {
+			methodSideEffects.put(method, false);
+			return false;
+		}
+		
+		// Scan for references to this variable
+		Local thisLocal = method.isStatic() ? null : method.getActiveBody().getThisLocal();
+		for (Unit u : method.getActiveBody().getUnits()) {
+			if (u instanceof AssignStmt) {
+				AssignStmt assign = (AssignStmt) u;
+				if (assign.getLeftOp() instanceof FieldRef
+						|| assign.getLeftOp() instanceof ArrayRef) {
+					methodSideEffects.put(method, true);
+					return true;
+				}
+			}
+			
+			Stmt s = (Stmt) u;
+			
+			// If this statement uses the "this" local, we have to
+			// conservatively assume that is can read data
+			if (thisLocal != null)
+				for (ValueBox vb : s.getUseBoxes())
+					if (vb.getValue() == thisLocal)
+						return true;
+			
+			if (s.containsInvokeExpr()) {
+				// Check the callees
+				for (Iterator<Edge> edgeIt = Scene.v().getCallGraph().edgesOutOf(u); edgeIt.hasNext(); ) {
+					Edge e = edgeIt.next();
+					if (hasSideEffectsOrReadsThis(e.getTgt().method(), runList))
+						return true;
+				}
+			}
+		}
+		
+		// Variable is not read
+		methodSideEffects.put(method, false);
+		return false;
+	}
+	
+	/**
 	 * Checks whether the given method is a library stub method
 	 * @param method The method to check
 	 * @return True if the given method is an Android library stub, false
 	 * otherwise
 	 */
-	private boolean methodIsAndroidStub(SootMethod method) {
+	private boolean methodIsAndroidStub(SootMethod method) {		
 		if (!(Options.v().src_prec() == Options.src_prec_apk
 				&& method.getDeclaringClass().isLibraryClass()
 				&& SystemClassHandler.isClassInSystemPackage(
@@ -489,7 +681,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 				SootMethod callee = stmt.getInvokeExpr().getMethod();
 				if (!callee.getSubSignature().equals("void <init>(java.lang.String)"))
 					// Check for super class constructor invocation
-					if (!(callee.getDeclaringClass().hasSuperclass()
+					if (!(method.getDeclaringClass().hasSuperclass()
 							&& callee.getDeclaringClass() == method.getDeclaringClass().getSuperclass()
 							&& callee.getName().equals("<init>")))
 						return false;
