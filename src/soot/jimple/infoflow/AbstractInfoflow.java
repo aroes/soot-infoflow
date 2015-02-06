@@ -37,7 +37,7 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	
 	protected Collection<Transform> preProcessors = Collections.emptyList();
 	
-	protected CodeEliminationMode codeEliminationMode = CodeEliminationMode.RemoveSideEffectFreeCode;
+	protected CodeEliminationMode codeEliminationMode = CodeEliminationMode.PropagateConstants;
     
     /**
      * Creates a new instance of the abstract info flow problem
