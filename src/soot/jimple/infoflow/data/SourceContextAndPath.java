@@ -148,7 +148,7 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 			return hashCode;
 		
 		synchronized(this) {
-			hashCode = (!Infoflow.getPathAgnosticResults() ? 31 * path.hashCode() : 0)
+			hashCode = (!Infoflow.getPathAgnosticResults() ? 31 * (path == null ? 0 : path.hashCode()) : 0)
 					+ 31 * (callStack == null ? 0 : callStack.hashCode())
 					+ 31 * super.hashCode();
 		}
