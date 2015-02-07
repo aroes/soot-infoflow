@@ -445,6 +445,9 @@ public class Infoflow extends AbstractInfoflow {
 		maxMemoryConsumption = -1;
 		ipcManager.updateJimpleForICC();
 		
+		// Clear the base registrations from previous runs
+		AccessPath.clearBaseRegister();
+		
 		// Patch the java.lang.Thread implementation
 		patchThreadImplementation();
 				
@@ -627,7 +630,6 @@ public class Infoflow extends AbstractInfoflow {
 		}
 		forwardSolver = null;
 		forwardProblem = null;
-		AccessPath.clearBaseRegister();
 		Runtime.getRuntime().gc();
 		
 		computeTaintPaths(res);
