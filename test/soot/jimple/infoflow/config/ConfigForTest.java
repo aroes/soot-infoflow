@@ -21,22 +21,22 @@ public class ConfigForTest implements IInfoflowConfig{
 	public void setSootOptions(Options options) {
 		// explicitly include packages for shorter runtime:
 		List<String> includeList = new LinkedList<String>();
-		includeList.add("java.lang.");
-		includeList.add("java.util.");
-		includeList.add("java.io.");
-		includeList.add("sun.misc.");
-		includeList.add("java.net.");
-		includeList.add("javax.servlet.");
-		includeList.add("javax.crypto.");
+		includeList.add("java.lang.*");
+		includeList.add("java.util.*");
+		includeList.add("java.io.*");
+		includeList.add("sun.misc.*");
+		includeList.add("java.net.*");
+		includeList.add("javax.servlet.*");
+		includeList.add("javax.crypto.*");
 
-		includeList.add("android.");
-		includeList.add("org.apache.http.");
+		includeList.add("android.*");
+		includeList.add("org.apache.http.*");
 
-		includeList.add("de.test.");
-		includeList.add("soot.");
-		includeList.add("com.example.");
-		includeList.add("libcore.icu.");
-		includeList.add("securibench.");
+		includeList.add("de.test.*");
+		includeList.add("soot.*");
+		includeList.add("com.example.*");
+		includeList.add("libcore.icu.*");
+		includeList.add("securibench.*");
 		Options.v().set_no_bodies_for_excluded(true);
 		Options.v().set_allow_phantom_refs(true);
 		options.set_include(includeList);

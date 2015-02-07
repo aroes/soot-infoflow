@@ -22,17 +22,17 @@ public class ConfigSecuriBench implements IInfoflowConfig{
 	public void setSootOptions(Options options) {
 		// explicitly include packages for shorter runtime:
 		List<String> includeList = new LinkedList<String>();
-		includeList.add("java.lang.");
-		includeList.add("java.util.");
-		includeList.add("java.io.");
-		includeList.add("sun.misc.");
-		includeList.add("java.net.");
-		includeList.add("org.apache.http.");
-		includeList.add("de.test.");
-		includeList.add("soot.");
-		includeList.add("securibench.");
-		includeList.add("javax.servlet.");
-		includeList.add("com.oreilly.servlet.");
+		includeList.add("java.lang.*");
+		includeList.add("java.util.*");
+		includeList.add("java.io.*");
+		includeList.add("sun.misc.*");
+		includeList.add("java.net.*");
+		includeList.add("org.apache.http.*");
+		includeList.add("de.test.*");
+		includeList.add("soot.*");
+		includeList.add("securibench.*");
+		includeList.add("javax.servlet.*");
+		includeList.add("com.oreilly.servlet.*");
 //		includeList.add("java.security.");
 //		includeList.add("javax.crypto.");
 		options.set_include(includeList);
