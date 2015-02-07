@@ -1,7 +1,6 @@
 package soot.jimple.infoflow.aliasing;
 
 import heros.solver.IDESolver;
-import heros.solver.Pair;
 
 import java.util.Collection;
 
@@ -14,6 +13,7 @@ import soot.Value;
 import soot.jimple.Constant;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.data.AccessPath.BasePair;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 import soot.jimple.toolkits.pointer.LocalMustAliasAnalysis;
 import soot.jimple.toolkits.pointer.StrongLocalMustAliasAnalysis;
@@ -86,7 +86,7 @@ public class Aliasing {
 			if (!referencedAP.isStaticFieldRef())
 				return null;
 		
-		final Collection<Pair<SootField[], Type[]>> bases = taintedAP.isStaticFieldRef()
+		final Collection<BasePair> bases = taintedAP.isStaticFieldRef()
 				? AccessPath.getBaseForType(taintedAP.getFirstFieldType())
 						: AccessPath.getBaseForType(taintedAP.getBaseType());
 		
@@ -107,23 +107,23 @@ public class Aliasing {
 				// must be excluded from base matching.
 				if (bases != null && !(taintedAP.isStaticFieldRef() && fieldIdx == 0)) {
 					// Check the base. Handles A.y (taint) ~ A.[x].y (ref)
-					for (Pair<SootField[], Type[]> base : bases) {
-						if (base.getO1()[0] == referencedAP.getFields()[fieldIdx]) {
+					for (BasePair base : bases) {
+						if (base.getFields()[0] == referencedAP.getFields()[fieldIdx]) {
 							// Build the access path against which we have
 							// actually matched
 							SootField[] cutFields = new SootField
-									[taintedAP.getFieldCount() + base.getO1().length];
+									[taintedAP.getFieldCount() + base.getFields().length];
 							Type[] cutFieldTypes = new Type[cutFields.length];
 							
 							System.arraycopy(taintedAP.getFields(), 0, cutFields, 0, fieldIdx);
-							System.arraycopy(base.getO1(), 0, cutFields, fieldIdx, base.getO1().length);
+							System.arraycopy(base.getFields(), 0, cutFields, fieldIdx, base.getFields().length);
 							System.arraycopy(taintedAP.getFields(), fieldIdx, cutFields,
-									fieldIdx + base.getO1().length, taintedAP.getFieldCount() - fieldIdx);
+									fieldIdx + base.getFields().length, taintedAP.getFieldCount() - fieldIdx);
 							
 							System.arraycopy(taintedAP.getFieldTypes(), 0, cutFieldTypes, 0, fieldIdx);
-							System.arraycopy(base.getO2(), 0, cutFieldTypes, fieldIdx, base.getO2().length);
+							System.arraycopy(base.getTypes(), 0, cutFieldTypes, fieldIdx, base.getTypes().length);
 							System.arraycopy(taintedAP.getFieldTypes(), fieldIdx, cutFieldTypes,
-									fieldIdx + base.getO2().length, taintedAP.getFieldCount() - fieldIdx);
+									fieldIdx + base.getTypes().length, taintedAP.getFieldCount() - fieldIdx);
 
 							return new AccessPath(taintedAP.getPlainValue(),
 									cutFields, taintedAP.getBaseType(), cutFieldTypes,

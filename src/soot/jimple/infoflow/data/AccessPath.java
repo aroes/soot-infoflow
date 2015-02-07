@@ -10,8 +10,6 @@
  ******************************************************************************/
 package soot.jimple.infoflow.data;
 
-import heros.solver.Pair;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Set;
@@ -54,8 +52,59 @@ public class AccessPath implements Cloneable {
 	
 	private int hashCode = 0;
 	
-	private static MyConcurrentHashMap<Type, Set<Pair<SootField[], Type[]>>> baseRegister
-			= new MyConcurrentHashMap<Type, Set<Pair<SootField[],Type[]>>>();
+	/**
+	 * Specialized pair class for field bases
+	 * 
+	 * @author Steven Arzt
+	 *
+	 */
+	public static class BasePair {
+		
+		private final SootField[] fields;
+		private final Type[] types;
+		
+		public BasePair(SootField[] fields, Type[] types) {
+			this.fields = fields;
+			this.types = types;
+		}
+		
+		public SootField[] getFields() {
+			return this.fields;
+		}
+		
+		public Type[] getTypes()  {
+			return this.types;
+		}
+		
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + Arrays.hashCode(fields);
+			result = prime * result + Arrays.hashCode(types);
+			return result;
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			BasePair other = (BasePair) obj;
+			if (!Arrays.equals(fields, other.fields))
+				return false;
+			if (!Arrays.equals(types, other.types))
+				return false;
+			return true;
+		}
+		
+	}
+	
+	private static MyConcurrentHashMap<Type, Set<BasePair>> baseRegister
+			= new MyConcurrentHashMap<Type, Set<BasePair>>();
 
 	/**
 	 * The empty access path denotes a code region depending on a tainted
@@ -280,16 +329,16 @@ public class AccessPath implements Cloneable {
 				break;
 			}
 		
-		Set<Pair<SootField[], Type[]>> bases = baseRegister.putIfAbsentElseGet
-				(eiType, new ConcurrentHashSet<Pair<SootField[], Type[]>>());
-		bases.add(new Pair<SootField[], Type[]>(base, baseTypes));
+		Set<BasePair> bases = baseRegister.putIfAbsentElseGet
+				(eiType, new ConcurrentHashSet<BasePair>());
+		bases.add(new BasePair(base, baseTypes));
 	}
 	
 	public static void clearBaseRegister() {
-		baseRegister.clear();
+//		baseRegister.clear();
 	}
 	
-	public static Collection<Pair<SootField[], Type[]>> getBaseForType(Type tp) {
+	public static Collection<BasePair> getBaseForType(Type tp) {
 		return baseRegister.get(tp);
 	}
 
