@@ -62,6 +62,7 @@ public class AccessPath implements Cloneable {
 		
 		private final SootField[] fields;
 		private final Type[] types;
+		private int hashCode = 0;
 		
 		public BasePair(SootField[] fields, Type[] types) {
 			this.fields = fields;
@@ -78,11 +79,14 @@ public class AccessPath implements Cloneable {
 		
 		@Override
 		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + Arrays.hashCode(fields);
-			result = prime * result + Arrays.hashCode(types);
-			return result;
+			if (hashCode == 0) {			
+				final int prime = 31;
+				int result = 1;
+				result = prime * result + Arrays.hashCode(fields);
+				result = prime * result + Arrays.hashCode(types);
+				hashCode = result;
+			}
+			return hashCode;
 		}
 		
 		@Override
