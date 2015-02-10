@@ -18,8 +18,11 @@ import java.util.List;
  */
 public class AndroidEntryPointConstants {
 	
+	/*========================================================================*/
+
 	public static final String ACTIVITYCLASS = "android.app.Activity";
 	public static final String SERVICECLASS = "android.app.Service";
+	public static final String GCMBASEINTENTSERVICECLASS = "com.google.android.gcm.GCMBaseIntentService";
 	public static final String BROADCASTRECEIVERCLASS = "android.content.BroadcastReceiver";
 	public static final String CONTENTPROVIDERCLASS = "android.content.ContentProvider";
 	public static final String APPLICATIONCLASS = "android.app.Application";
@@ -45,6 +48,13 @@ public class AndroidEntryPointConstants {
 	public static final String SERVICE_ONUNBIND = "boolean onUnbind(android.content.Intent)";
 	public static final String SERVICE_ONDESTROY = "void onDestroy()";
 	
+	public static final String GCMINTENTSERVICE_ONDELETEDMESSAGES = "void onDeletedMessages(android.content.Context,int)";
+	public static final String GCMINTENTSERVICE_ONERROR = "void onError(android.content.Context,java.lang.String)";
+	public static final String GCMINTENTSERVICE_ONMESSAGE = "void onMessage(android.content.Context,android.content.Intent)";
+	public static final String GCMINTENTSERVICE_ONRECOVERABLEERROR = "void onRecoverableError(android.content.Context,java.lang.String)";
+	public static final String GCMINTENTSERVICE_ONREGISTERED = "void onRegistered(android.content.Context,java.lang.String)";
+	public static final String GCMINTENTSERVICE_ONUNREGISTERED = "void onUnregistered(android.content.Context,java.lang.String)";
+	
 	public static final String BROADCAST_ONRECEIVE = "void onReceive(android.content.Context,android.content.Intent)";
 	
 	public static final String CONTENTPROVIDER_ONCREATE = "boolean onCreate()";
@@ -60,19 +70,51 @@ public class AndroidEntryPointConstants {
 	public static final String APPLIFECYCLECALLBACK_ONACTIVITYDESTROYED = "void onActivityDestroyed(android.app.Activity)";
 	public static final String APPLIFECYCLECALLBACK_ONACTIVITYCREATED = "void onActivityCreated(android.app.Activity,android.os.Bundle)";
 	
-	private static final String[] activityMethods = {ACTIVITY_ONCREATE, ACTIVITY_ONDESTROY, ACTIVITY_ONPAUSE,
-		ACTIVITY_ONRESTART, ACTIVITY_ONRESUME, ACTIVITY_ONSTART, ACTIVITY_ONSTOP,
-		ACTIVITY_ONSAVEINSTANCESTATE, ACTIVITY_ONRESTOREINSTANCESTATE,
-		ACTIVITY_ONCREATEDESCRIPTION, ACTIVITY_ONPOSTCREATE, ACTIVITY_ONPOSTRESUME};
-	private static final String[] serviceMethods = {SERVICE_ONCREATE, SERVICE_ONDESTROY, SERVICE_ONSTART1,
-		SERVICE_ONSTART2, SERVICE_ONBIND, SERVICE_ONREBIND, SERVICE_ONUNBIND};
+	/*========================================================================*/
+	
+	private static final String[] activityMethods = {ACTIVITY_ONCREATE,
+		ACTIVITY_ONDESTROY,
+		ACTIVITY_ONPAUSE,
+		ACTIVITY_ONRESTART,
+		ACTIVITY_ONRESUME,
+		ACTIVITY_ONSTART,
+		ACTIVITY_ONSTOP,
+		ACTIVITY_ONSAVEINSTANCESTATE,
+		ACTIVITY_ONRESTOREINSTANCESTATE,
+		ACTIVITY_ONCREATEDESCRIPTION,
+		ACTIVITY_ONPOSTCREATE,
+		ACTIVITY_ONPOSTRESUME};
+	
+	private static final String[] serviceMethods = {SERVICE_ONCREATE,
+		SERVICE_ONDESTROY,
+		SERVICE_ONSTART1,
+		SERVICE_ONSTART2,
+		SERVICE_ONBIND,
+		SERVICE_ONREBIND,
+		SERVICE_ONUNBIND};
+	
+	private static final String[] gcmIntentServiceMethods = {GCMINTENTSERVICE_ONDELETEDMESSAGES,
+		GCMINTENTSERVICE_ONERROR,
+		GCMINTENTSERVICE_ONMESSAGE,
+		GCMINTENTSERVICE_ONRECOVERABLEERROR,
+		GCMINTENTSERVICE_ONREGISTERED,
+		GCMINTENTSERVICE_ONUNREGISTERED};
+	
 	private static final String[] broadcastMethods = {BROADCAST_ONRECEIVE};
+	
 	private static final String[] contentproviderMethods = {CONTENTPROVIDER_ONCREATE};
-	private static final String[] applicationMethods = {APPLICATION_ONCREATE, APPLICATION_ONTERMINATE,
-		APPLIFECYCLECALLBACK_ONACTIVITYSTARTED, APPLIFECYCLECALLBACK_ONACTIVITYSTOPPED,
-		APPLIFECYCLECALLBACK_ONACTIVITYSAVEINSTANCESTATE, APPLIFECYCLECALLBACK_ONACTIVITYRESUMED,
-		APPLIFECYCLECALLBACK_ONACTIVITYPAUSED, APPLIFECYCLECALLBACK_ONACTIVITYDESTROYED,
+	
+	private static final String[] applicationMethods = {APPLICATION_ONCREATE,
+		APPLICATION_ONTERMINATE,
+		APPLIFECYCLECALLBACK_ONACTIVITYSTARTED,
+		APPLIFECYCLECALLBACK_ONACTIVITYSTOPPED,
+		APPLIFECYCLECALLBACK_ONACTIVITYSAVEINSTANCESTATE,
+		APPLIFECYCLECALLBACK_ONACTIVITYRESUMED,
+		APPLIFECYCLECALLBACK_ONACTIVITYPAUSED,
+		APPLIFECYCLECALLBACK_ONACTIVITYDESTROYED,
 		APPLIFECYCLECALLBACK_ONACTIVITYCREATED};
+	
+	/*========================================================================*/
 	
 	public static List<String> getActivityLifecycleMethods(){
 		return Arrays.asList(activityMethods);
@@ -80,6 +122,10 @@ public class AndroidEntryPointConstants {
 	
 	public static List<String> getServiceLifecycleMethods(){
 		return Arrays.asList(serviceMethods);
+	}
+
+	public static List<String> getGCMIntentServiceMethods(){
+		return Arrays.asList(gcmIntentServiceMethods);
 	}
 	
 	public static List<String> getBroadcastLifecycleMethods(){
@@ -94,6 +140,8 @@ public class AndroidEntryPointConstants {
 		return Arrays.asList(applicationMethods);
 	}
 
+	/*========================================================================*/
+	
 	/**
 	 * Gets whether the given class if one of Android's default lifecycle
 	 * classes (android.app.Activity etc.)

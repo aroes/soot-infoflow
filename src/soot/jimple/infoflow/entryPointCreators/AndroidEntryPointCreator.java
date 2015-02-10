@@ -457,6 +457,11 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 				ctype = ComponentType.BroadcastReceiver;
 			else if(sc.getName().equals(AndroidEntryPointConstants.CONTENTPROVIDERCLASS))
 				ctype = ComponentType.ContentProvider;
+			else
+				continue;
+			
+			// As soon was we have found one matching parent class, we abort
+			break;
 		}
 		componentTypeCache.put(currentClass, ctype);
 		return ctype; 
@@ -493,15 +498,9 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		
 		boolean hasAdditionalMethods = false;
 		if (modelAdditionalMethods) {
-			for(SootMethod currentMethod : currentClass.getMethods()){
-				if(entryPoints.contains(currentMethod.toString()) && !AndroidEntryPointConstants.getContentproviderLifecycleMethods().contains(currentMethod.getSubSignature())){
-					JNopStmt thenStmt = new JNopStmt();
-					createIfStmt(thenStmt);
-					buildMethodCall(currentMethod, body, classLocal, generator);
-					body.getUnits().add(thenStmt);
-					hasAdditionalMethods = true;
-				}
-			}
+			for (SootMethod currentMethod : currentClass.getMethods())
+				if (entryPoints.contains(currentMethod.toString()))
+					hasAdditionalMethods |= createPlainMethodCall(classLocal, currentMethod);
 		}
 		addCallbackMethods(currentClass);
 		body.getUnits().add(endWhileStmt);
@@ -537,15 +536,9 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		
 		boolean hasAdditionalMethods = false;
 		if (modelAdditionalMethods) {
-			for(SootMethod currentMethod : currentClass.getMethods()){
-				if(entryPoints.contains(currentMethod.toString()) && !AndroidEntryPointConstants.getBroadcastLifecycleMethods().contains(currentMethod.getSubSignature())){
-					JNopStmt thenStmt = new JNopStmt();
-					createIfStmt(thenStmt);
-					buildMethodCall(currentMethod, body, classLocal, generator);
-					body.getUnits().add(thenStmt);
-					hasAdditionalMethods = true;
-				}
-			}
+			for (SootMethod currentMethod : currentClass.getMethods())
+				if (entryPoints.contains(currentMethod.toString()))
+					hasAdditionalMethods |= createPlainMethodCall(classLocal, currentMethod);
 		}
 		addCallbackMethods(currentClass);
 		body.getUnits().add(endWhileStmt);
@@ -567,6 +560,8 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 			SootClass currentClass,
 			JNopStmt endClassStmt,
 			Local classLocal) {
+		final boolean isGCMBaseIntentService = isGCMBaseIntentService(currentClass);
+		
 		// 1. onCreate:
 		searchAndBuildMethod(AndroidEntryPointConstants.SERVICE_ONCREATE, currentClass, entryPoints, classLocal);
 		
@@ -594,15 +589,16 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		
 		boolean hasAdditionalMethods = false;
 		if (modelAdditionalMethods) {
-			for(SootMethod currentMethod : currentClass.getMethods()){
-				if(entryPoints.contains(currentMethod.toString()) && !AndroidEntryPointConstants.getServiceLifecycleMethods().contains(currentMethod.getSubSignature())){
-					JNopStmt thenStmt = new JNopStmt();
-					createIfStmt(thenStmt);
-					buildMethodCall(currentMethod, body, classLocal, generator);
-					body.getUnits().add(thenStmt);
-				}
-			}
+			for (SootMethod currentMethod : currentClass.getMethods())
+				if (entryPoints.contains(currentMethod.toString()))
+					hasAdditionalMethods |= createPlainMethodCall(classLocal, currentMethod);
 		}
+		if (isGCMBaseIntentService)
+			for (String sig : AndroidEntryPointConstants.getGCMIntentServiceMethods()) {
+				SootMethod sm = findMethod(currentClass, sig);
+				if (sm != null && !sm.getName().equals(AndroidEntryPointConstants.GCMBASEINTENTSERVICECLASS))
+					hasAdditionalMethods |= createPlainMethodCall(classLocal, sm);
+			}
 		addCallbackMethods(currentClass);
 		body.getUnits().add(endWhileStmt);
 		if (hasAdditionalMethods)
@@ -622,16 +618,16 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		body.getUnits().add(startWhile2Stmt);
 		hasAdditionalMethods = false;
 		if (modelAdditionalMethods) {
-			for(SootMethod currentMethod : currentClass.getMethods()){
-				if(entryPoints.contains(currentMethod.toString()) && !AndroidEntryPointConstants.getServiceLifecycleMethods().contains(currentMethod.getSubSignature())){
-					JNopStmt thenStmt = new JNopStmt();
-					createIfStmt(thenStmt);
-					buildMethodCall(currentMethod, body, classLocal, generator);
-					body.getUnits().add(thenStmt);
-					hasAdditionalMethods = true;
-				}
-			}
+			for (SootMethod currentMethod : currentClass.getMethods())
+				if (entryPoints.contains(currentMethod.toString()))
+					hasAdditionalMethods |= createPlainMethodCall(classLocal, currentMethod);
 		}
+		if (isGCMBaseIntentService)
+			for (String sig : AndroidEntryPointConstants.getGCMIntentServiceMethods()) {
+				SootMethod sm = findMethod(currentClass, sig);
+				if (sm != null && !sm.getName().equals(AndroidEntryPointConstants.GCMBASEINTENTSERVICECLASS))
+					hasAdditionalMethods |= createPlainMethodCall(classLocal, sm);
+			}
 		addCallbackMethods(currentClass);
 		body.getUnits().add(endWhile2Stmt);
 		if (hasAdditionalMethods)
@@ -654,6 +650,36 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		
 		//either begin or end or next class:
 		// createIfStmt(onCreateStmt);	// no, the process gets killed in between
+	}
+
+	private boolean createPlainMethodCall(Local classLocal, SootMethod currentMethod) {
+		// Do not create calls to lifecycle methods which we handle explicitly
+		if(AndroidEntryPointConstants.getServiceLifecycleMethods().contains(currentMethod.getSubSignature()))
+			return false;
+		
+		JNopStmt beforeStmt = new JNopStmt();
+		JNopStmt thenStmt = new JNopStmt();
+		body.getUnits().add(beforeStmt);
+		createIfStmt(thenStmt);
+		buildMethodCall(currentMethod, body, classLocal, generator);
+		
+		body.getUnits().add(thenStmt);
+		createIfStmt(beforeStmt);
+		return true;
+	}
+	
+	/**
+	 * Checks whether the given service is a GCM BaseIntentService
+	 * @param currentClass The class to check
+	 * @return True if the given service is a GCM BaseIntentService, otherwise
+	 * false
+	 */
+	private boolean isGCMBaseIntentService(SootClass currentClass) {
+		while (currentClass.hasSuperclass())
+			if (currentClass.getSuperclass().getName().equals(
+					AndroidEntryPointConstants.GCMBASEINTENTSERVICECLASS))
+				return true;
+		return false;
 	}
 
 	/**
@@ -728,7 +754,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 						&& !AndroidEntryPointConstants.getActivityLifecycleMethods().contains(currentMethod.getSubSignature()))
 					methodsToInvoke.add(currentMethod);
 		boolean hasCallbacks = this.callbackFunctions.containsKey(currentClass.getName());
-	
+		
 		if (!methodsToInvoke.isEmpty() || hasCallbacks) {
 			JNopStmt startWhileStmt = new JNopStmt();
 			JNopStmt endWhileStmt = new JNopStmt();
@@ -739,15 +765,14 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 			addCallbackMethods(currentClass);
 
 			// Add the other entry points
-			for (SootMethod currentMethod : methodsToInvoke) {
-				JNopStmt thenStmt = new JNopStmt();
-				createIfStmt(thenStmt);
-				buildMethodCall(currentMethod, body, classLocal, generator);
-				body.getUnits().add(thenStmt);
-			}
-
+			boolean hasAdditionalMethods = false;
+			for (SootMethod currentMethod : currentClass.getMethods())
+				if (entryPoints.contains(currentMethod.toString()))
+					hasAdditionalMethods |= createPlainMethodCall(classLocal, currentMethod);
+			
 			body.getUnits().add(endWhileStmt);
-			createIfStmt(startWhileStmt);
+			if (hasAdditionalMethods)
+				createIfStmt(startWhileStmt);
 		}
 				
 		//4. onPause:
