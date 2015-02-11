@@ -675,10 +675,12 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 	 * false
 	 */
 	private boolean isGCMBaseIntentService(SootClass currentClass) {
-		while (currentClass.hasSuperclass())
+		while (currentClass.hasSuperclass()) {
 			if (currentClass.getSuperclass().getName().equals(
 					AndroidEntryPointConstants.GCMBASEINTENTSERVICECLASS))
 				return true;
+			currentClass = currentClass.getSuperclass();
+		}
 		return false;
 	}
 
