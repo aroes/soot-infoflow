@@ -339,7 +339,7 @@ public class AccessPath implements Cloneable {
 	}
 	
 	public static void clearBaseRegister() {
-//		baseRegister.clear();
+		baseRegister.clear();
 	}
 	
 	public static Collection<BasePair> getBaseForType(Type tp) {
