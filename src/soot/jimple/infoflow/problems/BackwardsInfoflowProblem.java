@@ -164,7 +164,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 									&& ref.getBase() == source.getAccessPath().getPlainValue()
 									&& source.getAccessPath().firstFieldMatches(ref.getField())) {
 								newLeftAbs = source.deriveNewAbstraction(leftValue, true,
-										source.getAccessPath().getFirstFieldType());
+										defStmt, source.getAccessPath().getFirstFieldType());
 							}
 						}
 						else if (enableStaticFields && rightValue instanceof StaticFieldRef) {
@@ -172,7 +172,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							if (source.getAccessPath().isStaticFieldRef()
 									&& source.getAccessPath().firstFieldMatches(ref.getField())) {
 								newLeftAbs = source.deriveNewAbstraction(leftValue, true,
-										source.getAccessPath().getBaseType());
+										defStmt, source.getAccessPath().getBaseType());
 							}
 						}
 						else if (rightValue == source.getAccessPath().getPlainValue()) {
@@ -388,7 +388,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						if (source == getZeroValue())
 							return Collections.emptySet();
 						assert source.isAbstractionActive() || flowSensitiveAliasing;
-						
+												
 						//if we do not have to look into sources or sinks:
 						if (!inspectSources && isSource)
 							return Collections.emptySet();
