@@ -292,6 +292,14 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								targetType = null;
 							// We do not need to handle casts. Casts only make
 							// types more imprecise when going backwards.
+
+							// If the right side's type is not compatible with our current type,
+							// this cannot be an alias
+							if (addRightValue) {
+								if (!canCastType(rightValue.getType(), targetType))
+									addRightValue = false;
+							}
+
 							if (addRightValue) {
 								Abstraction newAbs = source.deriveNewAbstraction(rightValue, cutFirstField,
 										defStmt, targetType);
@@ -330,7 +338,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							if (source == getZeroValue())
 								return Collections.emptySet();
 							assert source.isAbstractionActive() || flowSensitiveAliasing;
-							
+														
 							Set<Abstraction> res = computeAliases(defStmt, leftValue, d1, source);
 							
 							if (destDefStmt != null && interproceduralCFG().isExitStmt(destDefStmt))
@@ -349,7 +357,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 			public FlowFunction<Abstraction> getCallFlowFunction(final Unit src, final SootMethod dest) {
 				if (!dest.isConcrete())
 					return KillAll.v();
-				
+								
 				final Stmt stmt = (Stmt) src;
 				final InvokeExpr ie = stmt.getInvokeExpr();
 
@@ -388,7 +396,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						if (source == getZeroValue())
 							return Collections.emptySet();
 						assert source.isAbstractionActive() || flowSensitiveAliasing;
-												
+						
 						//if we do not have to look into sources or sinks:
 						if (!inspectSources && isSource)
 							return Collections.emptySet();
