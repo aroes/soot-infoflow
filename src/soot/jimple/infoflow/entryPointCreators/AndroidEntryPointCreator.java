@@ -887,7 +887,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 	 * @return True if a matching callback has been found, otherwise false.
 	 */
 	private boolean addCallbackMethods(SootClass currentClass) {
-		return addCallbackMethods(currentClass, Collections.<SootClass>emptySet(), "");
+		return addCallbackMethods(currentClass, null, "");
 	}
 
 	/**
@@ -952,7 +952,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 
 		// The class for which we are generating the lifecycle always has an
 		// instance.
-		if (referenceClasses.isEmpty())
+		if (referenceClasses == null || referenceClasses.isEmpty())
 			referenceClasses = Collections.singleton(currentClass);
 		else {
 			referenceClasses = new HashSet<SootClass>(referenceClasses);
