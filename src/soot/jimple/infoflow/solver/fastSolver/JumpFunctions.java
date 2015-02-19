@@ -13,7 +13,7 @@ package soot.jimple.infoflow.solver.fastSolver;
 import heros.SynchronizedBy;
 import heros.ThreadSafe;
 import heros.solver.PathEdge;
-import soot.jimple.infoflow.util.MyConcurrentHashMap;
+import soot.jimple.infoflow.collect.MyConcurrentHashMap;
 
 
 /**

@@ -1,4 +1,4 @@
-package soot.jimple.infoflow.util;
+package soot.jimple.infoflow.collect;
 
 import java.util.concurrent.ConcurrentHashMap;
 

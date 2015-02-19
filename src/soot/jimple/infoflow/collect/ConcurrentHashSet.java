@@ -1,27 +1,38 @@
-package soot.jimple.infoflow.util;
+/*******************************************************************************
+ * Copyright (c) 2012 Secure Software Engineering Group at EC SPRIDE.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the GNU Lesser Public License v2.1
+ * which accompanies this distribution, and is available at
+ * http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+ * 
+ * Contributors: Christian Fritz, Steven Arzt, Siegfried Rasthofer, Eric
+ * Bodden, and others.
+ ******************************************************************************/
+package soot.jimple.infoflow.collect;
 
 import java.util.AbstractSet;
 import java.util.Iterator;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 import com.google.common.collect.MapMaker;
 
 /**
- * HashSet with weak keys
+ * Multithreaded version of a hash set
  * 
  * @author Steven Arzt
- *
- * @param <E>
  */
-public class WeakConcurrentHashSet<E> extends AbstractSet<E> {
+public class ConcurrentHashSet<E> extends AbstractSet<E> implements Set<E> {
 
-    protected ConcurrentMap<E,E> delegate;
+    protected final ConcurrentMap<E,E> delegate;
     
     /**
      * Creates a new, empty ConcurrentHashSet. 
      */
-    public WeakConcurrentHashSet() {
-        delegate = new MapMaker().weakKeys().concurrencyLevel
+    public ConcurrentHashSet() {
+    	// had some really weird NPEs with Java's ConcurrentHashMap (i.e. got a
+    	// NPE at size()), now trying witrh Guava instead
+        delegate = new MapMaker().concurrencyLevel
         		(Runtime.getRuntime().availableProcessors()).makeMap();
     }
 
@@ -42,6 +53,7 @@ public class WeakConcurrentHashSet<E> extends AbstractSet<E> {
 
     @Override
     public boolean add(E o) {
+    	assert o != null;
         return delegate.put(o, o)==null;
     }
 
@@ -70,4 +82,5 @@ public class WeakConcurrentHashSet<E> extends AbstractSet<E> {
 		return delegate.keySet().toString();
 	}
 
+	
 }

@@ -40,8 +40,8 @@ import org.slf4j.LoggerFactory;
 
 import soot.SootMethod;
 import soot.Unit;
-import soot.jimple.infoflow.util.ConcurrentHashSet;
-import soot.jimple.infoflow.util.MyConcurrentHashMap;
+import soot.jimple.infoflow.collect.ConcurrentHashSet;
+import soot.jimple.infoflow.collect.MyConcurrentHashMap;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 import com.google.common.cache.CacheBuilder;

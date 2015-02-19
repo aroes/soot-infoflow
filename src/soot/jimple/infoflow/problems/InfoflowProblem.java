@@ -58,6 +58,8 @@ import soot.jimple.ThrowStmt;
 import soot.jimple.infoflow.aliasing.Aliasing;
 import soot.jimple.infoflow.aliasing.IAliasingStrategy;
 import soot.jimple.infoflow.aliasing.ImplicitFlowAliasStrategy;
+import soot.jimple.infoflow.collect.ConcurrentHashSet;
+import soot.jimple.infoflow.collect.MyConcurrentHashMap;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.AccessPath;
@@ -74,8 +76,6 @@ import soot.jimple.infoflow.source.DefaultSourceSinkManager;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.infoflow.util.BaseSelector;
-import soot.jimple.infoflow.util.ConcurrentHashSet;
-import soot.jimple.infoflow.util.MyConcurrentHashMap;
 import soot.jimple.infoflow.util.SystemClassHandler;
 
 public class InfoflowProblem extends AbstractInfoflowProblem {
@@ -879,7 +879,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					private Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
 						if (stopAfterFirstFlow && !results.isEmpty())
 							return Collections.emptySet();
-						
+												
 						//if we do not have to look into sources or sinks:
 						if (!inspectSources && sourceInfo != null)
 							return Collections.emptySet();

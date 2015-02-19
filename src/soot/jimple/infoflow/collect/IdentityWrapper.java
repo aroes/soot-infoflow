@@ -1,6 +1,6 @@
 package soot.jimple.infoflow.collect;
 
-public class IdentityWrapper<E> {
+class IdentityWrapper<E> {
 
 	private final E contents;
 	

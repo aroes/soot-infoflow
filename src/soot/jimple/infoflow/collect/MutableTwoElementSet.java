@@ -8,7 +8,7 @@
  * Contributors:
  *     Eric Bodden - initial API and implementation
  ******************************************************************************/
-package soot.jimple.infoflow.problems;
+package soot.jimple.infoflow.collect;
 
 import java.util.AbstractSet;
 import java.util.Iterator;
