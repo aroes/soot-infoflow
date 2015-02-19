@@ -418,6 +418,10 @@ public class Infoflow extends AbstractInfoflow {
 		if (runnable == null)
 			return;
 		
+		SootMethod smPost = sc.getMethodUnsafe(
+				"boolean post(java.lang.Runnable)");
+		SootMethod smPostAtFrontOfQueue = sc.getMethodUnsafe(
+				"boolean postAtFrontOfQueue(java.lang.Runnable)");
 		SootMethod smPostAtTimeWithToken = sc.getMethodUnsafe(
 				"boolean postAtTime(java.lang.Runnable,java.lang.Object,long)");
 		SootMethod smPostAtTime = sc.getMethodUnsafe(
@@ -425,10 +429,14 @@ public class Infoflow extends AbstractInfoflow {
 		SootMethod smPostDelayed = sc.getMethodUnsafe(
 				"boolean postDelayed(java.lang.Runnable,long)");
 		
-		if (smPostAtTimeWithToken != null && !smPostAtTimeWithToken.hasActiveBody())
-			patchHandlerPostBody(smPostAtTimeWithToken, runnable);
+		if (smPost != null && !smPost.hasActiveBody())
+			patchHandlerPostBody(smPost, runnable);
+		if (smPostAtFrontOfQueue != null && !smPostAtFrontOfQueue.hasActiveBody())
+			patchHandlerPostBody(smPostAtFrontOfQueue, runnable);
 		if (smPostAtTime != null && !smPostAtTime.hasActiveBody())
 			patchHandlerPostBody(smPostAtTime, runnable);
+		if (smPostAtTimeWithToken != null && !smPostAtTimeWithToken.hasActiveBody())
+			patchHandlerPostBody(smPostAtTimeWithToken, runnable);
 		if (smPostDelayed != null && !smPostDelayed.hasActiveBody())
 			patchHandlerPostBody(smPostDelayed, runnable);
 	}

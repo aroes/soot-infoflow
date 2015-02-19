@@ -479,7 +479,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								res.add(abs);
 							}
 						}
-						else if(!dest.getName().equals("<clinit>")) {
+						else if (dest.getParameterCount() > 0) {
 							assert dest.getParameterCount() == ie.getArgCount();
 							// check if param is tainted:
 							for (int i = 0; i < ie.getArgCount(); i++) {

@@ -1516,7 +1516,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						res.add(ap.copyWithNewValue(callee.getActiveBody().getThisLocal()));
 					}
 				}
-				else if(!callee.getName().equals("<clinit>")) {
+				else if (callee.getParameterCount() > 0) {
 					assert callee.getParameterCount() == ie.getArgCount();
 					// check if param is tainted:
 					for (int i = 0; i < ie.getArgCount(); i++) {
