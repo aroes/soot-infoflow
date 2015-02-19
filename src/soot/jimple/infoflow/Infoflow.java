@@ -36,8 +36,8 @@ import soot.Scene;
 import soot.SootClass;
 import soot.SootField;
 import soot.SootMethod;
-import soot.Transform;
 import soot.Unit;
+import soot.jimple.IntConstant;
 import soot.jimple.Jimple;
 import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
@@ -51,6 +51,7 @@ import soot.jimple.infoflow.data.pathBuilders.DefaultPathBuilderFactory;
 import soot.jimple.infoflow.data.pathBuilders.IAbstractionPathBuilder;
 import soot.jimple.infoflow.data.pathBuilders.IPathBuilderFactory;
 import soot.jimple.infoflow.entryPointCreators.IEntryPointCreator;
+import soot.jimple.infoflow.handlers.PreAnalysisHandler;
 import soot.jimple.infoflow.handlers.ResultsAvailableHandler;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler;
 import soot.jimple.infoflow.ipc.DefaultIPCManager;
@@ -405,6 +406,69 @@ public class Infoflow extends AbstractInfoflow {
 		b.getUnits().add(Jimple.v().newReturnVoidStmt());
 	}
 	
+	/**
+	 * Creates a dummy implementation of android.os.Handler if we don't have one
+	 */
+	private void patchHandlerImplementation() {
+		SootClass sc = Scene.v().getSootClassUnsafe("android.os.Handler");
+		if (sc == null)
+			return;
+		
+		SootClass runnable = Scene.v().getSootClassUnsafe("java.lang.Runnable");
+		if (runnable == null)
+			return;
+		
+		SootMethod smPostAtTimeWithToken = sc.getMethodUnsafe(
+				"boolean postAtTime(java.lang.Runnable,java.lang.Object,long)");
+		SootMethod smPostAtTime = sc.getMethodUnsafe(
+				"boolean postAtTime(java.lang.Runnable,long)");
+		SootMethod smPostDelayed = sc.getMethodUnsafe(
+				"boolean postDelayed(java.lang.Runnable,long)");
+		
+		if (smPostAtTimeWithToken != null && !smPostAtTimeWithToken.hasActiveBody())
+			patchHandlerPostBody(smPostAtTimeWithToken, runnable);
+		if (smPostAtTime != null && !smPostAtTime.hasActiveBody())
+			patchHandlerPostBody(smPostAtTime, runnable);
+		if (smPostDelayed != null && !smPostDelayed.hasActiveBody())
+			patchHandlerPostBody(smPostDelayed, runnable);
+	}
+	
+	/**
+	 * Creates a new body for one of the postXXX methods in android.os.Handler
+	 * @param method The method for which to create the implementation
+	 * @param runnable The java.lang.Runnable class
+	 * @return The newly created body
+	 */
+	private Body patchHandlerPostBody(SootMethod method, SootClass runnable) {
+		SootClass sc = method.getDeclaringClass();
+		Body b = Jimple.v().newBody(method);
+		method.setActiveBody(b);
+		
+		Local thisLocal = Jimple.v().newLocal("this", sc.getType());
+		b.getLocals().add(thisLocal);
+		b.getUnits().add(Jimple.v().newIdentityStmt(thisLocal,
+				Jimple.v().newThisRef(sc.getType())));
+		
+		// Assign the parameters
+		Local firstParam = null;
+		for (int i = 0; i < method.getParameterCount(); i++)  {
+			Local paramLocal = Jimple.v().newLocal("param" + i, method.getParameterType(i));
+			b.getLocals().add(paramLocal);
+			b.getUnits().add(Jimple.v().newIdentityStmt(paramLocal,
+					Jimple.v().newParameterRef(method.getParameterType(i), i)));
+			if (i == 0)
+				firstParam = paramLocal;
+		}
+			
+		// Invoke p0.run()
+		b.getUnits().add(Jimple.v().newInvokeStmt(Jimple.v().newInterfaceInvokeExpr(firstParam,
+				runnable.getMethod("void run()").makeRef())));
+		
+		Unit retStmt = Jimple.v().newReturnStmt(IntConstant.v(1));
+		b.getUnits().add(retStmt);
+		return b;
+	}
+	
 	@Override
 	public void computeInfoflow(String appPath, String libPath, String entryPoint,
 			ISourceSinkManager sourcesSinks) {
@@ -448,9 +512,16 @@ public class Infoflow extends AbstractInfoflow {
 		// Clear the base registrations from previous runs
 		AccessPath.clearBaseRegister();
 		
-		// Patch the java.lang.Thread implementation
+		// Run the preprocessors
+        for (PreAnalysisHandler tr : preProcessors)
+            tr.onBeforeCallgraphConstruction();
+        
+        // Patch the java.lang.Thread implementation
 		patchThreadImplementation();
-				
+
+		// Patch the android.os.Handler implementation
+		patchHandlerImplementation();
+		
 		// We explicitly select the packs we want to run for performance reasons
 		if (callgraphAlgorithm != CallgraphAlgorithm.OnDemand) {
 	        PackManager.v().getPack("wjpp").apply();
@@ -458,8 +529,8 @@ public class Infoflow extends AbstractInfoflow {
 		}
 		
 		// Run the preprocessors
-        for (Transform tr : preProcessors)
-            tr.apply();
+        for (PreAnalysisHandler tr : preProcessors)
+            tr.onAfterCallgraphConstruction();
                 
         // Perform constant propagation and remove dead code
         if (codeEliminationMode != CodeEliminationMode.NoCodeElimination) {

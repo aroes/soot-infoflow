@@ -13,8 +13,8 @@ package soot.jimple.infoflow;
 import java.util.Collection;
 import java.util.List;
 
-import soot.Transform;
 import soot.jimple.infoflow.entryPointCreators.IEntryPointCreator;
+import soot.jimple.infoflow.handlers.PreAnalysisHandler;
 import soot.jimple.infoflow.ipc.IIPCManager;
 import soot.jimple.infoflow.results.InfoflowResults;
 import soot.jimple.infoflow.source.ISourceSinkManager;
@@ -103,7 +103,7 @@ public interface IInfoflow {
      * the information flow.
      * @param preprocessors the pre-processors
      */
-    public void setPreProcessors(Collection<Transform> preprocessors);
+    public void setPreProcessors(Collection<PreAnalysisHandler> preprocessors);
 
 	/**
 	 * Computes the information flow on a list of entry point methods. This list

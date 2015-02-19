@@ -879,7 +879,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					private Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
 						if (stopAfterFirstFlow && !results.isEmpty())
 							return Collections.emptySet();
-												
+						
 						//if we do not have to look into sources or sinks:
 						if (!inspectSources && sourceInfo != null)
 							return Collections.emptySet();

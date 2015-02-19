@@ -4,9 +4,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import soot.Transform;
 import soot.jimple.infoflow.entryPointCreators.DefaultEntryPointCreator;
 import soot.jimple.infoflow.entryPointCreators.IEntryPointCreator;
+import soot.jimple.infoflow.handlers.PreAnalysisHandler;
 import soot.jimple.infoflow.source.DefaultSourceSinkManager;
 import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
 
@@ -35,7 +35,7 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	protected CallgraphAlgorithm callgraphAlgorithm = /*CallgraphAlgorithm.OnDemand;*/ CallgraphAlgorithm.AutomaticSelection;
 	protected AliasingAlgorithm aliasingAlgorithm = AliasingAlgorithm.FlowSensitive;
 	
-	protected Collection<Transform> preProcessors = Collections.emptyList();
+	protected Collection<PreAnalysisHandler> preProcessors = Collections.emptyList();
 	
 	protected CodeEliminationMode codeEliminationMode = CodeEliminationMode.PropagateConstants;
     
@@ -73,7 +73,7 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	}
 	
 	@Override
-	public void setPreProcessors(Collection<Transform> preprocessors) {
+	public void setPreProcessors(Collection<PreAnalysisHandler> preprocessors) {
         this.preProcessors = preprocessors;
 	}
 
