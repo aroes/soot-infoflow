@@ -685,14 +685,16 @@ public class Infoflow extends AbstractInfoflow {
 		for (Iterator<AbstractionAtSink> absAtSinkIt = res.iterator(); absAtSinkIt.hasNext(); ) {
 			AbstractionAtSink curAbs = absAtSinkIt.next();
 			for (AbstractionAtSink checkAbs : res)
-				if (checkAbs != curAbs && checkAbs.getSinkStmt() == curAbs.getSinkStmt())
+				if (checkAbs != curAbs
+						&& checkAbs.getSinkStmt() == curAbs.getSinkStmt()
+						&& checkAbs.getAbstraction().isImplicit() == curAbs.getAbstraction().isImplicit())
 					if (checkAbs.getAbstraction().getAccessPath().entails(
 							curAbs.getAbstraction().getAccessPath())) {
 						absAtSinkIt.remove();
 						break;
 					}
 		}
-
+		
 		logger.info("IFDS problem with {} forward and {} backward edges solved, "
 				+ "processing {} results...", forwardSolver.propagationCount,
 				backSolver == null ? 0 : backSolver.propagationCount,
