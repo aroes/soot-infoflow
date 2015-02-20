@@ -95,6 +95,6 @@ public class SourceContext implements Cloneable {
 
 	@Override
 	public String toString() {
-		return accessPath.toString();
+		return accessPath.toString() + (stmt == null ? "" : (" in " + stmt.toString()));
 	}
 }

@@ -417,7 +417,7 @@ public class ImplicitFlowTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(builder.toString());
 	}
-	
+
 	public void hierarchicalCallSetTest() {
 		A a = new A();
 		int tainted = TelephonyManager.getIMEI();
@@ -541,6 +541,15 @@ public class ImplicitFlowTestCode {
 		else
 			i = new I2();
 		i.leak();
+	}
+	
+	public void conditionalReturnTest() {
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(getConditionalValue());
+	}
+
+	private String getConditionalValue() {
+		return TelephonyManager.getIMEI() == 42 ? "a" : "b";
 	}
 
 }

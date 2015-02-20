@@ -98,6 +98,13 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		NotRegistered
 	}
 	
+	/**
+	 * Creates a new instanceof the {@link EasyTaintWrapper} class. This
+	 * constructor assumes that all classes are included and get wrapped.
+	 * However, only the methods in the given map create new taints
+	 * @param classList The method for which to create new taints. This
+	 * is a mapping from class names to sets of subsignatures.
+	 */
 	public EasyTaintWrapper(Map<String, Set<String>> classList){
 		this(classList, new HashMap<String, Set<String>>(),
 				new HashMap<String, Set<String>>(),
@@ -184,18 +191,6 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		// not to break anything
 		if(taintedPath.isStaticFieldRef())
 			return Collections.singleton(taintedPath);
-
-		// For implicit flows, we always taint the return value and the base
-		// object on the empty abstraction.
-		if (taintedPath.isEmpty()) {
-			taints.add(taintedPath);
-			if (stmt instanceof DefinitionStmt)
-				taints.add(new AccessPath(((DefinitionStmt) stmt).getLeftOp(), true));
-			if (stmt.containsInvokeExpr())
-				if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr)
-					taints.add(new AccessPath(((InstanceInvokeExpr) stmt.getInvokeExpr()).getBase(), true));
-			return taints;
-		}
 		
 		// Do we handle equals() and hashCode() separately?
 		final String subSig = method.getSubSignature();
@@ -204,17 +199,19 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		
 		// We need to handle some API calls explicitly as they do not really fit
 		// the model of our rules
-		if (method.getDeclaringClass().getName().equals("java.lang.String")
+		if (!taintedPath.isEmpty()
+				&& method.getDeclaringClass().getName().equals("java.lang.String")
 				&& subSig.equals("void getChars(int,int,char[],int)"))
 			return handleStringGetChars(stmt.getInvokeExpr(), taintedPath);
 		
 		// If this is not one of the supported classes, we skip it
-		boolean isSupported = false;
-		for (String supportedClass : this.includeList)
-			if (method.getDeclaringClass().getName().startsWith(supportedClass)) {
-				isSupported = true;
-				break;
-			}
+		boolean isSupported = includeList == null || includeList.isEmpty();
+		if (!isSupported)
+			for (String supportedClass : this.includeList)
+				if (method.getDeclaringClass().getName().startsWith(supportedClass)) {
+					isSupported = true;
+					break;
+				}
 		if (!isSupported && !aggressiveMode && !taintEqualsHashCode)
 			return taints;
 		
@@ -223,7 +220,8 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		
 		if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
 			InstanceInvokeExpr iiExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();			
-			if (iiExpr.getBase().equals(taintedPath.getPlainValue())) {
+			if (taintedPath.isEmpty()
+					 || iiExpr.getBase().equals(taintedPath.getPlainValue())) {
 				// If the base object is tainted, we have to check whether we must kill the taint
 				if (wrapType == MethodWrapType.KillTaint)
 					return Collections.emptySet();
@@ -244,24 +242,39 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		}
 				
 		//if param is tainted && classList contains classname && if list. contains signature of method -> add propagation
-		if (isSupported && wrapType == MethodWrapType.CreateTaint)
-			for (Value param : stmt.getInvokeExpr().getArgs()) {
-				if (param.equals(taintedPath.getPlainValue())) {
-					// If we call a method on an instance with a tainted parameter, this
-					// instance (base object) is assumed to be tainted.
-					if (!taintEqualsHashCode)
-						if (stmt.getInvokeExprBox().getValue() instanceof InstanceInvokeExpr)
-							taints.add(new AccessPath(((InstanceInvokeExpr) stmt.getInvokeExprBox().getValue()).getBase(), true));
-					
-					// If make sure to also taint the left side of an assignment
-					// if the object just got tainted 
-					if (stmt instanceof DefinitionStmt)
-						taints.add(new AccessPath(((DefinitionStmt) stmt).getLeftOp(), true));
+		if (isSupported && wrapType == MethodWrapType.CreateTaint) {
+			// If we are inside a conditional, we always taint
+			boolean doTaint = taintedPath.isEmpty();
+			
+			// Otherwise, we have to check whether we have a tainted parameter
+			if (!doTaint)
+				for (Value param : stmt.getInvokeExpr().getArgs()) {
+					if (param.equals(taintedPath.getPlainValue())) {
+						// If we call a method on an instance with a tainted parameter, this
+						// instance (base object) and (if it exists) any left side of the
+						// respective assignment is assumed to be tainted.
+						if (!taintEqualsHashCode) {
+							doTaint = true;
+							break;
+						}						
+					}
 				}
+			
+			if (doTaint) {
+				// If make sure to also taint the left side of an assignment
+				// if the object just got tainted 
+				if (stmt instanceof DefinitionStmt)
+					taints.add(new AccessPath(((DefinitionStmt) stmt).getLeftOp(), true));
 				
-				// The parameter as such stays tainted
+				// Taint the base object
+				if (stmt.getInvokeExprBox().getValue() instanceof InstanceInvokeExpr)
+					taints.add(new AccessPath(((InstanceInvokeExpr) stmt.getInvokeExprBox().getValue()).getBase(), true));
+				
+				// The originally tainted parameter or base object as such
+				// stays tainted
 				taints.add(taintedPath);
 			}
+		}
 		
 		return taints;
 	}

@@ -136,6 +136,7 @@
 <java.lang.String: char[] toCharArray()>
 
 <java.lang.String: java.lang.String replaceAll(java.lang.String,java.lang.String)>
+<java.lang.String: java.lang.String replace(java.lang.CharSequence,java.lang.CharSequence)>
 
 <java.lang.Byte: java.lang.Byte valueOf(byte)>
 <java.lang.Byte: java.lang.Byte valueOf(java.lang.String)>
@@ -267,6 +268,8 @@
 <android.content.Intent: void <init>(android.content.Context,java.lang.Class)>
 <android.content.Intent: android.content.Intent addFlags(int)>
 <android.content.Intent: android.content.Intent setFlags(int)>
+<android.content.Intent: android.content.Intent parseIntent(android.content.res.Resources,org.xmlpull.v1.XmlPullParser,android.util.AttributeSet)>
+<android.content.Intent: android.content.Intent parseUri(java.lang.String,int)>
 <android.content.Intent: android.content.Intent putExtra(java.lang.String,boolean)>
 <android.content.Intent: android.content.Intent putExtra(java.lang.String,byte)>
 <android.content.Intent: android.content.Intent putExtra(java.lang.String,char)>

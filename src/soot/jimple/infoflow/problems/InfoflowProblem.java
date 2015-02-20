@@ -588,17 +588,25 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							final Value rightValue = assignStmt.getRightOp();
 							boolean addLeftValue = false;
 							
+							// If we have an implicit flow, but the assigned
+							// local is never read outside the condition, we do
+							// not need to taint it.
+							boolean implicitTaint = newSource.getTopPostdominator() != null
+									&& newSource.getTopPostdominator().getUnit() != null;
+							implicitTaint |= newSource.getAccessPath().isEmpty();
+							
 							// If we have a non-empty postdominator stack, we taint
 							// every assignment target
-							if (newSource.getTopPostdominator() != null || newSource.getAccessPath().isEmpty()) {
+							if (implicitTaint) {
 								assert enableImplicitFlows;
 								
 								// We can skip over all local assignments inside conditionally-
 								// called functions since they are not visible in the caller
 								// anyway
-								if (d1 != null && d1.getAccessPath().isEmpty() && !(leftValue instanceof FieldRef))
+								if ((d1 == null || d1.getAccessPath().isEmpty())
+										&& !(leftValue instanceof FieldRef))
 									return Collections.singleton(newSource);
-								
+																
 								if (newSource.getAccessPath().isEmpty())
 									addLeftValue = true;
 							}
@@ -728,7 +736,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									? newSource : newSource.deriveNewAbstraction(mappedAP, null);							
 							addTaintViaStmt(d1, assignStmt, targetAB, res, cutFirstField,
 									interproceduralCFG().getMethodOf(src), targetType);
-							res.add(newSource);
+							res.add(newSource);							
 							return res;
 						}
 					};
@@ -1313,19 +1321,37 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							newSource = source;
 						
 						// Compute the taint wrapper taints
-						{
-							Collection<Abstraction> wrapperTaints = computeWrapperTaints(d1, iCallStmt, newSource);
-							if (wrapperTaints != null)
-								res.addAll(wrapperTaints);
-						}
+						Collection<Abstraction> wrapperTaints = computeWrapperTaints(d1, iCallStmt, newSource);
+						if (wrapperTaints != null)
+							res.addAll(wrapperTaints);
+						
+						if (newSource.getTopPostdominator() != null
+								&& newSource.getTopPostdominator().getUnit() == null)
+							return Collections.singleton(newSource);
 						
 						// Implicit flows: taint return value
-						if (call instanceof DefinitionStmt && (newSource.getTopPostdominator() != null
-								|| newSource.getAccessPath().isEmpty())) {
-							Value leftVal = ((DefinitionStmt) call).getLeftOp();
-							Abstraction abs = newSource.deriveNewAbstraction(new AccessPath(leftVal, true),
-									iCallStmt);
-							res.add(abs);
+						if (call instanceof DefinitionStmt) {
+							// If we have an implicit flow, but the assigned
+							// local is never read outside the condition, we do
+							// not need to taint it.
+							boolean implicitTaint = newSource.getTopPostdominator() != null
+									&& newSource.getTopPostdominator().getUnit() != null;							
+							implicitTaint |= newSource.getAccessPath().isEmpty();
+							
+							if (implicitTaint) {
+								Value leftVal = ((DefinitionStmt) call).getLeftOp();
+								
+								// We can skip over all local assignments inside conditionally-
+								// called functions since they are not visible in the caller
+								// anyway
+								if ((d1 == null || d1.getAccessPath().isEmpty())
+										&& !(leftVal instanceof FieldRef))
+									return Collections.singleton(newSource);
+								
+								Abstraction abs = newSource.deriveNewAbstraction(new AccessPath(leftVal, true),
+										iCallStmt);
+								return new TwoElementSet<Abstraction>(newSource, abs);
+							}
 						}
 						
 						// We can only pass on a taint if it is neither a parameter nor the
@@ -1550,6 +1576,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 		// Check whether we need to filter a result in a system package
 		if (ignoreFlowsInSystemPackages && SystemClassHandler.isClassInSystemPackage
 				(interproceduralCFG().getMethodOf(resultAbs.getSinkStmt()).getDeclaringClass().getName()))
+			return;
+		
+		// We do not proces empty access paths
+		if (resultAbs.getAbstraction().getAccessPath().isEmpty())
 			return;
 		
 		// Make sure that the sink statement also appears inside the
