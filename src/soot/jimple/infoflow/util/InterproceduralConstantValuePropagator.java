@@ -374,6 +374,9 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 					// otherwise we can just propagate the return value
 					Unit assignConst = Jimple.v().newAssignStmt(assign.getLeftOp(), value);
 					if (!hasSideEffectsOrCallsSink(sm)) {
+						// If this method threw an exception, we have to make up for it
+						fixExceptions(caller, callSite);
+						
 						// We don't have side effects, so we can just change
 						// a = b.foo() into a = 0.
 						caller.getActiveBody().getUnits().swapWith(assign, assignConst);
@@ -383,9 +386,6 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 						// Fix the callgraph
 						if (Scene.v().hasCallGraph())
 							Scene.v().getCallGraph().removeAllEdgesOutOf(assign);
-						
-						// If this method threw an exception, we have to make up for it
-						fixExceptions(caller, callSite);
 					}
 					else {
 						// We have side effects, so we need to keep the method call. Change
