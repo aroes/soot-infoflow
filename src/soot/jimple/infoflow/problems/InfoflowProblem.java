@@ -1578,10 +1578,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				(interproceduralCFG().getMethodOf(resultAbs.getSinkStmt()).getDeclaringClass().getName()))
 			return;
 		
-		// We do not proces empty access paths
-		if (resultAbs.getAbstraction().getAccessPath().isEmpty())
-			return;
-		
 		// Make sure that the sink statement also appears inside the
 		// abstraction
 		resultAbs = new AbstractionAtSink
