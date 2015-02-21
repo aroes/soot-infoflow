@@ -182,6 +182,11 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 						continue;
 					if (!(s instanceof InvokeStmt))
 						continue;
+					
+					// If this is a fixed exception method, we must keep it
+					if (exceptionClass != null
+							&& ((InvokeExpr) s.getInvokeExpr()).getMethod().getDeclaringClass() == exceptionClass)
+						continue;
 										
 					// If none of our pre-conditions are satisfied, there is no
 					// need to look at concrete callees
