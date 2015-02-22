@@ -1325,6 +1325,42 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (wrapperTaints != null)
 							res.addAll(wrapperTaints);
 						
+						// if we have called a sink we have to store the path from the source - in case one of the params is tainted!
+						if (isSink) {
+							// If we are inside a conditional branch, we consider every sink call a leak
+							boolean conditionalCall = enableImplicitFlows 
+									&& !interproceduralCFG().getMethodOf(call).isStatic()
+									&& aliasing.mayAlias(interproceduralCFG().getMethodOf(call).getActiveBody().getThisLocal(),
+											newSource.getAccessPath().getPlainValue())
+									&& newSource.getAccessPath().getFirstField() == null;
+							boolean taintedParam = (conditionalCall
+										|| newSource.getTopPostdominator() != null
+										|| newSource.getAccessPath().isEmpty())
+									&& newSource.isAbstractionActive();
+							
+							// If the base object is tainted, we also consider the "code" associated
+							// with the object's class as tainted.
+							if (!taintedParam) {
+								for (int i = 0; i < callArgs.length; i++) {
+									if (aliasing.mayAlias(callArgs[i], newSource.getAccessPath().getPlainValue())) {
+										taintedParam = true;
+										break;
+									}
+								}
+							}
+							
+							if (taintedParam && newSource.isAbstractionActive())
+								addResult(new AbstractionAtSink(newSource, iCallStmt));
+							
+							// if the base object which executes the method is tainted the sink is reached, too.
+							if (invExpr instanceof InstanceInvokeExpr) {
+								InstanceInvokeExpr vie = (InstanceInvokeExpr) iCallStmt.getInvokeExpr();
+								if (newSource.isAbstractionActive()
+										&& aliasing.mayAlias(vie.getBase(), newSource.getAccessPath().getPlainValue()))
+									addResult(new AbstractionAtSink(newSource, iCallStmt));
+							}
+						}
+						
 						if (newSource.getTopPostdominator() != null
 								&& newSource.getTopPostdominator().getUnit() == null)
 							return Collections.singleton(newSource);
@@ -1435,43 +1471,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									// We only call the native code handler once per statement
 									break;
 								}
-						
-						// if we have called a sink we have to store the path from the source - in case one of the params is tainted!
-						if (isSink) {
-							// If we are inside a conditional branch, we consider every sink call a leak
-							boolean conditionalCall = enableImplicitFlows 
-									&& !interproceduralCFG().getMethodOf(call).isStatic()
-									&& aliasing.mayAlias(interproceduralCFG().getMethodOf(call).getActiveBody().getThisLocal(),
-											newSource.getAccessPath().getPlainValue())
-									&& newSource.getAccessPath().getFirstField() == null;
-							boolean taintedParam = (conditionalCall
-										|| newSource.getTopPostdominator() != null
-										|| newSource.getAccessPath().isEmpty())
-									&& newSource.isAbstractionActive();
-							
-							// If the base object is tainted, we also consider the "code" associated
-							// with the object's class as tainted.
-							if (!taintedParam) {
-								for (int i = 0; i < callArgs.length; i++) {
-									if (aliasing.mayAlias(callArgs[i], newSource.getAccessPath().getPlainValue())) {
-										taintedParam = true;
-										break;
-									}
-								}
-							}
-							
-							if (taintedParam && newSource.isAbstractionActive())
-								addResult(new AbstractionAtSink(newSource, iCallStmt));
-							
-							// if the base object which executes the method is tainted the sink is reached, too.
-							if (invExpr instanceof InstanceInvokeExpr) {
-								InstanceInvokeExpr vie = (InstanceInvokeExpr) iCallStmt.getInvokeExpr();
-								if (newSource.isAbstractionActive()
-										&& aliasing.mayAlias(vie.getBase(), newSource.getAccessPath().getPlainValue()))
-									addResult(new AbstractionAtSink(newSource, iCallStmt));
-							}
-						}
-						
+												
 						for (Abstraction abs : res)
 							if (abs != newSource)
 								abs.setCorrespondingCallSite(iCallStmt);
