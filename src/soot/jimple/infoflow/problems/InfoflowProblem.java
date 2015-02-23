@@ -450,7 +450,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							}
 
 							if (addOriginal)
-								res.add(source);
+								if (source != getZeroValue())
+									res.add(source);
 							return res;
 						}
 					};
