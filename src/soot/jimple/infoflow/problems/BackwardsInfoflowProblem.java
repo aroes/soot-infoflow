@@ -491,23 +491,6 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							}
 						}
 						
-						// Check whether we need to directly map back any of
-						// the parameters
-						if (stmt instanceof DefinitionStmt) {
-							Value leftVal = ((DefinitionStmt) stmt).getLeftOp();
-							for (Unit sP : interproceduralCFG().getStartPointsOf(dest))
-								if (sP instanceof ReturnStmt) {
-									Value retVal = ((ReturnStmt) sP).getOp();
-									for (Abstraction abs : res)
-										if (abs.getAccessPath().getPlainValue() == retVal) {
-											Abstraction retAbs = abs.deriveNewAbstraction
-													(source.getAccessPath().copyWithNewValue(leftVal), stmt);
-											for (Unit u : interproceduralCFG().getPredsOf(stmt))
-												fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, retAbs));
-										}
-								}
-						}
-						
 						return res;
 					}
 				};
