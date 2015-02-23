@@ -36,7 +36,9 @@ import soot.Scene;
 import soot.SootClass;
 import soot.SootField;
 import soot.SootMethod;
+import soot.Type;
 import soot.Unit;
+import soot.VoidType;
 import soot.jimple.IntConstant;
 import soot.jimple.Jimple;
 import soot.jimple.NullConstant;
@@ -470,7 +472,7 @@ public class Infoflow extends AbstractInfoflow {
 			
 		// Invoke p0.run()
 		b.getUnits().add(Jimple.v().newInvokeStmt(Jimple.v().newInterfaceInvokeExpr(firstParam,
-				runnable.getMethod("void run()").makeRef())));
+				Scene.v().makeMethodRef(runnable, "run", Collections.<Type>emptyList(), VoidType.v(), false))));
 		
 		Unit retStmt = Jimple.v().newReturnStmt(IntConstant.v(1));
 		b.getUnits().add(retStmt);
