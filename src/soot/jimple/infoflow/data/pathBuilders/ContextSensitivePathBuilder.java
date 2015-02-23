@@ -98,12 +98,17 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 			if (pred.getCurrentStmt() != null
 					&& pred.getCurrentStmt() == pred.getCorrespondingCallSite()) {
 				SourceContextAndPath extendedScap = scap.extendPath(pred, reconstructPaths);
+				if (extendedScap == null)
+					return false;
+				
 				checkForSource(pred, extendedScap);
 				return pred.addPathElement(extendedScap);
 			}
 			
 			// If we enter a method, we put it on the stack
 			SourceContextAndPath extendedScap = scap.extendPath(pred, reconstructPaths);
+			if (extendedScap == null)
+				return false;
 			
 			// Do we process a method return?
 			if (pred.getCurrentStmt() != null 

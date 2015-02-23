@@ -75,16 +75,10 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 			return this;
 		
 		// Do not add the very same abstraction over and over again
-		if (this.path != null) {
-			boolean found = false;
+		if (this.path != null)
 			for (Abstraction a : this.path)
-				if (a == abs) {
-					found = true;
-					break;
-				}
-			if (found)
-				return this;
-		}
+				if (a == abs)
+					return null;
 		
 		SourceContextAndPath scap = clone();
 		if (trackPath && abs.getCurrentStmt() != null) {

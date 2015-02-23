@@ -92,6 +92,8 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
 		private boolean processPredecessor(SourceContextAndPath scap, Abstraction pred) {
 			// Put the current statement on the list
 			SourceContextAndPath extendedScap = scap.extendPath(pred, reconstructPaths);
+			if (extendedScap == null)
+				return false;
 			
 			// Add the new path
 			checkForSource(pred, extendedScap);

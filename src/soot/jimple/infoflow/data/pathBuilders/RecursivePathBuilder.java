@@ -126,7 +126,8 @@ public class RecursivePathBuilder extends AbstractAbstractionPathBuilder {
 						curAbs.getPredecessor(), newCallStack)) {
 					SourceContextAndPath extendedPath = curScap.extendPath(curAbs,
 							reconstructPaths);
-					cacheData.add(extendedPath);
+					if (extendedPath != null)
+						cacheData.add(extendedPath);
 				}
 			}
 		}
