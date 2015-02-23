@@ -46,7 +46,8 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 	/**
 	 * Extends the taint propagation path with the given abstraction
 	 * @param abs The abstraction to put on the taint propagation path
-	 * @return The new taint propagation path
+	 * @return The new taint propagation path If this path would contain a
+	 * loop, null is returned instead of the looping path.
 	 */
 	public SourceContextAndPath extendPath(Abstraction abs) {
 		return extendPath(abs, true);
@@ -59,7 +60,8 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 	 * path even if does not change the call stack. This is for instance useful
 	 * if all statements involved in the taint propagation shall later be
 	 * reported.
-	 * @return The new taint propagation path
+	 * @return The new taint propagation path. If this path would contain a
+	 * loop, null is returned instead of the looping path.
 	 */
 	public SourceContextAndPath extendPath(Abstraction abs, boolean trackPath) {
 		if (abs == null)
