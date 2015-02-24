@@ -31,6 +31,7 @@ public class DefaultNativeCallHandler extends NativeCallHandler {
 			if(params[0].equals(source.getAccessPath().getPlainValue())) {
 				Abstraction abs = source.deriveNewAbstraction(params[2], false, call,
 						source.getAccessPath().getBaseType());
+				abs.setCorrespondingCallSite(call);
 				return Collections.singleton(abs);
 			}
 		
