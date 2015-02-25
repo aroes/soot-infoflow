@@ -162,7 +162,7 @@ public class Infoflow extends AbstractInfoflow {
 	 * analysis seeds. All sources in these classes are used as seeds.
 	 * @param sourcesSinks The manager object for identifying sources and sinks
 	 */
-	private void initializeSoot(String appPath, String libPath, Set<String> classes) {
+	private void initializeSoot(String appPath, String libPath, Collection<String> classes) {
 		initializeSoot(appPath, libPath, classes,  "");
 	}
 	
@@ -174,7 +174,7 @@ public class Infoflow extends AbstractInfoflow {
 	 * analysis seeds. All sources in these classes are used as seeds. If a
 	 * non-empty extra seed is given, this one is used too.
 	 */
-	private void initializeSoot(String appPath, String libPath, Set<String> classes,
+	private void initializeSoot(String appPath, String libPath, Collection<String> classes,
 			String extraSeed) {
 		// reset Soot:
 		logger.info("Resetting Soot...");
@@ -199,8 +199,7 @@ public class Infoflow extends AbstractInfoflow {
 			}
 		}
 		else
-			Options.v().set_soot_classpath(appPath
-					+ (libPath != null && !libPath.isEmpty() ? File.pathSeparator + libPath : ""));
+			Options.v().set_soot_classpath(appendClasspath(appPath, libPath));
 		
 		// Configure the callgraph algorithm
 		switch (callgraphAlgorithm) {
@@ -267,8 +266,11 @@ public class Infoflow extends AbstractInfoflow {
 			sootConfig.setSootOptions(Options.v());
 		
 		// load all entryPoint classes with their bodies
+		for (String className : classes)
+			Scene.v().addBasicClass(className, SootClass.BODIES);
 		Scene.v().loadNecessaryClasses();
 		logger.info("Basic class loading done.");
+		
 		boolean hasClasses = false;
 		for (String className : classes) {
 			SootClass c = Scene.v().forceResolve(className, SootClass.BODIES);
@@ -283,6 +285,23 @@ public class Infoflow extends AbstractInfoflow {
 			return;
 		}
 	}
+	
+	/**
+	 * Appends two elements to build a classpath
+	 * @param appPath The first entry of the classpath
+	 * @param libPath The second entry of the classpath
+	 * @return The concatenated classpath
+	 */
+	private String appendClasspath(String appPath, String libPath) {
+		String s = (appPath != null && !appPath.isEmpty()) ? appPath : "";
+		
+		if (libPath != null && !libPath.isEmpty()) {
+			if (!s.isEmpty())
+				s += File.pathSeparator;
+			s += libPath;
+		}
+		return s;
+	}
 
 	@Override
 	public void computeInfoflow(String appPath, String libPath,
@@ -293,9 +312,7 @@ public class Infoflow extends AbstractInfoflow {
 			return;
 		}
 		
-		Set<String> requiredClasses = SootMethodRepresentationParser.v().parseClassNames
-				(entryPointCreator.getRequiredClasses(), false).keySet();
-		initializeSoot(appPath, libPath, requiredClasses);
+		initializeSoot(appPath, libPath, entryPointCreator.getRequiredClasses());
 
 		// entryPoints are the entryPoints required by Soot to calculate Graph - if there is no main method,
 		// we have to create a new main method and use it as entryPoint and store our real entryPoints
