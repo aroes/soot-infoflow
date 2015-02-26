@@ -410,7 +410,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				
 				final SourceInfo sourceInfo = sourceSinkManager != null
 						? sourceSinkManager.getSourceInfo(stmt, interproceduralCFG()) : null;
-
+				final boolean isSink = sourceSinkManager != null
+						? sourceSinkManager.isSink(stmt, interproceduralCFG()) : false;
+				
 				// If we compute flows on parameters, we create the initial
 				// flow fact here
 				if (src instanceof IdentityStmt) {
@@ -465,10 +467,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					
 					final Value leftValue = assignStmt.getLeftOp();
 					final Value[] rightVals = BaseSelector.selectBaseList(right, true);
-					
-					final boolean isSink = sourceSinkManager != null
-							? sourceSinkManager.isSink(assignStmt, interproceduralCFG()) : false;
-					
+										
 					return new NotifyingNormalFlowFunction(assignStmt) {
 						
 						@Override
@@ -762,8 +761,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							// Check whether we have reached a sink
 							if (aliasing.mayAlias(returnStmt.getOp(), source.getAccessPath().getPlainValue())
 									&& source.isAbstractionActive()
-									&& sourceSinkManager.isSink(returnStmt, interproceduralCFG())
-									&& source.getAccessPath().isEmpty())
+									&& sourceSinkManager.isSink(returnStmt, interproceduralCFG()))
 								addResult(new AbstractionAtSink(source, returnStmt));
 
 							return Collections.singleton(source);
@@ -791,18 +789,44 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						}
 					};
 				}
-				// IF statements can lead to implicit flows
-				else if (enableImplicitFlows && (src instanceof IfStmt || src instanceof LookupSwitchStmt
-						|| src instanceof TableSwitchStmt)) {
+				// IF statements can lead to implicit flows or sinks
+				else if (src instanceof IfStmt
+						|| src instanceof LookupSwitchStmt
+						|| src instanceof TableSwitchStmt) {
 					final Value condition = src instanceof IfStmt ? ((IfStmt) src).getCondition()
 							: src instanceof LookupSwitchStmt ? ((LookupSwitchStmt) src).getKey()
 							: ((TableSwitchStmt) src).getKey();
+					
+					// If implicit flow tracking is not enabled, we only need to
+					// check for sinks
+					if (!enableImplicitFlows)
+						return new NotifyingNormalFlowFunction(stmt) {
+							
+							@Override
+							public Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
+								// Check for a sink
+								if (aliasing.mayAlias(condition, source.getAccessPath().getPlainValue())
+										&& source.isAbstractionActive()
+										&& sourceSinkManager.isSink(stmt, interproceduralCFG()))
+									addResult(new AbstractionAtSink(source, stmt));
+								
+								return Collections.singleton(source);
+							}
+							
+						};
+					
+					// Check for implicit flows
 					return new NotifyingNormalFlowFunction(stmt) {
 
 						@Override
 						public Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
 							if (!source.isAbstractionActive())
 								return Collections.singleton(source);
+							
+							// Check for a sink
+							if (aliasing.mayAlias(condition, source.getAccessPath().getPlainValue())
+									&& sourceSinkManager.isSink(stmt, interproceduralCFG()))
+								addResult(new AbstractionAtSink(source, stmt));
 							
 							// Check whether we must leave a conditional branch
 							if (source.isTopPostdominator(src)) {
