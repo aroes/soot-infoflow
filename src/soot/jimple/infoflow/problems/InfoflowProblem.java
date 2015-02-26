@@ -805,10 +805,13 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							@Override
 							public Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
 								// Check for a sink
-								if (aliasing.mayAlias(condition, source.getAccessPath().getPlainValue())
-										&& source.isAbstractionActive()
+								if (source.isAbstractionActive()
 										&& sourceSinkManager.isSink(stmt, interproceduralCFG()))
-									addResult(new AbstractionAtSink(source, stmt));
+									for (Value v : BaseSelector.selectBaseList(condition, false))
+										if (aliasing.mayAlias(v, source.getAccessPath().getPlainValue())) {
+											addResult(new AbstractionAtSink(source, stmt));
+											break;
+										}
 								
 								return Collections.singleton(source);
 							}
@@ -824,9 +827,12 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								return Collections.singleton(source);
 							
 							// Check for a sink
-							if (aliasing.mayAlias(condition, source.getAccessPath().getPlainValue())
-									&& sourceSinkManager.isSink(stmt, interproceduralCFG()))
-								addResult(new AbstractionAtSink(source, stmt));
+							if (sourceSinkManager.isSink(stmt, interproceduralCFG()))
+								for (Value v : BaseSelector.selectBaseList(condition, false))
+									if (aliasing.mayAlias(v, source.getAccessPath().getPlainValue())) {
+										addResult(new AbstractionAtSink(source, stmt));
+										break;
+									}
 							
 							// Check whether we must leave a conditional branch
 							if (source.isTopPostdominator(src)) {
