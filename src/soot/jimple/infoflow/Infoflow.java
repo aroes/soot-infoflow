@@ -669,7 +669,10 @@ public class Infoflow extends AbstractInfoflow {
 		logger.info("Source lookup done, found {} sources and {} sinks.", forwardProblem.getInitialSeeds().size(),
 				sinkCount);
 		
-		taintWrapper.initialize();
+		// Initialize the taint wrapper if we have one
+		if (taintWrapper != null)
+			taintWrapper.initialize();
+		
 		forwardSolver.solve();
 		maxMemoryConsumption = Math.max(maxMemoryConsumption, getUsedMemory());
 		
