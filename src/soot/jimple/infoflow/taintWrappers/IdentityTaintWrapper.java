@@ -31,6 +31,11 @@ import soot.jimple.internal.JAssignStmt;
 public class IdentityTaintWrapper extends AbstractTaintWrapper {
 
 	@Override
+	public void initialize() {
+		// nothing to initialize yet
+	}
+	
+	@Override
 	public Set<AccessPath> getTaintsForMethod(Stmt stmt, AccessPath taintedPath,
 			IInfoflowCFG icfg) {
 		assert stmt.containsInvokeExpr();

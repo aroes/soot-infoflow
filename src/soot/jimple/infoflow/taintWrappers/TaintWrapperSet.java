@@ -29,6 +29,12 @@ public class TaintWrapperSet extends AbstractTaintWrapper {
 
 	private Set<ITaintPropagationWrapper> wrappers = new HashSet<ITaintPropagationWrapper>();
 	
+	@Override
+	public void initialize() {
+		for (ITaintPropagationWrapper w : this.wrappers)
+			w.initialize();
+	}
+	
 	/**
 	 * Adds the given wrapper to the chain of wrappers.
 	 * @param wrapper The wrapper to add to the chain.

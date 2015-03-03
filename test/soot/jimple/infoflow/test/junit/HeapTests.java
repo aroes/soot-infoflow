@@ -404,7 +404,12 @@ public class HeapTests extends JUnitTests {
 		Infoflow.setAccessPathLength(3);
 
 		infoflow.setTaintWrapper(new AbstractTaintWrapper() {
-
+			
+			@Override
+			public void initialize() {
+				// nothing to initialize
+			}
+			
 			@Override
 			public boolean isExclusiveInternal(Stmt stmt, AccessPath taintedPath,
 					IInfoflowCFG icfg) {

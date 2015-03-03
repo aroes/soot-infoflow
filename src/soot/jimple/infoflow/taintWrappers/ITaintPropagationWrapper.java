@@ -18,13 +18,27 @@ import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 
 /**
- * This interface declares methods to define classes and methods which should not be analyzed directly.
- * Instead the outcome of the analysis is summarized (which improves performance and helps if the sources are not available)
+ * This interface declares methods to define classes and methods which should not
+ * be analyzed directly. Analysis results are instead taken from an external model
+ * containing method summaries (which improves performance and helps if the sources
+ * are not available).
+ * 
+ * Unless stated otherwise, all methods in this interface must be implemented
+ * thread safe.
  * 
  * @author Christian Fritz
  * @author Steven Arzt
  */
 public interface ITaintPropagationWrapper {
+	
+	/**
+	 * This method is called before the taint propagation is started to give the taint wrapper
+	 * the chance to initialize required components once Soot is running, but before it is
+	 * queried for the first time.
+	 * 
+	 * Note that this method is guaranteed to be called only once and only by a single thread.
+	 */
+	public void initialize();
 	
 	/**
 	 * Checks an invocation statement for black-box taint propagation. This allows
