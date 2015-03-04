@@ -573,7 +573,7 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	 * registered before, otherwise false
 	 */
 	public boolean registerPathFlag(int id) {
-		if (pathFlags != null && pathFlags.get(id))
+		if (pathFlags != null && id < pathFlags.size() && pathFlags.get(id))
 			return false;
 		
 		synchronized (this) {
