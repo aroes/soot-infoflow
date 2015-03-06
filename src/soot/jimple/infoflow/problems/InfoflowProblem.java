@@ -1545,7 +1545,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				Set<AccessPath> res = null;
 				
 				// check if whole object is tainted (happens with strings, for example:)
-				if (!ap.isStaticFieldRef() && !callee.isStatic()) {
+				if (!isExecutorExecute
+						&& !ap.isStaticFieldRef()
+						&& !callee.isStatic()) {
 					assert ie instanceof InstanceInvokeExpr;
 					InstanceInvokeExpr vie = (InstanceInvokeExpr) ie;
 					// this might be enough because every call must happen with a local variable which is tainted itself:
