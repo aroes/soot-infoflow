@@ -566,6 +566,15 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	}
 	
 	/**
+	 * Only use this method if you really need to fake a source context and know
+	 * what you are doing.
+	 * @param sourceContext The new source context
+	 */
+	public void setSourceContext(SourceContext sourceContext) {
+		this.sourceContext = sourceContext;
+	}
+	
+	/**
 	 * Registers that a worker thread with the given ID has already processed
 	 * this abstraction
 	 * @param id The ID of the worker thread
