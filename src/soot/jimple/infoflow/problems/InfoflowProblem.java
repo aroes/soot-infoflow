@@ -433,8 +433,12 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							// This may also be a parameter access we regard as a source
 							Set<Abstraction> res = new HashSet<Abstraction>();
 							if (source == getZeroValue() && sourceInfo != null) {
-								Abstraction abs = new Abstraction(is.getLeftOp(), sourceInfo,
-										new AccessPath(is.getLeftOp(), true), is, false, false);
+								Abstraction abs = new Abstraction(
+										new AccessPath(is.getLeftOp(), true),
+										is,
+										sourceInfo.getUserData(),
+										false,
+										false);
 								res.add(abs);
 								
 								// Compute the aliases
@@ -483,11 +487,12 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							// Fields can be sources in some cases
                             if (source == getZeroValue() && sourceInfo != null) {
     							Set<Abstraction> res = new HashSet<Abstraction>();
-                                final Abstraction abs = new Abstraction(leftValue,
-                                		sourceInfo,
+                                final Abstraction abs = new Abstraction(
                                 		new AccessPath(assignStmt.getRightOp(), true),
                                 		assignStmt,
-                                		false, false);
+                                		sourceInfo.getUserData(),
+                                		false,
+                                		false);
                                 res.add(abs);
                                 
                                 // Compute the aliases
@@ -1327,8 +1332,12 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							else
 								target = ((InstanceInvokeExpr) invExpr).getBase();
 								
-							final Abstraction abs = new Abstraction(target, sourceInfo,
-									new AccessPath(target, true), iCallStmt, false, false);
+							final Abstraction abs = new Abstraction(
+									new AccessPath(target, sourceInfo.getTaintSubFields()),
+									iCallStmt,
+									sourceInfo.getUserData(),
+									false,
+									false);
 							res.add(abs);
 							
 							// Compute the aliases

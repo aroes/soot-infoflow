@@ -26,7 +26,6 @@ import soot.jimple.Stmt;
 import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.solver.IInfoflowCFG.UnitContainer;
 import soot.jimple.infoflow.solver.fastSolver.FastSolverLinkedNode;
-import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.internal.JimpleLocal;
 
 import com.google.common.collect.Sets;
@@ -81,35 +80,22 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	
 	private BitSet pathFlags = null;
 	
-	public Abstraction(Value taint,
-			SourceInfo sourceInfo,
-			AccessPath sourceVal,
-			Stmt sourceStmt,
-			boolean exceptionThrown,
-			boolean isImplicit) {
-		this(taint, sourceInfo.getTaintSubFields(),
-				sourceVal, sourceStmt, sourceInfo.getUserData(),
-				exceptionThrown, isImplicit);
-	}
-
-	protected Abstraction(Value taint,
-			boolean taintSubFields,
-			AccessPath sourceVal,
+	public Abstraction(AccessPath sourceVal,
 			Stmt sourceStmt,
 			Object userData,
 			boolean exceptionThrown,
 			boolean isImplicit){
-		this(taint, taintSubFields,
+		this(sourceVal,
 				new SourceContext(sourceVal, sourceStmt, userData),
 				exceptionThrown, isImplicit);
 	}
 
-	protected Abstraction(Value taint, boolean taintSubFields,
+	protected Abstraction(AccessPath apToTaint,
 			SourceContext sourceContext,
 			boolean exceptionThrown,
 			boolean isImplicit){
 		this.sourceContext = sourceContext;
-		this.accessPath = new AccessPath(taint, taintSubFields);
+		this.accessPath = apToTaint;
 		this.activationUnit = null;
 		this.exceptionThrown = exceptionThrown;
 		
@@ -548,10 +534,11 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	}
 		
 	public static Abstraction getZeroAbstraction(boolean flowSensitiveAliasing) {
-		Abstraction zeroValue = new Abstraction(new JimpleLocal("zero", NullType.v()),
-				new SourceInfo(false),
+		Abstraction zeroValue = new Abstraction(
 				new AccessPath(new JimpleLocal("zero", NullType.v()), false),
-				null, false, false);
+				null,
+				false,
+				false);
 		Abstraction.flowSensitiveAliasing = flowSensitiveAliasing;
 		return zeroValue;
 	}
