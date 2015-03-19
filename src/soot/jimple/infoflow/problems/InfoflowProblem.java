@@ -1013,6 +1013,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					return KillAll.v();
 				final Stmt iCallStmt = (Stmt) callSite;
 				
+				final ThrowStmt throwStmt = (exitStmt instanceof ThrowStmt) ? (ThrowStmt) exitStmt : null;
+				
 				final ReturnStmt returnStmt = (exitStmt instanceof ReturnStmt) ? (ReturnStmt) exitStmt : null;
 				final boolean isSink = (returnStmt != null && sourceSinkManager != null)
 						? sourceSinkManager.isSink(returnStmt, interproceduralCFG()) : false;
@@ -1101,7 +1103,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									&& newSource.getTopPostdominator() == null)
 								return Collections.emptySet();
 						}
-						
+												
 						//if abstraction is not active and activeStmt was in this method, it will not get activated = it can be removed:
 						if(!newSource.isAbstractionActive() && newSource.getActivationUnit() != null)
 							if (interproceduralCFG().getMethodOf(newSource.getActivationUnit()) == callee)
@@ -1130,6 +1132,12 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						// can happen when leaving the main method.
 						if (callSite == null)
 							return Collections.emptySet();
+						
+						// If we throw an exception with a tainted operand, we need to
+						// handle this specially
+						if (throwStmt != null)
+							if (aliasing.mayAlias(throwStmt.getOp(), source.getAccessPath().getPlainValue()))
+								return Collections.singleton(source.deriveNewAbstractionOnThrow(throwStmt));
 						
 						Set<Abstraction> res = new HashSet<Abstraction>();
 						

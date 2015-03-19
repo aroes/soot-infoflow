@@ -61,4 +61,19 @@ public class ExceptionTestCode {
 		return "foo";
 	}
 	
+	public void exceptionDataFlowTest1() {
+		String tainted = TelephonyManager.getDeviceId();
+		try {
+			throwData(tainted);
+		}
+		catch (Exception ex) {
+			ConnectionManager cm = new ConnectionManager();
+			cm.publish(ex.getMessage());
+		}
+	}
+
+	private void throwData(String tainted) {
+		throw new RuntimeException(tainted);
+	}
+	
 }
