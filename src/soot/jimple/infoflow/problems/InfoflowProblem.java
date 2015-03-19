@@ -361,11 +361,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						}
 					}
 					// Special type handling for certain operations
-					else if (rightValue instanceof LengthExpr) {
-						assert source.getAccessPath().getBaseType() instanceof ArrayType;
-						newAbs = source.deriveNewAbstraction(new AccessPath(leftValue, null,
-								IntType.v(), (Type[]) null, true), assignStmt);
-					}
 					else if (rightValue instanceof InstanceOfExpr)
 						newAbs = source.deriveNewAbstraction(new AccessPath(leftValue, null,
 								BooleanType.v(), (Type[]) null, true), assignStmt);
@@ -600,10 +595,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									&& newSource.getTopPostdominator().getUnit() != null;
 							implicitTaint |= newSource.getAccessPath().isEmpty();
 							
-							SootMethod sm = interproceduralCFG().getMethodOf(assignStmt);
-							if (src.toString().equals("$i0 = lengthof array"))
-								System.out.println("x");
-
 							// If we have a non-empty postdominator stack, we taint
 							// every assignment target
 							if (implicitTaint) {
