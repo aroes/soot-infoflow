@@ -62,6 +62,15 @@ public class TypeTests extends JUnitTests {
 	}
 
 	@Test(timeout=300000)
+	public void classCastTest4(){
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.TypeTestCode: void classCastTest4()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);	
+	}
+
+	@Test(timeout=300000)
 	public void instanceofTest1(){
 		Infoflow infoflow = initInfoflow();
 		List<String> epoints = new ArrayList<String>();

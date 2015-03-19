@@ -125,6 +125,21 @@ public class TypeTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(newStr);
 	}
+	
+	private static A a;
+	
+	public void classCastTest4() {
+		String tainted = TelephonyManager.getDeviceId();
+		B b = new B();
+		b.data = tainted;
+		a = b;
+		
+		B b2 = (B) a;
+		String newStr = b2.bar();
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(newStr);
+	}	
 
 	public void instanceofTest1() {
 		String tainted = TelephonyManager.getDeviceId();

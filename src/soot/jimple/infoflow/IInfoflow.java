@@ -258,6 +258,13 @@ public interface IInfoflow {
 	public void setIPCManager(IIPCManager ipcManager);
 	
 	/**
+	 * Sets whether type checking shall be done on casts and method calls
+	 * @param enableTypeChecking True if type checking shall be performed,
+	 * otherwise false
+	 */
+	public void setEnableTypeChecking(boolean enableTypeChecking);
+	
+	/**
 	 * Sets whether flows starting or ending in system packages such as Android's
 	 * support library shall be ignored.
 	 * @param ignoreFlowsInSystemPackages True if flows starting or ending in

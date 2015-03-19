@@ -39,7 +39,6 @@ public class ArrayTestCode {
 		cm.publish(taintedElement);
 	}
 	
-	
 	public void concreteWriteReadSamePosTest(){
 		String tainted = TelephonyManager.getDeviceId();
 		String[] array = new String[2];
@@ -173,6 +172,14 @@ public class ArrayTestCode {
 		
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(array[0]);
+	}
+	
+	public void arrayLengthTest() {
+		String tainted = TelephonyManager.getDeviceId();		
+		char[] array = tainted.toCharArray();
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(array.length);
 	}
 
 }

@@ -4,6 +4,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import soot.jimple.infoflow.cfg.BiDirICFGFactory;
+import soot.jimple.infoflow.cfg.DefaultBiDiICFGFactory;
 import soot.jimple.infoflow.entryPointCreators.DefaultEntryPointCreator;
 import soot.jimple.infoflow.entryPointCreators.IEntryPointCreator;
 import soot.jimple.infoflow.handlers.PreAnalysisHandler;
@@ -24,6 +26,7 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	protected boolean enableStaticFields = true;
 	protected boolean enableExceptions = true;
 	protected boolean flowSensitiveAliasing = true;
+	protected boolean enableTypeChecking = true;
 	protected boolean ignoreFlowsInSystemPackages = true;
 	
 	protected boolean inspectSources = false;
@@ -145,6 +148,11 @@ public abstract class AbstractInfoflow implements IInfoflow {
 		this.maxThreadNum = threadNum;
 	}
 
+	@Override
+	public void setEnableTypeChecking(boolean enableTypeChecking) {
+		this.enableTypeChecking = enableTypeChecking;
+	}
+	
 	@Override
 	public void setIgnoreFlowsInSystemPackages(boolean ignoreFlowsInSystemPackages) {
 		this.ignoreFlowsInSystemPackages = ignoreFlowsInSystemPackages;
