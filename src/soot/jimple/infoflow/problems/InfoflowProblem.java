@@ -600,6 +600,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									&& newSource.getTopPostdominator().getUnit() != null;
 							implicitTaint |= newSource.getAccessPath().isEmpty();
 							
+							SootMethod sm = interproceduralCFG().getMethodOf(assignStmt);
+							if (src.toString().equals("$i0 = lengthof array"))
+								System.out.println("x");
+
 							// If we have a non-empty postdominator stack, we taint
 							// every assignment target
 							if (implicitTaint) {
