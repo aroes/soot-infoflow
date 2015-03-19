@@ -5,7 +5,6 @@
 package soot.jimple.infoflow.cfg;
 
 
-import soot.jimple.infoflow.IInfoflow;
 import soot.jimple.infoflow.IInfoflow.CallgraphAlgorithm;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 
