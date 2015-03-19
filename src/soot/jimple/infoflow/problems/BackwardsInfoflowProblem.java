@@ -499,8 +499,6 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 			@Override
 			public FlowFunction<Abstraction> getReturnFlowFunction(final Unit callSite, final SootMethod callee,
 					final Unit exitStmt, final Unit retSite) {
-				final ReturnStmt returnStmt = (exitStmt instanceof ReturnStmt) ? (ReturnStmt) exitStmt : null;
-				
 				final Value[] paramLocals = new Value[callee.getParameterCount()]; 
 				for (int i = 0; i < callee.getParameterCount(); i++)
 					paramLocals[i] = callee.getActiveBody().getParameterLocal(i);
@@ -531,19 +529,10 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 
 						final Value sourceBase = source.getAccessPath().getPlainValue();
 						Set<Abstraction> res = new HashSet<Abstraction>();
-
-						// if we have a returnStmt we have to look at the returned value:
-						if (returnStmt != null && callSite instanceof DefinitionStmt) {
-							DefinitionStmt defnStmt = (DefinitionStmt) callSite;
-							Value leftOp = defnStmt.getLeftOp();
-							
-							if (leftOp == source.getAccessPath().getPlainValue()) {
-								Abstraction abs = source.deriveNewAbstraction
-										(source.getAccessPath().copyWithNewValue(leftOp), (Stmt) exitStmt);
-								res.add(abs);
-								registerActivationCallSite(callSite, callee, abs);
-							}
-						}
+						
+						// Since we return from the top of the callee into the
+						// caller, return values cannot be propagated here. They
+						// don't yet exist at the beginning of the callee.
 						
 						// check one of the call params are tainted (not if simple type)
 						boolean parameterAliases = false;
