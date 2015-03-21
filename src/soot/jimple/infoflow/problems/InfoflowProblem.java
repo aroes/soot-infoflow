@@ -1542,17 +1542,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				
 				// Android executor methods are handled specially. getSubSignature()
 				// is slow, so we try to avoid it whenever we can
-				boolean isExecutorExecute = false; 
-				SootMethod ieMethod = ie.getMethod();
-				if (ieMethod.getName().equals("execute")
-						|| ieMethod.getName().equals("doPrivileged")) {
-					final String ieSubSig = ieMethod.getSubSignature();
-					final String calleeSubSig = callee.getSubSignature();
-					isExecutorExecute = (ieSubSig.equals("void execute(java.lang.Runnable)")
-									&& calleeSubSig.equals("void run()"))
-							|| (ieSubSig.equals("java.lang.Object doPrivileged(java.security.PrivilegedAction)")
-									&& calleeSubSig.equals("java.lang.Object run()"));
-				}
+				final boolean isExecutorExecute = isExecutorExecute(ie, callee);
 				
 				Set<AccessPath> res = null;
 				

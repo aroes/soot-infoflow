@@ -10,6 +10,8 @@
  ******************************************************************************/
 package soot.jimple.infoflow.test;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.LinkedList;
 
 import soot.jimple.infoflow.test.android.AccountManager;
@@ -565,4 +567,29 @@ public class OtherTestCode {
 		cm.publish(deviceId2);
 	}
 	
+	private class MyAction implements PrivilegedAction<O> {
+
+		private String data = "";
+		
+		@Override
+		public O run() {
+			ConnectionManager cm = new ConnectionManager();
+			cm.publish(data);
+			return new O();
+		}
+		
+	}
+	
+	public void doPrivilegedTest1() {
+		MyAction action = new MyAction();
+		action.data = TelephonyManager.getDeviceId();
+		AccessController.doPrivileged(action);
+	}
+	
+	public void doPrivilegedTest2() {
+		MyAction action = new MyAction();
+		action.data = TelephonyManager.getDeviceId();
+		AccessController.doPrivileged(action, null);
+	}
+
 }

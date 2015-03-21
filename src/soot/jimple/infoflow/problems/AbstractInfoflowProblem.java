@@ -31,6 +31,7 @@ import soot.Type;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.InstanceFieldRef;
+import soot.jimple.InvokeExpr;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.collect.MyConcurrentHashMap;
@@ -454,6 +455,42 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	
 	protected Abstraction getZeroValue() {
 		return zeroValue;
+	}
+	
+	/**
+	 * Checks whether the given call is a call to Executor.execute() or
+	 * AccessController.doPrivileged() and whether the callee matches
+	 * the expected method signature
+	 * @param ie The invocation expression to check
+	 * @param dest The callee of the given invocation expression
+	 * @return True if the given invocation expression and callee are a valid
+	 * call to Executor.execute() or AccessController.doPrivileged()
+	 */
+	protected boolean isExecutorExecute(InvokeExpr ie, SootMethod dest) {
+		SootMethod ieMethod = ie.getMethod();
+		if (!ieMethod.getName().equals("execute") && !ieMethod.getName().equals("doPrivileged"))
+			return false;
+		
+		final String ieSubSig = ieMethod.getSubSignature();
+		final String calleeSubSig = dest.getSubSignature();
+		
+		if (ieSubSig.equals("void execute(java.lang.Runnable)")
+				&& calleeSubSig.equals("void run()"))
+			return true;
+		
+		if (calleeSubSig.equals("java.lang.Object run()")) {
+			if (ieSubSig.equals("java.lang.Object doPrivileged(java.security.PrivilegedAction)"))
+				return true;
+			if (ieSubSig.equals("java.lang.Object doPrivileged(java.security.PrivilegedAction,"
+					+ "java.security.AccessControlContext)"))
+				return true;
+			if (ieSubSig.equals("java.lang.Object doPrivileged(java.security.PrivilegedExceptionAction)"))
+				return true;
+			if (ieSubSig.equals("java.lang.Object doPrivileged(java.security.PrivilegedExceptionAction,"
+					+ "java.security.AccessControlContext)"))
+				return true;
+		}
+		return false;
 	}
 
 }
