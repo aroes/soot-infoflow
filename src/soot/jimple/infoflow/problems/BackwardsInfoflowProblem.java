@@ -360,7 +360,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					return KillAll.v();
 								
 				final Stmt stmt = (Stmt) src;
-				final InvokeExpr ie = stmt.getInvokeExpr();
+				final InvokeExpr ie = stmt.containsInvokeExpr() ? stmt.getInvokeExpr() : null;
 
 				final Value[] paramLocals = new Value[dest.getParameterCount()]; 
 				for (int i = 0; i < dest.getParameterCount(); i++)
@@ -468,7 +468,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								res.add(abs);
 							}
 						}
-						else if (dest.getParameterCount() > 0) {
+						else if (ie != null && dest.getParameterCount() > 0) {
 							assert dest.getParameterCount() == ie.getArgCount();
 							// check if param is tainted:
 							for (int i = 0; i < ie.getArgCount(); i++) {
