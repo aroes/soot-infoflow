@@ -491,11 +491,18 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				final Value[] paramLocals = new Value[callee.getParameterCount()]; 
 				for (int i = 0; i < callee.getParameterCount(); i++)
 					paramLocals[i] = callee.getActiveBody().getParameterLocal(i);
-
+				
+				final Stmt stmt = (Stmt) callSite;
+				final InvokeExpr ie = (stmt == null) ? null : stmt.getInvokeExpr();
+				
 				// This is not cached by Soot, so accesses are more expensive
 				// than one might think
 				final Local thisLocal = callee.isStatic() ? null : callee.getActiveBody().getThisLocal();	
-
+				
+				// Android executor methods are handled specially. getSubSignature()
+				// is slow, so we try to avoid it whenever we can
+				final boolean isExecutorExecute = isExecutorExecute(ie, callee);
+				
 				return new SolverReturnFlowFunction() {
 					
 					@Override
@@ -523,53 +530,61 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						// caller, return values cannot be propagated here. They
 						// don't yet exist at the beginning of the callee.
 						
-						// check one of the call params are tainted (not if simple type)
-						boolean parameterAliases = false;
-						{
-						Value originalCallArg = null;
-						for (int i = 0; i < callee.getParameterCount(); i++) {
-							if (paramLocals[i] == sourceBase) {
-								parameterAliases = true;
-								if (callSite instanceof Stmt) {
-									Stmt iStmt = (Stmt) callSite;
-									originalCallArg = iStmt.getInvokeExpr().getArg(i);
-									
-									// If this is a constant parameter, we can safely ignore it
-									if (!AccessPath.canContainValue(originalCallArg))
-										continue;
-									if (!checkCast(source.getAccessPath(), originalCallArg.getType()))
-										continue;
-									
-									Abstraction abs = source.deriveNewAbstraction
-											(source.getAccessPath().copyWithNewValue(originalCallArg), (Stmt) exitStmt);
-									res.add(abs);
-									registerActivationCallSite(callSite, callee, abs);
-								}
+						if (isExecutorExecute) {
+							// Map the "this" object to the first argument of the call site
+							if (source.getAccessPath().getPlainValue() == thisLocal) {
+								Abstraction abs = source.deriveNewAbstraction
+										(source.getAccessPath().copyWithNewValue(ie.getArg(0)), (Stmt) exitStmt);
+								res.add(abs);
+								registerActivationCallSite(callSite, callee, abs);
 							}
 						}
-						}
-						
-						{
-						if (!callee.isStatic()) {
-							if (thisLocal == sourceBase && hasCompatibleTypesForCall
-									(source.getAccessPath(), callee.getDeclaringClass())) {
-								// check if it is not one of the params (then we have already fixed it)
-								if (!parameterAliases) {
+						else {
+							boolean parameterAliases = false;
+							
+							// check one of the call params are tainted (not if simple type)
+							Value originalCallArg = null;
+							for (int i = 0; i < paramLocals.length; i++) {
+								if (paramLocals[i] == sourceBase) {
+									parameterAliases = true;
 									if (callSite instanceof Stmt) {
-										Stmt stmt = (Stmt) callSite;
-										if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
-											InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();
-											Abstraction abs = source.deriveNewAbstraction
-													(source.getAccessPath().copyWithNewValue(iIExpr.getBase()), (Stmt) exitStmt);
-											res.add(abs);
-											registerActivationCallSite(callSite, callee, abs);
-										}
+										originalCallArg = ie.getArg(i);
+										
+										// If this is a constant parameter, we can safely ignore it
+										if (!AccessPath.canContainValue(originalCallArg))
+											continue;
+										if (!checkCast(source.getAccessPath(), originalCallArg.getType()))
+											continue;
+										
+										Abstraction abs = source.deriveNewAbstraction
+												(source.getAccessPath().copyWithNewValue(originalCallArg), (Stmt) exitStmt);
+										res.add(abs);
+										registerActivationCallSite(callSite, callee, abs);
 									}
 								}
 							}
-							}
+							
+							// Map the "this" local
+							if (!callee.isStatic()) {
+								if (thisLocal == sourceBase && hasCompatibleTypesForCall
+										(source.getAccessPath(), callee.getDeclaringClass())) {
+									// check if it is not one of the params (then we have already fixed it)
+									if (!parameterAliases) {
+										if (callSite instanceof Stmt) {
+											Stmt stmt = (Stmt) callSite;
+											if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
+												InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();
+												Abstraction abs = source.deriveNewAbstraction
+														(source.getAccessPath().copyWithNewValue(iIExpr.getBase()), (Stmt) exitStmt);
+												res.add(abs);
+												registerActivationCallSite(callSite, callee, abs);
+											}
+										}
+									}
+								}
+								}
 						}
-						
+																		
 						for (Abstraction abs : res)
 							if (abs != source)
 								abs.setCorrespondingCallSite((Stmt) callSite);

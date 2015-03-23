@@ -17,6 +17,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import soot.jimple.infoflow.Infoflow;
+import soot.jimple.infoflow.config.IInfoflowConfig;
+import soot.options.Options;
 
 /**
  * contain several tests that cannot be assigned to the other categories - often they are added due to findings in real-world applications, including negative tests and tests for lifecycle handling
@@ -337,6 +339,38 @@ public class OtherTests extends JUnitTests{
     	Infoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.OtherTestCode: void doPrivilegedTest2()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));		
+	}
+
+    @Test(timeout=300000)
+	public void doPrivilegedTest3() {
+    	Infoflow infoflow = initInfoflow();
+    	List<String> epoints = new ArrayList<String>();
+    	epoints.add("<soot.jimple.infoflow.test.OtherTestCode: void doPrivilegedTest3()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));		
+	}
+
+    @Test(timeout=300000)
+	public void doPrivilegedTest3_NoJDK() {
+    	Infoflow infoflow = initInfoflow();
+    	infoflow.setSootConfig(new IInfoflowConfig() {
+			
+			@Override
+			public void setSootOptions(Options options) {
+				List<String> excludeList = new ArrayList<String>();
+				excludeList.add("java.");
+				excludeList.add("javax.");
+				options.set_exclude(excludeList);
+				options.set_prepend_classpath(false);
+			}
+			
+		});
+    	List<String> epoints = new ArrayList<String>();
+    	epoints.add("<soot.jimple.infoflow.test.OtherTestCode: void doPrivilegedTest3()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
 		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));		

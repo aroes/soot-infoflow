@@ -592,4 +592,23 @@ public class OtherTestCode {
 		AccessController.doPrivileged(action, null);
 	}
 
+	private class MyHeapAction implements PrivilegedAction<O> {
+
+		private String data = "";
+		
+		@Override
+		public O run() {
+			this.data = TelephonyManager.getDeviceId();
+			return new O();
+		}
+		
+	}
+
+	public void doPrivilegedTest3() {
+		MyHeapAction action = new MyHeapAction();
+		AccessController.doPrivileged(action, null);
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(action.data);
+	}
+
 }

@@ -467,6 +467,9 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	 * call to Executor.execute() or AccessController.doPrivileged()
 	 */
 	protected boolean isExecutorExecute(InvokeExpr ie, SootMethod dest) {
+		if (ie == null || dest == null)
+			return false;
+		
 		SootMethod ieMethod = ie.getMethod();
 		if (!ieMethod.getName().equals("execute") && !ieMethod.getName().equals("doPrivileged"))
 			return false;
