@@ -360,7 +360,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					return KillAll.v();
 								
 				final Stmt stmt = (Stmt) src;
-				final InvokeExpr ie = stmt.containsInvokeExpr() ? stmt.getInvokeExpr() : null;
+				final InvokeExpr ie = (stmt != null && stmt.containsInvokeExpr())
+						? stmt.getInvokeExpr() : null;
 
 				final Value[] paramLocals = new Value[dest.getParameterCount()]; 
 				for (int i = 0; i < dest.getParameterCount(); i++)
@@ -493,7 +494,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					paramLocals[i] = callee.getActiveBody().getParameterLocal(i);
 				
 				final Stmt stmt = (Stmt) callSite;
-				final InvokeExpr ie = (stmt == null) ? null : stmt.getInvokeExpr();
+				final InvokeExpr ie = (stmt != null && stmt.containsInvokeExpr())
+						? null : stmt.getInvokeExpr();
 				
 				// This is not cached by Soot, so accesses are more expensive
 				// than one might think

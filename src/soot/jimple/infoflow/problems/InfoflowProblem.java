@@ -888,7 +888,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
                 }
                 
 				final Stmt stmt = (Stmt) src;
-				final InvokeExpr ie = stmt.getInvokeExpr();
+				final InvokeExpr ie = (stmt != null && stmt.containsInvokeExpr())
+						? stmt.getInvokeExpr() : null;
 				
 				final Value[] paramLocals = new Value[dest.getParameterCount()];
 				for (int i = 0; i < dest.getParameterCount(); i++)
