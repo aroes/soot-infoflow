@@ -441,7 +441,9 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 
 						// checks: this/fields
 						Value sourceBase = source.getAccessPath().getPlainValue();
-						if (!source.getAccessPath().isStaticFieldRef() && !dest.isStatic()) {
+						if (!isExecutorExecute
+								&& !source.getAccessPath().isStaticFieldRef()
+								&& !dest.isStatic()) {
 							InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();
 							if (iIExpr.getBase() == sourceBase
 									&& (hasCompatibleTypesForCall(source.getAccessPath(), dest.getDeclaringClass()))) {
@@ -495,7 +497,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				
 				final Stmt stmt = (Stmt) callSite;
 				final InvokeExpr ie = (stmt != null && stmt.containsInvokeExpr())
-						? null : stmt.getInvokeExpr();
+						? stmt.getInvokeExpr() : null;
 				
 				// This is not cached by Soot, so accesses are more expensive
 				// than one might think
