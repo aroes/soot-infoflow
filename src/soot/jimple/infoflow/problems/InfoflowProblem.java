@@ -162,7 +162,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			res = new HashSet<Abstraction>();
 			for (AccessPath val : vals) {
 				// The new abstraction gets activated where it was generated
-				if (val.equals(source.getAccessPath()))
+				if (val == source.getAccessPath())
 					res.add(source);
 				else {
 					Abstraction newAbs = source.deriveNewAbstraction(val, iStmt);
@@ -1365,9 +1365,20 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							newSource = source;
 						
 						// Compute the taint wrapper taints
+						boolean passOn = true;
 						Collection<Abstraction> wrapperTaints = computeWrapperTaints(d1, iCallStmt, newSource);
-						if (wrapperTaints != null)
+						if (wrapperTaints != null) {
 							res.addAll(wrapperTaints);
+							
+							// If the taint wrapper generated an abstraction for
+							// the incoming access path, we assume it to be handled
+							// and do not pass on the incoming abstraction on our own
+							for (Abstraction wrapperAbs : wrapperTaints)
+								if (wrapperAbs.getAccessPath().equals(newSource.getAccessPath())) {
+									passOn = false;
+									break;
+								}
+						}
 						
 						// if we have called a sink we have to store the path from the source - in case one of the params is tainted!
 						if (isSink) {
@@ -1434,12 +1445,15 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							}
 						}
 						
-						// We can only pass on a taint if it is neither a parameter nor the
-						// base object of the current call. If this call overwrites the left
-						// side, the taint is never passed on.
-						boolean passOn = !newSource.getAccessPath().isStaticFieldRef()
-								&& !(call instanceof DefinitionStmt && aliasing.mayAlias(((DefinitionStmt) call).getLeftOp(),
-										newSource.getAccessPath().getPlainValue()));
+						// If this call overwrites the left side, the taint is never passed on.
+						if (passOn) {
+							if (newSource.getAccessPath().isStaticFieldRef())
+								passOn = false;
+							else if (call instanceof DefinitionStmt
+									&& aliasing.mayAlias(((DefinitionStmt) call).getLeftOp(),
+											newSource.getAccessPath().getPlainValue()))
+								passOn = false;
+						}
 						
 						//we only can remove the taint if we step into the call/return edges
 						//otherwise we will loose taint - see ArrayTests/arrayCopyTest
