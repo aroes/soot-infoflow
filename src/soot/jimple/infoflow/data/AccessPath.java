@@ -67,6 +67,10 @@ public class AccessPath implements Cloneable {
 		public BasePair(SootField[] fields, Type[] types) {
 			this.fields = fields;
 			this.types = types;
+			
+			// Check whether this base makes sense
+			if (fields == null || fields.length == 0)
+				throw new RuntimeException("A base must contain at least one field");
 		}
 		
 		public SootField[] getFields() {
@@ -103,6 +107,11 @@ public class AccessPath implements Cloneable {
 			if (!Arrays.equals(types, other.types))
 				return false;
 			return true;
+		}
+		
+		@Override
+		public String toString() {
+			return Arrays.toString(fields);
 		}
 		
 	}
