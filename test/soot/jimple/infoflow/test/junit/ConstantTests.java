@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.Test;
+import org.junit.Ignore;
 
 import soot.jimple.infoflow.Infoflow;
 
@@ -155,6 +156,16 @@ public class ConstantTests extends JUnitTests {
 		epoints.add("<soot.jimple.infoflow.test.ConstantTestCode: void constantExceptionTest1()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
+	}
+
+	@Ignore		// dead code elimination is not propagated to callgraph
+	@Test(timeout = 300000)
+	public void allocSiteTest1() {
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.ConstantTestCode: void allocSiteTest1()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		negativeCheckInfoflow(infoflow);
 	}
 
 }

@@ -14,8 +14,10 @@ import soot.jimple.infoflow.test.android.ConnectionManager;
 import soot.jimple.infoflow.test.android.TelephonyManager;
 
 /**
- * tests constant tainting
- * @author Christian
+ * Tests constant tainting and dead-code elimination for checks on constants
+ * 
+ * @author Christian Fritz
+ * @author Steven Arzt
  *
  */
 public class ConstantTestCode {
@@ -170,7 +172,7 @@ public class ConstantTestCode {
 			cm.publish(ex + TelephonyManager.getDeviceId());			
 		}
 	}
-
+	
 	private String getSecretAndThrow() {
 		if (Math.random() < 0.5)
 			return "foo";
@@ -178,4 +180,37 @@ public class ConstantTestCode {
 			throw new MyException();
 	}
 	
+	private abstract class Base {
+		
+		public abstract String transform(String data);
+		
+	}
+	
+	private class A extends Base {
+		
+		@Override
+		public String transform(String data) {
+			return data;
+		}
+
+	}
+	
+	private class B extends Base {
+		
+		@Override
+		public String transform(String data) {
+			return "foo";
+		}
+
+	}
+	
+	public void allocSiteTest1() {
+		String tainted =  TelephonyManager.getDeviceId();
+		int i = 3;
+		Base obj = i > 10 ? new A() : new B();
+		String copy = obj.transform(tainted);
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(copy);
+	}
+
 }
