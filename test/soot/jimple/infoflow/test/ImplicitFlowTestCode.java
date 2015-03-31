@@ -154,7 +154,7 @@ public class ImplicitFlowTestCode {
 			if (tainted == "123")
 				throw new RuntimeException("Secret is 42");
 		}
-		catch (@SuppressWarnings("unused") RuntimeException ex) {
+		catch (RuntimeException ex) {
 			doPublish();
 		}
 	}
@@ -315,7 +315,7 @@ public class ImplicitFlowTestCode {
 		try {
 			conditional();
 		}
-		catch (@SuppressWarnings("unused") Exception ex) {
+		catch (Exception ex) {
 			ConnectionManager cm = new ConnectionManager();
 			cm.publish(ImplicitFlowTestCode.staticDataClass.data.data);
 		}
