@@ -20,6 +20,10 @@ class IdentityWrapper<E> {
 	@SuppressWarnings("rawtypes")
 	@Override
 	public boolean equals(Object other) {
+		if (other == null)
+			return false;
+		if (other == this)
+			return true;
 		if (this.getClass() != other.getClass())
 			return false;
 		return this.contents == ((IdentityWrapper) other).contents;

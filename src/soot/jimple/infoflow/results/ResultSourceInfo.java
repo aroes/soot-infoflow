@@ -79,10 +79,10 @@ public class ResultSourceInfo {
 		ResultSourceInfo si = (ResultSourceInfo) o;
 		
 		if (!Infoflow.getPathAgnosticResults()) {
-			if (path == null) {
-				if (si.path != null)
-					return false;
-			}
+			if (path == null && si.path != null)
+				return false;
+			if (path != null && si.path == null)
+				return false;
 			if (!path.equals(si.path))
 				return false;
 		}
