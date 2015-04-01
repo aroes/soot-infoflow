@@ -484,5 +484,11 @@ public class TypeTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish((Double) dblLong);		
 	}
+	
+	public void doubleToIntTest1() {
+		double longitude = LocationManager.getLongitude();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish((int) longitude);
+	}
 
 }
