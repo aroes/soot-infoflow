@@ -19,8 +19,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import soot.ArrayType;
-import soot.BooleanType;
+import soot.IntType;
 import soot.Local;
+import soot.LongType;
 import soot.PrimType;
 import soot.RefType;
 import soot.Scene;
@@ -98,19 +99,13 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 		if (sourceType == null)
 			return true;
 		
-		// If both types are equal, we allow the cast
-		if (sourceType == destType)
-			return true;
-		
-		// If we have a reference type, we use the Soot hierarchy
 		if (Scene.v().getFastHierarchy().canStoreType(destType, sourceType) // cast-up, i.e. Object to String
 				|| Scene.v().getFastHierarchy().canStoreType(sourceType, destType)) // cast-down, i.e. String to Object
 			return true;
 		
-		// If both types are primitive, they can be cast unless a boolean type
-		// is involved
 		if (destType instanceof PrimType && sourceType instanceof PrimType)
-			if (destType != BooleanType.v() && sourceType != BooleanType.v())
+			if (sourceType instanceof LongType && destType instanceof IntType
+					|| destType instanceof LongType && sourceType instanceof IntType)
 				return true;
 			
 		return false;

@@ -113,7 +113,7 @@ public class RecursivePathBuilder extends AbstractAbstractionPathBuilder {
 			if (isMethodEnter)
 				if (!newCallStack.isEmpty()) {
 					Pair<Stmt, Set<Abstraction>> newStackTop = newCallStack.isEmpty() ? null : newCallStack.peek();
-					if (newStackTop != null && newStackTop.getO1() != null) {
+					if (newStackTop.getO1() != null) {
 						if (curAbs.getCurrentStmt() != newStackTop.getO1())
 							scanPreds = false;
 						newCallStack.pop();

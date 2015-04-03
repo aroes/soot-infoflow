@@ -598,10 +598,11 @@ public class AccessPath implements Cloneable {
 			System.arraycopy(this.fields, 0, fields, 0, this.fields.length);
 			System.arraycopy(this.fieldTypes, 0, fieldTypes, 0, this.fieldTypes.length);
 		}
-		if (apFields != null && apFields.length > 0) {
-			System.arraycopy(apFields, 0, fields, offset, apFields.length);
-			System.arraycopy(apFieldTypes, 0, fieldTypes, offset, apFieldTypes.length);
-		}
+		if (apFields != null)
+			if (apFields != null && apFields.length > 0) {
+				System.arraycopy(apFields, 0, fields, offset, apFields.length);
+				System.arraycopy(apFieldTypes, 0, fieldTypes, offset, apFieldTypes.length);
+			}
 		
 		return new AccessPath(this.value, fields, baseType, fieldTypes, taintSubFields);
 	}

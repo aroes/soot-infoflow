@@ -276,7 +276,6 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								else if (leftValue instanceof ArrayRef) {
 									assert source.getAccessPath().getBaseType() instanceof ArrayType;
 									targetType = ((ArrayType) targetType).getElementType();
-									
 									// If the types do not match, the right side cannot be an alias
 									if (!canCastType(rightValue.getType(), targetType))
 										addRightValue = false;

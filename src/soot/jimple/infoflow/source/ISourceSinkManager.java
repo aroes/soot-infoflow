@@ -14,6 +14,7 @@ import heros.InterproceduralCFG;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.data.AccessPath;
 /**
  * the SourceSinkManager can tell if a statement contains a source or a sink
  */
@@ -36,5 +37,17 @@ public interface ISourceSinkManager {
 	 * @return true if sink method is called
 	 */
 	public boolean isSink(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg);
+
+	/**
+	 * Checks if the given access path at this statement will leak.
+	 * @param sCallSite the call site to check
+	 * @param cfg the control flow graph of the current problem
+	 * @param index If the access path is from the base object of the callee, the index must be negative. 
+	 * 				If the given access path is from a parameter, the index is the index of the parameter counted from 0.
+	 * @param ap the access path to check
+	 * @return true if the access path will leak in this method, false if not or if this method is not a sink
+	 * @author Daniel Magin
+	 */
+	boolean leaks(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg, int index, AccessPath ap);
 
 }

@@ -1006,6 +1006,11 @@ public class HeapTests extends JUnitTests {
 				}
 				return null;
 			}
+
+			@Override
+			public boolean leaks(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg, int index, AccessPath ap) {
+				return isSink(sCallSite, cfg);
+			}
 			
 		});
 		

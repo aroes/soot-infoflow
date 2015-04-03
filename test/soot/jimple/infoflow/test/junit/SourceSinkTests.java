@@ -20,9 +20,12 @@ import org.junit.Test;
 
 import soot.SootMethod;
 import soot.Unit;
+import soot.jimple.DefinitionStmt;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.Infoflow;
+import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.entryPointCreators.DefaultEntryPointCreator;
+import soot.jimple.infoflow.source.AccessPathBundle;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.source.SourceInfo;
 
@@ -31,18 +34,15 @@ import soot.jimple.infoflow.source.SourceInfo;
  * 
  * @author Steven Arzt
  */
-public class SourceSinkTests extends JUnitTests{
-	
-	private static final String sourceGetSecret =
-			"<soot.jimple.infoflow.test.SourceSinkTestCode: soot.jimple.infoflow.test.SourceSinkTestCode$A getSecret()>";
-	private static final String sourceGetSecret2 =
-			"<soot.jimple.infoflow.test.SourceSinkTestCode: soot.jimple.infoflow.test.SourceSinkTestCode$B getSecret2()>";
-	
+public class SourceSinkTests extends JUnitTests {
+
+	private static final String sourceGetSecret = "<soot.jimple.infoflow.test.SourceSinkTestCode: soot.jimple.infoflow.test.SourceSinkTestCode$A getSecret()>";
+	private static final String sourceGetSecret2 = "<soot.jimple.infoflow.test.SourceSinkTestCode: soot.jimple.infoflow.test.SourceSinkTestCode$B getSecret2()>";
+
 	private abstract class BaseSourceSinkManager implements ISourceSinkManager {
-		
+
 		@Override
-		public boolean isSink(Stmt sCallSite,
-				InterproceduralCFG<Unit, SootMethod> cfg) {
+		public boolean isSink(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg) {
 			if (!sCallSite.containsInvokeExpr())
 				return false;
 			SootMethod target = sCallSite.getInvokeExpr().getMethod();
@@ -51,76 +51,92 @@ public class SourceSinkTests extends JUnitTests{
 
 	}
 
-	@Test(timeout=300000)
-    public void fieldTest(){
+	@Test(timeout = 300000)
+	public void fieldTest() {
 		ISourceSinkManager sourceSinkManager = new BaseSourceSinkManager() {
-			
+
 			@Override
-			public SourceInfo getSourceInfo(Stmt sCallSite,
-					InterproceduralCFG<Unit, SootMethod> cfg) {
-				if (sCallSite.containsInvokeExpr()
-						&& sCallSite.getInvokeExpr().getMethod().getName().equals("getSecret"))
-					return new SourceInfo(true);
+			public SourceInfo getSourceInfo(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg) {
+				if (sCallSite.containsInvokeExpr() && sCallSite.getInvokeExpr().getMethod().getName().equals("getSecret") && sCallSite instanceof DefinitionStmt) {
+					AccessPath[] ap = { new AccessPath(((DefinitionStmt) sCallSite).getLeftOp(), true) };
+					AccessPathBundle bundle = new AccessPathBundle(ap);
+					return new SourceInfo(true, null, bundle);
+				}
 				return null;
 			}
-			
+
+			@Override
+			public boolean leaks(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg, int index, AccessPath ap) {
+				return isSink(sCallSite, cfg);
+			}
+
 		};
-		
-    	Infoflow infoflow = initInfoflow();
-    	List<String> epoints = new ArrayList<String>();
-    	epoints.add("<soot.jimple.infoflow.test.SourceSinkTestCode: void testDataObject()>");
+
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.SourceSinkTestCode: void testDataObject()>");
 		infoflow.computeInfoflow(appPath, libPath, new DefaultEntryPointCreator(epoints), sourceSinkManager);
 		Assert.assertTrue(infoflow.isResultAvailable());
 		Assert.assertEquals(1, infoflow.getResults().size());
 		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceGetSecret));
-    }
-	
-	@Test(timeout=300000)
-    public void negativeFieldTest(){
+	}
+
+	@Test(timeout = 300000)
+	public void negativeFieldTest() {
 		ISourceSinkManager sourceSinkManager = new BaseSourceSinkManager() {
-			
+
 			@Override
-			public SourceInfo getSourceInfo(Stmt sCallSite,
-					InterproceduralCFG<Unit, SootMethod> cfg) {
-				if (sCallSite.containsInvokeExpr()
-						&& sCallSite.getInvokeExpr().getMethod().getName().equals("getSecret"))
-					return new SourceInfo(false);
+			public SourceInfo getSourceInfo(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg) {
+				if (sCallSite.containsInvokeExpr() && sCallSite.getInvokeExpr().getMethod().getName().equals("getSecret") && sCallSite instanceof DefinitionStmt) {
+					AccessPath[] ap = { new AccessPath(((DefinitionStmt) sCallSite).getLeftOp(), false) };
+					AccessPathBundle bundle = new AccessPathBundle(ap);
+					return new SourceInfo(false, null, bundle);
+				}
 				return null;
 			}
-			
+
+			@Override
+			public boolean leaks(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg, int index, AccessPath ap) {
+				return isSink(sCallSite, cfg);
+			}
+
 		};
-		
-    	Infoflow infoflow = initInfoflow();
-    	List<String> epoints = new ArrayList<String>();
-    	epoints.add("<soot.jimple.infoflow.test.SourceSinkTestCode: void testDataObject()>");
+
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.SourceSinkTestCode: void testDataObject()>");
 		infoflow.computeInfoflow(appPath, libPath, new DefaultEntryPointCreator(epoints), sourceSinkManager);
 		negativeCheckInfoflow(infoflow);
-    }
+	}
 
-	@Test(timeout=300000)
-    public void accessPathTypesTest(){
+	@Test(timeout = 300000)
+	public void accessPathTypesTest() {
 		ISourceSinkManager sourceSinkManager = new BaseSourceSinkManager() {
-			
+
 			@Override
-			public SourceInfo getSourceInfo(Stmt sCallSite,
-					InterproceduralCFG<Unit, SootMethod> cfg) {
-				if (sCallSite.containsInvokeExpr()
-						&& (sCallSite.getInvokeExpr().getMethod().getName().equals("getSecret")
-								||(sCallSite.getInvokeExpr().getMethod().getName().equals("getSecret2"))))
-					return new SourceInfo(true);
+			public SourceInfo getSourceInfo(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg) {
+				if (sCallSite.containsInvokeExpr() && (sCallSite.getInvokeExpr().getMethod().getName().equals("getSecret") || (sCallSite.getInvokeExpr().getMethod().getName().equals("getSecret2")) && sCallSite instanceof DefinitionStmt)) {
+					AccessPath[] ap = { new AccessPath(((DefinitionStmt) sCallSite).getLeftOp(), true) };
+					AccessPathBundle bundle = new AccessPathBundle(ap);
+					return new SourceInfo(true, null, bundle);
+				}
 				return null;
 			}
-			
+
+			@Override
+			public boolean leaks(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg, int index, AccessPath ap) {
+				return isSink(sCallSite, cfg);
+			}
+
 		};
-		
-    	Infoflow infoflow = initInfoflow();
-    	List<String> epoints = new ArrayList<String>();
-    	epoints.add("<soot.jimple.infoflow.test.SourceSinkTestCode: void testAccessPathTypes()>");
+
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.SourceSinkTestCode: void testAccessPathTypes()>");
 		infoflow.computeInfoflow(appPath, libPath, new DefaultEntryPointCreator(epoints), sourceSinkManager);
 		Assert.assertTrue(infoflow.isResultAvailable());
 		Assert.assertEquals(1, infoflow.getResults().size());
 		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceGetSecret));
 		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceGetSecret2));
-    }
-
+	}
 }

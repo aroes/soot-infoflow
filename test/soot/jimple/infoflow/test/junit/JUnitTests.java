@@ -107,7 +107,6 @@ public abstract class JUnitTests {
 						|| map.isPathBetweenMethods(sinkInt, sourceDeviceId)
 						|| map.isPathBetweenMethods(sinkInt, sourceIMEI)
 						|| map.isPathBetweenMethods(sinkInt, sourceIMSI)
-						|| map.isPathBetweenMethods(sinkInt, sourceLongitude)
 						|| map.isPathBetweenMethods(sinkBoolean, sourceDeviceId)
 						|| map.isPathBetweenMethods(sinkDouble, sourceLongitude));
 			}else{

@@ -10,7 +10,11 @@
  ******************************************************************************/
 package soot.jimple.infoflow.source;
 
+import heros.InterproceduralCFG;
 import soot.SootMethod;
+import soot.Unit;
+import soot.jimple.Stmt;
+import soot.jimple.infoflow.data.AccessPath;
 
 /**
  * A {@link ISourceSinkManager} that always returns false, i.e. one for which
@@ -30,6 +34,12 @@ public class EmptySourceSinkManager extends MethodBasedSourceSinkManager {
 
 	@Override
 	public boolean isSinkMethod(SootMethod sMethod) {
+		return false;
+	}
+
+	@Override
+	public boolean leaks(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg, int index, AccessPath ap) {
+		// TODO Auto-generated method stub
 		return false;
 	}
 

@@ -20,6 +20,7 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import soot.Value;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.collect.ConcurrentHashSet;
@@ -66,7 +67,7 @@ public class InfoflowResults {
 	 * @return True if this result contains the given value as a sink, otherwise
 	 * false.
 	 */
-	public boolean containsSink(Stmt sink) {
+	public boolean containsSink(Value sink) {
 		for (ResultSinkInfo si : this.results.keySet())
 			if (si.getSink().equals(sink))
 				return true;
@@ -121,7 +122,7 @@ public class InfoflowResults {
 	 * @return True if there is a path between the given source and sink, false
 	 * otherwise
 	 */
-	public boolean isPathBetween(Stmt sink, Stmt source) {
+	public boolean isPathBetween(Value sink, Value source) {
 		Set<ResultSourceInfo> sources = null;
 		for(ResultSinkInfo sI : this.results.keySet()){
 			if(sI.getSink().equals(sink)){

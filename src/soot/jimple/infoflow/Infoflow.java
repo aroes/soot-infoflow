@@ -389,7 +389,8 @@ public class Infoflow extends AbstractInfoflow {
         	logger.info("Callgraph has {} edges", Scene.v().getCallGraph().size());
         iCfg = icfgFactory.buildBiDirICFG(callgraphAlgorithm);
 		        
-        int numThreads = Runtime.getRuntime().availableProcessors();
+//        int numThreads = Runtime.getRuntime().availableProcessors();
+        int numThreads = 1;
 		CountingThreadPoolExecutor executor = createExecutor(numThreads);
 		
 		BackwardsInfoflowProblem backProblem;
@@ -466,9 +467,10 @@ public class Infoflow extends AbstractInfoflow {
 		int sinkCount = 0;
         logger.info("Looking for sources and sinks...");
         
-        for (SootMethod sm : getMethodsForSeeds(iCfg))
+        for (SootMethod sm : getMethodsForSeeds(iCfg)){
+        	System.out.println("method: " + sm);
 			sinkCount += scanMethodForSourcesSinks(sourcesSinks, forwardProblem, sm);
-        
+        }
 		// We optionally also allow additional seeds to be specified
 		if (additionalSeeds != null)
 			for (String meth : additionalSeeds) {
