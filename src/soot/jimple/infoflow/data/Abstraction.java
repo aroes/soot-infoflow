@@ -569,8 +569,12 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 			return false;
 		
 		synchronized (this) {
-			if (pathFlags == null)
-				pathFlags = new BitSet();
+			if (pathFlags == null) {
+				// Make sure that the field is set only after the constructor
+				// is done and the object is fully usable
+				BitSet pf = new BitSet();
+				pathFlags = pf;
+			}
 			pathFlags.set(id);
 		}
 		return true;
