@@ -176,8 +176,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					// Note that we don't only need to check for heap writes such as a.x = y,
 					// but also for base object taints ("a" in this case).
 					boolean taintsObjectValue = val.getBaseType() instanceof RefType
-							&& !((RefType) val.getBaseType()).getSootClass().getName().equals("java.lang.String")
-							&& newAbs.getAccessPath().getBaseType() instanceof RefType;
+							&& newAbs.getAccessPath().getBaseType() instanceof RefType
+							&& !isStringType(val.getBaseType());
 					boolean taintsStaticField = enableStaticFields
 							&& newAbs.getAccessPath().isStaticFieldRef();
 						
@@ -249,6 +249,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 		if (val.getType() instanceof PrimType)
 			return false;
 		if (val instanceof Constant)
+			return false;
+		
+		// String cannot have aliases
+		if (isStringType(val.getType()))
 			return false;
 		
 		return val instanceof FieldRef
@@ -1215,6 +1219,13 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								if (!checkCast(source.getAccessPath(), originalCallArg.getType()))
 									continue;
 								
+								// Primitive types and strings cannot have aliases and thus
+								// never need to be propagated back
+								if (source.getAccessPath().getBaseType() instanceof PrimType)
+									continue;
+								if (isStringType(source.getAccessPath().getBaseType()))
+									continue;
+								
 								Abstraction abs = newSource.deriveNewAbstraction
 										(newSource.getAccessPath().copyWithNewValue(originalCallArg), (Stmt) exitStmt);
 								res.add(abs);
@@ -1222,15 +1233,15 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								// Aliases of implicitly tainted variables must be mapped back
 								// into the caller's context on return when we leave the last
 								// implicitly-called method
-								if (originalCallArg.getType() instanceof RefType || originalCallArg.getType() instanceof ArrayType)
-									if ((abs.isImplicit() && implicitFlowAliasingStrategy.hasProcessedMethod(callee)
-											&& !callerD1sConditional) || aliasingStrategy.requiresAnalysisOnReturn()) {
-										assert originalCallArg.getType() instanceof ArrayType
-												|| originalCallArg.getType() instanceof RefType;
-										for (Abstraction d1 : callerD1s)
-											computeAliasTaints(d1, iCallStmt, originalCallArg, res,
-												interproceduralCFG().getMethodOf(callSite), abs);
-									}
+								if ((abs.isImplicit()
+										&& implicitFlowAliasingStrategy.hasProcessedMethod(callee)
+										&& !callerD1sConditional) || aliasingStrategy.requiresAnalysisOnReturn()) {
+									assert originalCallArg.getType() instanceof ArrayType
+											|| originalCallArg.getType() instanceof RefType;
+									for (Abstraction d1 : callerD1s)
+										computeAliasTaints(d1, iCallStmt, originalCallArg, res,
+											interproceduralCFG().getMethodOf(callSite), abs);
+								}
 							}
 						}
 						}
@@ -1252,6 +1263,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										// implicitly-called method
 										if ((abs.isImplicit()
 												&& triggerInaktiveTaintOrReverseFlow(iCallStmt, iIExpr.getBase(), abs)
+												&& implicitFlowAliasingStrategy.hasProcessedMethod(callee)
 												&& !callerD1sConditional) || aliasingStrategy.requiresAnalysisOnReturn())
 											for (Abstraction d1 : callerD1s)
 												computeAliasTaints(d1, iCallStmt, iIExpr.getBase(), res,

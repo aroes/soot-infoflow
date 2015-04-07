@@ -25,6 +25,7 @@ import soot.ArrayType;
 import soot.BooleanType;
 import soot.IntType;
 import soot.Local;
+import soot.PrimType;
 import soot.RefType;
 import soot.Scene;
 import soot.SootMethod;
@@ -476,6 +477,13 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							// check if param is tainted:
 							for (int i = 0; i < ie.getArgCount(); i++) {
 								if (ie.getArg(i) == source.getAccessPath().getPlainValue()) {
+									// Primitive types and strings cannot have aliases and thus
+									// never need to be propagated back
+									if (source.getAccessPath().getBaseType() instanceof PrimType)
+										continue;
+									if (isStringType(source.getAccessPath().getBaseType()))
+										continue;
+									
 									Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
 											(paramLocals[i]), stmt);
 									res.add(abs);
@@ -558,6 +566,13 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 										if (!AccessPath.canContainValue(originalCallArg))
 											continue;
 										if (!checkCast(source.getAccessPath(), originalCallArg.getType()))
+											continue;
+										
+										// Primitive types and strings cannot have aliases and thus
+										// never need to be propagated back
+										if (source.getAccessPath().getBaseType() instanceof PrimType)
+											continue;
+										if (isStringType(source.getAccessPath().getBaseType()))
 											continue;
 										
 										Abstraction abs = source.deriveNewAbstraction
