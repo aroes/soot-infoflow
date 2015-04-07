@@ -129,10 +129,13 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			Abstraction source) {
 		assert inspectSources || source != getZeroValue();
 		
+		// If we don't have a taint wrapper, there's nothing we can do here
 		if(taintWrapper == null)
 			return Collections.emptySet();
 		
-		if (!source.getAccessPath().isStaticFieldRef() && !source.getAccessPath().isEmpty()) {
+		// Do not check taints that are not mentioned anywhere in the call
+		if (!source.getAccessPath().isStaticFieldRef()
+				&& !source.getAccessPath().isEmpty()) {
 			boolean found = false;
 
 			// The base object must be tainted
@@ -157,7 +160,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 		
 		Set<Abstraction> res = null;
 		Set<AccessPath> vals = taintWrapper.getTaintsForMethod(iStmt, source.getAccessPath(),
-				interproceduralCFG());
+				interproceduralCFG(), source.isAbstractionActive());
 		if(vals != null) {
 			res = new HashSet<Abstraction>();
 			for (AccessPath val : vals) {
@@ -167,27 +170,27 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				else {
 					Abstraction newAbs = source.deriveNewAbstraction(val, iStmt);
 					res.add(newAbs);
-				
+					
 					// If the taint wrapper creates a new taint, this must be propagated
 					// backwards as there might be aliases for the base object
 					// Note that we don't only need to check for heap writes such as a.x = y,
 					// but also for base object taints ("a" in this case).
-					boolean taintsBaseValue = val.getBaseType() instanceof RefType
+					boolean taintsObjectValue = val.getBaseType() instanceof RefType
 							&& !((RefType) val.getBaseType()).getSootClass().getName().equals("java.lang.String")
-							&& newAbs.getAccessPath().getBaseType() instanceof RefType
-							&& iStmt.getInvokeExpr() instanceof InstanceInvokeExpr
-							&& ((InstanceInvokeExpr) iStmt.getInvokeExpr()).getBase() == val.getPlainValue();
-					boolean taintsStaticField = enableStaticFields && newAbs.getAccessPath().isStaticFieldRef();
+							&& newAbs.getAccessPath().getBaseType() instanceof RefType;
+					boolean taintsStaticField = enableStaticFields
+							&& newAbs.getAccessPath().isStaticFieldRef();
 						
 					// If the tainted value gets overwritten, it cannot have aliases afterwards
 					boolean taintedValueOverwritten = (iStmt instanceof DefinitionStmt)
 							? baseMatches(((DefinitionStmt) iStmt).getLeftOp(), newAbs) : false;
 						
-					if (!taintedValueOverwritten && (taintsStaticField
-							|| (taintsBaseValue && newAbs.getAccessPath().getTaintSubFields())
-							|| triggerInaktiveTaintOrReverseFlow(iStmt, val.getPlainValue(), newAbs)))
-						computeAliasTaints(d1, iStmt, val.getPlainValue(), res,
-								interproceduralCFG().getMethodOf(iStmt), newAbs);
+					if (!taintedValueOverwritten)
+						if (taintsStaticField
+								|| (taintsObjectValue && newAbs.getAccessPath().getTaintSubFields())
+								|| triggerInaktiveTaintOrReverseFlow(iStmt, val.getPlainValue(), newAbs))
+							computeAliasTaints(d1, iStmt, val.getPlainValue(), res,
+									interproceduralCFG().getMethodOf(iStmt), newAbs);
 				}
 			}
 		}
@@ -1355,7 +1358,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							
 							return res;
 						}
-
+						
 						//check inactive elements:
 						final Abstraction newSource;
 						if (!source.isAbstractionActive() && (call == source.getActivationUnit()

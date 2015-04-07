@@ -421,7 +421,7 @@ public class HeapTests extends JUnitTests {
 
 			@Override
 			public Set<AccessPath> getTaintsForMethod(Stmt stmt,
-					AccessPath taintedPath, IInfoflowCFG icfg) {
+					AccessPath taintedPath, IInfoflowCFG icfg, boolean isActive) {
 				if (!stmt.containsInvokeExpr())
 					return Collections.singleton(taintedPath);
 

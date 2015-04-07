@@ -46,11 +46,14 @@ public interface ITaintPropagationWrapper {
 	 * requiring the analysis to look inside the method.
 	 * @param stmt The invocation statement which to check for black-box taint propagation
 	 * @param taintedPath The tainted field or value to propagate
-	 * @param icfg The interprocedural control flow graph 
+	 * @param icfg The interprocedural control flow graph
+	 * @param isActive True if the given access path belongs to an active taint.
+	 * False if the taint wrapper query is for an inactive alias of a taint.
 	 * @return The list of tainted values after the invocation statement referenced in {@link Stmt}
 	 * has been executed
 	 */
-	public Set<AccessPath> getTaintsForMethod(Stmt stmt, AccessPath taintedPath, IInfoflowCFG icfg);
+	public Set<AccessPath> getTaintsForMethod(Stmt stmt, AccessPath taintedPath,
+			IInfoflowCFG icfg, boolean isActive);
 	
 	/**
 	 * Gets whether the taints produced by this taint wrapper are exclusive, i.e. there are

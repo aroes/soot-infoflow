@@ -45,10 +45,10 @@ public class TaintWrapperSet extends AbstractTaintWrapper {
 
 	@Override
 	public Set<AccessPath> getTaintsForMethod(Stmt stmt, AccessPath taintedPath,
-			IInfoflowCFG icfg) {
+			IInfoflowCFG icfg, boolean isActive) {
 		Set<AccessPath> resList = new HashSet<AccessPath>();
 		for (ITaintPropagationWrapper w : this.wrappers)
-			resList.addAll(w.getTaintsForMethod(stmt, taintedPath, icfg));
+			resList.addAll(w.getTaintsForMethod(stmt, taintedPath, icfg, isActive));
 		return new HashSet<AccessPath>(resList);
 	}
 

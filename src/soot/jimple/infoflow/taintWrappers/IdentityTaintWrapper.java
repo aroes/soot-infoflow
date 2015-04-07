@@ -37,7 +37,7 @@ public class IdentityTaintWrapper extends AbstractTaintWrapper {
 	
 	@Override
 	public Set<AccessPath> getTaintsForMethod(Stmt stmt, AccessPath taintedPath,
-			IInfoflowCFG icfg) {
+			IInfoflowCFG icfg, boolean isActive) {
 		assert stmt.containsInvokeExpr();
 		
 		// For the moment, we don't implement static taints on wrappers. Pass it on

@@ -181,7 +181,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 	
 	@Override
 	public Set<AccessPath> getTaintsForMethod(Stmt stmt, AccessPath taintedPath,
-			IInfoflowCFG icfg) {
+			IInfoflowCFG icfg, boolean isActive) {
 		if (!stmt.containsInvokeExpr())
 			return Collections.emptySet();
 		
