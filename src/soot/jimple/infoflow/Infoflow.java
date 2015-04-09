@@ -456,11 +456,25 @@ public class Infoflow extends AbstractInfoflow {
 			backProblem.setInspectSinks(inspectSinks);
 		}
 		
+		// Print our configuration
 		if (!enableStaticFields)
 			logger.warn("Static field tracking is disabled, results may be incomplete");
 		if (!flowSensitiveAliasing || !aliasingStrategy.isFlowSensitive())
 			logger.warn("Using flow-insensitive alias tracking, results may be imprecise");
-
+		if (enableImplicitFlows)
+			logger.info("Implicit flow tracking is enabled");
+		else
+			logger.info("Implicit flow tracking is NOT enabled");
+		logger.info("Running with a maximum access path length of {}", getAccessPathLength());
+		if (pathAgnosticResults)
+			logger.info("Using path-agnostic result collection");
+		else
+			logger.info("Using path-sensitive result collection");
+		if (useRecursiveAccessPaths)
+			logger.info("Recursive access path shortening is enabled");
+		else
+			logger.info("Recursive access path shortening is NOT enabled");
+		
 		// We have to look through the complete program to find sources
 		// which are then taken as seeds.
 		int sinkCount = 0;
