@@ -421,8 +421,8 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 			}
 
 			@Override
-			public Set<AccessPath> getTaintsForMethod(Stmt stmt,
-					AccessPath taintedPath, IInfoflowCFG icfg, boolean isActive) {
+			public Set<AccessPath> getTaintsForMethodInternal(Stmt stmt,
+					AccessPath taintedPath, IInfoflowCFG icfg) {
 				if (!stmt.containsInvokeExpr())
 					return Collections.singleton(taintedPath);
 

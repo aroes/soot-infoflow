@@ -14,7 +14,7 @@ import java.util.Set;
 
 import soot.SootMethod;
 import soot.jimple.Stmt;
-import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 
 /**
@@ -47,13 +47,11 @@ public interface ITaintPropagationWrapper {
 	 * @param stmt The invocation statement which to check for black-box taint propagation
 	 * @param taintedPath The tainted field or value to propagate
 	 * @param icfg The interprocedural control flow graph
-	 * @param isActive True if the given access path belongs to an active taint.
-	 * False if the taint wrapper query is for an inactive alias of a taint.
 	 * @return The list of tainted values after the invocation statement referenced in {@link Stmt}
 	 * has been executed
 	 */
-	public Set<AccessPath> getTaintsForMethod(Stmt stmt, AccessPath taintedPath,
-			IInfoflowCFG icfg, boolean isActive);
+	public Set<Abstraction> getTaintsForMethod(Stmt stmt, Abstraction taintedPath,
+			IInfoflowCFG icfg);
 	
 	/**
 	 * Gets whether the taints produced by this taint wrapper are exclusive, i.e. there are
@@ -64,7 +62,7 @@ public interface ITaintPropagationWrapper {
 	 * @param icfg The interprocedural control flow graph 
 	 * @return True if this taint wrapper is exclusive, otherwise false. 
 	 */
-	public boolean isExclusive(Stmt stmt, AccessPath taintedPath, IInfoflowCFG icfg);
+	public boolean isExclusive(Stmt stmt, Abstraction taintedPath, IInfoflowCFG icfg);
 	
 	/**
 	 * Checks whether this taint wrapper can in general produce artificial taints

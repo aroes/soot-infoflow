@@ -403,7 +403,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						
 						// taint is propagated in CallToReturnFunction, so we do not
 						// need any taint here if the taint wrapper is exclusive:
-						if(taintWrapper != null && taintWrapper.isExclusive(stmt, source.getAccessPath(),
+						if(taintWrapper != null && taintWrapper.isExclusive(stmt, source,
 								interproceduralCFG()))
 							return Collections.emptySet();
 						

@@ -158,43 +158,36 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				return Collections.emptySet();
 		}
 		
-		Set<Abstraction> res = null;
-		Set<AccessPath> vals = taintWrapper.getTaintsForMethod(iStmt, source.getAccessPath(),
-				interproceduralCFG(), source.isAbstractionActive());
-		if(vals != null) {
-			res = new HashSet<Abstraction>();
-			for (AccessPath val : vals) {
+		Set<Abstraction> res = taintWrapper.getTaintsForMethod(iStmt, source,
+				interproceduralCFG());
+		if(res != null)
+			for (Abstraction abs : res) {
 				// The new abstraction gets activated where it was generated
-				if (val == source.getAccessPath())
-					res.add(source);
-				else {
-					Abstraction newAbs = source.deriveNewAbstraction(val, iStmt);
-					res.add(newAbs);
-					
+				if (!abs.equals(source)) {
 					// If the taint wrapper creates a new taint, this must be propagated
 					// backwards as there might be aliases for the base object
 					// Note that we don't only need to check for heap writes such as a.x = y,
 					// but also for base object taints ("a" in this case).
+					final AccessPath val = abs.getAccessPath();
 					boolean taintsObjectValue = val.getBaseType() instanceof RefType
-							&& newAbs.getAccessPath().getBaseType() instanceof RefType
+							&& abs.getAccessPath().getBaseType() instanceof RefType
 							&& !isStringType(val.getBaseType());
 					boolean taintsStaticField = enableStaticFields
-							&& newAbs.getAccessPath().isStaticFieldRef();
+							&& abs.getAccessPath().isStaticFieldRef();
 						
 					// If the tainted value gets overwritten, it cannot have aliases afterwards
 					boolean taintedValueOverwritten = (iStmt instanceof DefinitionStmt)
-							? baseMatches(((DefinitionStmt) iStmt).getLeftOp(), newAbs) : false;
-						
+							? baseMatches(((DefinitionStmt) iStmt).getLeftOp(), abs) : false;
+					
 					if (!taintedValueOverwritten)
 						if (taintsStaticField
-								|| (taintsObjectValue && newAbs.getAccessPath().getTaintSubFields())
-								|| triggerInaktiveTaintOrReverseFlow(iStmt, val.getPlainValue(), newAbs))
+								|| (taintsObjectValue && abs.getAccessPath().getTaintSubFields())
+								|| triggerInaktiveTaintOrReverseFlow(iStmt, val.getPlainValue(), abs))
 							computeAliasTaints(d1, iStmt, val.getPlainValue(), res,
-									interproceduralCFG().getMethodOf(iStmt), newAbs);
+									interproceduralCFG().getMethodOf(iStmt), abs);
 				}
 			}
-		}
-
+		
 		return res;
 	}
 	
@@ -945,7 +938,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						
 						// If we have an exclusive taint wrapper for the target
 						// method, we do not perform an own taint propagation. 
-						if(taintWrapper != null && taintWrapper.isExclusive(stmt, source.getAccessPath(),
+						if(taintWrapper != null && taintWrapper.isExclusive(stmt, source,
 								interproceduralCFG())) {
 							//taint is propagated in CallToReturnFunction, so we do not need any taint here:
 							return Collections.emptySet();
@@ -1478,7 +1471,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								&& (inspectSinks || !isSink)
 								&& (hasValidCallees
 									|| (taintWrapper != null && taintWrapper.isExclusive(iCallStmt,
-											newSource.getAccessPath(), interproceduralCFG())))) {
+											newSource, interproceduralCFG())))) {
 							// If one of the callers does not read the value, we must pass it on
 							// in any case
 							boolean allCalleesRead = true;

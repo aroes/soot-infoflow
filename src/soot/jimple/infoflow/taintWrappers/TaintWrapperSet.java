@@ -12,10 +12,11 @@ package soot.jimple.infoflow.taintWrappers;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import soot.SootMethod;
 import soot.jimple.Stmt;
-import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
 
 /**
@@ -25,9 +26,11 @@ import soot.jimple.infoflow.solver.IInfoflowCFG;
  * 
  * @author Steven Arzt
  */
-public class TaintWrapperSet extends AbstractTaintWrapper {
+public class TaintWrapperSet implements ITaintPropagationWrapper {
 
 	private Set<ITaintPropagationWrapper> wrappers = new HashSet<ITaintPropagationWrapper>();
+	private AtomicInteger hits = new AtomicInteger();
+	private AtomicInteger misses = new AtomicInteger();
 	
 	@Override
 	public void initialize() {
@@ -44,16 +47,23 @@ public class TaintWrapperSet extends AbstractTaintWrapper {
 	}
 
 	@Override
-	public Set<AccessPath> getTaintsForMethod(Stmt stmt, AccessPath taintedPath,
-			IInfoflowCFG icfg, boolean isActive) {
-		Set<AccessPath> resList = new HashSet<AccessPath>();
+	public Set<Abstraction> getTaintsForMethod(Stmt stmt, Abstraction taintedPath,
+			IInfoflowCFG icfg) {
+		Set<Abstraction> resList = new HashSet<Abstraction>();
 		for (ITaintPropagationWrapper w : this.wrappers)
-			resList.addAll(w.getTaintsForMethod(stmt, taintedPath, icfg, isActive));
-		return new HashSet<AccessPath>(resList);
+			resList.addAll(w.getTaintsForMethod(stmt, taintedPath, icfg));
+		
+		// Bookkeeping for statistics
+		if (resList.isEmpty())
+			misses.incrementAndGet();
+		else
+			hits.incrementAndGet();
+		
+		return resList;
 	}
 
 	@Override
-	public boolean isExclusiveInternal(Stmt stmt, AccessPath taintedPath,
+	public boolean isExclusive(Stmt stmt, Abstraction taintedPath,
 			IInfoflowCFG icfg) {
 		for (ITaintPropagationWrapper w : this.wrappers)
 			if (w.isExclusive(stmt, taintedPath, icfg))
@@ -75,6 +85,16 @@ public class TaintWrapperSet extends AbstractTaintWrapper {
 			if (w.supportsCallee(callSite, icfg))
 				return true;
 		return false;
+	}
+
+	@Override
+	public int getWrapperHits() {
+		return hits.get();
+	}
+
+	@Override
+	public int getWrapperMisses() {
+		return misses.get();
 	}
 	
 }
