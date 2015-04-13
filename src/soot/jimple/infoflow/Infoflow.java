@@ -782,7 +782,7 @@ public class Infoflow extends AbstractInfoflow {
 					forwardProblem.addInitialSeeds(u, Collections.singleton(forwardProblem.zeroValue()));
 					logger.debug("Source found: {}", u);
 				}
-				if (sourcesSinks.isSink(s, iCfg)) {
+				if (sourcesSinks.isSink(s, iCfg, null)) {
 		            logger.debug("Sink found: {}", u);
 					sinkCount++;
 				}

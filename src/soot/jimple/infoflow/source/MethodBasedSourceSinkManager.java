@@ -16,6 +16,7 @@ import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.data.AccessPath;
 
 /**
  * Abstracts from the very generic statement-based SourceSinkManager so that users
@@ -39,7 +40,8 @@ public abstract class MethodBasedSourceSinkManager implements ISourceSinkManager
 	}
 
 	@Override
-	public boolean isSink(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg) {
+	public boolean isSink(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg,
+			AccessPath ap) {
 		assert sCallSite != null;
 		return sCallSite.containsInvokeExpr()
 				&& isSinkMethod(sCallSite.getInvokeExpr().getMethod());

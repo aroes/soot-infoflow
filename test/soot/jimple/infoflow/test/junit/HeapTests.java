@@ -990,7 +990,8 @@ public class HeapTests extends JUnitTests {
 				new ISourceSinkManager() {
 			
 			@Override
-			public boolean isSink(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg) {
+			public boolean isSink(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg,
+					AccessPath ap) {
 				return sCallSite.containsInvokeExpr()
 						&& sCallSite.getInvokeExpr().getMethod().getSignature().equals(sinkMethod);
 			}
@@ -1000,7 +1001,7 @@ public class HeapTests extends JUnitTests {
 				if (sCallSite instanceof AssignStmt) {
 					AssignStmt assignStmt = (AssignStmt) sCallSite;
 					if (assignStmt.getRightOp().toString().contains("taintedBySourceSinkManager"))
-						return new SourceInfo(true);
+						return new SourceInfo(new AccessPath(assignStmt.getLeftOp(), true));
 					else
 						return null;
 				}

@@ -405,8 +405,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				
 				final SourceInfo sourceInfo = sourceSinkManager != null
 						? sourceSinkManager.getSourceInfo(stmt, interproceduralCFG()) : null;
-				final boolean isSink = sourceSinkManager != null
-						? sourceSinkManager.isSink(stmt, interproceduralCFG()) : false;
 				
 				// If we compute flows on parameters, we create the initial
 				// flow fact here
@@ -427,18 +425,21 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 
 							// This may also be a parameter access we regard as a source
 							Set<Abstraction> res = new HashSet<Abstraction>();
-							if (source == getZeroValue() && sourceInfo != null) {
-								Abstraction abs = new Abstraction(
-										new AccessPath(is.getLeftOp(), true),
-										is,
-										sourceInfo.getUserData(),
-										false,
-										false);
-								res.add(abs);
-								
-								// Compute the aliases
-								if (triggerInaktiveTaintOrReverseFlow(is, is.getLeftOp(), abs))
-									computeAliasTaints(d1, is, is.getLeftOp(), res, interproceduralCFG().getMethodOf(is), abs);
+							if (source == getZeroValue()
+									&& sourceInfo != null
+									&& !sourceInfo.getAccessPaths().isEmpty()) {
+								for (AccessPath ap : sourceInfo.getAccessPaths()) {
+									Abstraction abs = new Abstraction(ap,
+											is,
+											sourceInfo.getUserData(),
+											false,
+											false);
+									res.add(abs);
+									
+									// Compute the aliases
+									if (triggerInaktiveTaintOrReverseFlow(is, is.getLeftOp(), abs))
+										computeAliasTaints(d1, is, is.getLeftOp(), res, interproceduralCFG().getMethodOf(is), abs);
+								}
 								return res;
 							}
 
@@ -480,20 +481,23 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 											(source.getTopPostdominator().getUnit());
 							
 							// Fields can be sources in some cases
-                            if (source == getZeroValue() && sourceInfo != null) {
-    							Set<Abstraction> res = new HashSet<Abstraction>();
-                                final Abstraction abs = new Abstraction(
-                                		new AccessPath(assignStmt.getRightOp(), true),
-                                		assignStmt,
-                                		sourceInfo.getUserData(),
-                                		false,
-                                		false);
-                                res.add(abs);
-                                
-                                // Compute the aliases
-								if (triggerInaktiveTaintOrReverseFlow(assignStmt, leftValue, abs))
-									computeAliasTaints(d1, assignStmt, leftValue, res,
-											interproceduralCFG().getMethodOf(assignStmt), abs);
+                            if (source == getZeroValue()
+                            		&& sourceInfo != null
+                            		&& !sourceInfo.getAccessPaths().isEmpty()) {
+                            	Set<Abstraction> res = new HashSet<Abstraction>();
+                            	for (AccessPath ap : sourceInfo.getAccessPaths()) {
+	                                final Abstraction abs = new Abstraction(ap,
+	                                		assignStmt,
+	                                		sourceInfo.getUserData(),
+	                                		false,
+	                                		false);
+	                                res.add(abs);
+	                                
+	                                // Compute the aliases
+									if (triggerInaktiveTaintOrReverseFlow(assignStmt, leftValue, abs))
+										computeAliasTaints(d1, assignStmt, leftValue, res,
+												interproceduralCFG().getMethodOf(assignStmt), abs);
+                            	}
                                 return res;
                             }
                             
@@ -518,7 +522,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							
 							// Create the new taints that may be created by this assignment
 							Set<Abstraction> res = createNewTaintOnAssignment(src, assignStmt,
-									rightVals, isSink, d1, newSource);
+									rightVals, d1, newSource);
 							if (res != null)
 								return res;
 							
@@ -581,7 +585,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						private Set<Abstraction> createNewTaintOnAssignment(final Unit src,
 								final AssignStmt assignStmt,
 								final Value[] rightVals,
-								final boolean isSink,
 								Abstraction d1,
 								final Abstraction newSource) {
 							final Value leftValue = assignStmt.getLeftOp();
@@ -726,7 +729,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							}
 								
 							// If this is a sink, we need to report the finding
-							if (isSink
+							if (sourceSinkManager != null
+									&& sourceSinkManager.isSink(stmt, interproceduralCFG(),
+											newSource.getAccessPath())
 									&& newSource.isAbstractionActive()
 									&& newSource.getAccessPath().isEmpty())
 								addResult(new AbstractionAtSink(newSource, assignStmt));
@@ -759,9 +764,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							}
 							
 							// Check whether we have reached a sink
-							if (aliasing.mayAlias(returnStmt.getOp(), source.getAccessPath().getPlainValue())
+							if (sourceSinkManager != null
 									&& source.isAbstractionActive()
-									&& sourceSinkManager.isSink(returnStmt, interproceduralCFG()))
+									&& aliasing.mayAlias(returnStmt.getOp(), source.getAccessPath().getPlainValue())
+									&& sourceSinkManager.isSink(returnStmt, interproceduralCFG(),
+											source.getAccessPath()))
 								addResult(new AbstractionAtSink(source, returnStmt));
 
 							return Collections.singleton(source);
@@ -806,7 +813,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							public Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
 								// Check for a sink
 								if (source.isAbstractionActive()
-										&& sourceSinkManager.isSink(stmt, interproceduralCFG()))
+										&& sourceSinkManager != null
+										&& sourceSinkManager.isSink(stmt, interproceduralCFG(),
+												source.getAccessPath()))
 									for (Value v : BaseSelector.selectBaseList(condition, false))
 										if (aliasing.mayAlias(v, source.getAccessPath().getPlainValue())) {
 											addResult(new AbstractionAtSink(source, stmt));
@@ -827,7 +836,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								return Collections.singleton(source);
 							
 							// Check for a sink
-							if (sourceSinkManager.isSink(stmt, interproceduralCFG()))
+							if (sourceSinkManager != null
+									&& sourceSinkManager.isSink(stmt, interproceduralCFG(),
+											source.getAccessPath()))
 								for (Value v : BaseSelector.selectBaseList(condition, false))
 									if (aliasing.mayAlias(v, source.getAccessPath().getPlainValue())) {
 										addResult(new AbstractionAtSink(source, stmt));
@@ -898,7 +909,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				final SourceInfo sourceInfo = sourceSinkManager != null
 						? sourceSinkManager.getSourceInfo(stmt, interproceduralCFG()) : null;
 				final boolean isSink = sourceSinkManager != null
-						? sourceSinkManager.isSink(stmt, interproceduralCFG()) : false;
+						? sourceSinkManager.isSink(stmt, interproceduralCFG(), null) : false;
 				
 				// This is not cached by Soot, so accesses are more expensive
 				// than one might think
@@ -1017,8 +1028,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				final ThrowStmt throwStmt = (exitStmt instanceof ThrowStmt) ? (ThrowStmt) exitStmt : null;
 				
 				final ReturnStmt returnStmt = (exitStmt instanceof ReturnStmt) ? (ReturnStmt) exitStmt : null;
-				final boolean isSink = (returnStmt != null && sourceSinkManager != null)
-						? sourceSinkManager.isSink(returnStmt, interproceduralCFG()) : false;
 				
 				final Value[] paramLocals = new Value[callee.getParameterCount()];
 				for (int i = 0; i < callee.getParameterCount(); i++)
@@ -1124,7 +1133,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							mustTaintSink |= returnStmt.getOp() != null
 									&& newSource.getAccessPath().isLocal()
 									&& aliasing.mayAlias(newSource.getAccessPath().getPlainValue(), returnStmt.getOp());
-							if (mustTaintSink && isSink
+							if (mustTaintSink
+									&& sourceSinkManager != null
+									&& sourceSinkManager.isSink(returnStmt, interproceduralCFG(),
+											newSource.getAccessPath())
 									&& newSource.isAbstractionActive())
 								addResult(new AbstractionAtSink(newSource, returnStmt));
 						}
@@ -1293,7 +1305,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				final SourceInfo sourceInfo = sourceSinkManager != null
 						? sourceSinkManager.getSourceInfo(iCallStmt, interproceduralCFG()) : null;
 				final boolean isSink = (sourceSinkManager != null)
-						? sourceSinkManager.isSink(iCallStmt, interproceduralCFG()) : false;
+						? sourceSinkManager.isSink(iCallStmt, interproceduralCFG(), null) : false;
 				
 				final SootMethod callee = invExpr.getMethod();
 				final boolean hasValidCallees = hasValidCallees(call);
@@ -1333,34 +1345,27 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						
 						// Sources can either be assignments like x = getSecret() or
 						// instance method calls like constructor invocations
-						if (source == getZeroValue() && sourceInfo != null) {
-							// If we have nothing to taint, we can skip this source
-							if (!(call instanceof AssignStmt || invExpr instanceof InstanceInvokeExpr))
-								return Collections.emptySet();
-							
-							final Value target;
-							if (call instanceof AssignStmt)
-								target = ((AssignStmt) call).getLeftOp();
-							else
-								target = ((InstanceInvokeExpr) invExpr).getBase();
+						if (source == getZeroValue()
+								&& sourceInfo != null
+								&& !sourceInfo.getAccessPaths().isEmpty()) {
+							for (AccessPath ap : sourceInfo.getAccessPaths()) {
+								final Abstraction abs = new Abstraction(ap,
+										iCallStmt,
+										sourceInfo.getUserData(),
+										false,
+										false);
+								res.add(abs);
 								
-							final Abstraction abs = new Abstraction(
-									new AccessPath(target, sourceInfo.getTaintSubFields()),
-									iCallStmt,
-									sourceInfo.getUserData(),
-									false,
-									false);
-							res.add(abs);
-							
-							// Compute the aliases
-							if (triggerInaktiveTaintOrReverseFlow(iCallStmt, target, abs))
-								computeAliasTaints(d1, iCallStmt, target, res, interproceduralCFG().getMethodOf(call), abs);
-							
-							// Set the corresponding call site
-							for (Abstraction absRet : res)
-								if (absRet != source)
-									absRet.setCorrespondingCallSite(iCallStmt);
-							
+								// Compute the aliases
+								if (triggerInaktiveTaintOrReverseFlow(iCallStmt, ap.getPlainValue(), abs))
+									computeAliasTaints(d1, iCallStmt, ap.getPlainValue(), res,
+											interproceduralCFG().getMethodOf(call), abs);
+								
+								// Set the corresponding call site
+								for (Abstraction absRet : res)
+									if (absRet != source)
+										absRet.setCorrespondingCallSite(iCallStmt);
+							}
 							return res;
 						}
 						
@@ -1389,7 +1394,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						}
 						
 						// if we have called a sink we have to store the path from the source - in case one of the params is tainted!
-						if (isSink) {
+						if (sourceSinkManager != null
+								&& sourceSinkManager.isSink(iCallStmt, interproceduralCFG(),
+										newSource.getAccessPath())) {
 							// If we are inside a conditional branch, we consider every sink call a leak
 							boolean conditionalCall = enableImplicitFlows 
 									&& !interproceduralCFG().getMethodOf(call).isStatic()

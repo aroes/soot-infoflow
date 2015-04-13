@@ -1,43 +1,54 @@
 package soot.jimple.infoflow.source;
 
+import java.util.Collections;
+import java.util.Set;
+
+import soot.jimple.infoflow.data.AccessPath;
+
 /**
  * Class containing additional information about a source. Users of FlowDroid
  * can derive from this class when implementing their own SourceSinkManager
  * to associate additional information with a source.
  * 
- * @author Steven Arzt
+ * @author Steven Arzt, Daniel Magin
  */
 public class SourceInfo {
 	
-	private boolean taintSubFields = true;
-	private Object userData = null;
+	private final Object userData;
+	private final Set<AccessPath> accessPaths;
 	
 	/**
-	 * Creates a new instance of the {@link SourceInfo} class
-	 * @param taintSubFields True if all fields reachable through the source
-	 * shall also be considered as tainted, false if only the source as such
-	 * shall be tainted.
+	 * Creates a new instance of the {@link SourceInfo} class. This is a
+	 * convenience constructor to allow for the simple use of a single access
+	 * path.
+	 * @param ap The single access path that shall be tainted at this source
 	 */
-	public SourceInfo(boolean taintSubFields) {
-		this.taintSubFields = taintSubFields;
+	public SourceInfo(AccessPath ap){
+		this(Collections.singleton(ap), null);
 	}
 	
 	/**
 	 * Creates a new instance of the {@link SourceInfo} class
-	 * @param taintSubFields True if all fields reachable through the source
-	 * shall also be considered as tainted, false if only the source as such
-	 * shall be tainted.
+	 * @param bundle Information about access paths tainted by this source
+	 */
+	public SourceInfo(Set<AccessPath> bundle){
+		this(bundle, null);
+	}
+	
+	/**
+	 * Creates a new instance of the {@link SourceInfo} class
+	 * @param bundle Information about access paths tainted by this source
 	 * @param userData Additional user data to be propagated with the source
 	 */
-	public SourceInfo(boolean taintSubFields, Object userData) {
-		this.taintSubFields = taintSubFields;
+	public SourceInfo(Set<AccessPath> bundle, Object userData){
 		this.userData = userData;
+		this.accessPaths = bundle;
 	}
-
+	
 	@Override
 	public int hashCode() {
-		return 31 * (taintSubFields ? 1 : 0)
-				+ 31 * (this.userData == null ? 0 : this.userData.hashCode());
+		return 31 * (this.userData == null ? 0 : this.userData.hashCode())
+				+ 31 * (this.accessPaths == null ? 0 : this.accessPaths.hashCode());
 	}
 	
 	@Override
@@ -45,26 +56,20 @@ public class SourceInfo {
 		if (other == null || !(other instanceof SourceInfo))
 			return false;
 		SourceInfo otherInfo = (SourceInfo) other;
-		if (taintSubFields != otherInfo.taintSubFields)
-			return false;
 		if (this.userData == null) {
 			if (otherInfo.userData != null)
 				return false;
 		}
+		if(this.accessPaths == null){
+			if(otherInfo.userData != null){
+				return false;
+			}
+		}
 		else if (!this.userData.equals(otherInfo.userData))
 			return false;
+		else if(!this.accessPaths.equals(otherInfo.accessPaths))
+			return false;
 		return true;
-	}
-
-	/**
-	 * Gets whether all fields reachable through the source shall also be
-	 * considered as tainted.
-	 * @return True if all fields reachable through the source shall also
-	 * be considered as tainted, false if only the source as such shall be
-	 * tainted.
-	 */
-	public boolean getTaintSubFields() {
-		return taintSubFields;
 	}
 	
 	/**
@@ -75,4 +80,12 @@ public class SourceInfo {
 		return this.userData;
 	}
 
+	/**
+	 * Returns all access paths which are tainted by this source
+	 * @return All access paths tainted by this source
+	 */
+	public Set<AccessPath> getAccessPaths(){
+		return this.accessPaths;
+	}
+	
 }

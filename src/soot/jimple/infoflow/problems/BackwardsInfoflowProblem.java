@@ -277,7 +277,6 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								else if (leftValue instanceof ArrayRef) {
 									assert source.getAccessPath().getBaseType() instanceof ArrayType;
 									targetType = ((ArrayType) targetType).getElementType();
-									
 									// If the types do not match, the right side cannot be an alias
 									if (!canCastType(rightValue.getType(), targetType))
 										addRightValue = false;
@@ -371,7 +370,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				final boolean isSource = sourceSinkManager != null
 						? sourceSinkManager.getSourceInfo((Stmt) src, interproceduralCFG()) != null : false;
 				final boolean isSink = sourceSinkManager != null
-						? sourceSinkManager.isSink(stmt, interproceduralCFG()) : false;
+						? sourceSinkManager.isSink(stmt, interproceduralCFG(), null) : false;
 				
 				// This is not cached by Soot, so accesses are more expensive
 				// than one might think
