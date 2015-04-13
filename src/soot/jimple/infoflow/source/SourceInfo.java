@@ -28,6 +28,17 @@ public class SourceInfo {
 	}
 	
 	/**
+	 * Creates a new instance of the {@link SourceInfo} class. This is a
+	 * convenience constructor to allow for the simple use of a single access
+	 * path.
+	 * @param ap The single access path that shall be tainted at this source
+	 * @param userData Additional user data to be propagated with the source
+	 */
+	public SourceInfo(AccessPath ap, Object userData){
+		this(Collections.singleton(ap), userData);
+	}
+	
+	/**
 	 * Creates a new instance of the {@link SourceInfo} class
 	 * @param bundle Information about access paths tainted by this source
 	 */
