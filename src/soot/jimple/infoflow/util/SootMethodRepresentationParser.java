@@ -28,6 +28,8 @@ public class SootMethodRepresentationParser {
 	
 	private static final SootMethodRepresentationParser instance = new SootMethodRepresentationParser();
 	
+	private Pattern patternSubsigToName = null;
+	
 	private SootMethodRepresentationParser() {
 		
 	}
@@ -78,7 +80,10 @@ public class SootMethodRepresentationParser {
         return new SootMethodAndClass(name, className, returnType, paramList);
        
 	}
-	//returns classname and unresolved! method names and return types and parameters
+	
+	/*
+	 * Returns classname and unresolved! method names and return types and parameters
+	 */
 	public HashMap<String, Set<String>> parseClassNames(Collection<String> methods, boolean subSignature){
 		HashMap<String, Set<String>> result = new HashMap<String,  Set<String>>();
 		Pattern pattern = Pattern.compile("^\\s*<(.*?):\\s*(.*?)>\\s*$");
@@ -104,6 +109,42 @@ public class SootMethodRepresentationParser {
 	        }
 		}
 		return result;
+	}
+
+	/**
+	 * Parses a Soot method subsignature and returns the method name
+	 * @param subSignature The Soot subsignature to parse
+	 * @return The name of the method being invoked if the given subsignature
+	 * could be parsed successfully, otherwise an empty string.
+	 */
+	public String getMethodNameFromSubSignature(String subSignature) {
+		if (patternSubsigToName == null) {
+			Pattern pattern = Pattern.compile("^\\s*(.+)\\s+(.+)\\((.*?)\\)\\s*$");
+			this.patternSubsigToName = pattern;
+		}
+		Matcher matcher = patternSubsigToName.matcher(subSignature);
+		if (matcher.find())
+			return matcher.group(2);
+		return "";
+	}
+
+	/**
+	 * Parses a Soot method subsignature and returns the list of parameter types
+	 * @param subSignature The Soot subsignature to parse
+	 * @return The list of formal parameters in the given subsignature invoked
+	 * if the given subsignature could be parsed successfully, otherwise null.
+	 */
+	public String[] getParameterTypesFromSubSignature(String subSignature) {
+		if (patternSubsigToName == null) {
+			Pattern pattern = Pattern.compile("^\\s*(.+)\\s+(.+)\\((.*?)\\)\\s*$");
+			this.patternSubsigToName = pattern;
+		}
+		Matcher matcher = patternSubsigToName.matcher(subSignature);
+		if (!matcher.find() || matcher.groupCount() < 3)
+			return null;
+		
+		String params = matcher.group(3);
+		return params.split("\\s*,\\s*");
 	}
 
 }
