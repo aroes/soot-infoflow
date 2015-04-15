@@ -31,6 +31,7 @@ public class ContextInsensitiveSourceFinder extends AbstractAbstractionPathBuild
 	private final CountingThreadPoolExecutor executor;
 	
 	private static int lastTaskId = 0;
+	private int numTasks = 0;
 	
 	/**
 	 * Creates a new instance of the {@link ContextInsensitiveSourceFinder} class
@@ -89,12 +90,12 @@ public class ContextInsensitiveSourceFinder extends AbstractAbstractionPathBuild
 					assert abstraction.getPredecessor() == null;
 				}
 				else
-					if (abstraction.getPredecessor().registerPathFlag(taskId))
+					if (abstraction.getPredecessor().registerPathFlag(taskId, numTasks))
 						abstractionQueue.add(abstraction.getPredecessor());
 				
 				if (abstraction.getNeighbors() != null)
 					for (Abstraction nb : abstraction.getNeighbors())
-						if (nb.registerPathFlag(taskId))
+						if (nb.registerPathFlag(taskId, numTasks))
 							abstractionQueue.add(nb);
 			}
 		}
@@ -110,6 +111,7 @@ public class ContextInsensitiveSourceFinder extends AbstractAbstractionPathBuild
     	
     	// Start the propagation tasks
     	int curResIdx = 0;
+    	numTasks = res.size() + 1;
     	for (final AbstractionAtSink abs : res) {
     		logger.info("Building path " + ++curResIdx);
     		executor.execute(new SourceFindingTask(lastTaskId++, abs, abs.getAbstraction()));

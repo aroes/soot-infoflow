@@ -12,7 +12,6 @@ package soot.jimple.infoflow.data;
 
 
 import java.util.ArrayList;
-import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -23,6 +22,7 @@ import soot.Type;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.collect.AtomicBitSet;
 import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.solver.IInfoflowCFG.UnitContainer;
 import soot.jimple.infoflow.solver.fastSolver.FastSolverLinkedNode;
@@ -78,7 +78,7 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	 */
 	private boolean dependsOnCutAP = false;
 	
-	private BitSet pathFlags = null;
+	private AtomicBitSet pathFlags = null;
 	
 	public Abstraction(AccessPath sourceVal,
 			Stmt sourceStmt,
@@ -509,6 +509,7 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 		synchronized (this) {
 			if (neighbors == null)
 				neighbors = Sets.newIdentityHashSet();
+			/*
 			else {
 				// Check if we already have an identical neighbor
 				for (Abstraction nb : neighbors)
@@ -517,6 +518,7 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 						return;
 					}
 			}
+			*/
 			this.neighbors.add(originalAbstraction);
 		}
 	}
@@ -564,20 +566,21 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	 * @return True if the worker thread with the given ID has not been
 	 * registered before, otherwise false
 	 */
-	public boolean registerPathFlag(int id) {
+	public boolean registerPathFlag(int id, int maxSize) {
 		if (pathFlags != null && id < pathFlags.size() && pathFlags.get(id))
 			return false;
 		
-		synchronized (this) {
-			if (pathFlags == null) {
-				// Make sure that the field is set only after the constructor
-				// is done and the object is fully usable
-				BitSet pf = new BitSet();
-				pathFlags = pf;
+		if (pathFlags == null) {
+			synchronized (this) {
+				if (pathFlags == null) {
+					// Make sure that the field is set only after the constructor
+					// is done and the object is fully usable
+					AtomicBitSet pf = new AtomicBitSet(maxSize);
+					pathFlags = pf;
+				}
 			}
-			pathFlags.set(id);
 		}
-		return true;
+		return pathFlags.set(id);
 	}
 	
 	public Abstraction injectSourceContext(SourceContext sourceContext) {

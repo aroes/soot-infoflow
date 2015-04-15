@@ -902,9 +902,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				final InvokeExpr ie = (stmt != null && stmt.containsInvokeExpr())
 						? stmt.getInvokeExpr() : null;
 				
-				final Value[] paramLocals = new Value[dest.getParameterCount()];
-				for (int i = 0; i < dest.getParameterCount(); i++)
-					paramLocals[i] = dest.getActiveBody().getParameterLocal(i);
+				final Local[] paramLocals = dest.getActiveBody().getParameterLocals().toArray(
+						new Local[0]);
 				
 				final SourceInfo sourceInfo = sourceSinkManager != null
 						? sourceSinkManager.getSourceInfo(stmt, interproceduralCFG()) : null;
@@ -1029,9 +1028,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				
 				final ReturnStmt returnStmt = (exitStmt instanceof ReturnStmt) ? (ReturnStmt) exitStmt : null;
 				
-				final Value[] paramLocals = new Value[callee.getParameterCount()];
-				for (int i = 0; i < callee.getParameterCount(); i++)
-					paramLocals[i] = callee.getActiveBody().getParameterLocal(i);
+				final Local[] paramLocals = callee.getActiveBody().getParameterLocals().toArray(
+						new Local[0]);
 				
 				// This is not cached by Soot, so accesses are more expensive
 				// than one might think
@@ -1309,7 +1307,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				
 				final SootMethod callee = invExpr.getMethod();
 				final boolean hasValidCallees = hasValidCallees(call);
-
+				
 				return new SolverCallToReturnFlowFunction() {
 
 					@Override
@@ -1612,7 +1610,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					// check if param is tainted:
 					for (int i = 0; i < ie.getArgCount(); i++) {
 						if (aliasing.mayAlias(ie.getArg(i), ap.getPlainValue())) {
-							if (res == null) res = new HashSet<AccessPath>();
+							if (res == null) res = new HashSet<AccessPath>();							
 							
 							// Get the parameter locals if we don't have them yet
 							if (paramLocals == null)
