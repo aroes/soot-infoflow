@@ -386,11 +386,12 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 			for (Entry<N,Map<D, D>> entry: inc.entrySet()) {
 				//line 22
 				N c = entry.getKey();
+				Set<D> callerSideDs = entry.getValue().keySet();
 				//for each return site
 				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
 					//compute return-flow function
 					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
-					Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, entry.getValue().keySet());
+					Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, callerSideDs);
 					//for each incoming-call value
 					for(Entry<D, D> d1d2entry : entry.getValue().entrySet()) {
 						final D d4 = d1d2entry.getKey();
