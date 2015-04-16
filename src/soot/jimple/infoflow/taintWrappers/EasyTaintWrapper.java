@@ -198,7 +198,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 			return Collections.singleton(taintedPath);
 		
 		// Do we handle equals() and hashCode() separately?
-		final String subSig = method.getSubSignature();
+		final String subSig = stmt.getInvokeExpr().getMethodRef().getSubSignature().getString();
 		boolean taintEqualsHashCode = alwaysModelEqualsHashCode
 				&& (subSig.equals("boolean equals(java.lang.Object)") || subSig.equals("int hashCode()"));
 		
@@ -540,10 +540,12 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 			return false;
 				
 		// We need a method that can create a taint
-		if (!aggressiveMode
-				&& getMethodWrapType(method.getSubSignature(), method.getDeclaringClass()) 
-						!= MethodWrapType.CreateTaint)
-			return false;
+		if (!aggressiveMode) {
+			// Check for a cached wrap type
+			final MethodWrapType wrapType = methodWrapCache.getUnchecked(method);
+			if (wrapType != MethodWrapType.CreateTaint)
+				return false;
+		}
 		
 		// We need at least one non-constant argument or a tainted base
 		if (callSite.getInvokeExpr() instanceof InstanceInvokeExpr)
