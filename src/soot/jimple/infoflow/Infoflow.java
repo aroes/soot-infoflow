@@ -84,6 +84,7 @@ public class Infoflow extends AbstractInfoflow {
 	private static boolean useRecursiveAccessPaths = true;
 	private static boolean pathAgnosticResults = true;
 	private static boolean oneResultPerAccessPath = false;
+	private static boolean mergeNeighbors = false;
 	
 	private InfoflowResults results = null;
 	private final IPathBuilderFactory pathBuilderFactory;
@@ -499,7 +500,7 @@ public class Infoflow extends AbstractInfoflow {
 			logger.error("No sources or sinks found, aborting analysis");
 			return;
 		}
-
+		
 		logger.info("Source lookup done, found {} sources and {} sinks.", forwardProblem.getInitialSeeds().size(),
 				sinkCount);
 		
@@ -887,6 +888,24 @@ public class Infoflow extends AbstractInfoflow {
 	 */
 	public void addResultsAvailableHandler(ResultsAvailableHandler handler) {
 		this.onResultsAvailable.add(handler);
+	}
+	
+	/**
+	 * Gets whether neighbors at the same statement shall be merged into a
+	 * single abstraction
+	 * @return True if equivalent neighbor shall be merged, otherwise false
+	 */
+	public static boolean getMergeNeighbors() {
+		return mergeNeighbors;
+	}
+	
+	/**
+	 * Sets whether neighbors at the same statement shall be merged into a
+	 * single abstraction
+	 * @param value True if equivalent neighbor shall be merged, otherwise false
+	 */
+	public static void setMergeNeighbors(boolean value) {
+		mergeNeighbors = value;
 	}
 	
 	/**

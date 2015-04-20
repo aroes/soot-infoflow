@@ -22,6 +22,7 @@ import soot.Type;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.Infoflow;
 import soot.jimple.infoflow.collect.AtomicBitSet;
 import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.solver.IInfoflowCFG.UnitContainer;
@@ -115,7 +116,6 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 			sourceContext = null;
 			exceptionThrown = false;
 			activationUnit = null;
-			flowSensitiveAliasing = true;
 			isImplicit = false;
 		}
 		else {
@@ -501,22 +501,25 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 		
 		// We should not add identical nodes as neighbors
 		if (this.predecessor == originalAbstraction.predecessor
-				&& this.currentStmt == originalAbstraction.currentStmt)
+				&& this.currentStmt == originalAbstraction.currentStmt
+				&& this.predecessor == originalAbstraction.predecessor)
 			return;
 		
 		synchronized (this) {
 			if (neighbors == null)
 				neighbors = Sets.newIdentityHashSet();
-			/*
-			else {
+			else if (Infoflow.getMergeNeighbors()) {
 				// Check if we already have an identical neighbor
-				for (Abstraction nb : neighbors)
+				for (Abstraction nb : neighbors) {
+					if (nb == originalAbstraction)
+						return;
 					if (originalAbstraction.predecessor == nb.predecessor
-							&& originalAbstraction.currentStmt == nb.currentStmt) {
+							&& originalAbstraction.currentStmt == nb.currentStmt
+							&& originalAbstraction.predecessor == nb.predecessor) {
 						return;
 					}
+				}
 			}
-			*/
 			this.neighbors.add(originalAbstraction);
 		}
 	}
@@ -592,5 +595,5 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 		abs.currentStmt = this.currentStmt;
 		return abs;
 	}
-	
+		
 }
