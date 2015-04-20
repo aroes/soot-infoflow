@@ -495,8 +495,6 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	
 	@Override
 	public void addNeighbor(Abstraction originalAbstraction) {
-		assert originalAbstraction.equals(this);
-		
 		// We should not register ourselves as a neighbor
 		if (originalAbstraction == this)
 			return;
@@ -509,6 +507,7 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 		synchronized (this) {
 			if (neighbors == null)
 				neighbors = Sets.newIdentityHashSet();
+			/*
 			else {
 				// Check if we already have an identical neighbor
 				for (Abstraction nb : neighbors)
@@ -517,6 +516,7 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 						return;
 					}
 			}
+			*/
 			this.neighbors.add(originalAbstraction);
 		}
 	}
