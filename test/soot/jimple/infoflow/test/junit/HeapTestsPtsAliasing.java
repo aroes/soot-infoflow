@@ -28,7 +28,6 @@ import soot.jimple.Stmt;
 import soot.jimple.infoflow.IInfoflow.AliasingAlgorithm;
 import soot.jimple.infoflow.Infoflow;
 import soot.jimple.infoflow.data.AccessPath;
-import soot.jimple.infoflow.solver.IInfoflowCFG;
 import soot.jimple.infoflow.taintWrappers.AbstractTaintWrapper;
 
 /**
@@ -407,13 +406,8 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 		infoflow.setTaintWrapper(new AbstractTaintWrapper() {
 			
 			@Override
-			public void initialize() {
-				// nothing to initialize
-			}
-			
-			@Override
 			public boolean isExclusiveInternal(Stmt stmt,
-					AccessPath taintedPath, IInfoflowCFG icfg) {
+					AccessPath taintedPath) {
 				return stmt.containsInvokeExpr()
 						&& (stmt.getInvokeExpr().getMethod().getName()
 								.equals("foo2") || stmt.getInvokeExpr()
@@ -422,7 +416,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 			@Override
 			public Set<AccessPath> getTaintsForMethodInternal(Stmt stmt,
-					AccessPath taintedPath, IInfoflowCFG icfg) {
+					AccessPath taintedPath) {
 				if (!stmt.containsInvokeExpr())
 					return Collections.singleton(taintedPath);
 
@@ -520,7 +514,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 			}
 
 			@Override
-			public boolean supportsCallee(Stmt callSite, IInfoflowCFG icfg) {
+			public boolean supportsCallee(Stmt callSite) {
 				return false;
 			}
 		});

@@ -16,6 +16,7 @@ import soot.SootMethod;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
+import soot.jimple.infoflow.solver.IInfoflowSolver;
 
 /**
  * This interface declares methods to define classes and methods which should not
@@ -37,8 +38,10 @@ public interface ITaintPropagationWrapper {
 	 * queried for the first time.
 	 * 
 	 * Note that this method is guaranteed to be called only once and only by a single thread.
+	 * @param solver The data flow solver processing the IFDS edges
+	 * @param icfg The interprocedural control flow graph
 	 */
-	public void initialize();
+	public void initialize(IInfoflowSolver solver, IInfoflowCFG icfg);
 	
 	/**
 	 * Checks an invocation statement for black-box taint propagation. This allows
@@ -46,12 +49,10 @@ public interface ITaintPropagationWrapper {
 	 * requiring the analysis to look inside the method.
 	 * @param stmt The invocation statement which to check for black-box taint propagation
 	 * @param taintedPath The tainted field or value to propagate
-	 * @param icfg The interprocedural control flow graph
 	 * @return The list of tainted values after the invocation statement referenced in {@link Stmt}
 	 * has been executed
 	 */
-	public Set<Abstraction> getTaintsForMethod(Stmt stmt, Abstraction taintedPath,
-			IInfoflowCFG icfg);
+	public Set<Abstraction> getTaintsForMethod(Stmt stmt, Abstraction taintedPath);
 	
 	/**
 	 * Gets whether the taints produced by this taint wrapper are exclusive, i.e. there are
@@ -59,10 +60,9 @@ public interface ITaintPropagationWrapper {
 	 * not to propagate inside the callee.
 	 * @param stmt The call statement to check
 	 * @param taintedPath The tainted field or value to propagate 
-	 * @param icfg The interprocedural control flow graph 
 	 * @return True if this taint wrapper is exclusive, otherwise false. 
 	 */
-	public boolean isExclusive(Stmt stmt, Abstraction taintedPath, IInfoflowCFG icfg);
+	public boolean isExclusive(Stmt stmt, Abstraction taintedPath);
 	
 	/**
 	 * Checks whether this taint wrapper can in general produce artificial taints
@@ -79,11 +79,10 @@ public interface ITaintPropagationWrapper {
 	 * for the given call site. If an implementation returns "false" for a call
 	 * site, this call sites might be removed if not needed elsewhere.
 	 * @param callSite The call site to check
-	 * @param icfg The interprocedural control flow graph 
 	 * @return True if this taint wrapper can in general produce taints for the
 	 * given call site.
 	 */
-	public boolean supportsCallee(Stmt callSite, IInfoflowCFG icfg);
+	public boolean supportsCallee(Stmt callSite);
 	
 	/**
 	 * Gets the number of times in which the taint wrapper was able to

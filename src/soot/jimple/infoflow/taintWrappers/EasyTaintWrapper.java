@@ -37,7 +37,6 @@ import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.AccessPath;
-import soot.jimple.infoflow.solver.IInfoflowCFG;
 import soot.jimple.infoflow.util.SootMethodRepresentationParser;
 
 import com.google.common.cache.CacheBuilder;
@@ -173,15 +172,9 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 	public EasyTaintWrapper(EasyTaintWrapper taintWrapper) {
 		this(taintWrapper.classList, taintWrapper.excludeList, taintWrapper.killList, taintWrapper.includeList);
 	}
-	
+		
 	@Override
-	public void initialize() {
-		// nothing to initialize yet
-	}
-	
-	@Override
-	public Set<AccessPath> getTaintsForMethodInternal(Stmt stmt, AccessPath taintedPath,
-			IInfoflowCFG icfg) {
+	public Set<AccessPath> getTaintsForMethodInternal(Stmt stmt, AccessPath taintedPath) {
 		if (!stmt.containsInvokeExpr())
 			return Collections.emptySet();
 		
@@ -420,7 +413,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 	}
 	
 	@Override
-	public boolean isExclusiveInternal(Stmt stmt, AccessPath taintedPath, IInfoflowCFG icfg) {
+	public boolean isExclusiveInternal(Stmt stmt, AccessPath taintedPath) {
 		SootMethod method = stmt.getInvokeExpr().getMethod();
 		
 		// Do we have an entry for at least one entry in the given class?
@@ -530,7 +523,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 	}
 	
 	@Override
-	public boolean supportsCallee(Stmt callSite, IInfoflowCFG icfg) {
+	public boolean supportsCallee(Stmt callSite) {
 		// We need an invocation expression
 		if (!callSite.containsInvokeExpr())
 			return false;

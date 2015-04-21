@@ -36,7 +36,6 @@ import soot.jimple.infoflow.Infoflow;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.entryPointCreators.DefaultEntryPointCreator;
 import soot.jimple.infoflow.results.InfoflowResults;
-import soot.jimple.infoflow.solver.IInfoflowCFG;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.infoflow.taintWrappers.AbstractTaintWrapper;
@@ -404,15 +403,9 @@ public class HeapTests extends JUnitTests {
 		Infoflow.setAccessPathLength(3);
 
 		infoflow.setTaintWrapper(new AbstractTaintWrapper() {
-			
+						
 			@Override
-			public void initialize() {
-				// nothing to initialize
-			}
-			
-			@Override
-			public boolean isExclusiveInternal(Stmt stmt, AccessPath taintedPath,
-					IInfoflowCFG icfg) {
+			public boolean isExclusiveInternal(Stmt stmt, AccessPath taintedPath) {
 				return stmt.containsInvokeExpr()
 						&& (stmt.getInvokeExpr().getMethod().getName()
 								.equals("foo2") || stmt.getInvokeExpr()
@@ -421,7 +414,7 @@ public class HeapTests extends JUnitTests {
 
 			@Override
 			public Set<AccessPath> getTaintsForMethodInternal(Stmt stmt,
-					AccessPath taintedPath, IInfoflowCFG icfg) {
+					AccessPath taintedPath) {
 				if (!stmt.containsInvokeExpr())
 					return Collections.singleton(taintedPath);
 
@@ -479,7 +472,7 @@ public class HeapTests extends JUnitTests {
 			}
 
 			@Override
-			public boolean supportsCallee(Stmt callSite, IInfoflowCFG icfg) {
+			public boolean supportsCallee(Stmt callSite) {
 				return false;
 			}
 		});

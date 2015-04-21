@@ -356,7 +356,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 					
 					// If we have a taint wrapper, we need to keep the stub untouched since we
 					// don't know what artificial taint the wrapper will come up with
-					if (taintWrapper != null && taintWrapper.supportsCallee(assign, icfg))
+					if (taintWrapper != null && taintWrapper.supportsCallee(assign))
 						continue;
 					
 					// If this is a call to a source method, we do not propagate
@@ -552,7 +552,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 			// If this method calls another method for which we have a taint
 			// wrapper, we need to conservatively assume that the taint wrapper
 			// can do anything
-			if (taintWrapper != null && taintWrapper.supportsCallee(s, icfg)) {
+			if (taintWrapper != null && taintWrapper.supportsCallee(s)) {
 				methodSideEffects.put(method, true);
 				return true;
 			}

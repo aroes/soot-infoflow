@@ -506,7 +506,7 @@ public class Infoflow extends AbstractInfoflow {
 		
 		// Initialize the taint wrapper if we have one
 		if (taintWrapper != null)
-			taintWrapper.initialize();
+			taintWrapper.initialize(forwardSolver, iCfg);
 		
 		forwardSolver.solve();
 		maxMemoryConsumption = Math.max(maxMemoryConsumption, getUsedMemory());

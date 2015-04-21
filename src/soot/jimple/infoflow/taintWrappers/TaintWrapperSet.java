@@ -18,6 +18,7 @@ import soot.SootMethod;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
+import soot.jimple.infoflow.solver.IInfoflowSolver;
 
 /**
  * Set of taint wrappers. It supports taint wrapping for a class if at least one
@@ -33,9 +34,9 @@ public class TaintWrapperSet implements ITaintPropagationWrapper {
 	private AtomicInteger misses = new AtomicInteger();
 	
 	@Override
-	public void initialize() {
+	public void initialize(IInfoflowSolver solver, IInfoflowCFG icfg) {
 		for (ITaintPropagationWrapper w : this.wrappers)
-			w.initialize();
+			w.initialize(solver, icfg);
 	}
 	
 	/**
@@ -47,11 +48,10 @@ public class TaintWrapperSet implements ITaintPropagationWrapper {
 	}
 
 	@Override
-	public Set<Abstraction> getTaintsForMethod(Stmt stmt, Abstraction taintedPath,
-			IInfoflowCFG icfg) {
+	public Set<Abstraction> getTaintsForMethod(Stmt stmt, Abstraction taintedPath) {
 		Set<Abstraction> resList = new HashSet<Abstraction>();
 		for (ITaintPropagationWrapper w : this.wrappers)
-			resList.addAll(w.getTaintsForMethod(stmt, taintedPath, icfg));
+			resList.addAll(w.getTaintsForMethod(stmt, taintedPath));
 		
 		// Bookkeeping for statistics
 		if (resList.isEmpty())
@@ -63,10 +63,9 @@ public class TaintWrapperSet implements ITaintPropagationWrapper {
 	}
 
 	@Override
-	public boolean isExclusive(Stmt stmt, Abstraction taintedPath,
-			IInfoflowCFG icfg) {
+	public boolean isExclusive(Stmt stmt, Abstraction taintedPath) {
 		for (ITaintPropagationWrapper w : this.wrappers)
-			if (w.isExclusive(stmt, taintedPath, icfg))
+			if (w.isExclusive(stmt, taintedPath))
 				return true;
 		return false;
 	}
@@ -80,9 +79,9 @@ public class TaintWrapperSet implements ITaintPropagationWrapper {
 	}
 	
 	@Override
-	public boolean supportsCallee(Stmt callSite, IInfoflowCFG icfg) {
+	public boolean supportsCallee(Stmt callSite) {
 		for (ITaintPropagationWrapper w : this.wrappers)
-			if (w.supportsCallee(callSite, icfg))
+			if (w.supportsCallee(callSite))
 				return true;
 		return false;
 	}

@@ -158,8 +158,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				return Collections.emptySet();
 		}
 		
-		Set<Abstraction> res = taintWrapper.getTaintsForMethod(iStmt, source,
-				interproceduralCFG());
+		Set<Abstraction> res = taintWrapper.getTaintsForMethod(iStmt, source);
 		if(res != null)
 			for (Abstraction abs : res) {
 				// The new abstraction gets activated where it was generated
@@ -948,8 +947,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						
 						// If we have an exclusive taint wrapper for the target
 						// method, we do not perform an own taint propagation. 
-						if(taintWrapper != null && taintWrapper.isExclusive(stmt, source,
-								interproceduralCFG())) {
+						if(taintWrapper != null && taintWrapper.isExclusive(stmt, source)) {
 							//taint is propagated in CallToReturnFunction, so we do not need any taint here:
 							return Collections.emptySet();
 						}
@@ -1475,8 +1473,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								&& newSource.getAccessPath().isInstanceFieldRef()
 								&& (inspectSinks || !isSink)
 								&& (hasValidCallees
-									|| (taintWrapper != null && taintWrapper.isExclusive(iCallStmt,
-											newSource, interproceduralCFG())))) {
+									|| (taintWrapper != null && taintWrapper.isExclusive(
+											iCallStmt, newSource)))) {
 							// If one of the callers does not read the value, we must pass it on
 							// in any case
 							boolean allCalleesRead = true;

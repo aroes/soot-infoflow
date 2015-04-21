@@ -8,6 +8,7 @@ import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.solver.IInfoflowCFG;
+import soot.jimple.infoflow.solver.IInfoflowSolver;
 
 /**
  * Abstract base class for all taint propagation wrappers
@@ -16,20 +17,27 @@ import soot.jimple.infoflow.solver.IInfoflowCFG;
  */
 public abstract class AbstractTaintWrapper implements ITaintPropagationWrapper {
 	
+	protected IInfoflowSolver solver;
+	protected IInfoflowCFG icfg;
+	
 	private final AtomicInteger wrapperHits = new AtomicInteger(0);
 	private final AtomicInteger wrapperMisses = new AtomicInteger(0);
-
+	
+	@Override
+	public void initialize(IInfoflowSolver solver, IInfoflowCFG icfg) {
+		this.solver = solver;
+		this.icfg = icfg;
+	}
+	
 	/**
 	 * Gets whether the taints produced by this taint wrapper are exclusive, i.e. there are
 	 * no other taints than those produced by the wrapper. In effect, this tells the analysis
 	 * not to propagate inside the callee.
 	 * @param stmt The call statement to check
 	 * @param taintedPath The tainted field or value to propagate
-	 * @param icfg The interprocedural cfg 
 	 * @return True if this taint wrapper is exclusive, otherwise false. 
 	 */
-	protected abstract boolean isExclusiveInternal(Stmt stmt, AccessPath taintedPath,
-			IInfoflowCFG icfg);
+	protected abstract boolean isExclusiveInternal(Stmt stmt, AccessPath taintedPath);
 
 	/**
 	 * Checks an invocation statement for black-box taint propagation. This allows
@@ -37,16 +45,14 @@ public abstract class AbstractTaintWrapper implements ITaintPropagationWrapper {
 	 * requiring the analysis to look inside the method.
 	 * @param stmt The invocation statement which to check for black-box taint propagation
 	 * @param taintedPath The tainted field or value to propagate
-	 * @param icfg The interprocedural control flow graph
 	 * @return The list of tainted values after the invocation statement referenced in {@link Stmt}
 	 * has been executed
 	 */
-	public abstract Set<AccessPath> getTaintsForMethodInternal(Stmt stmt, AccessPath taintedPath,
-			IInfoflowCFG icfg);
+	public abstract Set<AccessPath> getTaintsForMethodInternal(Stmt stmt, AccessPath taintedPath);
 
 	@Override
-	public boolean isExclusive(Stmt stmt, Abstraction taintedPath, IInfoflowCFG icfg) {
-		if (isExclusiveInternal(stmt, taintedPath.getAccessPath(), icfg)) {
+	public boolean isExclusive(Stmt stmt, Abstraction taintedPath) {
+		if (isExclusiveInternal(stmt, taintedPath.getAccessPath())) {
 			wrapperHits.incrementAndGet();
 			return true;
 		}
@@ -57,11 +63,10 @@ public abstract class AbstractTaintWrapper implements ITaintPropagationWrapper {
 	}
 	
 	@Override
-	public Set<Abstraction> getTaintsForMethod(Stmt stmt, Abstraction taintedPath,
-			IInfoflowCFG icfg) {
+	public Set<Abstraction> getTaintsForMethod(Stmt stmt, Abstraction taintedPath) {
 		// Compute the tainted access paths
 		Set<AccessPath> aps = getTaintsForMethodInternal(stmt,
-				taintedPath.getAccessPath(), icfg);
+				taintedPath.getAccessPath());
 		if (aps == null || aps.isEmpty())
 			return null;
 		
