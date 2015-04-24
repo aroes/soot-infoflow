@@ -263,13 +263,15 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 		SootMethod method = callSite.getInvokeExpr().getMethod();
 		
 		// If this method is a source on its own, we must keep it
-		if (sourceSinkManager.getSourceInfo((Stmt) callSite, icfg) != null) {
+		if (sourceSinkManager != null
+				&& sourceSinkManager.getSourceInfo((Stmt) callSite, icfg) != null) {
 			methodFieldReads.put(method, true);
 			return true;
 		}
 		
 		// If this method is a sink, we must keep it as well
-		if (sourceSinkManager.isSink((Stmt) callSite, icfg, null)) {
+		if (sourceSinkManager != null
+				&& sourceSinkManager.isSink((Stmt) callSite, icfg, null)) {
 			methodSinks.put(method, true);
 			return true;
 		}
@@ -559,7 +561,8 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 			
 			if (s.containsInvokeExpr()) {
 				// If this method calls a sink, we need to keep it
-				if (sourceSinkManager.isSink((Stmt) u, icfg, null)) {
+				if (sourceSinkManager != null
+						&& sourceSinkManager.isSink((Stmt) u, icfg, null)) {
 					methodSinks.put(method, true);
 					return true;
 				}
