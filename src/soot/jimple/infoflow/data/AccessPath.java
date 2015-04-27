@@ -208,6 +208,13 @@ public class AccessPath implements Cloneable {
 			fieldTypes = appendingFieldTypes;
 		}
 		
+		// If we don't want to track fields at all, we can cut the field
+		// processing short
+		if (Infoflow.getAccessPathLength() == 0) {
+			fields = null;
+			fieldTypes = null;
+		}
+		
 		// Cut the first field if requested
 		if (cutFirstField && fields != null && fields.length > 0) {
 			SootField[] newFields = new SootField[fields.length - 1];
