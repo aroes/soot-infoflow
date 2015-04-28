@@ -357,6 +357,13 @@ public class Infoflow extends AbstractInfoflow {
 		maxMemoryConsumption = -1;
 		ipcManager.updateJimpleForICC();
 		
+		// Some configuration options do not really make sense in combination
+		if (enableStaticFields && accessPathLength == 0)
+			throw new RuntimeException("Static field tracking must be disabled "
+					+ "if the access path length is zero");
+		if (accessPathLength < 0)
+			throw new RuntimeException("The access path length may not be negative");
+		
 		// Clear the base registrations from previous runs
 		AccessPath.clearBaseRegister();
 		

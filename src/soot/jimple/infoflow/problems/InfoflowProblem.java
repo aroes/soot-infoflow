@@ -637,8 +637,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 											return null;
 										
 										// Check for aliasing
-										mappedAP = aliasing.mayAlias(newSource.getAccessPath(),
-												new AccessPath(rightRef, false));
+										mappedAP = aliasing.mayAlias(newSource.getAccessPath(), rightRef);
 										
 										// check if static variable is tainted (same name, same class)
 										//y = X.f && X.f tainted --> y, X.f tainted
@@ -726,7 +725,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										(leftValue, null, IntType.v(), (Type[]) null, true), assignStmt);
 								return new TwoElementSet<Abstraction>(newSource, lenAbs);
 							}
-								
+							
+							if (mappedAP == null)
+								for (Value val : rightVals)
+									aliasing.mayAlias(newSource.getAccessPath(), val);
+							
 							// If this is a sink, we need to report the finding
 							if (sourceSinkManager != null
 									&& sourceSinkManager.isSink(stmt, interproceduralCFG(),

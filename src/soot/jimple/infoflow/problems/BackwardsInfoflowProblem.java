@@ -291,6 +291,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							// Special type handling for certain operations
 							if (defStmt.getRightOp() instanceof LengthExpr)
 								targetType = null;
+							
 							// We do not need to handle casts. Casts only make
 							// types more imprecise when going backwards.
 
@@ -300,6 +301,11 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								if (!canCastType(rightValue.getType(), targetType))
 									addRightValue = false;
 							}
+							
+							// Make sure to only track static fields if it has been enabled
+							if (addRightValue)
+								if (!enableStaticFields && rightValue instanceof StaticFieldRef)
+									addRightValue = false;
 
 							if (addRightValue) {
 								Abstraction newAbs = source.deriveNewAbstraction(rightValue, cutFirstField,

@@ -10,7 +10,11 @@ import soot.SootField;
 import soot.SootMethod;
 import soot.Type;
 import soot.Value;
+import soot.jimple.ArrayRef;
 import soot.jimple.Constant;
+import soot.jimple.FieldRef;
+import soot.jimple.InstanceFieldRef;
+import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.data.AccessPath.BasePair;
@@ -51,9 +55,10 @@ public class Aliasing {
 	 * or to an object reachable through the other
 	 * @param taintedAP The access path that is tainted
 	 * @param referencedAP The access path that is accessed
-	 * @return True if the two access paths may potentially point to the same runtime
-	 * object, or taintedAP may point to an object reachable through referencedAP,
-	 * otherwise false
+	 * @return The access path that actually matched if the access paths alias.
+	 * In the simplest case, this is the given tainted access path.
+	 * When using recursive access paths, it can however also be a base
+	 * expansion. If the given access paths do not alias, null is returned.
 	 */
 	public AccessPath mayAlias(AccessPath taintedAP, AccessPath referencedAP) {
 		// Check whether the access paths are directly equal
@@ -86,12 +91,25 @@ public class Aliasing {
 			if (!referencedAP.isStaticFieldRef())
 				return null;
 		
+		// Match the bases
+		return getReferencedAPBase(taintedAP, referencedAP.getFields());
+	}
+	
+	/**
+	 * Matches the given access path against the given array of fields
+	 * @param taintedAP The tainted access paths
+	 * @param referencedFields The array of referenced access paths
+	 * @return The actually matched access path if a matching was possible,
+	 * otherwise null
+	 */
+	private AccessPath getReferencedAPBase(AccessPath taintedAP,
+			SootField[] referencedFields) {
 		final Collection<BasePair> bases = taintedAP.isStaticFieldRef()
 				? AccessPath.getBaseForType(taintedAP.getFirstFieldType())
 						: AccessPath.getBaseForType(taintedAP.getBaseType());
 		
 		int fieldIdx = 0;
-		while (fieldIdx < referencedAP.getFieldCount()) {
+		while (fieldIdx < referencedFields.length) {
 			// If we reference a.b.c, this only matches a.b.*, but not a.b
 			if (fieldIdx >= taintedAP.getFieldCount()) {
 				if (taintedAP.getTaintSubFields())
@@ -101,14 +119,14 @@ public class Aliasing {
 			}
 			
 			// a.b does not match a.c
-			if (taintedAP.getFields()[fieldIdx] != referencedAP.getFields()[fieldIdx]) {
+			if (taintedAP.getFields()[fieldIdx] != referencedFields[fieldIdx]) {
 				// If the referenced field is a base, we add it in. Note that
 				// the first field in a static reference is the base, so this
 				// must be excluded from base matching.
 				if (bases != null && !(taintedAP.isStaticFieldRef() && fieldIdx == 0)) {
 					// Check the base. Handles A.y (taint) ~ A.[x].y (ref)
 					for (BasePair base : bases) {
-						if (base.getFields()[0] == referencedAP.getFields()[fieldIdx]) {
+						if (base.getFields()[0] == referencedFields[fieldIdx]) {
 							// Build the access path against which we have
 							// actually matched
 							SootField[] cutFields = new SootField
@@ -138,7 +156,6 @@ public class Aliasing {
 			fieldIdx++;
 		}
 		
-		// We have not found anything that does not match
 		return taintedAP;
 	}
 
@@ -167,6 +184,62 @@ public class Aliasing {
 			return aliasingStrategy.mayAlias(new AccessPath(val1, false), new AccessPath(val2, false));
 		
 		return false;		
+	}
+	
+	/**
+	 * Gets whether a value and an access path may potentially point to the same
+	 * runtime object
+	 * @param ap The access path
+	 * @param val The value
+	 * @return The access path that actually matched if the given value and
+	 * access path alias. In the simplest case, this is the given access path.
+	 * When using recursive access paths, it can however also be a base
+	 * expansion. If the given access path and value do not alias, null is
+	 * returned.
+	 */
+	public AccessPath mayAlias(AccessPath ap, Value val) {
+		// What cannot be represented in an access path cannot alias
+		if (!AccessPath.canContainValue(val))
+			return null;
+		
+		// Constants can never alias
+		if (val instanceof Constant)
+			return null;
+		
+		// For instance field references, the base must match
+		if (val instanceof Local)
+			if (ap.getPlainValue() != val)
+				return null;
+		
+		// For array references, the base must match
+		if (val instanceof ArrayRef)
+			if (ap.getPlainValue() != ((ArrayRef) val).getBase())
+				return null;
+		
+		// For instance field references, the base local must match
+		if (val instanceof InstanceFieldRef) {
+			if (!ap.isLocal() && !ap.isInstanceFieldRef())
+				return null;
+			if (((InstanceFieldRef) val).getBase() != ap.getPlainValue())
+				return null;
+		}
+		
+		// If the value is a static field reference, the access path must be
+		// static as well
+		if (val instanceof StaticFieldRef)
+			if (!ap.isStaticFieldRef())
+				return null;
+						
+		// If we have an interactive aliasing algorithm, we check that as well
+		/*
+		if (aliasingStrategy.isInteractive())
+			return aliasingStrategy.mayAlias(new AccessPath(val1, false), new AccessPath(val2, false));
+		*/
+		
+		// Get the field set from the value
+		SootField[] fields = val instanceof FieldRef
+				? new SootField[] { ((FieldRef) val).getField() } : new SootField[0];
+		return getReferencedAPBase(ap, fields);
 	}
 	
 	/**
