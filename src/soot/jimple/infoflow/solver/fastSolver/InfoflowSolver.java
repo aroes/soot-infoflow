@@ -12,15 +12,18 @@ package soot.jimple.infoflow.solver.fastSolver;
 
 import heros.FlowFunction;
 import heros.solver.CountingThreadPoolExecutor;
+import heros.solver.Pair;
 import heros.solver.PathEdge;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.problems.AbstractInfoflowProblem;
+import soot.jimple.infoflow.solver.IFollowReturnsPastSeedsHandler;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
 import soot.jimple.infoflow.solver.functions.SolverCallFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverCallToReturnFlowFunction;
@@ -34,7 +37,9 @@ import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
  */
 public class InfoflowSolver extends IFDSSolver<Unit, Abstraction, SootMethod, BiDiInterproceduralCFG<Unit, SootMethod>>
 		implements IInfoflowSolver {
-
+	
+	private IFollowReturnsPastSeedsHandler followReturnsPastSeedsHandler = null;
+	
 	public InfoflowSolver(AbstractInfoflowProblem problem, CountingThreadPoolExecutor executor) {
 		super(problem);
 		this.executor = executor;
@@ -59,11 +64,15 @@ public class InfoflowSolver extends IFDSSolver<Unit, Abstraction, SootMethod, Bi
 	}
 	
 	@Override
-	protected Set<Abstraction> computeReturnFlowFunction
-			(FlowFunction<Abstraction> retFunction, Abstraction d2, Unit callSite, Collection<Abstraction> callerSideDs) {
+	protected Set<Abstraction> computeReturnFlowFunction(
+			FlowFunction<Abstraction> retFunction,
+			Abstraction d1,
+			Abstraction d2,
+			Unit callSite,
+			Collection<Abstraction> callerSideDs) {
 		if (retFunction instanceof SolverReturnFlowFunction) {
 			// Get the d1s at the start points of the caller
-			return ((SolverReturnFlowFunction) retFunction).computeTargets(d2, callerSideDs);
+			return ((SolverReturnFlowFunction) retFunction).computeTargets(d2, d1, callerSideDs);
 		}
 		else
 			return retFunction.computeTargets(d2);
@@ -104,8 +113,30 @@ public class InfoflowSolver extends IFDSSolver<Unit, Abstraction, SootMethod, Bi
 	}
 	
 	@Override
-	public void solve() {
-		super.solve();
+	public Set<Pair<Unit, Abstraction>> endSummary(SootMethod m, Abstraction d3) {
+		return super.endSummary(m, d3);
+	}
+	
+	@Override
+	protected void processExit(PathEdge<Unit, Abstraction> edge) {
+		super.processExit(edge);
+		
+		if (followReturnsPastSeeds && followReturnsPastSeedsHandler != null) {
+			final Abstraction d1 = edge.factAtSource();
+			final Unit u = edge.getTarget();
+			final Abstraction d2 = edge.factAtTarget();
+			
+			final SootMethod methodThatNeedsSummary = icfg.getMethodOf(u);
+			final Map<Unit, Map<Abstraction, Abstraction>> inc = incoming(d1, methodThatNeedsSummary);
+			
+			if (inc == null || inc.isEmpty())
+				followReturnsPastSeedsHandler.handleFollowReturnsPastSeeds(d1, u, d2);
+		}
+	}
+	
+	@Override
+	public void setFollowReturnsPastSeedsHandler(IFollowReturnsPastSeedsHandler handler) {
+		this.followReturnsPastSeedsHandler = handler;
 	}
 	
 }

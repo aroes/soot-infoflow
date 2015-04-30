@@ -15,22 +15,27 @@ import heros.FlowFunction;
 import heros.edgefunc.EdgeIdentity;
 import heros.solver.CountingThreadPoolExecutor;
 import heros.solver.IFDSSolver;
+import heros.solver.Pair;
 import heros.solver.PathEdge;
 import heros.solver.PathTrackingIFDSSolver;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.problems.AbstractInfoflowProblem;
+import soot.jimple.infoflow.solver.IFollowReturnsPastSeedsHandler;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
 import soot.jimple.infoflow.solver.functions.SolverCallFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverCallToReturnFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverNormalFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverReturnFlowFunction;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
+
+import com.google.common.collect.Table;
 /**
  * We are subclassing the JimpleIFDSSolver because we need the same executor for both the forward and the backward analysis
  * Also we need to be able to insert edges containing new taint information
@@ -38,7 +43,9 @@ import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
  */
 public class InfoflowSolver extends PathTrackingIFDSSolver<Unit, Abstraction, SootMethod, BiDiInterproceduralCFG<Unit, SootMethod>>
 		implements IInfoflowSolver {
-
+	
+	private IFollowReturnsPastSeedsHandler followReturnsPastSeedsHandler = null;
+	
 	public InfoflowSolver(AbstractInfoflowProblem problem, CountingThreadPoolExecutor executor) {
 		super(problem);
 		this.executor = executor;
@@ -88,8 +95,12 @@ public class InfoflowSolver extends PathTrackingIFDSSolver<Unit, Abstraction, So
 	}
 	
 	@Override
-	protected Set<Abstraction> computeReturnFlowFunction
-			(FlowFunction<Abstraction> retFunction, Abstraction d2, Unit callSite, Set<Abstraction> callerSideDs) {
+	protected Set<Abstraction> computeReturnFlowFunction(
+			FlowFunction<Abstraction> retFunction,
+			Abstraction d1,
+			Abstraction d2,
+			Unit callSite,
+			Set<Abstraction> callerSideDs) {
 		if (retFunction instanceof SolverReturnFlowFunction) {
 			// Get the d1s at the start points of the caller
 			Set<Abstraction> d1s = new HashSet<Abstraction>(callerSideDs.size() * 5);
@@ -101,7 +112,7 @@ public class InfoflowSolver extends PathTrackingIFDSSolver<Unit, Abstraction, So
 						d1s.addAll(jumpFn.reverseLookup(callSite, d4).keySet());
 					}
 			
-			return ((SolverReturnFlowFunction) retFunction).computeTargets(d2, d1s);
+			return ((SolverReturnFlowFunction) retFunction).computeTargets(d2, d1, d1s);
 		}
 		else
 			return retFunction.computeTargets(d2);
@@ -167,6 +178,47 @@ public class InfoflowSolver extends PathTrackingIFDSSolver<Unit, Abstraction, So
 		this.endSummary.clear();
 		this.val.clear();
 		this.cache.clear();
+	}
+
+	@Override
+	public Set<Pair<Unit, Abstraction>> endSummary(SootMethod m, Abstraction d3) {
+		Set<Pair<Unit, Abstraction>> res = null;
+		
+		for (Unit sP : icfg.getStartPointsOf(m)) {
+			Set<Table.Cell<Unit,Abstraction,EdgeFunction<IFDSSolver.BinaryDomain>>> endSum =
+					super.endSummary(sP, d3);
+			if (endSum == null || endSum.isEmpty())
+				continue;
+			if (res == null)
+				res = new HashSet<>();
+			
+			for (Table.Cell<Unit,Abstraction,EdgeFunction<IFDSSolver.BinaryDomain>> cell : endSum)
+				res.add(new Pair<>(cell.getRowKey(), cell.getColumnKey()));
+		}
+		return res;
+	}
+	
+	@Override
+	protected void processExit(PathEdge<Unit, Abstraction> edge) {
+		super.processExit(edge);
+		
+		if (followReturnsPastSeeds && followReturnsPastSeedsHandler != null) {
+			final Abstraction d1 = edge.factAtSource();
+			final Unit u = edge.getTarget();
+			final Abstraction d2 = edge.factAtTarget();
+			
+			final SootMethod methodThatNeedsSummary = icfg.getMethodOf(u);
+			for (Unit sP : icfg.getStartPointsOf(methodThatNeedsSummary)) {
+				final Map<Unit, Set<Abstraction>> inc = incoming(d1, sP);				
+				if (inc == null || inc.isEmpty())
+					followReturnsPastSeedsHandler.handleFollowReturnsPastSeeds(d1, u, d2);
+			}
+		}
+	}
+	
+	@Override
+	public void setFollowReturnsPastSeedsHandler(IFollowReturnsPastSeedsHandler handler) {
+		this.followReturnsPastSeedsHandler = handler;
 	}
 	
 }

@@ -44,6 +44,7 @@ public interface TaintPropagationHandler {
 	 * Handler function that is invoked when a new taint is generated in the data
 	 * flow engine
 	 * @param stmt The statement over which the taint is propagated
+	 * @param d1 The abstraction at the beginning of the current method
 	 * @param incoming The original abstraction from which the outgoing ones
 	 * were computed
 	 * @param outgoing The set of taints being propagated
@@ -54,8 +55,8 @@ public interface TaintPropagationHandler {
 	 * change the normal propagation behavior, just return the value of the
 	 * "taints" parameter as-is.
 	 */
-	public Set<Abstraction> notifyFlowOut
-			(Unit stmt,
+	public Set<Abstraction> notifyFlowOut(Unit stmt,
+			Abstraction d1,
 			Abstraction incoming,
 			Set<Abstraction> outgoing,
 			BiDiInterproceduralCFG<Unit, SootMethod> cfg,

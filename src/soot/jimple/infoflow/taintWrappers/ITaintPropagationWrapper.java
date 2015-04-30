@@ -14,9 +14,8 @@ import java.util.Set;
 
 import soot.SootMethod;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.data.Abstraction;
-import soot.jimple.infoflow.solver.IInfoflowCFG;
-import soot.jimple.infoflow.solver.IInfoflowSolver;
 
 /**
  * This interface declares methods to define classes and methods which should not
@@ -38,10 +37,10 @@ public interface ITaintPropagationWrapper {
 	 * queried for the first time.
 	 * 
 	 * Note that this method is guaranteed to be called only once and only by a single thread.
-	 * @param solver The data flow solver processing the IFDS edges
-	 * @param icfg The interprocedural control flow graph
+	 * @param manager The manager object providing access to the data flow solver processing
+	 * the IFDS edges and the interprocedural control flow graph
 	 */
-	public void initialize(IInfoflowSolver solver, IInfoflowCFG icfg);
+	public void initialize(InfoflowManager manager);
 	
 	/**
 	 * Checks an invocation statement for black-box taint propagation. This allows

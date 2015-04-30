@@ -5,10 +5,9 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
-import soot.jimple.infoflow.solver.IInfoflowCFG;
-import soot.jimple.infoflow.solver.IInfoflowSolver;
 
 /**
  * Abstract base class for all taint propagation wrappers
@@ -17,16 +16,17 @@ import soot.jimple.infoflow.solver.IInfoflowSolver;
  */
 public abstract class AbstractTaintWrapper implements ITaintPropagationWrapper {
 	
-	protected IInfoflowSolver solver;
-	protected IInfoflowCFG icfg;
+	/**
+	 * Data flow manager that gives access to internal solver objects
+	 */
+	protected InfoflowManager manager;
 	
 	private final AtomicInteger wrapperHits = new AtomicInteger(0);
 	private final AtomicInteger wrapperMisses = new AtomicInteger(0);
 	
 	@Override
-	public void initialize(IInfoflowSolver solver, IInfoflowCFG icfg) {
-		this.solver = solver;
-		this.icfg = icfg;
+	public void initialize(InfoflowManager manager) {
+		this.manager = manager;
 	}
 	
 	/**

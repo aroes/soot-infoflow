@@ -286,7 +286,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 							//compute return-flow function
 							FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(n, sCalledProcN, eP, retSiteN);
 							//for each target value of the function
-							for(D d5: computeReturnFlowFunction(retFunction, d4, n, Collections.singleton(d1))) {
+							for(D d5: computeReturnFlowFunction(retFunction, d3, d4, n, Collections.singleton(d1))) {
 								// If we have not changed anything in the callee, we do not need the facts
 								// from there. Even if we change something: If we don't need the concrete
 								// path, we can skip the callee in the predecessor chain
@@ -391,7 +391,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
 					//compute return-flow function
 					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
-					Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, callerSideDs);
+					Set<D> targets = computeReturnFlowFunction(retFunction, d1, d2, c, callerSideDs);
 					//for each incoming-call value
 					for(Entry<D, D> d1d2entry : entry.getValue().entrySet()) {
 						final D d4 = d1d2entry.getKey();
@@ -422,7 +422,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 			for(N c: callers) {
 				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
 					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
-					Set<D> targets = computeReturnFlowFunction(retFunction, d2, c, Collections.singleton(zeroValue));
+					Set<D> targets = computeReturnFlowFunction(retFunction, d1, d2, c, Collections.singleton(zeroValue));
 					for(D d5: targets) {
 						compactAbstractionChain(d5, d2);
 						propagate(zeroValue, retSiteC, d5, c, true);
@@ -443,13 +443,14 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 	 * Computes the return flow function for the given set of caller-side
 	 * abstractions.
 	 * @param retFunction The return flow function to compute
+	 * @param d1 The abstraction at the beginning of the callee
 	 * @param d2 The abstraction at the exit node in the callee
 	 * @param callSite The call site
 	 * @param callerSideDs The abstractions at the call site
 	 * @return The set of caller-side abstractions at the return site
 	 */
 	protected Set<D> computeReturnFlowFunction
-			(FlowFunction<D> retFunction, D d2, N callSite, Collection<D> callerSideDs) {
+			(FlowFunction<D> retFunction, D d1, D d2, N callSite, Collection<D> callerSideDs) {
 		return retFunction.computeTargets(d2);
 	}
 
@@ -555,7 +556,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 		return false;
 	}
 
-	private Set<Pair<N, D>> endSummary(M m, D d3) {
+	protected Set<Pair<N, D>> endSummary(M m, D d3) {
 		Set<Pair<N, D>> map = endSummary.get(new Pair<M, D>(m, d3));
 		return map;
 	}

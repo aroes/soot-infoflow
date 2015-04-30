@@ -18,8 +18,8 @@ import soot.jimple.Jimple;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
-import soot.jimple.infoflow.solver.IInfoflowCFG;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
+import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;

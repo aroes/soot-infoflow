@@ -17,7 +17,7 @@ import soot.jimple.infoflow.solver.IInfoflowSolver;
  * @author Steven Arzt
  */
 public interface IAliasingStrategy {
-
+	
 	/**
 	 * Computes the taints for the aliases of a given tainted variable
 	 * @param d1 The context in which the variable has been tainted

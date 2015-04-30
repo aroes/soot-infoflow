@@ -10,8 +10,8 @@ import org.slf4j.LoggerFactory;
 
 import soot.Scene;
 import soot.jimple.infoflow.IInfoflow.CallgraphAlgorithm;
-import soot.jimple.infoflow.solver.IInfoflowCFG;
-import soot.jimple.infoflow.solver.InfoflowCFG;
+import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
+import soot.jimple.infoflow.solver.cfg.InfoflowCFG;
 import soot.jimple.toolkits.ide.icfg.OnTheFlyJimpleBasedICFG;
 
 /**

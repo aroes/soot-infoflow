@@ -11,7 +11,7 @@
 package soot.jimple.infoflow.handlers;
 
 import soot.jimple.infoflow.results.InfoflowResults;
-import soot.jimple.infoflow.solver.IInfoflowCFG;
+import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 
 /**
  * Handler that is called when information flow results become available

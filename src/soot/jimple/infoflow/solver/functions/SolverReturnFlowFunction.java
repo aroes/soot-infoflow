@@ -19,17 +19,20 @@ public abstract class SolverReturnFlowFunction implements FlowFunction<Abstracti
 		
 	@Override
 	public Set<Abstraction> computeTargets(Abstraction source) {
-		return computeTargets(source, Collections.<Abstraction>emptySet());
+		return computeTargets(source, null, Collections.<Abstraction>emptySet());
 	}
 
 	/**
 	 * Computes the abstractions at the return site.
 	 * @param source The abstraction at the exit node
+	 * @param calleeD1 The abstraction at the start point of the callee
 	 * @param callerD1s The abstractions at the start nodes of all methods to
 	 * which we return (i.e. the contexts to which this flow function will be
 	 * applied).
 	 * @return The set of abstractions at the return site.
 	 */
-	public abstract Set<Abstraction> computeTargets(Abstraction source, Collection<Abstraction> callerD1s);
+	public abstract Set<Abstraction> computeTargets(Abstraction source,
+			Abstraction calleeD1,
+			Collection<Abstraction> callerD1s);
 	
 }

@@ -57,9 +57,9 @@ import soot.jimple.infoflow.problems.InfoflowProblem;
 import soot.jimple.infoflow.results.InfoflowResults;
 import soot.jimple.infoflow.results.ResultSinkInfo;
 import soot.jimple.infoflow.results.ResultSourceInfo;
-import soot.jimple.infoflow.solver.BackwardsInfoflowCFG;
-import soot.jimple.infoflow.solver.IInfoflowCFG;
-import soot.jimple.infoflow.solver.InfoflowCFG;
+import soot.jimple.infoflow.solver.cfg.BackwardsInfoflowCFG;
+import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
+import soot.jimple.infoflow.solver.cfg.InfoflowCFG;
 import soot.jimple.infoflow.solver.fastSolver.InfoflowSolver;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.util.InterproceduralConstantValuePropagator;
@@ -513,7 +513,7 @@ public class Infoflow extends AbstractInfoflow {
 		
 		// Initialize the taint wrapper if we have one
 		if (taintWrapper != null)
-			taintWrapper.initialize(forwardSolver, iCfg);
+			taintWrapper.initialize(new InfoflowManager(forwardSolver, iCfg));
 		
 		forwardSolver.solve();
 		maxMemoryConsumption = Math.max(maxMemoryConsumption, getUsedMemory());

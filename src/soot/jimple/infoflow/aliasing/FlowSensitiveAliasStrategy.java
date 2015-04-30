@@ -9,8 +9,8 @@ import soot.Unit;
 import soot.Value;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
-import soot.jimple.infoflow.solver.IInfoflowCFG;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
+import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 
 /**
  * A fully flow-sensitive aliasing strategy
@@ -31,8 +31,6 @@ public class FlowSensitiveAliasStrategy extends AbstractBulkAliasStrategy {
 			(final Abstraction d1, final Stmt src,
 			final Value targetValue, Set<Abstraction> taintSet,
 			SootMethod method, Abstraction newAbs) {
-		//TODO: only start backwards search for RefLikeTypes
-		
 		// Start the backwards solver
 		Abstraction bwAbs = newAbs.deriveInactiveAbstraction(src);
 		for (Unit predUnit : interproceduralCFG().getPredsOf(src))

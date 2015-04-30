@@ -6,7 +6,7 @@ package soot.jimple.infoflow.cfg;
 
 
 import soot.jimple.infoflow.IInfoflow.CallgraphAlgorithm;
-import soot.jimple.infoflow.solver.IInfoflowCFG;
+import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 
 public interface BiDirICFGFactory {
 

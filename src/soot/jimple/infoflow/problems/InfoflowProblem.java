@@ -65,9 +65,9 @@ import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler.FlowFunctionType;
-import soot.jimple.infoflow.solver.IInfoflowCFG;
-import soot.jimple.infoflow.solver.IInfoflowCFG.UnitContainer;
-import soot.jimple.infoflow.solver.InfoflowCFG;
+import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
+import soot.jimple.infoflow.solver.cfg.InfoflowCFG;
+import soot.jimple.infoflow.solver.cfg.IInfoflowCFG.UnitContainer;
 import soot.jimple.infoflow.solver.functions.SolverCallFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverCallToReturnFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverNormalFlowFunction;
@@ -159,7 +159,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 		}
 		
 		Set<Abstraction> res = taintWrapper.getTaintsForMethod(iStmt, source);
-		if(res != null)
+		if(res != null) {
+			Set<Abstraction> resWithAliases = new HashSet<>(res);
 			for (Abstraction abs : res) {
 				// The new abstraction gets activated where it was generated
 				if (!abs.equals(source)) {
@@ -182,10 +183,12 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (taintsStaticField
 								|| (taintsObjectValue && abs.getAccessPath().getTaintSubFields())
 								|| triggerInaktiveTaintOrReverseFlow(iStmt, val.getPlainValue(), abs))
-							computeAliasTaints(d1, iStmt, val.getPlainValue(), res,
+							computeAliasTaints(d1, iStmt, val.getPlainValue(), resWithAliases,
 									interproceduralCFG().getMethodOf(iStmt), abs);
 				}
 			}
+			res = resWithAliases;
+		}
 		
 		return res;
 	}
@@ -199,6 +202,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 	 * added
 	 * @param method The method containing src
 	 * @param newAbs The newly generated abstraction for the variable taint
+	 * @return The set of immediately available alias abstractions. If no such
+	 * abstractions exist, null is returned
 	 */
 	private void computeAliasTaints
 			(final Abstraction d1, final Stmt src,
@@ -208,10 +213,13 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 		// full alias analysis algorithm. Otherwise, we use a global
 		// non-flow-sensitive approximation.
 		if (!d1.getAccessPath().isEmpty()) {
-			aliasingStrategy.computeAliasTaints(d1, src, targetValue, taintSet, method, newAbs);
-		} else if (targetValue instanceof InstanceFieldRef) {
+			aliasingStrategy.computeAliasTaints(d1,
+					src, targetValue, taintSet, method, newAbs);
+		}
+		else if (targetValue instanceof InstanceFieldRef) {
 			assert enableImplicitFlows;
-			implicitFlowAliasingStrategy.computeAliasTaints(d1, src, targetValue, taintSet, method, newAbs);
+			implicitFlowAliasingStrategy.computeAliasTaints(d1, src,
+					targetValue, taintSet, method, newAbs);
 		}
 	}
 	
@@ -283,7 +291,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					
 					// Compute the new abstractions
 					Set<Abstraction> res = computeTargetsInternal(d1, source);
-					return notifyOutFlowHandlers(stmt, source, res,
+					return notifyOutFlowHandlers(stmt, d1, source, res,
 							FlowFunctionType.NormalFlowFunction);
 				}
 				
@@ -294,6 +302,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			/**
 			 * Notifies the outbound flow handlers, if any, about the computed
 			 * result abstractions for the current flow function
+			 * @param d1 The abstraction at the beginning of the method
 			 * @param stmt The statement that has just been processed
 			 * @param incoming The incoming abstraction from which the outbound
 			 * ones were computed
@@ -303,6 +312,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			 * flow handlers
 			 */
 			private Set<Abstraction> notifyOutFlowHandlers(Unit stmt,
+					Abstraction d1,
 					Abstraction incoming,
 					Set<Abstraction> outgoing,
 					FlowFunctionType functionType) {
@@ -310,7 +320,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						&& outgoing != null
 						&& !outgoing.isEmpty())
 					for (TaintPropagationHandler tp : taintPropagationHandlers)
-						outgoing = tp.notifyFlowOut(stmt, incoming, outgoing,
+						outgoing = tp.notifyFlowOut(stmt, d1, incoming, outgoing,
 								interproceduralCFG(), functionType);
 				return outgoing;
 			}
@@ -377,7 +387,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				taintSet.add(newAbs);
 				
 				if (triggerInaktiveTaintOrReverseFlow(assignStmt, leftValue, newAbs))
-					computeAliasTaints(d1, assignStmt, leftValue, taintSet, method, newAbs);
+					computeAliasTaints(d1, assignStmt, leftValue, taintSet,
+							method, newAbs);
 			}
 			
 			/**
@@ -437,7 +448,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									
 									// Compute the aliases
 									if (triggerInaktiveTaintOrReverseFlow(is, is.getLeftOp(), abs))
-										computeAliasTaints(d1, is, is.getLeftOp(), res, interproceduralCFG().getMethodOf(is), abs);
+										computeAliasTaints(d1, is, is.getLeftOp(),
+												res, interproceduralCFG().getMethodOf(is), abs);
 								}
 								return res;
 							}
@@ -743,7 +755,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									? newSource : newSource.deriveNewAbstraction(mappedAP, null);							
 							addTaintViaStmt(d1, assignStmt, targetAB, res, cutFirstField,
 									interproceduralCFG().getMethodOf(src), targetType);
-							res.add(newSource);							
+							res.add(newSource);
 							return res;
 						}
 					};
@@ -924,7 +936,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (!res.isEmpty())
 							for (Abstraction abs : res)
 								aliasingStrategy.injectCallingContext(abs, solver, dest, src, source, d1);
-						return notifyOutFlowHandlers(stmt, source, res,
+						return notifyOutFlowHandlers(stmt, d1, source, res,
 								FlowFunctionType.CallFlowFunction);
 					}
 					
@@ -1039,13 +1051,15 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				return new SolverReturnFlowFunction() {
 
 					@Override
-					public Set<Abstraction> computeTargets(Abstraction source, Collection<Abstraction> callerD1s) {
+					public Set<Abstraction> computeTargets(Abstraction source, Abstraction d1,
+							Collection<Abstraction> callerD1s) {
 						Set<Abstraction> res = computeTargetsInternal(source, callerD1s);
-						return notifyOutFlowHandlers(exitStmt, source, res,
+						return notifyOutFlowHandlers(exitStmt, d1, source, res,
 								FlowFunctionType.ReturnFlowFunction);
 					}
 					
-					private Set<Abstraction> computeTargetsInternal(Abstraction source, Collection<Abstraction> callerD1s) {
+					private Set<Abstraction> computeTargetsInternal(Abstraction source,
+							Collection<Abstraction> callerD1s) {
 						if (stopAfterFirstFlow && !results.isEmpty())
 							return Collections.emptySet();
 						if (source == getZeroValue())
@@ -1314,7 +1328,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					@Override
 					public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
 						Set<Abstraction> res = computeTargetsInternal(d1, source);
-						return notifyOutFlowHandlers(call, source, res,
+						return notifyOutFlowHandlers(call, d1, source, res,
 								FlowFunctionType.CallToReturnFlowFunction);
 					}
 					
@@ -1536,14 +1550,16 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									// Compute the aliases
 									for (Abstraction abs : nativeAbs)
 										if (abs.getAccessPath().isStaticFieldRef()
-												|| triggerInaktiveTaintOrReverseFlow(iCallStmt, abs.getAccessPath().getPlainValue(), abs))
-											computeAliasTaints(d1, iCallStmt, abs.getAccessPath().getPlainValue(), res,
+												|| triggerInaktiveTaintOrReverseFlow(iCallStmt,
+														abs.getAccessPath().getPlainValue(), abs))
+											computeAliasTaints(d1, iCallStmt,
+													abs.getAccessPath().getPlainValue(), res,
 													interproceduralCFG().getMethodOf(call), abs);
 									
 									// We only call the native code handler once per statement
 									break;
 								}
-												
+						
 						for (Abstraction abs : res)
 							if (abs != newSource)
 								abs.setCorrespondingCallSite(iCallStmt);

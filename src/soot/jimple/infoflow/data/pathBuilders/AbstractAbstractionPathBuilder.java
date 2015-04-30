@@ -1,6 +1,6 @@
 package soot.jimple.infoflow.data.pathBuilders;
 
-import soot.jimple.infoflow.solver.IInfoflowCFG;
+import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 
 /**
  * Abstract base class for all abstraction path builders

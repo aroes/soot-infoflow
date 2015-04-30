@@ -1,4 +1,4 @@
-package soot.jimple.infoflow.solver;
+package soot.jimple.infoflow.solver.cfg;
 
 import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
 

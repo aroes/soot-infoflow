@@ -16,9 +16,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import soot.SootMethod;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.data.Abstraction;
-import soot.jimple.infoflow.solver.IInfoflowCFG;
-import soot.jimple.infoflow.solver.IInfoflowSolver;
 
 /**
  * Set of taint wrappers. It supports taint wrapping for a class if at least one
@@ -34,9 +33,9 @@ public class TaintWrapperSet implements ITaintPropagationWrapper {
 	private AtomicInteger misses = new AtomicInteger();
 	
 	@Override
-	public void initialize(IInfoflowSolver solver, IInfoflowCFG icfg) {
+	public void initialize(InfoflowManager manager) {
 		for (ITaintPropagationWrapper w : this.wrappers)
-			w.initialize(solver, icfg);
+			w.initialize(manager);
 	}
 	
 	/**

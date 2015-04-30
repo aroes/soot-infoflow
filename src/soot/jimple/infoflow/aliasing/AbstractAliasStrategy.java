@@ -1,8 +1,8 @@
 package soot.jimple.infoflow.aliasing;
 
 import soot.SootMethod;
-import soot.jimple.infoflow.solver.IInfoflowCFG;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
+import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 
 /**
  * Common base class for alias strategies
