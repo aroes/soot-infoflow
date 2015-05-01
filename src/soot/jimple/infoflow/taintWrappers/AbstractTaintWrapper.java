@@ -63,7 +63,8 @@ public abstract class AbstractTaintWrapper implements ITaintPropagationWrapper {
 	}
 	
 	@Override
-	public Set<Abstraction> getTaintsForMethod(Stmt stmt, Abstraction taintedPath) {
+	public Set<Abstraction> getTaintsForMethod(Stmt stmt, Abstraction d1,
+			Abstraction taintedPath) {
 		// Compute the tainted access paths
 		Set<AccessPath> aps = getTaintsForMethodInternal(stmt,
 				taintedPath.getAccessPath());

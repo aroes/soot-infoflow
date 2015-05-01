@@ -158,7 +158,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				return Collections.emptySet();
 		}
 		
-		Set<Abstraction> res = taintWrapper.getTaintsForMethod(iStmt, source);
+		Set<Abstraction> res = taintWrapper.getTaintsForMethod(iStmt, d1, source);
 		if(res != null) {
 			Set<Abstraction> resWithAliases = new HashSet<>(res);
 			for (Abstraction abs : res) {

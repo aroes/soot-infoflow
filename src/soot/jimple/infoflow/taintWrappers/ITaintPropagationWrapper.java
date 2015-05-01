@@ -47,11 +47,14 @@ public interface ITaintPropagationWrapper {
 	 * the wrapper to artificially propagate taints over method invocations without
 	 * requiring the analysis to look inside the method.
 	 * @param stmt The invocation statement which to check for black-box taint propagation
+	 * @param d1 The abstraction at the beginning of the method that calls the
+	 * wrapped method
 	 * @param taintedPath The tainted field or value to propagate
 	 * @return The list of tainted values after the invocation statement referenced in {@link Stmt}
 	 * has been executed
 	 */
-	public Set<Abstraction> getTaintsForMethod(Stmt stmt, Abstraction taintedPath);
+	public Set<Abstraction> getTaintsForMethod(Stmt stmt, Abstraction d1, 
+			Abstraction taintedPath);
 	
 	/**
 	 * Gets whether the taints produced by this taint wrapper are exclusive, i.e. there are

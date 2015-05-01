@@ -47,10 +47,11 @@ public class TaintWrapperSet implements ITaintPropagationWrapper {
 	}
 
 	@Override
-	public Set<Abstraction> getTaintsForMethod(Stmt stmt, Abstraction taintedPath) {
+	public Set<Abstraction> getTaintsForMethod(Stmt stmt, Abstraction d1,
+			Abstraction taintedPath) {
 		Set<Abstraction> resList = new HashSet<Abstraction>();
 		for (ITaintPropagationWrapper w : this.wrappers)
-			resList.addAll(w.getTaintsForMethod(stmt, taintedPath));
+			resList.addAll(w.getTaintsForMethod(stmt, d1, taintedPath));
 		
 		// Bookkeeping for statistics
 		if (resList.isEmpty())
