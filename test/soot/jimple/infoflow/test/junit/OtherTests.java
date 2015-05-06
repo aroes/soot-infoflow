@@ -18,6 +18,8 @@ import org.junit.Test;
 
 import soot.jimple.infoflow.Infoflow;
 import soot.jimple.infoflow.config.IInfoflowConfig;
+import soot.jimple.infoflow.data.pathBuilders.DefaultPathBuilderFactory;
+import soot.jimple.infoflow.data.pathBuilders.DefaultPathBuilderFactory.PathBuilder;
 import soot.options.Options;
 
 /**
@@ -376,4 +378,34 @@ public class OtherTests extends JUnitTests{
 		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));		
 	}
 
+    @Test(timeout=300000)
+	public void multiSinkTest1() {
+    	Infoflow infoflow = initInfoflow();
+    	List<String> epoints = new ArrayList<String>();
+    	epoints.add("<soot.jimple.infoflow.test.OtherTestCode: void multiSinkTest1()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 2);
+		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));		
+	}
+    
+    @Test//(timeout=300000)
+	public void multiSinkTest2() {
+    	boolean oldPathAgnosticResults = Infoflow.getPathAgnosticResults();
+    	try {
+	    	Infoflow infoflow = initInfoflow();
+	    	List<String> epoints = new ArrayList<String>();
+	    	epoints.add("<soot.jimple.infoflow.test.OtherTestCode: void multiSinkTest2()>");
+	    	Infoflow.setPathAgnosticResults(false);
+	    	infoflow.setPathBuilderFactory(new DefaultPathBuilderFactory(PathBuilder.ContextSensitive,
+	    			true));
+			infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+			checkInfoflow(infoflow, 1);
+			Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));
+			Assert.assertEquals(2, infoflow.getResults().numConnections());
+    	}
+    	finally {
+    		Infoflow.setPathAgnosticResults(oldPathAgnosticResults);
+    	}
+	}
+    
 }

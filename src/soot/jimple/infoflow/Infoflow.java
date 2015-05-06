@@ -87,7 +87,7 @@ public class Infoflow extends AbstractInfoflow {
 	private static boolean mergeNeighbors = false;
 	
 	private InfoflowResults results = null;
-	private final IPathBuilderFactory pathBuilderFactory;
+	private IPathBuilderFactory pathBuilderFactory;
 
 	private final String androidPath;
 	private final boolean forceAndroidJar;
@@ -943,6 +943,15 @@ public class Infoflow extends AbstractInfoflow {
 	 */
 	public long getMaxMemoryConsumption() {
 		return this.maxMemoryConsumption;
+	}
+	
+	/**
+	 * Sets the path builder factory to be used in subsequent data flow analyses
+	 * @param factory The path bilder factory to use for constructing path
+	 * reconstruction algorithms
+	 */
+	public void setPathBuilderFactory(IPathBuilderFactory factory) {
+		this.pathBuilderFactory = factory;
 	}
 	
 }

@@ -610,5 +610,23 @@ public class OtherTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(action.data);
 	}
+	
+	public void multiSinkTest1() {
+		String imei = TelephonyManager.getDeviceId();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(imei);
+		cm.publish(imei);
+	}
 
+	public void multiSinkTest2() {
+		String imei = TelephonyManager.getDeviceId();
+		doLeak(imei);		
+		doLeak(imei);
+	}
+
+	private void doLeak(String imei) {
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(imei);		
+	}
+	
 }

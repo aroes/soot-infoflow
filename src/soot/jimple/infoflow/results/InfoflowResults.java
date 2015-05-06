@@ -15,12 +15,12 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import soot.Value;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.collect.ConcurrentHashSet;
@@ -48,7 +48,21 @@ public class InfoflowResults {
 	 * @return The number of entries in this result object
 	 */
 	public int size() {
-		return this.results.size();
+		return this.results == null ? 0 : this.results.size();
+	}
+	
+	/**
+	 * Gets the total number of source-to-sink connections. If there are two
+	 * connections along different paths between the same source and sink,
+	 * size() will return 1, but numConnections() will return 2.
+	 * @return The number of source-to-sink connections in this result object
+	 */
+	public int numConnections() {
+		int num = 0;
+		if (this.results != null)
+			for (Entry<ResultSinkInfo, Set<ResultSourceInfo>> entry : this.results.entrySet())
+				num += entry.getValue().size();
+		return num;
 	}
 	
 	/**
@@ -57,7 +71,7 @@ public class InfoflowResults {
 	 * @return True if this result object is empty, otherwise false.
 	 */
 	public boolean isEmpty() {
-		return this.results.isEmpty();
+		return this.results == null || this.results.isEmpty();
 	}
 	
 	/**
