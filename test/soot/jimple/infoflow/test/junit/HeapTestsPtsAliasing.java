@@ -27,6 +27,7 @@ import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.IInfoflow.AliasingAlgorithm;
 import soot.jimple.infoflow.Infoflow;
+import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.taintWrappers.AbstractTaintWrapper;
 
@@ -517,6 +518,13 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 			public boolean supportsCallee(Stmt callSite) {
 				return false;
 			}
+
+			@Override
+			public Set<Abstraction> getAliasesForMethod(Stmt stmt,
+					Abstraction d1, Abstraction taintedPath) {
+				return null;
+			}
+			
 		});
 
 		infoflow.setInspectSources(false);

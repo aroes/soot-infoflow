@@ -17,6 +17,7 @@ import soot.SootMethod;
 import soot.Value;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.internal.JAssignStmt;
 
@@ -85,6 +86,13 @@ public class IdentityTaintWrapper extends AbstractTaintWrapper {
 	@Override
 	public boolean supportsCallee(Stmt callSite) {
 		return true;
+	}
+
+	@Override
+	public Set<Abstraction> getAliasesForMethod(Stmt stmt, Abstraction d1,
+			Abstraction taintedPath) {
+		// We do not provide any aliases
+		return null;
 	}
 	
 }

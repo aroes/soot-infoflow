@@ -50,8 +50,11 @@ public class TaintWrapperSet implements ITaintPropagationWrapper {
 	public Set<Abstraction> getTaintsForMethod(Stmt stmt, Abstraction d1,
 			Abstraction taintedPath) {
 		Set<Abstraction> resList = new HashSet<Abstraction>();
-		for (ITaintPropagationWrapper w : this.wrappers)
-			resList.addAll(w.getTaintsForMethod(stmt, d1, taintedPath));
+		for (ITaintPropagationWrapper w : this.wrappers) {
+			Set<Abstraction> curAbsSet = w.getTaintsForMethod(stmt, d1, taintedPath);
+			if (curAbsSet != null)
+				resList.addAll(curAbsSet);
+		}
 		
 		// Bookkeeping for statistics
 		if (resList.isEmpty())
@@ -94,6 +97,18 @@ public class TaintWrapperSet implements ITaintPropagationWrapper {
 	@Override
 	public int getWrapperMisses() {
 		return misses.get();
+	}
+
+	@Override
+	public Set<Abstraction> getAliasesForMethod(Stmt stmt, Abstraction d1,
+			Abstraction taintedPath) {
+		Set<Abstraction> resList = new HashSet<Abstraction>();
+		for (ITaintPropagationWrapper w : this.wrappers) {
+			Set<Abstraction> curAbsSet = w.getAliasesForMethod(stmt, d1, taintedPath);
+			if (curAbsSet != null)
+				resList.addAll(curAbsSet);
+		}
+		return resList;
 	}
 	
 }

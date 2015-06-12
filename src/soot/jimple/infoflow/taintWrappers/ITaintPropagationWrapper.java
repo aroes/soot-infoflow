@@ -67,6 +67,20 @@ public interface ITaintPropagationWrapper {
 	public boolean isExclusive(Stmt stmt, Abstraction taintedPath);
 	
 	/**
+	 * Gets the aliases that a summarized method generates for the given
+	 * abstraction. Note that this is a may-alias problem.
+	 * @param stmt The statement that calls the summarized method
+	 * @param d1 The abstraction at the entry point of the method that calls the
+	 * wrapped method
+	 * @param taintedPath The abstraction for which the aliases shall be
+	 * computed
+	 * @return The set of aliases for the given abstraction or null if no such
+	 * aliases exist
+	 */
+	public Set<Abstraction> getAliasesForMethod(Stmt stmt, Abstraction d1,
+			Abstraction taintedPath);
+	
+	/**
 	 * Checks whether this taint wrapper can in general produce artificial taints
 	 * for the given callee. If an implementation returns "false" for a callee,
 	 * all call sites for this callee might be removed if not needed elsewhere.

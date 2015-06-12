@@ -62,7 +62,8 @@ import soot.jimple.infoflow.util.BaseSelector;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 /**
- * class which contains the flow functions for the backwards solver. This is required for on-demand alias analysis.
+ * class which contains the flow functions for the backwards solver. This is
+ * required for on-demand alias analysis.
  */
 public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 	private IInfoflowSolver fSolver;
@@ -629,12 +630,34 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				
 				final SootMethod callee = invExpr.getMethod();
 				
+				final DefinitionStmt defStmt = iStmt instanceof DefinitionStmt
+						? (DefinitionStmt) iStmt : null;
+				
 				return new SolverCallToReturnFlowFunction() {
 					@Override
 					public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
 						if (source == getZeroValue())
 							return Collections.emptySet();
 						assert source.isAbstractionActive() || flowSensitiveAliasing;
+						
+						// Compute wrapper aliases
+						if (taintWrapper != null) {
+							Set<Abstraction> wrapperAliases = taintWrapper.getAliasesForMethod(
+									iStmt, d1, source);
+							if (wrapperAliases != null && !wrapperAliases.isEmpty()) {
+								Set<Abstraction> passOnSet = new HashSet<>(wrapperAliases.size());
+								for (Abstraction abs : wrapperAliases)
+									if (defStmt != null && defStmt.getLeftOp()
+											== abs.getAccessPath().getPlainValue()) {
+										// Do not pass on this taint, but trigger the forward analysis
+										for (Unit u : interproceduralCFG().getPredsOf(defStmt))
+											fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, abs));
+									}
+									else
+										passOnSet.add(abs);
+								return passOnSet;
+							}
+						}
 						
 						// If the callee does not read the given value, we also need to pass it on
 						// since we do not propagate it into the callee.
@@ -661,7 +684,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						for (int i = 0; i < callArgs.length; i++)
 							if (callArgs[i] == source.getAccessPath().getPlainValue())
 								return Collections.emptySet();
-						
+												
 						return Collections.singleton(source);
 					}
 				};

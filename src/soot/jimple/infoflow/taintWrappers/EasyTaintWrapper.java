@@ -36,6 +36,7 @@ import soot.jimple.DefinitionStmt;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.util.SootMethodRepresentationParser;
 
@@ -547,6 +548,13 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 			if (!(val instanceof Constant))
 				return true;
 		return false;
+	}
+
+	@Override
+	public Set<Abstraction> getAliasesForMethod(Stmt stmt, Abstraction d1,
+			Abstraction taintedPath) {
+		// We do not provide any aliases
+		return null;
 	}
 		
 }
