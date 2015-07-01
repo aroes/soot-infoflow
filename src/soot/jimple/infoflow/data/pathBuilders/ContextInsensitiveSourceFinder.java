@@ -2,7 +2,6 @@ package soot.jimple.infoflow.data.pathBuilders;
 
 import heros.solver.CountingThreadPoolExecutor;
 
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -12,7 +11,6 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.results.InfoflowResults;
@@ -84,7 +82,7 @@ public class ContextInsensitiveSourceFinder extends AbstractAbstractionPathBuild
 							abstraction.getSourceContext().getAccessPath(),
 							abstraction.getSourceContext().getStmt(),
 							abstraction.getSourceContext().getUserData(),
-							Collections.<Stmt>emptyList());
+							null);
 					
 					// Sources may not have predecessors
 					assert abstraction.getPredecessor() == null;

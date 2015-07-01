@@ -123,7 +123,7 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
 				sourceContext.getAccessPath(),
 				sourceContext.getStmt(),
 				sourceContext.getUserData(),
-				scap.getPath());
+				scap.getAbstractionPath());
 		return true;
 	}
 	

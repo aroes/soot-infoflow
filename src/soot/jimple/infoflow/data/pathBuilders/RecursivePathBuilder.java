@@ -3,11 +3,9 @@ package soot.jimple.infoflow.data.pathBuilders;
 import heros.solver.CountingThreadPoolExecutor;
 import heros.solver.Pair;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
-import java.util.List;
 import java.util.Set;
 import java.util.Stack;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -159,12 +157,12 @@ public class RecursivePathBuilder extends AbstractAbstractionPathBuilder {
 							Collections.newSetFromMap(new IdentityHashMap<Abstraction,Boolean>())));
 		    		for (SourceContextAndPath context : getPaths(lastTaskId++,
 		    				abs.getAbstraction(), initialStack)) {
-		    			List<Stmt> newPath = new ArrayList<>(context.getPath());
-		    			newPath.add(abs.getSinkStmt());
 						results.addResult(abs.getAbstraction().getAccessPath(),
 								abs.getSinkStmt(),
-								context.getAccessPath(), context.getStmt(), context.getUserData(),
-								newPath);
+								context.getAccessPath(),
+								context.getStmt(),
+								context.getUserData(),
+								context.getAbstractionPath());
 		    		}
 				}
 				

@@ -157,7 +157,7 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 				sourceContext.getAccessPath(),
 				sourceContext.getStmt(),
 				sourceContext.getUserData(),
-				scap.getPath());
+				scap.getAbstractionPath());
 		return true;
 	}
 	

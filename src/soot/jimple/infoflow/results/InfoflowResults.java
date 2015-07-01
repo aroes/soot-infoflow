@@ -25,6 +25,7 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.collect.MyConcurrentHashMap;
+import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
 
 /**
@@ -107,9 +108,33 @@ public class InfoflowResults {
 	public void addResult(AccessPath sink, Stmt sinkStmt,
 			AccessPath source, Stmt sourceStmt,
 			Object userData,
-			List<Stmt> propagationPath) {
+			List<Abstraction> propagationPath) {
+		// Get the statements and the access paths from the abstractions
+		List<Stmt> stmtPath = null;
+		List<AccessPath> apPath = null;
+		if (propagationPath != null) {
+			stmtPath = new ArrayList<Stmt>(propagationPath.size());
+			apPath = new ArrayList<AccessPath>(propagationPath.size());
+			for (Abstraction pathAbs : propagationPath) {
+				if (pathAbs.getCurrentStmt() != null) {
+					stmtPath.add(pathAbs.getCurrentStmt());
+					apPath.add(pathAbs.getAccessPath());
+				}
+			}
+		}
+		
+		// Add the result
+		addResult(sink, sinkStmt, source, sourceStmt, userData, stmtPath, apPath);
+	}
+	
+	public void addResult(AccessPath sink, Stmt sinkStmt,
+			AccessPath source, Stmt sourceStmt,
+			Object userData,
+			List<Stmt> propagationPath,
+			List<AccessPath> propagationAccessPath) {
 		this.addResult(new ResultSinkInfo(sink, sinkStmt),
-				new ResultSourceInfo(source, sourceStmt, userData, propagationPath));
+				new ResultSourceInfo(source, sourceStmt, userData, propagationPath,
+						propagationAccessPath));
 	}
 	
 	public void addResult(ResultSinkInfo sink, ResultSourceInfo source) {

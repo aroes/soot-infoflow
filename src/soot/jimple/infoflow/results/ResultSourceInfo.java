@@ -17,6 +17,7 @@ public class ResultSourceInfo {
 	private final Stmt source;
 	private final Object userData;
 	private final List<Stmt> path;
+	private final List<AccessPath> pathAPs;
 	
 	public ResultSourceInfo(AccessPath source, Stmt context) {
 		assert source != null;
@@ -25,15 +26,18 @@ public class ResultSourceInfo {
 		this.source = context;
 		this.userData = null;
 		this.path = null;
+		this.pathAPs = null;
 	}
 	
-	public ResultSourceInfo(AccessPath source, Stmt context, Object userData, List<Stmt> path) {
+	public ResultSourceInfo(AccessPath source, Stmt context, Object userData,
+			List<Stmt> path, List<AccessPath> pathAPs) {
 		assert source != null;
 
 		this.accessPath = source;
 		this.source = context;
 		this.userData = userData;
 		this.path = path;
+		this.pathAPs = pathAPs;
 	}
 
 	public AccessPath getAccessPath() {
@@ -51,6 +55,10 @@ public class ResultSourceInfo {
 	public List<Stmt> getPath() {
 		return this.path;
 	}
+	
+	public List<AccessPath> getPathAccessPaths() {
+		return this.pathAPs;
+	}
 
     @Override
     public String toString(){
@@ -65,6 +73,7 @@ public class ResultSourceInfo {
 	@Override
 	public int hashCode() {
 		return (path != null && !Infoflow.getPathAgnosticResults() ? 31 * this.path.hashCode() : 0)
+				+ (pathAPs != null && !Infoflow.getPathAgnosticResults() ? 31 * this.pathAPs.hashCode() : 0)
 				+ (Infoflow.getOneResultPerAccessPath() ?
 						31 * this.accessPath.hashCode() : 0)
 				+ 7 * (this.source == null ? 0 : this.source.hashCode());
@@ -84,6 +93,8 @@ public class ResultSourceInfo {
 			if (path != null && si.path == null)
 				return false;
 			if (!path.equals(si.path))
+				return false;
+			if (!pathAPs.equals(si.pathAPs))
 				return false;
 		}
 		
