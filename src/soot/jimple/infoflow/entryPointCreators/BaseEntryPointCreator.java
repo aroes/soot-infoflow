@@ -11,7 +11,6 @@
 package soot.jimple.infoflow.entryPointCreators;
 
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -71,8 +70,8 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 
 	private final Set<SootMethod> failedMethods = new HashSet<>();
 	
-	protected final String DUMMY_CLASS_NAME = "dummyMainClass";
-	protected final String DUMMY_METHOD_NAME = "dummyMainMethod";
+	protected String dummyClassName = "dummyMainClass";
+	protected String dummyMethodName = "dummyMainMethod";
 	
 	/**
 	 * Returns a copy of all classes that could not be instantiated properly
@@ -139,19 +138,20 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 		// If we already have a main class, we need to make sure to use a fresh
 		// method name
 		final SootClass mainClass;
-		String methodName = DUMMY_METHOD_NAME;
-		if (Scene.v().containsClass(DUMMY_CLASS_NAME)) {
+		String methodName = dummyMethodName;
+		if (Scene.v().containsClass(dummyClassName)) {
 			int methodIndex = 0;
-			mainClass = Scene.v().getSootClass(DUMMY_CLASS_NAME);
+			mainClass = Scene.v().getSootClass(dummyClassName);
 			while (mainClass.declaresMethodByName(methodName))
-				methodName = DUMMY_METHOD_NAME + "_" + methodIndex++;
+				methodName = dummyMethodName + "_" + methodIndex++;
 		}
 		else {
-			mainClass = new SootClass(DUMMY_CLASS_NAME);
+			mainClass = new SootClass(dummyClassName);
 			Scene.v().addClass(mainClass);
 		}
 		
-		SootMethod mainMethod = new SootMethod(methodName, new ArrayList<Type>(), VoidType.v());
+		SootMethod mainMethod = new SootMethod(methodName, Collections.singletonList((Type)
+				ArrayType.v(RefType.v("java.lang.String"), 1)), VoidType.v());
 		body.setMethod(mainMethod);
 		mainMethod.setActiveBody(body);
 		mainClass.addMethod(mainMethod);
@@ -623,6 +623,24 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 					unitIt.remove();
 			}
 		}
+	}
+	
+	/**
+	 * Sets the name that shall be used for the new class containing the dummy
+	 * main method
+	 * @param dummyMethodName The name for the new class containing the dummy
+	 * main method
+	 */
+	public void setDummyClassName(String dummyClassName) {
+		this.dummyClassName = dummyClassName;
+	}
+	
+	/**
+	 * Sets the name that shall be used for the new dummy main method
+	 * @param dummyMethodName The name for the new dummy main method
+	 */
+	public void setDummyMethodName(String dummyMethodName) {
+		this.dummyMethodName = dummyMethodName;
 	}
 
 }
