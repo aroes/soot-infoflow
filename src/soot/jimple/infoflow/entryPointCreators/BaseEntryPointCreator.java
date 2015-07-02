@@ -150,11 +150,19 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 			Scene.v().addClass(mainClass);
 		}
 		
-		SootMethod mainMethod = new SootMethod(methodName, Collections.singletonList((Type)
-				ArrayType.v(RefType.v("java.lang.String"), 1)), VoidType.v());
+		Type stringArrayType = ArrayType.v(RefType.v("java.lang.String"), 1);
+		SootMethod mainMethod = new SootMethod(methodName,
+				Collections.singletonList(stringArrayType), VoidType.v());
 		body.setMethod(mainMethod);
 		mainMethod.setActiveBody(body);
 		mainClass.addMethod(mainMethod);
+		
+		// Add a parameter reference to the body
+		LocalGenerator lg = new LocalGenerator(body);
+		Local paramLocal = lg.generateLocal(stringArrayType);
+		body.getUnits().addFirst(Jimple.v().newIdentityStmt(paramLocal,
+				Jimple.v().newParameterRef(stringArrayType, 0)));
+		
 		// First add class to scene, then make it an application class
 		// as addClass contains a call to "setLibraryClass" 
 		mainClass.setApplicationClass();
