@@ -243,7 +243,7 @@ public class AccessPath implements Cloneable {
 				final Type eiType = ei == 0 ? this.baseType : fieldTypes[ei - 1];
 				int ej = ei;
 				while (ej < fields.length) {
-					if (fieldTypes[ej] == eiType) {
+					if (fieldTypes[ej] == eiType || fields[ej].getType() == eiType) {
 						// The types match, f0...fi...fj maps back to an object of the
 						// same type as f0...fi. We must thus convert the access path
 						// to f0...fi-1[...fj]fj+1
@@ -275,7 +275,50 @@ public class AccessPath implements Cloneable {
 				ei++;
 			}
 		}
-		
+		else if (fields != null) {
+			// We can always merge a.inner.this$0.c to a.c
+			for (int i = 0; i < fields.length; i++) {
+				// Is this a reference to an outer class?
+				if (fields[i].getName().startsWith("this$")) {
+					// Get the name of the outer class
+					int outerClassIdx = Integer.parseInt(fields[i].getName().substring(5));
+					String outerClassName = ((RefType) fields[i].getType()).getClassName();
+					for (int j = 0; j < outerClassIdx; j++)
+						outerClassName = outerClassName.substring(0, outerClassName.indexOf("$"));
+					
+					// Check the base object
+					int startIdx = -1;
+					if (this.value != null && ((RefType) this.value.getType())
+							.getClassName().equals(outerClassName)) {
+						startIdx = 0;
+					}
+					else {
+						// Scan forward to find the same reference
+						for (int j = 0; j < i; j++)
+							if (((RefType) fields[j].getType()).getClassName().equals(outerClassName)) {
+								startIdx = j;
+								break;
+							}
+					}
+					
+					if (startIdx >= 0) {
+						SootField[] newFields = new SootField[fields.length - (i - startIdx) - 1];
+						Type[] newFieldTypes = new Type[fieldTypes.length - (i - startIdx) - 1];
+						
+						System.arraycopy(fields, 0, newFields, 0, startIdx);
+						System.arraycopy(fieldTypes, 0, newFieldTypes, 0, startIdx);
+						
+						System.arraycopy(fields, i + 1, newFields, startIdx, fields.length - i - 1);
+						System.arraycopy(fieldTypes, i + 1, newFieldTypes, startIdx, fieldTypes.length - i - 1);
+						
+						fields = newFields;
+						fieldTypes = newFieldTypes;
+						break;
+					}
+				}
+			}
+		}
+				
 		// Cut the fields at the maximum access path length. If this happens,
 		// we must always add a star
 		if (fields != null) {
@@ -306,6 +349,9 @@ public class AccessPath implements Cloneable {
 			this.fields = null;
 			this.fieldTypes = null;
 		}
+		
+		if (this.fields != null && Arrays.toString(this.fields).contains("<java.util.LinkedList$Node: java.lang.Object item>, <java.util.AbstractList: int modCount>"))
+			System.out.println("x");
 		
 		// Type checks
 		assert this.value == null || !(!(this.baseType instanceof ArrayType)
@@ -517,12 +563,24 @@ public class AccessPath implements Cloneable {
 	 * the val parameter
 	 */
 	public AccessPath copyWithNewValue(Value val, Type newType, boolean cutFirstField){
+		return copyWithNewValue(val, newType, cutFirstField, true);
+	}
+	
+	/**
+	 * value val gets new base, fields are preserved.
+	 * @param val The new base value
+	 * @param reduceBases True if circurlar types shall be reduced to bases
+	 * @return This access path with the base replaced by the value given in
+	 * the val parameter
+	 */
+	public AccessPath copyWithNewValue(Value val, Type newType, boolean cutFirstField,
+			boolean reduceBases) {
 		if (this.value != null && this.value.equals(val)
 				&& this.baseType.equals(newType))
 			return this;
 		
 		return new AccessPath(val, fields, newType, fieldTypes, this.taintSubFields,
-				cutFirstField, true);
+				cutFirstField, reduceBases);
 	}
 	
 	@Override

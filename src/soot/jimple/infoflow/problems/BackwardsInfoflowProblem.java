@@ -346,7 +346,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							if (source == getZeroValue())
 								return Collections.emptySet();
 							assert source.isAbstractionActive() || flowSensitiveAliasing;
-														
+							
 							Set<Abstraction> res = computeAliases(defStmt, leftValue, d1, source);
 							
 							if (destDefStmt != null && interproceduralCFG().isExitStmt(destDefStmt))
