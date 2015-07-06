@@ -297,7 +297,7 @@ public class Infoflow extends AbstractInfoflow {
 		}
 		return s;
 	}
-
+	
 	@Override
 	public void computeInfoflow(String appPath, String libPath,
 			IEntryPointCreator entryPointCreator,
@@ -352,7 +352,21 @@ public class Infoflow extends AbstractInfoflow {
 		// Run the analysis
         runAnalysis(sourcesSinks, seeds);
 	}
-
+	
+	/**
+	 * Conducts a taint analysis on an already initialized callgraph
+	 * @param sourcesSinks The sources and sinks to be used
+	 */
+	protected void runAnalysis(final ISourceSinkManager sourcesSinks) {
+		runAnalysis(sourcesSinks, null);
+	}
+	
+	/**
+	 * Conducts a taint analysis on an already initialized callgraph
+	 * @param sourcesSinks The sources and sinks to be used
+	 * @param additionalSeeds Additional seeds at which to create A ZERO fact
+	 * even if they are not sources
+	 */
 	private void runAnalysis(final ISourceSinkManager sourcesSinks, final Set<String> additionalSeeds) {
 		maxMemoryConsumption = -1;
 		ipcManager.updateJimpleForICC();
@@ -375,8 +389,11 @@ public class Infoflow extends AbstractInfoflow {
         LibraryClassPatcher patcher = new LibraryClassPatcher();
         patcher.patchLibraries();
 		
-		// We explicitly select the packs we want to run for performance reasons
-		if (callgraphAlgorithm != CallgraphAlgorithm.OnDemand) {
+		// We explicitly select the packs we want to run for performance
+        // reasons. Do not re-run the callgraph algorithm if the host
+        // application already provides us with a CG.
+		if (callgraphAlgorithm != CallgraphAlgorithm.OnDemand
+				&& !Scene.v().hasCallGraph()) {
 	        PackManager.v().getPack("wjpp").apply();
 	        PackManager.v().getPack("cg").apply();
 		}
