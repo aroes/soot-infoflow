@@ -350,9 +350,6 @@ public class AccessPath implements Cloneable {
 			this.fieldTypes = null;
 		}
 		
-		if (this.fields != null && Arrays.toString(this.fields).contains("<java.util.LinkedList$Node: java.lang.Object item>, <java.util.AbstractList: int modCount>"))
-			System.out.println("x");
-		
 		// Type checks
 		assert this.value == null || !(!(this.baseType instanceof ArrayType)
 				&& !(this.baseType instanceof RefType && ((RefType) this.baseType).getSootClass().getName().equals("java.lang.Object")) 
