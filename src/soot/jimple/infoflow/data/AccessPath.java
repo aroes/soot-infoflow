@@ -17,6 +17,7 @@ import java.util.Set;
 import soot.ArrayType;
 import soot.Local;
 import soot.RefType;
+import soot.Scene;
 import soot.SootField;
 import soot.Type;
 import soot.Value;
@@ -231,6 +232,58 @@ public class AccessPath implements Cloneable {
 				|| this.value.getType() instanceof ArrayType
 				|| fields == null || fields.length == 0;
 		
+		// Make sure that the actual types are always as precise as the declared ones
+		if (fields != null)
+			for (int i = 0; i < fields.length; i++)
+				if (fields[i].getType() != fieldTypes[i]
+						&& Scene.v().getFastHierarchy().canStoreType(fields[i].getType(), fieldTypes[i]))
+					fieldTypes[i] = fields[i].getType();
+		
+		// We can always merge a.inner.this$0.c to a.c. We do this first so that
+		// we don't create recursive bases for stuff we don't need anyway.
+		if (fields != null) {
+			for (int i = 0; i < fields.length; i++) {
+				// Is this a reference to an outer class?
+				if (fields[i].getName().startsWith("this$")) {
+					// Get the name of the outer class
+					int outerClassIdx = Integer.parseInt(fields[i].getName().substring(5));
+					String outerClassName = ((RefType) fields[i].getType()).getClassName();
+					for (int j = 0; j < outerClassIdx; j++)
+						outerClassName = outerClassName.substring(0, outerClassName.indexOf("$"));
+					
+					// Check the base object
+					int startIdx = -1;
+					if (this.value != null && ((RefType) this.value.getType())
+							.getClassName().equals(outerClassName)) {
+						startIdx = 0;
+					}
+					else {
+						// Scan forward to find the same reference
+						for (int j = 0; j < i; j++)
+							if (((RefType) fields[j].getType()).getClassName().equals(outerClassName)) {
+								startIdx = j;
+								break;
+							}
+					}
+					
+					if (startIdx >= 0) {
+						SootField[] newFields = new SootField[fields.length - (i - startIdx) - 1];
+						Type[] newFieldTypes = new Type[fieldTypes.length - (i - startIdx) - 1];
+						
+						System.arraycopy(fields, 0, newFields, 0, startIdx);
+						System.arraycopy(fieldTypes, 0, newFieldTypes, 0, startIdx);
+						
+						System.arraycopy(fields, i + 1, newFields, startIdx, fields.length - i - 1);
+						System.arraycopy(fieldTypes, i + 1, newFieldTypes, startIdx, fieldTypes.length - i - 1);
+						
+						fields = newFields;
+						fieldTypes = newFieldTypes;
+						break;
+					}
+				}
+			}
+		}
+		
 		// Check for recursive data structures. If a last field maps back to something we
 		// already know, we build a repeatable component from it
 		boolean recursiveCutOff = false;
@@ -275,50 +328,7 @@ public class AccessPath implements Cloneable {
 				ei++;
 			}
 		}
-		else if (fields != null) {
-			// We can always merge a.inner.this$0.c to a.c
-			for (int i = 0; i < fields.length; i++) {
-				// Is this a reference to an outer class?
-				if (fields[i].getName().startsWith("this$")) {
-					// Get the name of the outer class
-					int outerClassIdx = Integer.parseInt(fields[i].getName().substring(5));
-					String outerClassName = ((RefType) fields[i].getType()).getClassName();
-					for (int j = 0; j < outerClassIdx; j++)
-						outerClassName = outerClassName.substring(0, outerClassName.indexOf("$"));
-					
-					// Check the base object
-					int startIdx = -1;
-					if (this.value != null && ((RefType) this.value.getType())
-							.getClassName().equals(outerClassName)) {
-						startIdx = 0;
-					}
-					else {
-						// Scan forward to find the same reference
-						for (int j = 0; j < i; j++)
-							if (((RefType) fields[j].getType()).getClassName().equals(outerClassName)) {
-								startIdx = j;
-								break;
-							}
-					}
-					
-					if (startIdx >= 0) {
-						SootField[] newFields = new SootField[fields.length - (i - startIdx) - 1];
-						Type[] newFieldTypes = new Type[fieldTypes.length - (i - startIdx) - 1];
-						
-						System.arraycopy(fields, 0, newFields, 0, startIdx);
-						System.arraycopy(fieldTypes, 0, newFieldTypes, 0, startIdx);
-						
-						System.arraycopy(fields, i + 1, newFields, startIdx, fields.length - i - 1);
-						System.arraycopy(fieldTypes, i + 1, newFieldTypes, startIdx, fieldTypes.length - i - 1);
-						
-						fields = newFields;
-						fieldTypes = newFieldTypes;
-						break;
-					}
-				}
-			}
-		}
-				
+		
 		// Cut the fields at the maximum access path length. If this happens,
 		// we must always add a star
 		if (fields != null) {
