@@ -189,21 +189,21 @@ public class AccessPath implements Cloneable {
 				System.arraycopy(appendingFields, 0, fields, 1, appendingFields.length);
 			
 			fieldTypes = new Type[(appendingFieldTypes == null ? 0 : appendingFieldTypes.length) + 1];
-			fieldTypes[0] = valType != null ? valType : fields[0].getType();
+			fieldTypes[0] = checkType(fields[0].getType(), valType);
 			if (appendingFieldTypes != null)
 				System.arraycopy(appendingFieldTypes, 0, fieldTypes, 1, appendingFieldTypes.length);
 		}
 		else if (val instanceof ArrayRef) {
 			ArrayRef ref = (ArrayRef) val;
 			this.value = (Local) ref.getBase();
-			this.baseType = valType == null ? value.getType() : valType;
+			this.baseType = checkType(value.getType(), valType);
 			
 			fields = appendingFields;
 			fieldTypes = appendingFieldTypes;
 		}
 		else {
 			this.value = (Local) val;
-			this.baseType = valType == null ? (this.value == null ? null : value.getType()) : valType;
+			this.baseType = this.value == null ? null : checkType(value.getType(), valType);
 			
 			fields = appendingFields;
 			fieldTypes = appendingFieldTypes;
@@ -235,9 +235,7 @@ public class AccessPath implements Cloneable {
 		// Make sure that the actual types are always as precise as the declared ones
 		if (fields != null)
 			for (int i = 0; i < fields.length; i++)
-				if (fields[i].getType() != fieldTypes[i]
-						&& Scene.v().getFastHierarchy().canStoreType(fields[i].getType(), fieldTypes[i]))
-					fieldTypes[i] = fields[i].getType();
+				fieldTypes[i] = checkType(fields[i].getType(), fieldTypes[i]);
 		
 		// We can always merge a.inner.this$0.c to a.c. We do this first so that
 		// we don't create recursive bases for stuff we don't need anyway.
@@ -375,6 +373,21 @@ public class AccessPath implements Cloneable {
 		assert !isEmpty() || this.baseType == null;
 	}
 	
+	private Type checkType(Type declaredType, Type actualType) {
+		// If we only have the declared type, we take that one
+		if (actualType == null)
+			return declaredType;
+		
+		// If the declared type is more precise than the actual one, we take the
+		// declared type
+		if (declaredType != actualType
+				&& Scene.v().getFastHierarchy().canStoreType(declaredType, actualType))
+			return declaredType;
+		
+		// The actual type is more precise than the declared one, so we take it
+		return actualType;
+	}
+
 	public AccessPath(SootField staticfield, boolean taintSubFields){
 		this(null, new SootField[] { staticfield }, null, new Type[] { staticfield.getType() }, taintSubFields);
 	}
