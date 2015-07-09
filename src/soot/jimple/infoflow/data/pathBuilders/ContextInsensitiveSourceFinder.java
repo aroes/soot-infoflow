@@ -28,7 +28,7 @@ public class ContextInsensitiveSourceFinder extends AbstractAbstractionPathBuild
     private final InfoflowResults results = new InfoflowResults();
 	private final CountingThreadPoolExecutor executor;
 	
-	private static int lastTaskId = 0;
+	private int lastTaskId = 0;
 	private int numTasks = 0;
 	
 	/**
