@@ -41,8 +41,10 @@ import soot.jimple.infoflow.aliasing.PtsBasedAliasStrategy;
 import soot.jimple.infoflow.cfg.BiDirICFGFactory;
 import soot.jimple.infoflow.cfg.LibraryClassPatcher;
 import soot.jimple.infoflow.config.IInfoflowConfig;
+import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.data.FlowDroidMemoryManager;
 import soot.jimple.infoflow.data.pathBuilders.DefaultPathBuilderFactory;
 import soot.jimple.infoflow.data.pathBuilders.IAbstractionPathBuilder;
 import soot.jimple.infoflow.data.pathBuilders.IPathBuilderFactory;
@@ -57,6 +59,7 @@ import soot.jimple.infoflow.problems.InfoflowProblem;
 import soot.jimple.infoflow.results.InfoflowResults;
 import soot.jimple.infoflow.results.ResultSinkInfo;
 import soot.jimple.infoflow.results.ResultSourceInfo;
+import soot.jimple.infoflow.solver.IMemoryManager;
 import soot.jimple.infoflow.solver.cfg.BackwardsInfoflowCFG;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 import soot.jimple.infoflow.solver.cfg.InfoflowCFG;
@@ -417,6 +420,9 @@ public class Infoflow extends AbstractInfoflow {
         int numThreads = Runtime.getRuntime().availableProcessors();
 		CountingThreadPoolExecutor executor = createExecutor(numThreads);
 		
+		// Initialize the memory manager
+		IMemoryManager<Abstraction> memoryManager = new FlowDroidMemoryManager();
+		
 		BackwardsInfoflowProblem backProblem;
 		InfoflowSolver backSolver;
 		final IAliasingStrategy aliasingStrategy;
@@ -427,6 +433,7 @@ public class Infoflow extends AbstractInfoflow {
 				backProblem.setFlowSensitiveAliasing(flowSensitiveAliasing);
 				
 				backSolver = new InfoflowSolver(backProblem, executor);
+				backSolver.setMemoryManager(memoryManager);
 				backSolver.setJumpPredecessors(!pathBuilderFactory.supportsPathReconstruction());
 //				backSolver.setEnableMergePointChecking(true);
 				
@@ -451,6 +458,7 @@ public class Infoflow extends AbstractInfoflow {
 		// Set the options
 		InfoflowSolver forwardSolver = new InfoflowSolver(forwardProblem, executor);
 		aliasingStrategy.setForwardSolver(forwardSolver);
+		forwardSolver.setMemoryManager(memoryManager);
 		forwardSolver.setJumpPredecessors(!pathBuilderFactory.supportsPathReconstruction());
 //		forwardSolver.setEnableMergePointChecking(true);
 		
@@ -625,6 +633,7 @@ public class Infoflow extends AbstractInfoflow {
 			PackManager.v().writeOutput();
 		
 		maxMemoryConsumption = Math.max(maxMemoryConsumption, getUsedMemory());
+		System.out.println("Maximum memory consumption: " + maxMemoryConsumption / 1E6 + " MB");
 	}
 	
 	/**

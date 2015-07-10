@@ -44,7 +44,7 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	/**
 	 * the access path contains the currently tainted variable or field
 	 */
-	private final AccessPath accessPath;
+	private AccessPath accessPath;
 	
 	private Abstraction predecessor = null;
 	private Set<Abstraction> neighbors = null;
@@ -594,6 +594,18 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 		abs.sourceContext = sourceContext;
 		abs.currentStmt = this.currentStmt;
 		return abs;
+	}
+	
+	/**
+	 * For internal use by memory manager only. Setting a new access path will
+	 * not update any dependent data such as cached hashes. Handle with care!
+	 */
+	void setAccessPath(AccessPath accessPath) {
+		this.accessPath = accessPath;
+	}
+	
+	void setCurrentStmt(Stmt currentStmt) {
+		this.currentStmt = currentStmt;
 	}
 		
 }
