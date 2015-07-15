@@ -103,7 +103,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					Abstraction d1,
 					Abstraction source) {
 				assert !source.getAccessPath().isEmpty();
-								
+				
 				// A backward analysis looks for aliases of existing taints and thus
 				// cannot create new taints out of thin air
 				if (source == getZeroValue())
@@ -148,7 +148,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					// be performed on primitive objects.
 					if (rightValue instanceof BinopExpr)
 						return res;
-									
+					
 					// If we have a = x with the taint "x" being inactive,
 					// we must not taint the left side. We can only taint
 					// the left side if the tainted value is some "x.y".

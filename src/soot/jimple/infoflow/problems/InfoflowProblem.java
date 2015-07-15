@@ -802,7 +802,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								if (source.getAccessPath().isEmpty() && source.getTopPostdominator() == null)
 									return Collections.emptySet();
 							}
-
+							
 							if (aliasing.mayAlias(throwStmt.getOp(), source.getAccessPath().getPlainValue()))
 								return Collections.singleton(source.deriveNewAbstractionOnThrow(throwStmt));
 
@@ -1161,7 +1161,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						
 						// If we throw an exception with a tainted operand, we need to
 						// handle this specially
-						if (throwStmt != null)
+						if (throwStmt != null && enableExceptions)
 							if (aliasing.mayAlias(throwStmt.getOp(), source.getAccessPath().getPlainValue()))
 								return Collections.singleton(source.deriveNewAbstractionOnThrow(throwStmt));
 						
