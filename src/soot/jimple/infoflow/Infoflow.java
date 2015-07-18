@@ -498,6 +498,10 @@ public class Infoflow extends AbstractInfoflow {
 			logger.info("Implicit flow tracking is enabled");
 		else
 			logger.info("Implicit flow tracking is NOT enabled");
+		if (enableExceptions)
+			logger.info("Exceptional flow tracking is enabled");
+		else
+			logger.info("Exceptional flow tracking is NOT enabled");
 		logger.info("Running with a maximum access path length of {}", getAccessPathLength());
 		if (pathAgnosticResults)
 			logger.info("Using path-agnostic result collection");
