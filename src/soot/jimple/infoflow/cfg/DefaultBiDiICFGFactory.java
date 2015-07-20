@@ -12,6 +12,7 @@ import soot.Scene;
 import soot.jimple.infoflow.IInfoflow.CallgraphAlgorithm;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 import soot.jimple.infoflow.solver.cfg.InfoflowCFG;
+import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.OnTheFlyJimpleBasedICFG;
 
 /**
@@ -25,7 +26,8 @@ public class DefaultBiDiICFGFactory implements BiDirICFGFactory {
     private final Logger logger = LoggerFactory.getLogger(getClass());
     
     @Override
-    public IInfoflowCFG buildBiDirICFG(CallgraphAlgorithm callgraphAlgorithm){
+    public IInfoflowCFG buildBiDirICFG(CallgraphAlgorithm callgraphAlgorithm,
+    		boolean enableExceptions) {
     	if (callgraphAlgorithm == CallgraphAlgorithm.OnDemand) {
     		// Load all classes on the classpath to signatures
     		long beforeClassLoading = System.nanoTime();
@@ -43,6 +45,7 @@ public class DefaultBiDiICFGFactory implements BiDirICFGFactory {
 
     		return cfg;
     	}
-        return new InfoflowCFG();
+    	
+        return new InfoflowCFG(new JimpleBasedInterproceduralCFG(enableExceptions));
     }
 }
