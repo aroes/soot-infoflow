@@ -415,7 +415,7 @@ public class Infoflow extends AbstractInfoflow {
 		
         if (callgraphAlgorithm != CallgraphAlgorithm.OnDemand)
         	logger.info("Callgraph has {} edges", Scene.v().getCallGraph().size());
-        iCfg = icfgFactory.buildBiDirICFG(callgraphAlgorithm);
+        iCfg = icfgFactory.buildBiDirICFG(callgraphAlgorithm, enableExceptions);
 		        
         int numThreads = Runtime.getRuntime().availableProcessors();
 		CountingThreadPoolExecutor executor = createExecutor(numThreads);

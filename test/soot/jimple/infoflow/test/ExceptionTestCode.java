@@ -86,5 +86,17 @@ public class ExceptionTestCode {
 			cm.publish(ex.getMessage());
 		}
 	}
-
+	
+	public void disabledExceptionTest() {
+		String imei = TelephonyManager.getDeviceId();
+		try {
+			throw new RuntimeException();
+		}
+		catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(imei);		
+	}
+	
 }
