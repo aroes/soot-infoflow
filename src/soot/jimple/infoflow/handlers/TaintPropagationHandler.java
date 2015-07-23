@@ -2,10 +2,9 @@ package soot.jimple.infoflow.handlers;
 
 import java.util.Set;
 
-import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.infoflow.data.Abstraction;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
+import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 
 /**
  * Handler interface for callbacks during taint propagation
@@ -37,7 +36,7 @@ public interface TaintPropagationHandler {
 	public void notifyFlowIn
 			(Unit stmt,
 			Abstraction taint,
-			BiDiInterproceduralCFG<Unit, SootMethod> cfg,
+			IInfoflowCFG cfg,
 			FlowFunctionType type);
 
 	/**
@@ -59,7 +58,7 @@ public interface TaintPropagationHandler {
 			Abstraction d1,
 			Abstraction incoming,
 			Set<Abstraction> outgoing,
-			BiDiInterproceduralCFG<Unit, SootMethod> cfg,
+			IInfoflowCFG cfg,
 			FlowFunctionType type);
 
 	
