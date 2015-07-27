@@ -470,7 +470,8 @@ public class Infoflow extends AbstractInfoflow {
 		for (TaintPropagationHandler tp : taintPropagationHandlers)
 			forwardProblem.addTaintPropagationHandler(tp);
 		forwardProblem.setTaintWrapper(taintWrapper);
-		forwardProblem.setNativeCallHandler(nativeCallHandler);
+		if (nativeCallHandler != null)
+			forwardProblem.setNativeCallHandler(nativeCallHandler);
 		forwardProblem.setStopAfterFirstFlow(stopAfterFirstFlow);
 		forwardProblem.setEnableTypeChecking(enableTypeChecking);
 		forwardProblem.setIgnoreFlowsInSystemPackages(ignoreFlowsInSystemPackages);
@@ -483,7 +484,8 @@ public class Infoflow extends AbstractInfoflow {
 			for (TaintPropagationHandler tp : taintPropagationHandlers)
 				backProblem.addTaintPropagationHandler(tp);
 			backProblem.setTaintWrapper(taintWrapper);
-			backProblem.setNativeCallHandler(nativeCallHandler);
+			if (nativeCallHandler != null)
+				backProblem.setNativeCallHandler(nativeCallHandler);
 			backProblem.setActivationUnitsToCallSites(forwardProblem);
 			backProblem.setEnableTypeChecking(enableTypeChecking);
 			backProblem.setIgnoreFlowsInSystemPackages(ignoreFlowsInSystemPackages);
