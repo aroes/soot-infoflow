@@ -58,7 +58,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	protected final Map<Unit, Set<Abstraction>> initialSeeds = new HashMap<Unit, Set<Abstraction>>();
 	protected ITaintPropagationWrapper taintWrapper;
 	
-	protected final NativeCallHandler ncHandler = new DefaultNativeCallHandler();
+	protected NativeCallHandler ncHandler = new DefaultNativeCallHandler();
 	protected final ISourceSinkManager sourceSinkManager;
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
@@ -148,8 +148,23 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 		return true;
 	}
 	
+	/**
+	 * Sets the taint wrapper that shall be used for applying external library
+	 * models
+	 * @param wrapper The taint wrapper that shall be used for applying external
+	 * library models
+	 */
 	public void setTaintWrapper(ITaintPropagationWrapper wrapper){
-		taintWrapper = wrapper;
+		this.taintWrapper = wrapper;
+	}
+	
+	/**
+	 * Sets the handler class to be used for modeling the effects of native
+	 * methods on the taint state
+	 * @param handler The native call handler to use
+	 */
+	public void setNativeCallHandler(NativeCallHandler handler) {
+		this.ncHandler = handler;
 	}
 		
 	/**

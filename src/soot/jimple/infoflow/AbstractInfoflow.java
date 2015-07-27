@@ -9,6 +9,7 @@ import soot.jimple.infoflow.cfg.DefaultBiDiICFGFactory;
 import soot.jimple.infoflow.entryPointCreators.DefaultEntryPointCreator;
 import soot.jimple.infoflow.entryPointCreators.IEntryPointCreator;
 import soot.jimple.infoflow.handlers.PreAnalysisHandler;
+import soot.jimple.infoflow.nativ.NativeCallHandler;
 import soot.jimple.infoflow.source.DefaultSourceSinkManager;
 import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
 
@@ -20,6 +21,7 @@ import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
 public abstract class AbstractInfoflow implements IInfoflow {
 	
 	protected ITaintPropagationWrapper taintWrapper;
+	protected NativeCallHandler nativeCallHandler;
 
 	protected boolean stopAfterFirstFlow = false;
 	protected boolean enableImplicitFlows = false;
@@ -64,6 +66,11 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	public void setTaintWrapper(ITaintPropagationWrapper wrapper) {
 		taintWrapper = wrapper;
 	}
+    
+    @Override
+    public void setNativeCallHandler(NativeCallHandler handler) {
+    	this.nativeCallHandler = handler;
+    }
     
     @Override
     public ITaintPropagationWrapper getTaintWrapper() {
