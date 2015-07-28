@@ -254,14 +254,15 @@ public class AccessPath implements Cloneable {
 					// Check the base object
 					int startIdx = -1;
 					if (this.value != null
-							&& this.value instanceof RefType
+							&& this.value.getType() instanceof RefType
 							&& ((RefType) this.value.getType()).getClassName().equals(outerClassName)) {
 						startIdx = 0;
 					}
 					else {
 						// Scan forward to find the same reference
 						for (int j = 0; j < i; j++)
-							if (((RefType) fields[j].getType()).getClassName().equals(outerClassName)) {
+							if (fields[j].getType() instanceof RefType
+									&& ((RefType) fields[j].getType()).getClassName().equals(outerClassName)) {
 								startIdx = j;
 								break;
 							}
