@@ -31,4 +31,13 @@ public abstract class NativeCallHandler {
 	 */
 	public abstract Set<Abstraction> getTaintedValues(Stmt call, Abstraction source, Value[] params);
 
+	/**
+	 * Checks whether this handler is able to handle the given call, i.e., has
+	 * an explicit model for it
+	 * @param call The call site to check
+	 * @return True if this native call handler has an explicit model for the
+	 * given call site, otherwise false
+	 */
+	public abstract boolean supportsCall(Stmt call);
+	
 }

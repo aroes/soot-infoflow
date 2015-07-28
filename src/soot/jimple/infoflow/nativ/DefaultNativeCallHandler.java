@@ -19,6 +19,9 @@ import soot.jimple.infoflow.data.Abstraction;
 
 public class DefaultNativeCallHandler extends NativeCallHandler {
 	
+	private static final String SIG_ARRAYCOPY =
+			"<java.lang.System: void arraycopy(java.lang.Object,int,java.lang.Object,int,int)>";
+	
 	@Override
 	public Set<Abstraction> getTaintedValues(Stmt call, Abstraction source, Value[] params){
 		//check some evaluated methods:
@@ -27,7 +30,7 @@ public class DefaultNativeCallHandler extends NativeCallHandler {
 		//arraycopy(Object src, int srcPos, Object dest, int destPos, int length)
         //Copies an array from the specified source array, beginning at the specified position,
 		//to the specified position of the destination array.
-		if(call.getInvokeExpr().getMethod().toString().contains("arraycopy"))
+		if(call.getInvokeExpr().getMethod().getSignature().equals(SIG_ARRAYCOPY))
 			if(params[0].equals(source.getAccessPath().getPlainValue())) {
 				Abstraction abs = source.deriveNewAbstraction(params[2], false, call,
 						source.getAccessPath().getBaseType());
@@ -36,6 +39,12 @@ public class DefaultNativeCallHandler extends NativeCallHandler {
 			}
 		
 		return Collections.emptySet();
+	}
+	
+	@Override
+	public boolean supportsCall(Stmt call) {
+		return call.containsInvokeExpr()
+				&& call.getInvokeExpr().getMethod().getSignature().equals(SIG_ARRAYCOPY);
 	}
 	
 }
