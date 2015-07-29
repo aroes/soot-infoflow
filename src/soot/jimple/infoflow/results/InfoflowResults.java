@@ -13,6 +13,7 @@ package soot.jimple.infoflow.results;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -244,8 +245,8 @@ public class InfoflowResults {
 			logger.info("Found a flow to sink {}, from the following sources:", sink);
 			for (ResultSourceInfo source : this.results.get(sink)) {
 				logger.info("\t- {}", source.getSource());
-				if (source.getPath() != null && !source.getPath().isEmpty())
-					logger.info("\t\ton Path {}", source.getPath());
+				if (source.getPath() != null)
+					logger.info("\t\ton Path {}", Arrays.toString(source.getPath()));
 			}
 		}
 	}
@@ -260,8 +261,8 @@ public class InfoflowResults {
 			wr.write("Found a flow to sink " + sink + ", from the following sources:\n");
 			for (ResultSourceInfo source : this.results.get(sink)) {
 				wr.write("\t- " + source.getSource() + "\n");
-				if (source.getPath() != null && !source.getPath().isEmpty())
-					wr.write("\t\ton Path " + source.getPath() + "\n");
+				if (source.getPath() != null)
+					wr.write("\t\ton Path " + Arrays.toString(source.getPath()) + "\n");
 			}
 		}
 	}

@@ -624,7 +624,7 @@ public class Infoflow extends AbstractInfoflow {
                     entry.getKey(), iCfg.getMethodOf(entry.getKey().getSink()).getSignature() );
 			for (ResultSourceInfo source : entry.getValue()) {
 				logger.info("- {} in method {}",source, iCfg.getMethodOf(source.getSource()).getSignature());
-				if (source.getPath() != null && !source.getPath().isEmpty()) {
+				if (source.getPath() != null) {
 					logger.info("\ton Path: ");
 					for (Unit p : source.getPath()) {
 						logger.info("\t -> " + iCfg.getMethodOf(p));

@@ -16,8 +16,8 @@ public class ResultSourceInfo {
 	private final AccessPath accessPath;
 	private final Stmt source;
 	private final Object userData;
-	private final List<Stmt> path;
-	private final List<AccessPath> pathAPs;
+	private final Stmt[] path;
+	private final AccessPath[] pathAPs;
 	
 	public ResultSourceInfo(AccessPath source, Stmt context) {
 		assert source != null;
@@ -36,8 +36,10 @@ public class ResultSourceInfo {
 		this.accessPath = source;
 		this.source = context;
 		this.userData = userData;
-		this.path = path;
-		this.pathAPs = pathAPs;
+		this.path = path == null || path.isEmpty() ? null :
+			path.toArray(new Stmt[path.size()]);
+		this.pathAPs = pathAPs == null || pathAPs.isEmpty() ? null :
+			pathAPs.toArray(new AccessPath[pathAPs.size()]);
 	}
 
 	public AccessPath getAccessPath() {
@@ -52,11 +54,11 @@ public class ResultSourceInfo {
 		return this.userData;
 	}
 	
-	public List<Stmt> getPath() {
+	public Stmt[] getPath() {
 		return this.path;
 	}
 	
-	public List<AccessPath> getPathAccessPaths() {
+	public AccessPath[] getPathAccessPaths() {
 		return this.pathAPs;
 	}
 
