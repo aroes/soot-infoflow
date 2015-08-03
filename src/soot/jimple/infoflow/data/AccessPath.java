@@ -246,10 +246,16 @@ public class AccessPath implements Cloneable {
 				// Is this a reference to an outer class?
 				if (fields[i].getName().startsWith("this$")) {
 					// Get the name of the outer class
-					int outerClassIdx = Integer.parseInt(fields[i].getName().substring(5));
 					String outerClassName = ((RefType) fields[i].getType()).getClassName();
-					for (int j = 0; j < outerClassIdx; j++)
-						outerClassName = outerClassName.substring(0, outerClassName.indexOf("$"));
+					{
+						int outerClassIdx = Integer.parseInt(fields[i].getName().substring(5));
+						String newOuterClassName = "";
+						for (int j = 0; j < outerClassIdx; j++) {
+							newOuterClassName = outerClassName.substring(0, outerClassName.indexOf("$"));
+							outerClassName = outerClassName.substring(outerClassName.indexOf("$") + 1);
+						}
+						outerClassName = newOuterClassName;
+					}
 					
 					// Check the base object
 					int startIdx = -1;
