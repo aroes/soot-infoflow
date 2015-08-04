@@ -760,7 +760,7 @@ public class HeapTests extends JUnitTests {
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		Infoflow.setUseRecursiveAccessPaths(oldUseRecAP);
 		
-		checkInfoflow(infoflow, 1);
+		negativeCheckInfoflow(infoflow);
 	}
 
 	@Test(timeout = 300000)
