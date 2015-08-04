@@ -561,6 +561,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 			JNopStmt endClassStmt,
 			Local classLocal) {
 		final boolean isGCMBaseIntentService = isGCMBaseIntentService(currentClass);
+		final boolean isGCMListenerService = !isGCMBaseIntentService && isGCMListenerService(currentClass);
 		
 		// 1. onCreate:
 		searchAndBuildMethod(AndroidEntryPointConstants.SERVICE_ONCREATE, currentClass, entryPoints, classLocal);
@@ -593,12 +594,22 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 				if (entryPoints.contains(currentMethod.toString()))
 					hasAdditionalMethods |= createPlainMethodCall(classLocal, currentMethod);
 		}
-		if (isGCMBaseIntentService)
+		if (isGCMBaseIntentService) {
 			for (String sig : AndroidEntryPointConstants.getGCMIntentServiceMethods()) {
 				SootMethod sm = findMethod(currentClass, sig);
-				if (sm != null && !sm.getName().equals(AndroidEntryPointConstants.GCMBASEINTENTSERVICECLASS))
+				if (sm != null && !sm.getDeclaringClass().getName().equals(
+						AndroidEntryPointConstants.GCMBASEINTENTSERVICECLASS))
 					hasAdditionalMethods |= createPlainMethodCall(classLocal, sm);
 			}
+		}
+		else if (isGCMListenerService) {
+			for (String sig : AndroidEntryPointConstants.getGCMListenerServiceMethods()) {
+				SootMethod sm = findMethod(currentClass, sig);
+				if (sm != null && !sm.getDeclaringClass().getName().equals(
+						AndroidEntryPointConstants.GCMLISTENERSERVICECLASS))
+					hasAdditionalMethods |= createPlainMethodCall(classLocal, sm);
+			}
+		}
 		addCallbackMethods(currentClass);
 		body.getUnits().add(endWhileStmt);
 		if (hasAdditionalMethods)
@@ -683,7 +694,23 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		}
 		return false;
 	}
-
+	
+	/**
+	 * Checks whether the given service is a GCMListenerService
+	 * @param currentClass The class to check
+	 * @return True if the given service is a GCMListenerService, otherwise
+	 * false
+	 */
+	private boolean isGCMListenerService(SootClass currentClass) {
+		while (currentClass.hasSuperclass()) {
+			if (currentClass.getSuperclass().getName().equals(
+					AndroidEntryPointConstants.GCMLISTENERSERVICECLASS))
+				return true;
+			currentClass = currentClass.getSuperclass();
+		}
+		return false;
+	}
+	
 	/**
 	 * Generates the lifecycle for an Android activity
 	 * @param entryPoints The list of methods to consider in this class

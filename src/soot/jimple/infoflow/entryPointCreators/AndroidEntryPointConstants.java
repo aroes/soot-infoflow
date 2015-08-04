@@ -23,6 +23,7 @@ public class AndroidEntryPointConstants {
 	public static final String ACTIVITYCLASS = "android.app.Activity";
 	public static final String SERVICECLASS = "android.app.Service";
 	public static final String GCMBASEINTENTSERVICECLASS = "com.google.android.gcm.GCMBaseIntentService";
+	public static final String GCMLISTENERSERVICECLASS = "com.google.android.gms.gcm.GcmListenerService";
 	public static final String BROADCASTRECEIVERCLASS = "android.content.BroadcastReceiver";
 	public static final String CONTENTPROVIDERCLASS = "android.content.ContentProvider";
 	public static final String APPLICATIONCLASS = "android.app.Application";
@@ -54,6 +55,11 @@ public class AndroidEntryPointConstants {
 	public static final String GCMINTENTSERVICE_ONRECOVERABLEERROR = "void onRecoverableError(android.content.Context,java.lang.String)";
 	public static final String GCMINTENTSERVICE_ONREGISTERED = "void onRegistered(android.content.Context,java.lang.String)";
 	public static final String GCMINTENTSERVICE_ONUNREGISTERED = "void onUnregistered(android.content.Context,java.lang.String)";
+	
+	public static final String GCMLISTENERSERVICE_ONDELETEDMESSAGES = "void onDeletedMessages()";
+	public static final String GCMLISTENERSERVICE_ONMESSAGERECEIVED = "void onMessageReceived(java.lang.String,android.os.Bundle)";
+	public static final String GCMLISTENERSERVICE_ONMESSAGESENT = "void onMessageSent(java.lang.String)";
+	public static final String GCMLISTENERSERVICE_ONSENDERROR = "void onSendError(java.lang.String,java.lang.String)";
 	
 	public static final String BROADCAST_ONRECEIVE = "void onReceive(android.content.Context,android.content.Intent)";
 	
@@ -100,6 +106,11 @@ public class AndroidEntryPointConstants {
 		GCMINTENTSERVICE_ONREGISTERED,
 		GCMINTENTSERVICE_ONUNREGISTERED};
 	
+	private static final String[] gcmListenerServiceMethods = {GCMLISTENERSERVICE_ONDELETEDMESSAGES,
+		GCMLISTENERSERVICE_ONMESSAGERECEIVED,
+		GCMLISTENERSERVICE_ONMESSAGESENT,
+		GCMLISTENERSERVICE_ONSENDERROR};
+	
 	private static final String[] broadcastMethods = {BROADCAST_ONRECEIVE};
 	
 	private static final String[] contentproviderMethods = {CONTENTPROVIDER_ONCREATE};
@@ -126,6 +137,10 @@ public class AndroidEntryPointConstants {
 
 	public static List<String> getGCMIntentServiceMethods(){
 		return Arrays.asList(gcmIntentServiceMethods);
+	}
+	
+	public static List<String> getGCMListenerServiceMethods(){
+		return Arrays.asList(gcmListenerServiceMethods);
 	}
 	
 	public static List<String> getBroadcastLifecycleMethods(){
