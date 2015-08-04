@@ -392,6 +392,14 @@ public class Infoflow extends AbstractInfoflow {
         LibraryClassPatcher patcher = new LibraryClassPatcher();
         patcher.patchLibraries();
 		
+        // To cope with broken APK files, we convert all classes that are still
+        // dangling after resolution into phantoms
+        for (SootClass sc : Scene.v().getClasses())
+        	if (sc.resolvingLevel() == SootClass.DANGLING) {
+        		sc.setResolvingLevel(SootClass.BODIES);
+        		sc.setPhantomClass();
+        	}
+        
 		// We explicitly select the packs we want to run for performance
         // reasons. Do not re-run the callgraph algorithm if the host
         // application already provides us with a CG.
