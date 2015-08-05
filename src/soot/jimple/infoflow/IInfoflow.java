@@ -16,7 +16,7 @@ import java.util.List;
 import soot.jimple.infoflow.entryPointCreators.IEntryPointCreator;
 import soot.jimple.infoflow.handlers.PreAnalysisHandler;
 import soot.jimple.infoflow.ipc.IIPCManager;
-import soot.jimple.infoflow.nativ.NativeCallHandler;
+import soot.jimple.infoflow.nativ.INativeCallHandler;
 import soot.jimple.infoflow.results.InfoflowResults;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
@@ -88,7 +88,7 @@ public interface IInfoflow {
 	 * methods on the taint state
 	 * @param handler The native call handler to use
 	 */
-	public void setNativeCallHandler(NativeCallHandler handler);
+	public void setNativeCallHandler(INativeCallHandler handler);
 	
 	/**
 	 * Gets the taint wrapper for deciding on taint propagation through black-box

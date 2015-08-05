@@ -17,7 +17,7 @@ import soot.Value;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
 
-public class DefaultNativeCallHandler extends NativeCallHandler {
+public class DefaultNativeCallHandler extends AbstractNativeCallHandler {
 	
 	private static final String SIG_ARRAYCOPY =
 			"<java.lang.System: void arraycopy(java.lang.Object,int,java.lang.Object,int,int)>";

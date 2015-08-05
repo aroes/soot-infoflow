@@ -557,8 +557,11 @@ public class Infoflow extends AbstractInfoflow {
 				sinkCount);
 		
 		// Initialize the taint wrapper if we have one
+		InfoflowManager manager = new InfoflowManager(forwardSolver, iCfg);
 		if (taintWrapper != null)
-			taintWrapper.initialize(new InfoflowManager(forwardSolver, iCfg));
+			taintWrapper.initialize(manager);
+		if (nativeCallHandler != null)
+			nativeCallHandler.initialize(manager);
 		
 		forwardSolver.solve();
 		maxMemoryConsumption = Math.max(maxMemoryConsumption, getUsedMemory());

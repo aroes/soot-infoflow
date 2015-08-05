@@ -37,8 +37,7 @@ import soot.jimple.infoflow.collect.MyConcurrentHashMap;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler;
-import soot.jimple.infoflow.nativ.DefaultNativeCallHandler;
-import soot.jimple.infoflow.nativ.NativeCallHandler;
+import soot.jimple.infoflow.nativ.INativeCallHandler;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 import soot.jimple.infoflow.source.ISourceSinkManager;
@@ -58,7 +57,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	protected final Map<Unit, Set<Abstraction>> initialSeeds = new HashMap<Unit, Set<Abstraction>>();
 	protected ITaintPropagationWrapper taintWrapper;
 	
-	protected NativeCallHandler ncHandler = new DefaultNativeCallHandler();
+	protected INativeCallHandler ncHandler;
 	protected final ISourceSinkManager sourceSinkManager;
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
@@ -163,7 +162,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	 * methods on the taint state
 	 * @param handler The native call handler to use
 	 */
-	public void setNativeCallHandler(NativeCallHandler handler) {
+	public void setNativeCallHandler(INativeCallHandler handler) {
 		this.ncHandler = handler;
 	}
 		
