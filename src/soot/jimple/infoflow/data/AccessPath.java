@@ -25,7 +25,7 @@ import soot.jimple.ArrayRef;
 import soot.jimple.FieldRef;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.StaticFieldRef;
-import soot.jimple.infoflow.Infoflow;
+import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.collect.MyConcurrentHashMap;
 
@@ -211,7 +211,7 @@ public class AccessPath implements Cloneable {
 		
 		// If we don't want to track fields at all, we can cut the field
 		// processing short
-		if (Infoflow.getAccessPathLength() == 0) {
+		if (InfoflowConfiguration.getAccessPathLength() == 0) {
 			fields = null;
 			fieldTypes = null;
 		}
@@ -286,7 +286,7 @@ public class AccessPath implements Cloneable {
 		// Check for recursive data structures. If a last field maps back to something we
 		// already know, we build a repeatable component from it
 		boolean recursiveCutOff = false;
-		if (Infoflow.getUseRecursiveAccessPaths() && reduceBases && fields != null) {
+		if (InfoflowConfiguration.getUseRecursiveAccessPaths() && reduceBases && fields != null) {
 			// f0...fi references an object of type T
 			// look for an extension f0...fi...fj that also references an object
 			// of type T
@@ -331,7 +331,7 @@ public class AccessPath implements Cloneable {
 		// Cut the fields at the maximum access path length. If this happens,
 		// we must always add a star
 		if (fields != null) {
-			int fieldNum = Math.min(Infoflow.getAccessPathLength(), fields.length);
+			int fieldNum = Math.min(InfoflowConfiguration.getAccessPathLength(), fields.length);
 			if (fields.length > fieldNum) {
 				this.taintSubFields = true;
 				this.cutOffApproximation = true;

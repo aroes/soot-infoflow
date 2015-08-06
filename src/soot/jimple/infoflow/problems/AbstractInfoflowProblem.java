@@ -32,6 +32,7 @@ import soot.Value;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InvokeExpr;
 import soot.jimple.StaticFieldRef;
+import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.collect.MyConcurrentHashMap;
 import soot.jimple.infoflow.data.Abstraction;
@@ -53,7 +54,8 @@ import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
  */
 public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulationProblem<Abstraction,
 			BiDiInterproceduralCFG<Unit, SootMethod>> {
-
+	
+	protected final InfoflowConfiguration config;
 	protected final Map<Unit, Set<Abstraction>> initialSeeds = new HashMap<Unit, Set<Abstraction>>();
 	protected ITaintPropagationWrapper taintWrapper;
 	
@@ -62,35 +64,25 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
-    protected boolean enableImplicitFlows = false;
-	protected boolean enableStaticFields = true;
-	protected boolean enableExceptions = true;
-	protected boolean flowSensitiveAliasing = true;
-	protected boolean enableTypeChecking = true;
-	protected boolean ignoreFlowsInSystemPackages = true;
-	
-	protected boolean inspectSources = false;
-	protected boolean inspectSinks = false;
-
 	private Abstraction zeroValue = null;
 	
 	protected IInfoflowSolver solver = null;
-	
-	protected boolean stopAfterFirstFlow = false;
 	
 	protected Set<TaintPropagationHandler> taintPropagationHandlers = null;
 
 	private MyConcurrentHashMap<Unit, Set<Unit>> activationUnitsToCallSites =
 			new MyConcurrentHashMap<Unit, Set<Unit>>();
 	
-	public AbstractInfoflowProblem(BiDiInterproceduralCFG<Unit, SootMethod> icfg,
+	public AbstractInfoflowProblem(InfoflowConfiguration config,
+			BiDiInterproceduralCFG<Unit, SootMethod> icfg,
 			ISourceSinkManager sourceSinkManager) {
 		super(icfg);
+		this.config = config;
 		this.sourceSinkManager = sourceSinkManager;
 	}
 	
 	protected boolean canCastType(Type destType, Type sourceType) {
-		if (!enableTypeChecking)
+		if (!config.getEnableTypeChecking())
 			return true;
 		
 		// If we don't have a source type, we generally allow the cast
@@ -116,7 +108,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	}
 		
 	protected boolean hasCompatibleTypesForCall(AccessPath apBase, SootClass dest) {
-		if (!enableTypeChecking)
+		if (!config.getEnableTypeChecking())
 			return true;
 
 		// Cannot invoke a method on a primitive type
@@ -165,78 +157,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	public void setNativeCallHandler(INativeCallHandler handler) {
 		this.ncHandler = handler;
 	}
-		
-	/**
-	 * Sets whether the information flow analysis shall stop after the first
-	 * flow has been found
-	 * @param stopAfterFirstFlow True if the analysis shall stop after the
-	 * first flow has been found, otherwise false.
-	 */
-	public void setStopAfterFirstFlow(boolean stopAfterFirstFlow) {
-		this.stopAfterFirstFlow = stopAfterFirstFlow;
-	}
-		
-	/**
-	 * Sets whether the solver shall consider implicit flows.
-	 * @param enableImplicitFlows True if implicit flows shall be considered,
-	 * otherwise false.
-	 */
-	public void setEnableImplicitFlows(boolean enableImplicitFlows) {
-		this.enableImplicitFlows = enableImplicitFlows;
-	}
-
-	/**
-	 * Sets whether the solver shall consider assignments to static fields.
-	 * @param enableStaticFields True if assignments to static fields shall be
-	 * tracked, otherwise false
-	 */
-	public void setEnableStaticFieldTracking(boolean enableStaticFields) {
-		this.enableStaticFields = enableStaticFields;
-	}
-
-	/**
-	 * Sets whether the solver shall track taints over exceptions, i.e. throw
-	 * new RuntimeException(secretData).
-	 * @param enableExceptions True if taints in thrown exception objects shall
-	 * be tracked.
-	 */
-	public void setEnableExceptionTracking(boolean enableExceptions) {
-		this.enableExceptions = enableExceptions;
-	}
-
-	/**
-	 * Sets whether the solver shall use flow sensitive aliasing. This makes
-	 * the analysis more precise, but also requires more time.
-	 * @param flowSensitiveAliasing True if flow sensitive aliasing shall be
-	 * used, otherwise false
-	 */
-	public void setFlowSensitiveAliasing(boolean flowSensitiveAliasing) {
-		this.flowSensitiveAliasing = flowSensitiveAliasing;
-		
-		// We need to reset the zero value since it depends on the flow
-		// sensitivity setting
-		this.zeroValue = null;
-	}
 	
-	/**
-	 * Sets whether type checking shall be done on casts and method calls
-	 * @param enableTypeChecking True if type checking shall be performed,
-	 * otherwise false
-	 */
-	public void setEnableTypeChecking(boolean enableTypeChecking) {
-		this.enableTypeChecking = enableTypeChecking;
-	}
-	
-	/**
-	 * Sets whether flows starting or ending in system packages such as Android's
-	 * support library shall be ignored.
-	 * @param ignoreFlowsInSystemPackages True if flows starting or ending in
-	 * system packages shall be ignored, otherwise false.
-	 */
-	public void setIgnoreFlowsInSystemPackages(boolean ignoreFlowsInSystemPackages) {
-		this.ignoreFlowsInSystemPackages = ignoreFlowsInSystemPackages;
-	}
-
 	/**
 	 * Gets whether the given method is an entry point, i.e. one of the initial
 	 * seeds belongs to the given method
@@ -264,26 +185,6 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 		return false;
 	}
 	
-	/**
-	 * default: inspectSources is set to true, this means sources are analyzed as well.
-	 * If inspectSources is set to false, then the analysis does not propagate values into 
-	 * the source method. 
-	 * @param inspect boolean that determines the inspectSource option
-	 */
-	public void setInspectSources(boolean inspect){
-		inspectSources = inspect;
-	}
-
-	/**
-	 * default: inspectSinks is set to true, this means sinks are analyzed as well.
-	 * If inspectSinks is set to false, then the analysis does not propagate values into 
-	 * the sink method. 
-	 * @param inspect boolean that determines the inspectSink option
-	 */
-	public void setInspectSinks(boolean inspect){
-		inspectSinks = inspect;
-	}
-		
 	/**
 	 * Checks whether the given base value matches the base of the given
 	 * taint abstraction
@@ -333,7 +234,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	}
 	
 	protected boolean isCallSiteActivatingTaint(Unit callSite, Unit activationUnit) {
-		if (!flowSensitiveAliasing)
+		if (!config.getFlowSensitiveAliasing())
 			return false;
 
 		if (activationUnit == null)
@@ -343,7 +244,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	}
 	
 	protected boolean registerActivationCallSite(Unit callSite, SootMethod callee, Abstraction activationAbs) {
-		if (!flowSensitiveAliasing)
+		if (!config.getFlowSensitiveAliasing())
 			return false;
 		Unit activationUnit = activationAbs.getActivationUnit();
 		if (activationUnit == null)
@@ -468,7 +369,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	@Override
 	public Abstraction createZeroValue() {
 		if (zeroValue == null)
-			zeroValue = Abstraction.getZeroAbstraction(flowSensitiveAliasing);
+			zeroValue = Abstraction.getZeroAbstraction(config.getFlowSensitiveAliasing());
 		return zeroValue;
 	}
 	

@@ -17,6 +17,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import soot.jimple.infoflow.Infoflow;
+import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.config.IInfoflowConfig;
 import soot.jimple.infoflow.data.pathBuilders.DefaultPathBuilderFactory;
 import soot.jimple.infoflow.data.pathBuilders.DefaultPathBuilderFactory.PathBuilder;
@@ -390,12 +391,12 @@ public class OtherTests extends JUnitTests{
     
     @Test(timeout=300000)
 	public void multiSinkTest2() {
-    	boolean oldPathAgnosticResults = Infoflow.getPathAgnosticResults();
+    	boolean oldPathAgnosticResults = InfoflowConfiguration.getPathAgnosticResults();
     	try {
 	    	Infoflow infoflow = initInfoflow();
 	    	List<String> epoints = new ArrayList<String>();
 	    	epoints.add("<soot.jimple.infoflow.test.OtherTestCode: void multiSinkTest2()>");
-	    	Infoflow.setPathAgnosticResults(false);
+	    	InfoflowConfiguration.setPathAgnosticResults(false);
 	    	infoflow.setPathBuilderFactory(new DefaultPathBuilderFactory(PathBuilder.ContextSensitive,
 	    			true));
 			infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
@@ -404,7 +405,7 @@ public class OtherTests extends JUnitTests{
 			Assert.assertEquals(2, infoflow.getResults().numConnections());
     	}
     	finally {
-    		Infoflow.setPathAgnosticResults(oldPathAgnosticResults);
+    		InfoflowConfiguration.setPathAgnosticResults(oldPathAgnosticResults);
     	}
 	}
     

@@ -53,7 +53,7 @@ public class MapTests extends JUnitTests {
     @Test(timeout=300000)
     public void concreteLinkedMapPos0Test(){
     	Infoflow infoflow = initInfoflow();
-    	infoflow.setFlowSensitiveAliasing(false);
+    	infoflow.getConfig().setFlowSensitiveAliasing(false);
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void concreteLinkedWriteReadPos0Test()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);

@@ -22,7 +22,7 @@ import soot.Type;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.Stmt;
-import soot.jimple.infoflow.Infoflow;
+import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.collect.AtomicBitSet;
 import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG.UnitContainer;
@@ -508,7 +508,7 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 		synchronized (this) {
 			if (neighbors == null)
 				neighbors = Sets.newIdentityHashSet();
-			else if (Infoflow.getMergeNeighbors()) {
+			else if (InfoflowConfiguration.getMergeNeighbors()) {
 				// Check if we already have an identical neighbor
 				for (Abstraction nb : neighbors) {
 					if (nb == originalAbstraction)

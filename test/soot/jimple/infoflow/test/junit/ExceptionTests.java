@@ -103,7 +103,7 @@ public class ExceptionTests extends JUnitTests {
 		Infoflow infoflow = initInfoflow();
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.ExceptionTestCode: void disabledExceptionTest()>");
-		infoflow.setEnableExceptionTracking(false);
+		infoflow.getConfig().setEnableExceptionTracking(false);
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		negativeCheckInfoflow(infoflow);
 	}

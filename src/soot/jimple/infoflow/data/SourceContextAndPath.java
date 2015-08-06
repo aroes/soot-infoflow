@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.List;
 
 import soot.jimple.Stmt;
-import soot.jimple.infoflow.Infoflow;
+import soot.jimple.infoflow.InfoflowConfiguration;
 
 /**
  * Extension of {@link SourceContext} that also allows a paths from the source
@@ -132,7 +132,7 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 		else if (!this.callStack.equals(scap.callStack))
 			return false;
 		
-		if (!Infoflow.getPathAgnosticResults() && !this.path.equals(scap.path))
+		if (!InfoflowConfiguration.getPathAgnosticResults() && !this.path.equals(scap.path))
 			return false;
 		
 		return super.equals(other);
@@ -144,7 +144,7 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 			return hashCode;
 		
 		synchronized(this) {
-			hashCode = (!Infoflow.getPathAgnosticResults() ? 31 * (path == null ? 0 : path.hashCode()) : 0)
+			hashCode = (!InfoflowConfiguration.getPathAgnosticResults() ? 31 * (path == null ? 0 : path.hashCode()) : 0)
 					+ 31 * (callStack == null ? 0 : callStack.hashCode())
 					+ 31 * super.hashCode();
 		}

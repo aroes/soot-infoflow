@@ -48,6 +48,7 @@ import soot.jimple.LengthExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.collect.MutableTwoElementSet;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
@@ -72,9 +73,10 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 		taintWrapper = wrapper;
 	}
 	
-	public BackwardsInfoflowProblem(BiDiInterproceduralCFG<Unit, SootMethod> icfg,
+	public BackwardsInfoflowProblem(InfoflowConfiguration config,
+			BiDiInterproceduralCFG<Unit, SootMethod> icfg,
 			ISourceSinkManager sourceSinkManager) {
-		super(icfg, sourceSinkManager);
+		super(config, icfg, sourceSinkManager);
 	}
 
 	public void setForwardSolver(IInfoflowSolver forwardSolver) {
@@ -170,7 +172,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 										defStmt, source.getAccessPath().getFirstFieldType());
 							}
 						}
-						else if (enableStaticFields && rightValue instanceof StaticFieldRef) {
+						else if (config.getEnableStaticFieldTracking()
+								&& rightValue instanceof StaticFieldRef) {
 							StaticFieldRef ref = (StaticFieldRef) rightValue;
 							if (source.getAccessPath().isStaticFieldRef()
 									&& source.getAccessPath().firstFieldMatches(ref.getField())) {
@@ -305,7 +308,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							
 							// Make sure to only track static fields if it has been enabled
 							if (addRightValue)
-								if (!enableStaticFields && rightValue instanceof StaticFieldRef)
+								if (!config.getEnableStaticFieldTracking()
+										&& rightValue instanceof StaticFieldRef)
 									addRightValue = false;
 
 							if (addRightValue) {
@@ -345,7 +349,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
 							if (source == getZeroValue())
 								return Collections.emptySet();
-							assert source.isAbstractionActive() || flowSensitiveAliasing;
+							assert source.isAbstractionActive() || config.getFlowSensitiveAliasing();
 							
 							Set<Abstraction> res = computeAliases(defStmt, leftValue, d1, source);
 							
@@ -393,12 +397,12 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
 						if (source == getZeroValue())
 							return Collections.emptySet();
-						assert source.isAbstractionActive() || flowSensitiveAliasing;
+						assert source.isAbstractionActive() || config.getFlowSensitiveAliasing();
 						
 						//if we do not have to look into sources or sinks:
-						if (!inspectSources && isSource)
+						if (!config.getInspectSources() && isSource)
 							return Collections.emptySet();
-						if (!inspectSinks && isSink)
+						if (!config.getInspectSinks() && isSink)
 							return Collections.emptySet();
 						
 						// Do not propagate in inactive taints that will be
@@ -413,7 +417,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							return Collections.emptySet();
 						
 						// Only propagate the taint if the target field is actually read
-						if (enableStaticFields && source.getAccessPath().isStaticFieldRef())
+						if (config.getEnableStaticFieldTracking()
+								&& source.getAccessPath().isStaticFieldRef())
 							if (!interproceduralCFG().isStaticFieldRead(dest,
 									source.getAccessPath().getFirstField()))
 								return Collections.emptySet();
@@ -442,7 +447,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						}
 
 						// easy: static
-						if (enableStaticFields && source.getAccessPath().isStaticFieldRef())
+						if (config.getEnableStaticFieldTracking()
+								&& source.getAccessPath().isStaticFieldRef())
 							res.add(source.deriveNewAbstraction(source.getAccessPath(), stmt));
 
 						// checks: this/fields
@@ -528,7 +534,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							Collection<Abstraction> callerD1s) {
 						if (source == getZeroValue())
 							return Collections.emptySet();
-						assert source.isAbstractionActive() || flowSensitiveAliasing;
+						assert source.isAbstractionActive() || config.getFlowSensitiveAliasing();
 						
 						// If we have no caller, we have nowhere to propagate. This
 						// can happen when leaving the main method.
@@ -536,7 +542,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							return Collections.emptySet();
 						
 						// easy: static
-						if (enableStaticFields && source.getAccessPath().isStaticFieldRef()) {
+						if (config.getEnableStaticFieldTracking()
+								&& source.getAccessPath().isStaticFieldRef()) {
 							registerActivationCallSite(callSite, callee, source);
 							return Collections.singleton(source);
 						}
@@ -638,7 +645,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
 						if (source == getZeroValue())
 							return Collections.emptySet();
-						assert source.isAbstractionActive() || flowSensitiveAliasing;
+						assert source.isAbstractionActive() || config.getFlowSensitiveAliasing();
 						
 						// Compute wrapper aliases
 						if (taintWrapper != null) {
@@ -661,7 +668,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						
 						// If the callee does not read the given value, we also need to pass it on
 						// since we do not propagate it into the callee.
-						if (enableStaticFields && source.getAccessPath().isStaticFieldRef()) {
+						if (config.getEnableStaticFieldTracking()
+								&& source.getAccessPath().isStaticFieldRef()) {
 							if (interproceduralCFG().isStaticFieldUsed(callee,
 									source.getAccessPath().getFirstField()))
 								return Collections.emptySet();

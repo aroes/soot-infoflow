@@ -3,7 +3,7 @@ package soot.jimple.infoflow.results;
 import java.util.List;
 
 import soot.jimple.Stmt;
-import soot.jimple.infoflow.Infoflow;
+import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.tagkit.LineNumberTag;
 
@@ -74,9 +74,9 @@ public class ResultSourceInfo {
 
 	@Override
 	public int hashCode() {
-		return (path != null && !Infoflow.getPathAgnosticResults() ? 31 * this.path.hashCode() : 0)
-				+ (pathAPs != null && !Infoflow.getPathAgnosticResults() ? 31 * this.pathAPs.hashCode() : 0)
-				+ (Infoflow.getOneResultPerAccessPath() ?
+		return (path != null && !InfoflowConfiguration.getPathAgnosticResults() ? 31 * this.path.hashCode() : 0)
+				+ (pathAPs != null && !InfoflowConfiguration.getPathAgnosticResults() ? 31 * this.pathAPs.hashCode() : 0)
+				+ (InfoflowConfiguration.getOneResultPerAccessPath() ?
 						31 * this.accessPath.hashCode() : 0)
 				+ 7 * (this.source == null ? 0 : this.source.hashCode());
 	}
@@ -89,7 +89,7 @@ public class ResultSourceInfo {
 			return false;
 		ResultSourceInfo si = (ResultSourceInfo) o;
 		
-		if (!Infoflow.getPathAgnosticResults()) {
+		if (!InfoflowConfiguration.getPathAgnosticResults()) {
 			if (path == null && si.path != null)
 				return false;
 			if (path != null && si.path == null)
@@ -107,7 +107,7 @@ public class ResultSourceInfo {
 		else if (!this.source.equals(si.source))
 			return false;
 		
-		return !Infoflow.getOneResultPerAccessPath()
+		return !InfoflowConfiguration.getOneResultPerAccessPath()
 				|| this.accessPath.equals(si.accessPath);
 	}
 }

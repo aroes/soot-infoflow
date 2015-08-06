@@ -1,4 +1,4 @@
-package soot.jimple.infoflow.util;
+package soot.jimple.infoflow.codeOptimization;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -57,6 +57,7 @@ import soot.jimple.infoflow.entryPointCreators.IEntryPointCreator;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
+import soot.jimple.infoflow.util.SystemClassHandler;
 import soot.jimple.internal.JAssignStmt;
 import soot.jimple.toolkits.callgraph.Edge;
 import soot.jimple.toolkits.scalar.ConstantPropagatorAndFolder;
@@ -76,6 +77,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 	private final ISourceSinkManager sourceSinkManager;
 	private final ITaintPropagationWrapper taintWrapper;
 	private boolean removeSideEffectFreeMethods = true;
+	private boolean excludeSystemClasses = true;
 	
 	protected final Map<SootMethod, Boolean> methodSideEffects =
 			new ConcurrentHashMap<SootMethod, Boolean>();
@@ -132,6 +134,16 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 		this.removeSideEffectFreeMethods = removeSideEffectFreeMethods;
 	}
 	
+	/**
+	 * Sets whether methods in system classes shall be excluded from constraint
+	 * propagation
+	 * @param excludeSystemClasses True if methods in system classes shall be
+	 * excluded from constraint propagation, otherwise false
+	 */
+	public void setExcludeSystemClasses(boolean excludeSystemClasses) {
+		this.excludeSystemClasses = excludeSystemClasses;
+	}
+	
 	@Override
 	protected void internalTransform(String phaseName, Map<String, String> options) {
 		logger.info("Removing side-effect free methods is "
@@ -148,7 +160,8 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 			// If this callee is excluded, we do not propagate out of it
 			if (excludedMethods != null && excludedMethods.contains(sm))
 				continue;
-			if (SystemClassHandler.isClassInSystemPackage(sm.getDeclaringClass().getName()))
+			if (excludeSystemClasses
+					&& SystemClassHandler.isClassInSystemPackage(sm.getDeclaringClass().getName()))
 				continue;
 			
 			if (sm.getReturnType() != VoidType.v() || sm.getParameterCount() > 0) {
@@ -765,6 +778,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 				ConstantPropagatorAndFolder.v().transform(sm.getActiveBody());
 				for (Unit u : inserted)
 					sm.getActiveBody().getUnits().remove(u);
+				
 			}
 		}
 	}

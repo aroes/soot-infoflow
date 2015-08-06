@@ -35,11 +35,15 @@ import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.InfoflowConfiguration.CallgraphAlgorithm;
+import soot.jimple.infoflow.InfoflowConfiguration.CodeEliminationMode;
 import soot.jimple.infoflow.aliasing.FlowSensitiveAliasStrategy;
 import soot.jimple.infoflow.aliasing.IAliasingStrategy;
 import soot.jimple.infoflow.aliasing.PtsBasedAliasStrategy;
 import soot.jimple.infoflow.cfg.BiDirICFGFactory;
 import soot.jimple.infoflow.cfg.LibraryClassPatcher;
+import soot.jimple.infoflow.codeOptimization.DeadCodeEliminator;
+import soot.jimple.infoflow.codeOptimization.ICodeOptimizer;
 import soot.jimple.infoflow.config.IInfoflowConfig;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
@@ -62,19 +66,12 @@ import soot.jimple.infoflow.results.ResultSourceInfo;
 import soot.jimple.infoflow.solver.IMemoryManager;
 import soot.jimple.infoflow.solver.cfg.BackwardsInfoflowCFG;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
-import soot.jimple.infoflow.solver.cfg.InfoflowCFG;
 import soot.jimple.infoflow.solver.fastSolver.InfoflowSolver;
 import soot.jimple.infoflow.source.ISourceSinkManager;
-import soot.jimple.infoflow.util.InterproceduralConstantValuePropagator;
 import soot.jimple.infoflow.util.SootMethodRepresentationParser;
 import soot.jimple.infoflow.util.SystemClassHandler;
 import soot.jimple.toolkits.callgraph.ReachableMethods;
-import soot.jimple.toolkits.scalar.ConditionalBranchFolder;
-import soot.jimple.toolkits.scalar.ConstantPropagatorAndFolder;
-import soot.jimple.toolkits.scalar.DeadAssignmentEliminator;
-import soot.jimple.toolkits.scalar.UnreachableCodeEliminator;
 import soot.options.Options;
-import soot.util.queue.QueueReader;
 /**
  * main infoflow class which triggers the analysis and offers method to customize it.
  *
@@ -83,12 +80,6 @@ public class Infoflow extends AbstractInfoflow {
 	
     private final Logger logger = LoggerFactory.getLogger(getClass());
     
-	private static int accessPathLength = 5;
-	private static boolean useRecursiveAccessPaths = true;
-	private static boolean pathAgnosticResults = true;
-	private static boolean oneResultPerAccessPath = false;
-	private static boolean mergeNeighbors = false;
-	
 	private InfoflowResults results = null;
 	private IPathBuilderFactory pathBuilderFactory;
 
@@ -187,7 +178,7 @@ public class Infoflow extends AbstractInfoflow {
 		
 		// We only need to distinguish between application and library classes
 		// if we use the OnTheFly ICFG
-		if (callgraphAlgorithm == CallgraphAlgorithm.OnDemand) {
+		if (config.getCallgraphAlgorithm() == CallgraphAlgorithm.OnDemand) {
 			Options.v().set_soot_classpath(libPath);
 			if (appPath != null) {
 				List<String> processDirs = new LinkedList<String>();
@@ -200,7 +191,7 @@ public class Infoflow extends AbstractInfoflow {
 			Options.v().set_soot_classpath(appendClasspath(appPath, libPath));
 		
 		// Configure the callgraph algorithm
-		switch (callgraphAlgorithm) {
+		switch (config.getCallgraphAlgorithm()) {
 			case AutomaticSelection:
 				// If we analyze a distinct entry point which is not static,
 				// SPARK fails due to the missing allocation site and we fall
@@ -228,11 +219,6 @@ public class Infoflow extends AbstractInfoflow {
 			case SPARK:
 				Options.v().setPhaseOption("cg.spark", "on");
 				Options.v().setPhaseOption("cg.spark", "string-constants:true");
-				
-				if (this.aliasingAlgorithm == AliasingAlgorithm.FlowSensitive) {
-//					Options.v().setPhaseOption("cg.spark", "types-for-sites:true");
-				}
-				
 				break;
 			case OnDemand:
 				// nothing to set here
@@ -242,7 +228,7 @@ public class Infoflow extends AbstractInfoflow {
 		}
 		
 		// Specify additional options required for the callgraph
-		if (callgraphAlgorithm != CallgraphAlgorithm.OnDemand) {
+		if (config.getCallgraphAlgorithm() != CallgraphAlgorithm.OnDemand) {
 			Options.v().set_whole_program(true);
 			Options.v().setPhaseOption("cg", "trim-clinit:false");
 		}
@@ -375,10 +361,11 @@ public class Infoflow extends AbstractInfoflow {
 		ipcManager.updateJimpleForICC();
 		
 		// Some configuration options do not really make sense in combination
-		if (enableStaticFields && accessPathLength == 0)
+		if (config.getEnableStaticFieldTracking()
+				&& InfoflowConfiguration.getAccessPathLength() == 0)
 			throw new RuntimeException("Static field tracking must be disabled "
 					+ "if the access path length is zero");
-		if (accessPathLength < 0)
+		if (InfoflowConfiguration.getAccessPathLength() < 0)
 			throw new RuntimeException("The access path length may not be negative");
 		
 		// Clear the base registrations from previous runs
@@ -403,7 +390,7 @@ public class Infoflow extends AbstractInfoflow {
 		// We explicitly select the packs we want to run for performance
         // reasons. Do not re-run the callgraph algorithm if the host
         // application already provides us with a CG.
-		if (callgraphAlgorithm != CallgraphAlgorithm.OnDemand
+		if (config.getCallgraphAlgorithm() != CallgraphAlgorithm.OnDemand
 				&& !Scene.v().hasCallGraph()) {
 	        PackManager.v().getPack("wjpp").apply();
 	        PackManager.v().getPack("cg").apply();
@@ -414,16 +401,17 @@ public class Infoflow extends AbstractInfoflow {
             tr.onAfterCallgraphConstruction();
                 
         // Perform constant propagation and remove dead code
-        if (codeEliminationMode != CodeEliminationMode.NoCodeElimination) {
+        if (config.getCodeEliminationMode() != CodeEliminationMode.NoCodeElimination) {
 			long currentMillis = System.nanoTime();
 			eliminateDeadCode(sourcesSinks);
 			logger.info("Dead code elimination took " + (System.nanoTime() - currentMillis) / 1E9
 					+ " seconds");
         }
 		
-        if (callgraphAlgorithm != CallgraphAlgorithm.OnDemand)
+        if (config.getCallgraphAlgorithm() != CallgraphAlgorithm.OnDemand)
         	logger.info("Callgraph has {} edges", Scene.v().getCallGraph().size());
-        iCfg = icfgFactory.buildBiDirICFG(callgraphAlgorithm, enableExceptions);
+        iCfg = icfgFactory.buildBiDirICFG(config.getCallgraphAlgorithm(),
+        		config.getEnableExceptionTracking());
 		        
         int numThreads = Runtime.getRuntime().availableProcessors();
 		CountingThreadPoolExecutor executor = createExecutor(numThreads);
@@ -434,12 +422,10 @@ public class Infoflow extends AbstractInfoflow {
 		BackwardsInfoflowProblem backProblem;
 		InfoflowSolver backSolver;
 		final IAliasingStrategy aliasingStrategy;
-		switch (aliasingAlgorithm) {
+		switch (getConfig().getAliasingAlgorithm()) {
 			case FlowSensitive:
-				backProblem = new BackwardsInfoflowProblem(new BackwardsInfoflowCFG(iCfg), sourcesSinks);
-				// need to set this before creating the zero abstraction
-				backProblem.setFlowSensitiveAliasing(flowSensitiveAliasing);
-				
+				backProblem = new BackwardsInfoflowProblem(config,
+						new BackwardsInfoflowCFG(iCfg), sourcesSinks);				
 				backSolver = new InfoflowSolver(backProblem, executor);
 				backSolver.setMemoryManager(memoryManager);
 				backSolver.setJumpPredecessors(!pathBuilderFactory.supportsPathReconstruction());
@@ -456,10 +442,8 @@ public class Infoflow extends AbstractInfoflow {
 				throw new RuntimeException("Unsupported aliasing algorithm");
 		}
 		
-		InfoflowProblem forwardProblem  = new InfoflowProblem(iCfg, sourcesSinks,
-				aliasingStrategy);
-		// need to set this before creating the zero abstraction
-		forwardProblem.setFlowSensitiveAliasing(flowSensitiveAliasing);
+		InfoflowProblem forwardProblem  = new InfoflowProblem(config,
+				iCfg, sourcesSinks, aliasingStrategy);
 		if (backProblem != null)
 			forwardProblem.setZeroValue(backProblem.createZeroValue());
 		
@@ -470,59 +454,27 @@ public class Infoflow extends AbstractInfoflow {
 		forwardSolver.setJumpPredecessors(!pathBuilderFactory.supportsPathReconstruction());
 //		forwardSolver.setEnableMergePointChecking(true);
 		
-		forwardProblem.setInspectSources(inspectSources);
-		forwardProblem.setInspectSinks(inspectSinks);
-		forwardProblem.setEnableImplicitFlows(enableImplicitFlows);
-		forwardProblem.setEnableStaticFieldTracking(enableStaticFields);
-		forwardProblem.setEnableExceptionTracking(enableExceptions);
 		for (TaintPropagationHandler tp : taintPropagationHandlers)
 			forwardProblem.addTaintPropagationHandler(tp);
 		forwardProblem.setTaintWrapper(taintWrapper);
 		if (nativeCallHandler != null)
 			forwardProblem.setNativeCallHandler(nativeCallHandler);
-		forwardProblem.setStopAfterFirstFlow(stopAfterFirstFlow);
-		forwardProblem.setEnableTypeChecking(enableTypeChecking);
-		forwardProblem.setIgnoreFlowsInSystemPackages(ignoreFlowsInSystemPackages);
 		
 		if (backProblem != null) {
-			backProblem.setForwardSolver((InfoflowSolver) forwardSolver);
-			backProblem.setTaintWrapper(taintWrapper);
-			backProblem.setEnableStaticFieldTracking(enableStaticFields);
-			backProblem.setEnableExceptionTracking(enableExceptions);
+			backProblem.setForwardSolver(forwardSolver);
 			for (TaintPropagationHandler tp : taintPropagationHandlers)
 				backProblem.addTaintPropagationHandler(tp);
 			backProblem.setTaintWrapper(taintWrapper);
 			if (nativeCallHandler != null)
 				backProblem.setNativeCallHandler(nativeCallHandler);
 			backProblem.setActivationUnitsToCallSites(forwardProblem);
-			backProblem.setEnableTypeChecking(enableTypeChecking);
-			backProblem.setIgnoreFlowsInSystemPackages(ignoreFlowsInSystemPackages);
-			backProblem.setInspectSources(inspectSources);
-			backProblem.setInspectSinks(inspectSinks);
 		}
 		
 		// Print our configuration
-		if (!enableStaticFields)
-			logger.warn("Static field tracking is disabled, results may be incomplete");
-		if (!flowSensitiveAliasing || !aliasingStrategy.isFlowSensitive())
-			logger.warn("Using flow-insensitive alias tracking, results may be imprecise");
-		if (enableImplicitFlows)
-			logger.info("Implicit flow tracking is enabled");
-		else
-			logger.info("Implicit flow tracking is NOT enabled");
-		if (enableExceptions)
-			logger.info("Exceptional flow tracking is enabled");
-		else
-			logger.info("Exceptional flow tracking is NOT enabled");
-		logger.info("Running with a maximum access path length of {}", getAccessPathLength());
-		if (pathAgnosticResults)
-			logger.info("Using path-agnostic result collection");
-		else
-			logger.info("Using path-sensitive result collection");
-		if (useRecursiveAccessPaths)
-			logger.info("Recursive access path shortening is enabled");
-		else
-			logger.info("Recursive access path shortening is NOT enabled");
+		config.printSummary();
+		if (config.getFlowSensitiveAliasing() && !aliasingStrategy.isFlowSensitive())
+			logger.warn("Trying to use a flow-sensitive aliasing with an "
+					+ "aliasing strategy that does not support this feature");
 		
 		// We have to look through the complete program to find sources
 		// which are then taken as seeds.
@@ -665,90 +617,15 @@ public class Infoflow extends AbstractInfoflow {
 	}
 
 	/**
-	 * Performs an interprocedural dead-code elimination on all application
-	 * classes
-	 * @param sourcesSinks The SourceSinkManager to make sure that sources
-	 * remain intact during constant propagation
+	 * Runs all code optimizers 
+	 * @param sourcesSinks The SourceSinkManager
 	 */
 	private void eliminateDeadCode(ISourceSinkManager sourcesSinks) {
-		// Perform an intra-procedural constant propagation to prepare for the
-		// inter-procedural one
-		for (QueueReader<MethodOrMethodContext> rdr =
-				Scene.v().getReachableMethods().listener(); rdr.hasNext(); ) {
-			MethodOrMethodContext sm = rdr.next();
-			if (sm.method() == null || !sm.method().hasActiveBody())
-				continue;
-			
-			// Exclude the dummy main method
-			if (Scene.v().getEntryPoints().contains(sm.method()))
-				continue;
-			
-			List<Unit> callSites = getCallsInMethod(sm.method());
-			
-			ConstantPropagatorAndFolder.v().transform(sm.method().getActiveBody());
-			DeadAssignmentEliminator.v().transform(sm.method().getActiveBody());
-			
-			// Remove the dead callgraph edges
-			List<Unit> newCallSites = getCallsInMethod(sm.method());
-			if (callSites != null)
-				for (Unit u : callSites)
-					if (newCallSites == null ||  !newCallSites.contains(u))
-						Scene.v().getCallGraph().removeAllEdgesOutOf(u);
-		}
-		
-		// Perform an inter-procedural constant propagation and code cleanup
-		InterproceduralConstantValuePropagator ipcvp =
-				new InterproceduralConstantValuePropagator(
-						new InfoflowCFG(),
-						Scene.v().getEntryPoints(),
-						sourcesSinks,
-						taintWrapper);
-		ipcvp.setRemoveSideEffectFreeMethods(codeEliminationMode
-				== CodeEliminationMode.RemoveSideEffectFreeCode && !enableImplicitFlows);
-		ipcvp.transform();
-		
-		// Get rid of all dead code
-		for (QueueReader<MethodOrMethodContext> rdr =
-				Scene.v().getReachableMethods().listener(); rdr.hasNext(); ) {
-			MethodOrMethodContext sm = rdr.next();
-			
-			if (sm.method() == null || !sm.method().hasActiveBody())
-				continue;
-			if (SystemClassHandler.isClassInSystemPackage(sm.method()
-					.getDeclaringClass().getName()))
-				continue;
-			
-			ConditionalBranchFolder.v().transform(sm.method().getActiveBody());
-			
-			// Delete all dead code. We need to be careful and patch the cfg so
-			// that it does not retain edges for call statements we have deleted
-			List<Unit> callSites = getCallsInMethod(sm.method());
-			UnreachableCodeEliminator.v().transform(sm.method().getActiveBody());
-			List<Unit> newCallSites = getCallsInMethod(sm.method());
-			if (callSites != null)
-				for (Unit u : callSites)
-					if (newCallSites == null ||  !newCallSites.contains(u))
-						Scene.v().getCallGraph().removeAllEdgesOutOf(u);
-		}
+		ICodeOptimizer dce = new DeadCodeEliminator();
+		dce.initialize(config);
+		dce.run(iCfg, Scene.v().getEntryPoints(), sourcesSinks, taintWrapper);
 	}
 	
-	/**
-	 * Gets a list of all units that invoke other methods in the given method
-	 * @param method The method from which to get all invocations
-	 * @return The list of units calling other methods in the given method if
-	 * there is at least one such unit. Otherwise null.
-	 */
-	private List<Unit> getCallsInMethod(SootMethod method) {
-		List<Unit> callSites = null;
-		for (Unit u : method.getActiveBody().getUnits())
-			if (((Stmt) u).containsInvokeExpr()) {
-				if (callSites == null)
-					callSites = new ArrayList<Unit>();
-				callSites.add(u);
-			}
-		return callSites;
-	}
-
 	/**
 	 * Creates a new executor object for spawning worker threads
 	 * @param numThreads The number of threads to use
@@ -756,7 +633,8 @@ public class Infoflow extends AbstractInfoflow {
 	 */
 	private CountingThreadPoolExecutor createExecutor(int numThreads) {
 		return new CountingThreadPoolExecutor
-				(maxThreadNum == -1 ? numThreads : Math.min(maxThreadNum, numThreads),
+				(config.getMaxThreadNum() == -1 ? numThreads
+						: Math.min(config.getMaxThreadNum(), numThreads),
 				Integer.MAX_VALUE, 30, TimeUnit.SECONDS,
 				new LinkedBlockingQueue<Runnable>());
 	}
@@ -767,7 +645,7 @@ public class Infoflow extends AbstractInfoflow {
 	 */
 	private void computeTaintPaths(final Set<AbstractionAtSink> res) {
 		IAbstractionPathBuilder builder = this.pathBuilderFactory.createPathBuilder
-				(maxThreadNum, iCfg);
+				(config.getMaxThreadNum(), iCfg);
    		builder.computeTaintPaths(res);
     	this.results = builder.getResults();
     	builder.shutdown();
@@ -826,7 +704,8 @@ public class Infoflow extends AbstractInfoflow {
 		if (m.hasActiveBody()) {
 			// Check whether this is a system class we need to ignore
 			final String className = m.getDeclaringClass().getName();
-			if (ignoreFlowsInSystemPackages && SystemClassHandler.isClassInSystemPackage(className))
+			if (config.getIgnoreFlowsInSystemPackages()
+					&& SystemClassHandler.isClassInSystemPackage(className))
 				return sinkCount;
 			
 			// Look for a source in the method. Also look for sinks. If we
@@ -862,106 +741,12 @@ public class Infoflow extends AbstractInfoflow {
 		return true;
 	}
 	
-	public static int getAccessPathLength() {
-		return accessPathLength;
-	}
-	
-	/**
-	 * Sets the maximum depth of the access paths. All paths will be truncated
-	 * if they exceed the given size.
-	 * @param accessPathLength the maximum value of an access path. If it gets longer than
-	 *  this value, it is truncated and all following fields are assumed as tainted 
-	 *  (which is imprecise but gains performance)
-	 *  Default value is 5.
-	 */
-	public static void setAccessPathLength(int accessPathLength) {
-		Infoflow.accessPathLength = accessPathLength;
-	}
-	
-	/**
-	 * Sets whether results (source-to-sink connections) that only differ in their
-	 * propagation paths shall be merged into a single result or not.
-	 * @param pathAgnosticResults True if two results shall be regarded as equal
-	 * if they connect the same source and sink, even if their propagation paths
-	 * differ, otherwise false
-	 */
-	public static void setPathAgnosticResults(boolean pathAgnosticResults) {
-		Infoflow.pathAgnosticResults = pathAgnosticResults;
-	}
-	
-	/**
-	 * Gets whether results (source-to-sink connections) that only differ in their
-	 * propagation paths shall be merged into a single result or not.
-	 * @return True if two results shall be regarded as equal if they connect the
-	 * same source and sink, even if their propagation paths differ, otherwise
-	 * false
-	 */
-	public static boolean getPathAgnosticResults() {
-		return Infoflow.pathAgnosticResults;
-	}
-	
-	/**
-	 * Gets whether recursive access paths shall be reduced, e.g. whether we
-	 * shall propagate a.[next].data instead of a.next.next.data.
-	 * @return True if recursive access paths shall be reduced, otherwise false
-	 */
-	public static boolean getUseRecursiveAccessPaths() {
-		return useRecursiveAccessPaths;
-	}
-
-	/**
-	 * Sets whether recursive access paths shall be reduced, e.g. whether we
-	 * shall propagate a.[next].data instead of a.next.next.data.
-	 * @param useRecursiveAccessPaths True if recursive access paths shall be
-	 * reduced, otherwise false
-	 */
-	public static void setUseRecursiveAccessPaths(boolean useRecursiveAccessPaths) {
-		Infoflow.useRecursiveAccessPaths = useRecursiveAccessPaths;
-	}
-	
-	/**
-	 * Gets whether different results shall be reported if they only differ in
-	 * the access path the reached the sink or left the source
-	 * @return True if results shall also be distinguished based on access paths
-	 */
-	public static boolean getOneResultPerAccessPath() {
-		return oneResultPerAccessPath;
-	}
-	
-	/**
-	 * Gets whether different results shall be reported if they only differ in
-	 * the access path the reached the sink or left the source
-	 * @param oneResultPerAP True if results shall also be distinguished based
-	 * on access paths
-	 */
-	public static void setOneResultPerAccessPath(boolean oneResultPerAP) {
-		oneResultPerAccessPath = oneResultPerAP;
-	}
-	
 	/**
 	 * Adds a handler that is called when information flow results are available
 	 * @param handler The handler to add
 	 */
 	public void addResultsAvailableHandler(ResultsAvailableHandler handler) {
 		this.onResultsAvailable.add(handler);
-	}
-	
-	/**
-	 * Gets whether neighbors at the same statement shall be merged into a
-	 * single abstraction
-	 * @return True if equivalent neighbor shall be merged, otherwise false
-	 */
-	public static boolean getMergeNeighbors() {
-		return mergeNeighbors;
-	}
-	
-	/**
-	 * Sets whether neighbors at the same statement shall be merged into a
-	 * single abstraction
-	 * @param value True if equivalent neighbor shall be merged, otherwise false
-	 */
-	public static void setMergeNeighbors(boolean value) {
-		mergeNeighbors = value;
 	}
 	
 	/**
