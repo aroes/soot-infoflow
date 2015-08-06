@@ -87,8 +87,9 @@ public class DeadCodeEliminator implements ICodeOptimizer {
 			
 			if (sm.method() == null || !sm.method().hasActiveBody())
 				continue;
-			if (SystemClassHandler.isClassInSystemPackage(sm.method()
-					.getDeclaringClass().getName()))
+			if (config.getIgnoreFlowsInSystemPackages()
+					&& SystemClassHandler.isClassInSystemPackage(sm.method()
+							.getDeclaringClass().getName()))
 				continue;
 			
 			ConditionalBranchFolder.v().transform(sm.method().getActiveBody());
