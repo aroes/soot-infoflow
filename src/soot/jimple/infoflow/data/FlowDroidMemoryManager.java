@@ -70,6 +70,7 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 	private AtomicInteger reuseCounter = new AtomicInteger();
 	
 	private final boolean tracingEnabled;
+	private boolean useAbstractionCache = false;
 	
 	/**
 	 * Constructs a new instance of the AccessPathManager class
@@ -127,10 +128,12 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 
 	@Override
 	public Abstraction handleMemoryObject(Abstraction obj) {
-		// We check for a cached version of the complete abstraction
-		Abstraction cachedAbs = getCachedAbstraction(obj);
-		if (cachedAbs != null)
-			return cachedAbs;
+		if (useAbstractionCache) {
+			// We check for a cached version of the complete abstraction
+			Abstraction cachedAbs = getCachedAbstraction(obj);
+			if (cachedAbs != null)
+				return cachedAbs;
+		}
 		
 		// We check for a cached version of the access path
 		AccessPath newAP = getCachedAccessPath(obj.getAccessPath());
@@ -168,6 +171,15 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 		}
 		
 		return output;
+	}
+	
+	/**
+	 * Sets whether the memory manager shall use the abstraction cache
+	 * @param useAbstractionCache True if the abstraction cache shall be used,
+	 * otherwise false
+	 */
+	public void setUseAbstractionCache(boolean useAbstractionCache) {
+		this.useAbstractionCache = useAbstractionCache;
 	}
 
 }
