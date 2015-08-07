@@ -14,7 +14,62 @@ import soot.jimple.infoflow.solver.IMemoryManager;
  */
 public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 	
+	/**
+	 * Special class for encapsulating taint abstractions for a full equality
+	 * check including those fields (predecessor, etc.) that are normally left
+	 * out
+	 * 
+	 * @author Steven Arzt
+	 *
+	 */
+	private class AbstractionCacheKey {
+		
+		private final Abstraction abs;
+		
+		public AbstractionCacheKey(Abstraction abs) {
+			this.abs = abs;
+		}
+		
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * abs.hashCode();
+			result = prime * result + ((abs.getPredecessor() == null) ? 0 : abs.getPredecessor().hashCode());
+			result = prime * result + ((abs.getCurrentStmt() == null) ? 0 : abs.getCurrentStmt().hashCode());
+			result = prime * result + ((abs.getCorrespondingCallSite() == null) ? 0 : abs.getCorrespondingCallSite().hashCode());
+			return result;
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			AbstractionCacheKey other = (AbstractionCacheKey) obj;
+			
+			if (!abs.equals(other.abs))
+				return false;
+			if (abs.getPredecessor() == null) {
+				if (other.abs.getPredecessor() != null)
+					return false;
+			} else if (!abs.getPredecessor().equals(other.abs.getPredecessor()))
+				return false;
+			if (abs.getCurrentStmt() != other.abs.getCurrentStmt())
+				return false;
+			if (abs.getCorrespondingCallSite() != other.abs.getCorrespondingCallSite())
+				return false;
+			
+			return true;
+		}		
+		
+	}
+	
 	private ConcurrentMap<AccessPath, AccessPath> apCache = new ConcurrentHashMap<>();
+	private ConcurrentHashMap<AbstractionCacheKey, Abstraction> absCache = new ConcurrentHashMap<>();
 	private AtomicInteger reuseCounter = new AtomicInteger();
 	
 	private final boolean tracingEnabled;
@@ -41,12 +96,27 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 	 */
 	private AccessPath getCachedAccessPath(AccessPath ap) {
 		AccessPath oldAP = apCache.putIfAbsent(ap, ap);
-		if (oldAP == null) {
-			if (tracingEnabled)
-				reuseCounter.incrementAndGet();
+		if (oldAP == null)
 			return ap;
-		}
+		
+		// We can re-use an old access path
+		if (tracingEnabled)
+			reuseCounter.incrementAndGet();
 		return oldAP;
+	}
+	
+	/**
+	 * Gets a cached equivalent abstraction for the given abstraction if we have
+	 * one, otherwise returns null
+	 * @param abs The abstraction for which to perform a cache lookup
+	 * @return The cached abstraction equivalent to the given one of it exists,
+	 * otherwise null
+	 */
+	private Abstraction getCachedAbstraction(Abstraction abs) {
+		Abstraction oldAbs = absCache.putIfAbsent(new AbstractionCacheKey(abs), abs);
+		if (oldAbs != null && tracingEnabled)
+			reuseCounter.incrementAndGet();
+		return oldAbs;
 	}
 	
 	/**
@@ -59,6 +129,11 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 
 	@Override
 	public Abstraction handleMemoryObject(Abstraction obj) {
+		// We check for a cached version of the complete abstraction
+		Abstraction cachedAbs = getCachedAbstraction(obj);
+		if (cachedAbs != null)
+			return cachedAbs;
+		
 		// We check for a cached version of the access path
 		AccessPath newAP = getCachedAccessPath(obj.getAccessPath());
 		obj.setAccessPath(newAP);
