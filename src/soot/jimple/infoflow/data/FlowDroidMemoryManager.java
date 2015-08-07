@@ -53,10 +53,7 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 			
 			if (!abs.equals(other.abs))
 				return false;
-			if (abs.getPredecessor() == null) {
-				if (other.abs.getPredecessor() != null)
-					return false;
-			} else if (!abs.getPredecessor().equals(other.abs.getPredecessor()))
+			if (abs.getPredecessor() != other.abs.getPredecessor())
 				return false;
 			if (abs.getCurrentStmt() != other.abs.getCurrentStmt())
 				return false;
@@ -100,7 +97,7 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 			return ap;
 		
 		// We can re-use an old access path
-		if (tracingEnabled)
+		if (tracingEnabled && oldAP != ap)
 			reuseCounter.incrementAndGet();
 		return oldAP;
 	}
@@ -114,8 +111,9 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 	 */
 	private Abstraction getCachedAbstraction(Abstraction abs) {
 		Abstraction oldAbs = absCache.putIfAbsent(new AbstractionCacheKey(abs), abs);
-		if (oldAbs != null && tracingEnabled)
-			reuseCounter.incrementAndGet();
+		if (oldAbs != null && oldAbs != abs)
+			if (tracingEnabled)
+				reuseCounter.incrementAndGet();
 		return oldAbs;
 	}
 	
