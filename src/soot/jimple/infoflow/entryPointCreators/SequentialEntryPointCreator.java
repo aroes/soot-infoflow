@@ -67,7 +67,7 @@ public class SequentialEntryPointCreator extends BaseEntryPointCreator {
 				
 				if (methodToInvoke == null)
 					System.err.println("Method " + methodAndClass + " not found, skipping");
-				else if (methodToInvoke.isConcrete()) {
+				else if (methodToInvoke.isConcrete() && !methodToInvoke.isConstructor()) {
 					// Load the method
 					methodToInvoke.retrieveActiveBody();
 					buildMethodCall(methodToInvoke, body, localVal, generator);
