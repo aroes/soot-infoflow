@@ -16,7 +16,8 @@ public class SystemClassHandler {
 	public static boolean isClassInSystemPackage(String className) {
 		return className.startsWith("android.")
 				|| className.startsWith("java.")
-				|| className.startsWith("sun.");
+				|| className.startsWith("sun.")
+				|| className.startsWith("com.google.");
 	}
 
 }
