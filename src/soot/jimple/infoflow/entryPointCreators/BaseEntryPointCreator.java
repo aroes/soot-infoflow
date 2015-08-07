@@ -65,8 +65,10 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 
 	protected Map<String, Local> localVarsForClasses = new HashMap<String, Local>();
 	private final Set<SootClass> failedClasses = new HashSet<SootClass>();
+	
 	private boolean substituteCallParams = false;
 	private List<String> substituteClasses;
+	private boolean allowSelfReferences = false;
 
 	private final Set<SootMethod> failedMethods = new HashSet<>();
 	
@@ -199,12 +201,16 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 			failedMethods.add(methodToCall);
 			return null;
 		}
-		
+				
 		final InvokeExpr invokeExpr;
 		List<Value> args = new LinkedList<Value>();
-		if(methodToCall.getParameterCount()>0){
-			for (Type tp : methodToCall.getParameterTypes())
-				args.add(getValueForType(body, gen, tp, new HashSet<SootClass>(), parentClasses));
+		if(methodToCall.getParameterCount() > 0){
+			for (Type tp : methodToCall.getParameterTypes()) {
+				Set<SootClass> constructionStack = new HashSet<SootClass>();
+				if (!allowSelfReferences)
+					constructionStack.add(methodToCall.getDeclaringClass());
+				args.add(getValueForType(body, gen, tp, constructionStack, parentClasses));
+			}
 			
 			if(methodToCall.isStatic())
 				invokeExpr = Jimple.v().newStaticInvokeExpr(methodToCall.makeRef(), args);
@@ -649,6 +655,17 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 	 */
 	public void setDummyMethodName(String dummyMethodName) {
 		this.dummyMethodName = dummyMethodName;
+	}
+	
+	/**
+	 * Sets whether a call to a method A.foo() may receive an instance of A as
+	 * a parameter. If this is not allowed, other type-compatible class instances
+	 * are taken. If they don't exist, null is used.
+	 * @param value True if method calls may receive instances of their
+	 * containing class as parameter values, otherwise false 
+	 */
+	public void setAllowSelfReferences(boolean value) {
+		this.allowSelfReferences = value;
 	}
 
 }
