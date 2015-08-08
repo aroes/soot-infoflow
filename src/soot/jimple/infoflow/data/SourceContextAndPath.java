@@ -78,9 +78,22 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 		
 		// Do not add the very same abstraction over and over again
 		if (this.path != null)
-			for (Abstraction a : this.path)
+			for (Abstraction a : this.path) {
 				if (a == abs)
 					return null;
+				
+				// Do not run into loops. If we come back to the same
+				// abstraction, we don't got on with a neighbor
+				if (a.getNeighbors() != null && a.getNeighbors().contains(abs))
+					return null;
+				if (abs.getNeighbors() != null && abs.getNeighbors().contains(a))
+					return null;
+				
+				if (a.equals(abs)
+						&& a.getCurrentStmt() == abs.getCurrentStmt()
+						&& a.getCorrespondingCallSite() == abs.getCorrespondingCallSite())
+					return null;
+			}
 		
 		SourceContextAndPath scap = clone();
 		if (trackPath && abs.getCurrentStmt() != null) {
