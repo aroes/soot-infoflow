@@ -201,18 +201,27 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							else if (defStmt.getRightOp() instanceof LengthExpr) {
 								// ignore. The length of an array is a primitive and thus
 								// cannot have aliases
+								return res;
 							}
 							else if (defStmt.getRightOp() instanceof InstanceOfExpr) {
 								// ignore. The type check of an array returns a
 								// boolean which is a primitive and thus cannot
 								// have aliases
+								return res;
 							}
 							
 							if (newLeftAbs == null)
 								newLeftAbs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
 										(leftValue, newType, false), defStmt);
 						}
+						
 						if (newLeftAbs != null) {
+							// If we ran into a new abstraction that points to a
+							// primitive value, we can remove it
+							if (newLeftAbs.getAccessPath().getLastFieldType() instanceof PrimType)
+								return res;
+							
+							// Propagate the new alias upwards
 							res.add(newLeftAbs);
 							
 							// Inject the new alias into the forward solver
