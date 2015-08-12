@@ -22,8 +22,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 import soot.ArrayType;
-import soot.BooleanType;
-import soot.IntType;
 import soot.Local;
 import soot.PrimType;
 import soot.RefType;
@@ -201,13 +199,14 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							}
 							// Special type handling for certain operations
 							else if (defStmt.getRightOp() instanceof LengthExpr) {
-								assert source.getAccessPath().getBaseType() instanceof ArrayType;
-								newLeftAbs = source.deriveNewAbstraction(new AccessPath(leftValue, null,
-										IntType.v(), (Type[]) null, true), defStmt);
+								// ignore. The length of an array is a primitive and thus
+								// cannot have aliases
 							}
-							else if (defStmt.getRightOp() instanceof InstanceOfExpr)
-								newLeftAbs = source.deriveNewAbstraction(new AccessPath(leftValue, null,
-										BooleanType.v(), (Type[]) null, true), defStmt);
+							else if (defStmt.getRightOp() instanceof InstanceOfExpr) {
+								// ignore. The type check of an array returns a
+								// boolean which is a primitive and thus cannot
+								// have aliases
+							}
 							
 							if (newLeftAbs == null)
 								newLeftAbs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue

@@ -90,13 +90,18 @@ public class ResultSourceInfo {
 		ResultSourceInfo si = (ResultSourceInfo) o;
 		
 		if (!InfoflowConfiguration.getPathAgnosticResults()) {
-			if (path == null && si.path != null)
+			if (this.path == null) {
+				if (si.path != null)
+					return false;
+			}
+			else if (!this.path.equals(si.path))
 				return false;
-			if (path != null && si.path == null)
-				return false;
-			if (!path.equals(si.path))
-				return false;
-			if (!pathAPs.equals(si.pathAPs))
+			
+			if (this.pathAPs == null) {
+				if (si.pathAPs != null)
+					return false;
+			}
+			else if (!pathAPs.equals(si.pathAPs))
 				return false;
 		}
 		

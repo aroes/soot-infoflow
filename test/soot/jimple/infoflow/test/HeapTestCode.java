@@ -1113,4 +1113,27 @@ public class HeapTestCode {
 		leakData(y.next);
 	}
 	
+	public void arrayLengthAliasTest1() {
+		String tainted = TelephonyManager.getDeviceId();
+		String[] arr = new String[] { "foo", "xx", "bar" };
+		int size = arr.length;
+		arr[1] = tainted;
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(size);
+	}
+	
+	public void arrayLengthAliasTest2() {
+		String tainted = TelephonyManager.getDeviceId();
+		String[] arr = new String[] { "foo", "xx", "bar" };
+		String[] arr2 = arr;
+		int size = arr.length;
+		arr[1] = tainted;
+		int size2 = arr2.length;
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(size2);
+		System.out.println(size);
+	}
+	
 }
