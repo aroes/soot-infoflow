@@ -50,6 +50,7 @@ public class AccessPath implements Cloneable {
 	
 	private final boolean taintSubFields;
 	private final boolean cutOffApproximation;
+	private final boolean isArrayLength;
 	
 	private int hashCode = 0;
 	
@@ -65,7 +66,7 @@ public class AccessPath implements Cloneable {
 		private final Type[] types;
 		private int hashCode = 0;
 		
-		public BasePair(SootField[] fields, Type[] types) {
+		private BasePair(SootField[] fields, Type[] types) {
 			this.fields = fields;
 			this.types = types;
 			
@@ -135,6 +136,7 @@ public class AccessPath implements Cloneable {
 		this.fieldTypes = null;
 		this.taintSubFields = true;
 		this.cutOffApproximation = false;
+		this.isArrayLength = false;
 	}
 	
 	public AccessPath(Value val, boolean taintSubFields){
@@ -147,12 +149,13 @@ public class AccessPath implements Cloneable {
 	
 	public AccessPath(Value val, SootField[] appendingFields, Type valType,
 			Type[] appendingFieldTypes, boolean taintSubFields) {
-		this(val, appendingFields, valType, appendingFieldTypes, taintSubFields, false, true);
+		this(val, appendingFields, valType, appendingFieldTypes, taintSubFields, false, true,
+				false);
 	}
 	
 	public AccessPath(Value val, SootField[] appendingFields, Type valType,
 			Type[] appendingFieldTypes, boolean taintSubFields,
-			boolean cutFirstField, boolean reduceBases){
+			boolean cutFirstField, boolean reduceBases, boolean isArrayLength) {
 		// Make sure that the base object is valid
 		assert (val == null && appendingFields != null && appendingFields.length > 0)
 		 	|| canContainValue(val);
@@ -166,6 +169,7 @@ public class AccessPath implements Cloneable {
 		
 		SootField[] fields;
 		Type[] fieldTypes;
+		this.isArrayLength = isArrayLength;
 		
 		// Get the base object, field and type
 		if(val instanceof FieldRef) {
@@ -488,6 +492,7 @@ public class AccessPath implements Cloneable {
 		result = prime * result + ((value == null) ? 0 : value.hashCode());
 		result = prime * result + ((baseType == null) ? 0 : baseType.hashCode());
 		result = prime * result + (this.taintSubFields ? 1 : 0);
+		result = prime * result + (this.isArrayLength ? 1 : 0);
 		this.hashCode = result;
 		
 		return this.hashCode;
@@ -514,6 +519,8 @@ public class AccessPath implements Cloneable {
 			return false;
 		
 		if (this.taintSubFields != other.taintSubFields)
+			return false;
+		if (this.isArrayLength != other.isArrayLength)
 			return false;
 		
 		if (!Arrays.equals(fields, other.fields))
@@ -555,6 +562,8 @@ public class AccessPath implements Cloneable {
 				}
 		if (taintSubFields)
 			str += " *";
+		if (isArrayLength)
+			str += " <length>";
 		return str;
 	}
 
@@ -568,7 +577,8 @@ public class AccessPath implements Cloneable {
 	 * @return This access path with the base replaced by the value given in
 	 * the val parameter
 	 */
-	public AccessPath copyWithNewValue(Value val, Type newType, boolean cutFirstField){
+	public AccessPath copyWithNewValue(Value val, Type newType,
+			boolean cutFirstField){
 		return copyWithNewValue(val, newType, cutFirstField, true);
 	}
 	
@@ -579,14 +589,27 @@ public class AccessPath implements Cloneable {
 	 * @return This access path with the base replaced by the value given in
 	 * the val parameter
 	 */
+	public AccessPath copyWithNewValue(Value val, Type newType,
+			boolean cutFirstField, boolean reduceBases) {
+		return copyWithNewValue(val, newType, cutFirstField,
+				reduceBases, false);
+	}
+	
+	/**
+	 * value val gets new base, fields are preserved.
+	 * @param val The new base value
+	 * @param reduceBases True if circurlar types shall be reduced to bases
+	 * @return This access path with the base replaced by the value given in
+	 * the val parameter
+	 */
 	public AccessPath copyWithNewValue(Value val, Type newType, boolean cutFirstField,
-			boolean reduceBases) {
+			boolean reduceBases, boolean isArrayLength) {
 		if (this.value != null && this.value.equals(val)
 				&& this.baseType.equals(newType))
 			return this;
 		
 		return new AccessPath(val, fields, newType, fieldTypes, this.taintSubFields,
-				cutFirstField, reduceBases);
+				cutFirstField, reduceBases, isArrayLength);
 	}
 	
 	@Override
@@ -753,6 +776,16 @@ public class AccessPath implements Cloneable {
 	 */
 	public boolean isCutOffApproximation() {
 		return this.cutOffApproximation;
+	}
+	
+	/**
+	 * Gets whether this access path references only the length of the array to
+	 * which it points, not the contents of that array
+	 * @return True if this access paths points refers to the length of an array
+	 * instead of to its contents
+	 */
+	public boolean isArrayLength() {
+		return this.isArrayLength;
 	}
 	
 }

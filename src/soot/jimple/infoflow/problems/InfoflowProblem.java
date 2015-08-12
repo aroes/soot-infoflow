@@ -208,6 +208,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			(final Abstraction d1, final Stmt src,
 			final Value targetValue, Set<Abstraction> taintSet,
 			SootMethod method, Abstraction newAbs) {
+		// We never ever handle primitives as they can never have aliases
+		if (newAbs.getAccessPath().getLastFieldType() instanceof PrimType)
+			return;
+		
 		// If we are not in a conditionally-called method, we run the
 		// full alias analysis algorithm. Otherwise, we use a global
 		// non-flow-sensitive approximation.
@@ -733,8 +737,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										|| newSource.getAccessPath().getBaseType() instanceof ArrayType;
 								assert leftValue instanceof Local;
 								
-								Abstraction lenAbs = newSource.deriveNewAbstraction(new AccessPath
-										(leftValue, null, IntType.v(), (Type[]) null, true), assignStmt);
+								AccessPath ap = new AccessPath(leftValue, null, IntType.v(),
+										(Type[]) null, true, false, true, true);
+								Abstraction lenAbs = newSource.deriveNewAbstraction(ap, assignStmt);
 								return new TwoElementSet<Abstraction>(newSource, lenAbs);
 							}
 							
