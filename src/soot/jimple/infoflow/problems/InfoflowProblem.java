@@ -49,6 +49,7 @@ import soot.jimple.InstanceOfExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.LengthExpr;
 import soot.jimple.LookupSwitchStmt;
+import soot.jimple.NewArrayExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
@@ -353,6 +354,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					return;
 				
 				Abstraction newAbs = null;
+				boolean isArrayLength = false;
 				if (!source.getAccessPath().isEmpty()) {
 					// Special handling for array (de)construction
 					if (leftValue instanceof ArrayRef && targetType != null)
@@ -377,6 +379,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					else if (rightValue instanceof InstanceOfExpr)
 						newAbs = source.deriveNewAbstraction(new AccessPath(leftValue, null,
 								BooleanType.v(), (Type[]) null, true), assignStmt);
+					else if (rightValue instanceof NewArrayExpr)
+						isArrayLength = true;
 				}
 				else
 					// For implicit taints, we have no type information
@@ -387,7 +391,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					if (source.getAccessPath().isEmpty())
 						newAbs = source.deriveNewAbstraction(new AccessPath(leftValue, true), assignStmt, true);
 					else
-						newAbs = source.deriveNewAbstraction(leftValue, cutFirstField, assignStmt, targetType);
+						newAbs = source.deriveNewAbstraction(leftValue, cutFirstField, assignStmt, targetType,
+								isArrayLength);
 				taintSet.add(newAbs);
 				
 				if (triggerInaktiveTaintOrReverseFlow(assignStmt, leftValue, newAbs))
@@ -1551,16 +1556,18 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								if (callVal == newSource.getAccessPath().getPlainValue()) {
 									// java uses call by value, but fields of complex objects can be changed (and tainted), so use this conservative approach:
 									Set<Abstraction> nativeAbs = ncHandler.getTaintedValues(iCallStmt, newSource, callArgs);
-									res.addAll(nativeAbs);
-									
-									// Compute the aliases
-									for (Abstraction abs : nativeAbs)
-										if (abs.getAccessPath().isStaticFieldRef()
-												|| triggerInaktiveTaintOrReverseFlow(iCallStmt,
-														abs.getAccessPath().getPlainValue(), abs))
-											computeAliasTaints(d1, iCallStmt,
-													abs.getAccessPath().getPlainValue(), res,
-													interproceduralCFG().getMethodOf(call), abs);
+									if (nativeAbs != null) {
+										res.addAll(nativeAbs);
+										
+										// Compute the aliases
+										for (Abstraction abs : nativeAbs)
+											if (abs.getAccessPath().isStaticFieldRef()
+													|| triggerInaktiveTaintOrReverseFlow(iCallStmt,
+															abs.getAccessPath().getPlainValue(), abs))
+												computeAliasTaints(d1, iCallStmt,
+														abs.getAccessPath().getPlainValue(), res,
+														interproceduralCFG().getMethodOf(call), abs);
+									}
 									
 									// We only call the native code handler once per statement
 									break;

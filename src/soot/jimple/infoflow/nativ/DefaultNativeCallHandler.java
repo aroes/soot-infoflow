@@ -38,7 +38,7 @@ public class DefaultNativeCallHandler extends AbstractNativeCallHandler {
 				return Collections.singleton(abs);
 			}
 		
-		return Collections.emptySet();
+		return null;
 	}
 	
 	@Override

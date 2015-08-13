@@ -15,6 +15,7 @@ import soot.jimple.ArrayRef;
 import soot.jimple.BinopExpr;
 import soot.jimple.CastExpr;
 import soot.jimple.InstanceOfExpr;
+import soot.jimple.NewArrayExpr;
 import soot.jimple.UnopExpr;
 
 /**
@@ -32,16 +33,19 @@ public class BaseSelector {
 	public static Value selectBase(Value val, boolean keepArrayRef){
 		//we taint base of array instead of array elements
 		if (val instanceof ArrayRef && !keepArrayRef) {
-			return selectBase(((ArrayRef) val).getBase(), keepArrayRef);
+			return ((ArrayRef) val).getBase();
 		}
-		
-		if (val instanceof CastExpr) {
-			return selectBase(((CastExpr) val).getOp(), keepArrayRef);
+		else if (val instanceof CastExpr) {
+			return ((CastExpr) val).getOp();
 		}
-		
-		// Check for unary operators like "not" or "length"
-		if (val instanceof UnopExpr)
-			return selectBase(((UnopExpr) val).getOp(), keepArrayRef);
+		else if (val instanceof NewArrayExpr) {
+			return ((NewArrayExpr) val).getSize();
+		}
+		else if (val instanceof InstanceOfExpr) {
+			return ((InstanceOfExpr) val).getOp();
+		}
+		else if (val instanceof UnopExpr)
+			return ((UnopExpr) val).getOp();
 		
 		return val;
 	}
@@ -60,10 +64,6 @@ public class BaseSelector {
 			BinopExpr expr = (BinopExpr) val;
 			set[0] = expr.getOp1();
 			set[1] = expr.getOp2();
-			return set;
-		}
-		else if (val instanceof InstanceOfExpr) {
-			Value[] set = new Value[] { ((InstanceOfExpr) val).getOp() };
 			return set;
 		}
 		else

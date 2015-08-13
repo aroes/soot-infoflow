@@ -181,5 +181,11 @@ public class ArrayTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(array.length);
 	}
-
+	
+	public void arrayLengthTest2() {
+		char[] array = new char[TelephonyManager.getIMEI()];
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(array.length);
+	}
+	
 }

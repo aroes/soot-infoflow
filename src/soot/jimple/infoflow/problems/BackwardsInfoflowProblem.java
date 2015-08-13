@@ -43,9 +43,11 @@ import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InstanceOfExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.LengthExpr;
+import soot.jimple.NewArrayExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
+import soot.jimple.UnopExpr;
 import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.collect.MutableTwoElementSet;
 import soot.jimple.infoflow.data.Abstraction;
@@ -127,9 +129,20 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				}
 				
 				if (defStmt instanceof AssignStmt) {
+					// If this statement creates a new array, we cannot track upwards the size
+					if (defStmt.getRightOp() instanceof NewArrayExpr)
+						return res;
+					
+					// We only process heap objects. Binary operations can only
+					// be performed on primitive objects.
+					if (defStmt.getRightOp() instanceof BinopExpr)
+						return res;
+					if (defStmt.getRightOp() instanceof UnopExpr)
+						return res;
+					
 					// Get the right side of the assignment
 					final Value rightValue = BaseSelector.selectBase(defStmt.getRightOp(), false);
-	
+					
 					// Is the left side overwritten completely?
 					if (leftSideMatches) {
 						// Termination shortcut: If the right side is a value we do not track,
@@ -142,11 +155,6 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					// any further or do any forward propagation since constants cannot
 					// carry taint.
 					if (rightValue instanceof Constant)
-						return res;
-	
-					// We only process heap objects. Binary operations can only
-					// be performed on primitive objects.
-					if (rightValue instanceof BinopExpr)
 						return res;
 					
 					// If we have a = x with the taint "x" being inactive,
