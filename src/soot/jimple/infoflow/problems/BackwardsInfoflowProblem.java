@@ -128,18 +128,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, source));
 				}
 				
-				if (defStmt instanceof AssignStmt) {
-					// If this statement creates a new array, we cannot track upwards the size
-					if (defStmt.getRightOp() instanceof NewArrayExpr)
-						return res;
-					
-					// We only process heap objects. Binary operations can only
-					// be performed on primitive objects.
-					if (defStmt.getRightOp() instanceof BinopExpr)
-						return res;
-					if (defStmt.getRightOp() instanceof UnopExpr)
-						return res;
-					
+				if (defStmt instanceof AssignStmt) {					
 					// Get the right side of the assignment
 					final Value rightValue = BaseSelector.selectBase(defStmt.getRightOp(), false);
 					
@@ -155,6 +144,17 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					// any further or do any forward propagation since constants cannot
 					// carry taint.
 					if (rightValue instanceof Constant)
+						return res;
+					
+					// If this statement creates a new array, we cannot track upwards the size
+					if (defStmt.getRightOp() instanceof NewArrayExpr)
+						return res;
+					
+					// We only process heap objects. Binary operations can only
+					// be performed on primitive objects.
+					if (defStmt.getRightOp() instanceof BinopExpr)
+						return res;
+					if (defStmt.getRightOp() instanceof UnopExpr)
 						return res;
 					
 					// If we have a = x with the taint "x" being inactive,
