@@ -64,6 +64,7 @@ import soot.jimple.infoflow.collect.MyConcurrentHashMap;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.data.AccessPath.ArrayTaintType;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler.FlowFunctionType;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
@@ -210,7 +211,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			final Value targetValue, Set<Abstraction> taintSet,
 			SootMethod method, Abstraction newAbs) {
 		// We never ever handle primitives as they can never have aliases
-		if (newAbs.getAccessPath().getLastFieldType() instanceof PrimType)
+		if (newAbs.getAccessPath().isStaticFieldRef()) {
+			if (newAbs.getAccessPath().getFirstFieldType() instanceof PrimType)
+				return;
+		}
+		else if (newAbs.getAccessPath().getBaseType() instanceof PrimType)
 			return;
 		
 		// If we are not in a conditionally-called method, we run the
@@ -344,7 +349,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					Set<Abstraction> taintSet,
 					boolean cutFirstField,
 					SootMethod method,
-					Type targetType) {
+					Type targetType,
+					ArrayTaintType arrayTaintType) {
 				final Value leftValue = assignStmt.getLeftOp();
 				final Value rightValue = assignStmt.getRightOp();
 				
@@ -354,7 +360,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					return;
 				
 				Abstraction newAbs = null;
-				boolean isArrayLength = false;
 				if (!source.getAccessPath().isEmpty()) {
 					// Special handling for array (de)construction
 					if (leftValue instanceof ArrayRef && targetType != null)
@@ -378,9 +383,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					// Special type handling for certain operations
 					else if (rightValue instanceof InstanceOfExpr)
 						newAbs = source.deriveNewAbstraction(new AccessPath(leftValue, null,
-								BooleanType.v(), (Type[]) null, true), assignStmt);
+								BooleanType.v(), (Type[]) null, true,
+								ArrayTaintType.ContentsAndLength), assignStmt);
 					else if (rightValue instanceof NewArrayExpr) {
-						isArrayLength = true;
+						arrayTaintType = ArrayTaintType.Length;
 						targetType = null;
 					}
 				}
@@ -394,7 +400,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						newAbs = source.deriveNewAbstraction(new AccessPath(leftValue, true), assignStmt, true);
 					else
 						newAbs = source.deriveNewAbstraction(leftValue, cutFirstField, assignStmt, targetType,
-								isArrayLength);
+								arrayTaintType);
 				taintSet.add(newAbs);
 				
 				if (triggerInaktiveTaintOrReverseFlow(assignStmt, leftValue, newAbs))
@@ -645,6 +651,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									&& rightValue.getType() instanceof RefType
 									&& !newSource.dependsOnCutAP();
 							
+							ArrayTaintType arrayTaintType = newSource.getAccessPath().getArrayTaintType();
 							boolean cutFirstField = false;
 							AccessPath mappedAP = newSource.getAccessPath();
 							Type targetType = null;
@@ -707,9 +714,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									//y = x[i] && x tainted -> x, y tainted
 									else if (rightVal instanceof ArrayRef) {
 										Local rightBase = (Local) ((ArrayRef) rightVal).getBase();
-										if (aliasing.mayAlias(rightBase, newSource.getAccessPath().getPlainValue())) {
+										if (newSource.getAccessPath().getArrayTaintType() != ArrayTaintType.Length
+												&& aliasing.mayAlias(rightBase, newSource.getAccessPath().getPlainValue())) {											
 											addLeftValue = true;
-											
 											targetType = newSource.getAccessPath().getBaseType();
 											assert targetType instanceof ArrayType;
 										}
@@ -731,6 +738,12 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							if (!addLeftValue)
 								return null;
 							
+							// Do not propagate non-active primitive taints
+							if (!newSource.isAbstractionActive()
+									&& (assignStmt.getLeftOp().getType() instanceof PrimType
+											|| isStringType(assignStmt.getLeftOp().getType())))
+								return Collections.singleton(newSource);
+							
 							// If the right side is a typecast, it must be compatible,
 							// or this path is not realizable
 							if (rightValue instanceof CastExpr) {
@@ -740,19 +753,25 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							}
 							// Special handling for certain operations
 							else if (rightValue instanceof LengthExpr) {
+								// Check that we really have an array
 								assert newSource.getAccessPath().isEmpty()
 										|| newSource.getAccessPath().getBaseType() instanceof ArrayType;
 								assert leftValue instanceof Local;
 								
+								// Is the length tainted?
+								if (newSource.getAccessPath().getArrayTaintType() == ArrayTaintType.Contents)
+									return Collections.singleton(newSource);
+								
+								// Taint the array length
 								AccessPath ap = new AccessPath(leftValue, null, IntType.v(),
-										(Type[]) null, true, false, true, true);
+										(Type[]) null, true, false, true, ArrayTaintType.ContentsAndLength);
 								Abstraction lenAbs = newSource.deriveNewAbstraction(ap, assignStmt);
 								return new TwoElementSet<Abstraction>(newSource, lenAbs);
 							}
 							
-							if (mappedAP == null)
-								for (Value val : rightVals)
-									aliasing.mayAlias(newSource.getAccessPath(), val);
+							// Do we taint the contents of an array?
+							if (leftValue instanceof ArrayRef)
+								arrayTaintType = ArrayTaintType.Contents;
 							
 							// If this is a sink, we need to report the finding
 							if (sourceSinkManager != null
@@ -766,7 +785,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							Abstraction targetAB = mappedAP.equals(newSource.getAccessPath())
 									? newSource : newSource.deriveNewAbstraction(mappedAP, null);							
 							addTaintViaStmt(d1, assignStmt, targetAB, res, cutFirstField,
-									interproceduralCFG().getMethodOf(src), targetType);
+									interproceduralCFG().getMethodOf(src), targetType,
+									arrayTaintType);
 							res.add(newSource);
 							return res;
 						}

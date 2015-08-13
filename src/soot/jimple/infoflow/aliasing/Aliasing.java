@@ -145,7 +145,7 @@ public class Aliasing {
 
 							return new AccessPath(taintedAP.getPlainValue(),
 									cutFields, taintedAP.getBaseType(), cutFieldTypes,
-									taintedAP.getTaintSubFields(), false, false, false);
+									taintedAP.getTaintSubFields(), false, false, taintedAP.getArrayTaintType());
 						}
 					}
 					

@@ -114,6 +114,7 @@ public class HeapTestCode {
 	class A{
 		public String b = "Y";
 		public String c = "X";
+		public int i = 0;
 	}
 	
 	class X{
@@ -321,6 +322,19 @@ public class HeapTestCode {
 		String[] c = b;
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(c[0]);		
+	}
+	
+	public void arrayAliasTest2() {
+		String tainted = TelephonyManager.getDeviceId();
+		String[] arr = new String[] { "foo", "bar" };
+		String[] arr2 = arr;
+		int size = arr.length;
+		arr[1] = tainted;
+		String x = arr2[1];
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(x);
+		System.out.println(size);
 	}
 
 	public void functionAliasTest() {
@@ -1134,6 +1148,37 @@ public class HeapTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(size2);
 		System.out.println(size);
+	}
+	
+	public void arrayLengthAliasTest3() {
+		String tainted = TelephonyManager.getDeviceId();
+		String[] arr = new String[tainted.length()];
+		int size = arr.length;
+		arr[1] = tainted;
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(size);
+	}
+	
+	public void arrayLengthAliasTest4() {
+		String tainted = TelephonyManager.getDeviceId();
+		String[] arr = new String[tainted.length()];
+		String[] arr2 = arr;
+		int size = arr.length;
+		arr[1] = tainted;
+		int size2 = arr2.length;
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(size2);
+		System.out.println(size);
+	}
+	
+	public void taintPrimitiveFieldTest1() {
+		A a = new A();
+		A b = a;
+		a.i = TelephonyManager.getIMEI();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(b.i);		
 	}
 	
 }

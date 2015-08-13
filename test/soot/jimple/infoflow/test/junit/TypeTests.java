@@ -284,7 +284,7 @@ public class TypeTests extends JUnitTests {
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.TypeTestCode: void arrayLengthObjectTest()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
-		checkInfoflow(infoflow, 1);
+		negativeCheckInfoflow(infoflow);
 	}
 	
 	@Test(timeout=300000)

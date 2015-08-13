@@ -86,6 +86,24 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 	@Override
 	public FlowFunctions<Unit, Abstraction, SootMethod> createFlowFunctionsFactory() {
 		return new FlowFunctions<Unit, Abstraction, SootMethod>() {
+			
+			private Abstraction checkAbstraction(Abstraction abs) {
+				// Primitive types and strings cannot have aliases and thus
+				// never need to be propagated back
+				if (!abs.getAccessPath().isStaticFieldRef()) {
+					if (abs.getAccessPath().getBaseType() instanceof PrimType)
+						return null;
+					if (isStringType(abs.getAccessPath().getBaseType()))
+						return null;
+				}
+				else {
+					if (abs.getAccessPath().getFirstFieldType() instanceof PrimType)
+						return null;
+					if (isStringType(abs.getAccessPath().getFirstFieldType()))
+						return null;
+				}
+				return abs;
+			}
 
 			/**
 			 * Computes the aliases for the given statement
@@ -128,7 +146,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, source));
 				}
 				
-				if (defStmt instanceof AssignStmt) {					
+				if (defStmt instanceof AssignStmt) {
 					// Get the right side of the assignment
 					final Value rightValue = BaseSelector.selectBase(defStmt.getRightOp(), false);
 					
@@ -174,8 +192,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							if (source.getAccessPath().isInstanceFieldRef()
 									&& ref.getBase() == source.getAccessPath().getPlainValue()
 									&& source.getAccessPath().firstFieldMatches(ref.getField())) {
-								newLeftAbs = source.deriveNewAbstraction(leftValue, true,
-										defStmt, source.getAccessPath().getFirstFieldType());
+								newLeftAbs = checkAbstraction(source.deriveNewAbstraction(leftValue, true,
+										defStmt, source.getAccessPath().getFirstFieldType()));
 							}
 						}
 						else if (config.getEnableStaticFieldTracking()
@@ -183,8 +201,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							StaticFieldRef ref = (StaticFieldRef) rightValue;
 							if (source.getAccessPath().isStaticFieldRef()
 									&& source.getAccessPath().firstFieldMatches(ref.getField())) {
-								newLeftAbs = source.deriveNewAbstraction(leftValue, true,
-										defStmt, source.getAccessPath().getBaseType());
+								newLeftAbs = checkAbstraction(source.deriveNewAbstraction(leftValue, true,
+										defStmt, source.getAccessPath().getBaseType()));
 							}
 						}
 						else if (rightValue == source.getAccessPath().getPlainValue()) {
@@ -219,8 +237,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							}
 							
 							if (newLeftAbs == null)
-								newLeftAbs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
-										(leftValue, newType, false), defStmt);
+								newLeftAbs = checkAbstraction(source.deriveNewAbstraction(
+										source.getAccessPath().copyWithNewValue(leftValue, newType, false), defStmt));
 						}
 						
 						if (newLeftAbs != null) {
@@ -329,13 +347,15 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 									addRightValue = false;
 
 							if (addRightValue) {
-								Abstraction newAbs = source.deriveNewAbstraction(rightValue, cutFirstField,
-										defStmt, targetType);
-								res.add(newAbs);
-								
-								// Inject the new alias into the forward solver
-								for (Unit u : interproceduralCFG().getPredsOf(defStmt))
-									fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, newAbs));
+								Abstraction newAbs = checkAbstraction(source.deriveNewAbstraction(
+										rightValue, cutFirstField, defStmt, targetType));
+								if (newAbs != null) {
+									res.add(newAbs);
+									
+									// Inject the new alias into the forward solver
+									for (Unit u : interproceduralCFG().getPredsOf(defStmt))
+										fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, newAbs));
+								}
 							}
 						}
 					}
@@ -452,10 +472,11 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 										ReturnStmt rStmt = (ReturnStmt) u;
 										if (rStmt.getOp() instanceof Local
 												|| rStmt.getOp() instanceof FieldRef) {
-											Abstraction abs = source.deriveNewAbstraction
+											Abstraction abs = checkAbstraction(source.deriveNewAbstraction
 													(source.getAccessPath().copyWithNewValue
-															(rStmt.getOp(), null, false), (Stmt) src);
-											res.add(abs);
+															(rStmt.getOp(), null, false), (Stmt) src));
+											if (abs != null)
+												res.add(abs);
 										}
 									}
 								}
@@ -464,8 +485,12 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 
 						// easy: static
 						if (config.getEnableStaticFieldTracking()
-								&& source.getAccessPath().isStaticFieldRef())
-							res.add(source.deriveNewAbstraction(source.getAccessPath(), stmt));
+								&& source.getAccessPath().isStaticFieldRef()) {
+							Abstraction abs = checkAbstraction(source.deriveNewAbstraction(
+									source.getAccessPath(), stmt));
+							if (abs != null)
+								res.add(abs);
+						}
 
 						// checks: this/fields
 						Value sourceBase = source.getAccessPath().getPlainValue();
@@ -484,9 +509,10 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 									}
 								}
 								if (!param) {
-									Abstraction abs = source.deriveNewAbstraction
-											(source.getAccessPath().copyWithNewValue(thisLocal), (Stmt) src);
-									res.add(abs);
+									Abstraction abs = checkAbstraction(source.deriveNewAbstraction
+											(source.getAccessPath().copyWithNewValue(thisLocal), (Stmt) src));
+									if (abs != null)
+										res.add(abs);
 								}
 							}
 						}
@@ -494,26 +520,21 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						// Map the parameter values into the callee
 						if (isExecutorExecute) {
 							if (ie.getArg(0) == source.getAccessPath().getPlainValue()) {
-								Abstraction abs = source.deriveNewAbstraction
-										(source.getAccessPath().copyWithNewValue(thisLocal), stmt);
-								res.add(abs);
+								Abstraction abs = checkAbstraction(source.deriveNewAbstraction
+										(source.getAccessPath().copyWithNewValue(thisLocal), stmt));
+								if (abs != null)
+									res.add(abs);
 							}
 						}
 						else if (ie != null && dest.getParameterCount() > 0) {
 							assert dest.getParameterCount() == ie.getArgCount();
 							// check if param is tainted:
 							for (int i = 0; i < ie.getArgCount(); i++) {
-								if (ie.getArg(i) == source.getAccessPath().getPlainValue()) {
-									// Primitive types and strings cannot have aliases and thus
-									// never need to be propagated back
-									if (source.getAccessPath().getBaseType() instanceof PrimType)
-										continue;
-									if (isStringType(source.getAccessPath().getBaseType()))
-										continue;
-									
-									Abstraction abs = source.deriveNewAbstraction(source.getAccessPath().copyWithNewValue
-											(paramLocals[i]), stmt);
-									res.add(abs);
+								if (ie.getArg(i) == source.getAccessPath().getPlainValue()) {									
+									Abstraction abs = checkAbstraction(source.deriveNewAbstraction(
+											source.getAccessPath().copyWithNewValue(paramLocals[i]), stmt));
+									if (abs != null)
+										res.add(abs);
 								}
 							}
 						}
@@ -574,10 +595,12 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						if (isExecutorExecute) {
 							// Map the "this" object to the first argument of the call site
 							if (source.getAccessPath().getPlainValue() == thisLocal) {
-								Abstraction abs = source.deriveNewAbstraction
-										(source.getAccessPath().copyWithNewValue(ie.getArg(0)), (Stmt) exitStmt);
-								res.add(abs);
-								registerActivationCallSite(callSite, callee, abs);
+								Abstraction abs = checkAbstraction(source.deriveNewAbstraction
+										(source.getAccessPath().copyWithNewValue(ie.getArg(0)), (Stmt) exitStmt));
+								if (abs != null) {
+									res.add(abs);
+									registerActivationCallSite(callSite, callee, abs);
+								}
 							}
 						}
 						else {
@@ -604,10 +627,12 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 										if (isStringType(source.getAccessPath().getBaseType()))
 											continue;
 										
-										Abstraction abs = source.deriveNewAbstraction
-												(source.getAccessPath().copyWithNewValue(originalCallArg), (Stmt) exitStmt);
-										res.add(abs);
-										registerActivationCallSite(callSite, callee, abs);
+										Abstraction abs = checkAbstraction(source.deriveNewAbstraction
+												(source.getAccessPath().copyWithNewValue(originalCallArg), (Stmt) exitStmt));
+										if (abs != null) {
+											res.add(abs);
+											registerActivationCallSite(callSite, callee, abs);
+										}
 									}
 								}
 							}
@@ -622,10 +647,12 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 											Stmt stmt = (Stmt) callSite;
 											if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
 												InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();
-												Abstraction abs = source.deriveNewAbstraction
-														(source.getAccessPath().copyWithNewValue(iIExpr.getBase()), (Stmt) exitStmt);
-												res.add(abs);
-												registerActivationCallSite(callSite, callee, abs);
+												Abstraction abs = checkAbstraction(source.deriveNewAbstraction
+														(source.getAccessPath().copyWithNewValue(iIExpr.getBase()), (Stmt) exitStmt));
+												if (abs != null) {
+													res.add(abs);
+													registerActivationCallSite(callSite, callee, abs);
+												}
 											}
 										}
 									}

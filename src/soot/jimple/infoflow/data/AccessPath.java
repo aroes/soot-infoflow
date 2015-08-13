@@ -35,6 +35,12 @@ import soot.jimple.infoflow.collect.MyConcurrentHashMap;
  */
 public class AccessPath implements Cloneable {
 	
+	public enum ArrayTaintType {
+		Contents,
+		Length,
+		ContentsAndLength
+	}
+	
 	// ATTENTION: This class *must* be immutable!
 	/*
 	 * tainted value, is not null for non-static values
@@ -50,7 +56,7 @@ public class AccessPath implements Cloneable {
 	
 	private final boolean taintSubFields;
 	private final boolean cutOffApproximation;
-	private final boolean isArrayLength;
+	private final ArrayTaintType arrayTaintType;
 	
 	private int hashCode = 0;
 	
@@ -136,26 +142,34 @@ public class AccessPath implements Cloneable {
 		this.fieldTypes = null;
 		this.taintSubFields = true;
 		this.cutOffApproximation = false;
-		this.isArrayLength = false;
+		this.arrayTaintType = ArrayTaintType.ContentsAndLength;
 	}
 	
 	public AccessPath(Value val, boolean taintSubFields){
-		this(val, (SootField[]) null, null, (Type[]) null, taintSubFields);
+		this(val, (SootField[]) null, null, (Type[]) null, taintSubFields,
+				ArrayTaintType.ContentsAndLength);
 	}
 	
-	public AccessPath(Value val, SootField[] appendingFields, boolean taintSubFields){
-		this(val, appendingFields, null, (Type[]) null, taintSubFields);
+	public AccessPath(Value val, SootField[] appendingFields, boolean taintSubFields) {
+		this(val, appendingFields, null, (Type[]) null, taintSubFields, ArrayTaintType.ContentsAndLength);
 	}
 	
-	public AccessPath(Value val, SootField[] appendingFields, Type valType,
-			Type[] appendingFieldTypes, boolean taintSubFields) {
-		this(val, appendingFields, valType, appendingFieldTypes, taintSubFields, false, true,
-				false);
+	public AccessPath(Value val, SootField[] appendingFields, boolean taintSubFields,
+			ArrayTaintType arrayTaintType) {
+		this(val, appendingFields, null, (Type[]) null, taintSubFields, arrayTaintType);
 	}
 	
 	public AccessPath(Value val, SootField[] appendingFields, Type valType,
 			Type[] appendingFieldTypes, boolean taintSubFields,
-			boolean cutFirstField, boolean reduceBases, boolean isArrayLength) {
+			ArrayTaintType arrayTaintType) {
+		this(val, appendingFields, valType, appendingFieldTypes, taintSubFields, false, true,
+				arrayTaintType);
+	}
+	
+	public AccessPath(Value val, SootField[] appendingFields, Type valType,
+			Type[] appendingFieldTypes, boolean taintSubFields,
+			boolean cutFirstField, boolean reduceBases,
+			ArrayTaintType arrayTaintType) {
 		// Make sure that the base object is valid
 		assert (val == null && appendingFields != null && appendingFields.length > 0)
 		 	|| canContainValue(val);
@@ -169,7 +183,7 @@ public class AccessPath implements Cloneable {
 		
 		SootField[] fields;
 		Type[] fieldTypes;
-		this.isArrayLength = isArrayLength;
+		this.arrayTaintType = arrayTaintType;
 		
 		// Get the base object, field and type
 		if(val instanceof FieldRef) {
@@ -379,12 +393,14 @@ public class AccessPath implements Cloneable {
 	}
 	
 	public AccessPath(SootField staticfield, boolean taintSubFields){
-		this(null, new SootField[] { staticfield }, null, new Type[] { staticfield.getType() }, taintSubFields);
+		this(null, new SootField[] { staticfield }, null,
+				new Type[] { staticfield.getType() }, taintSubFields, ArrayTaintType.ContentsAndLength);
 	}
 
 	public AccessPath(Value base, SootField field, boolean taintSubFields){
 		this(base, field == null ? null : new SootField[] { field }, null,
-				field == null ? null : new Type[] { field.getType() }, taintSubFields);
+				field == null ? null : new Type[] { field.getType() },
+						taintSubFields, ArrayTaintType.ContentsAndLength);
 		assert base instanceof Local;
 	}
 	
@@ -492,7 +508,7 @@ public class AccessPath implements Cloneable {
 		result = prime * result + ((value == null) ? 0 : value.hashCode());
 		result = prime * result + ((baseType == null) ? 0 : baseType.hashCode());
 		result = prime * result + (this.taintSubFields ? 1 : 0);
-		result = prime * result + (this.isArrayLength ? 1 : 0);
+		result = prime * result + this.arrayTaintType.hashCode();
 		this.hashCode = result;
 		
 		return this.hashCode;
@@ -520,7 +536,7 @@ public class AccessPath implements Cloneable {
 		
 		if (this.taintSubFields != other.taintSubFields)
 			return false;
-		if (this.isArrayLength != other.isArrayLength)
+		if (this.arrayTaintType != other.arrayTaintType)
 			return false;
 		
 		if (!Arrays.equals(fields, other.fields))
@@ -562,8 +578,12 @@ public class AccessPath implements Cloneable {
 				}
 		if (taintSubFields)
 			str += " *";
-		if (isArrayLength)
+		
+		if (arrayTaintType == ArrayTaintType.ContentsAndLength)
+			str += " <+length>";
+		else if (arrayTaintType == ArrayTaintType.Length)
 			str += " <length>";
+		
 		return str;
 	}
 
@@ -592,24 +612,26 @@ public class AccessPath implements Cloneable {
 	public AccessPath copyWithNewValue(Value val, Type newType,
 			boolean cutFirstField, boolean reduceBases) {
 		return copyWithNewValue(val, newType, cutFirstField,
-				reduceBases, false);
+				reduceBases, arrayTaintType);
 	}
 	
 	/**
 	 * value val gets new base, fields are preserved.
 	 * @param val The new base value
-	 * @param reduceBases True if circurlar types shall be reduced to bases
+	 * @param reduceBases True if circular types shall be reduced to bases
+	 * @param arrayTaintType The way a tainted array shall be handled
 	 * @return This access path with the base replaced by the value given in
 	 * the val parameter
 	 */
 	public AccessPath copyWithNewValue(Value val, Type newType, boolean cutFirstField,
-			boolean reduceBases, boolean isArrayLength) {
+			boolean reduceBases, ArrayTaintType arrayTaintType) {
 		if (this.value != null && this.value.equals(val)
-				&& this.baseType.equals(newType))
+				&& this.baseType.equals(newType)
+				&& this.arrayTaintType == arrayTaintType)
 			return this;
 		
 		return new AccessPath(val, fields, newType, fieldTypes, this.taintSubFields,
-				cutFirstField, reduceBases, isArrayLength);
+				cutFirstField, reduceBases, arrayTaintType);
 	}
 	
 	@Override
@@ -618,7 +640,8 @@ public class AccessPath implements Cloneable {
 		if (this == emptyAccessPath)
 			return this;
 
-		AccessPath a = new AccessPath(value, fields, baseType, fieldTypes, taintSubFields);
+		AccessPath a = new AccessPath(value, fields, baseType, fieldTypes,
+				taintSubFields, false, true, arrayTaintType);
 		assert a.equals(this);
 		return a;
 	}
@@ -697,7 +720,8 @@ public class AccessPath implements Cloneable {
 			System.arraycopy(apFieldTypes, 0, fieldTypes, offset, apFieldTypes.length);
 		}
 		
-		return new AccessPath(this.value, fields, baseType, fieldTypes, taintSubFields);
+		return new AccessPath(this.value, fields, baseType, fieldTypes, taintSubFields,
+				false, true, arrayTaintType);
 	}
 	
 	/**
@@ -722,7 +746,8 @@ public class AccessPath implements Cloneable {
 			newFields = null;
 			newTypes = null;
 		}
-		return new AccessPath(value, newFields, fieldTypes[0], newTypes, taintSubFields);		
+		return new AccessPath(value, newFields, fieldTypes[0], newTypes, taintSubFields,
+				false, true, arrayTaintType);		
 	}
 	
 	/**
@@ -747,7 +772,8 @@ public class AccessPath implements Cloneable {
 			newFields = null;
 			newTypes = null;
 		}
-		return new AccessPath(value, newFields, baseType, newTypes, taintSubFields);
+		return new AccessPath(value, newFields, baseType, newTypes,
+				taintSubFields, arrayTaintType);
 	}
 	
 	/**
@@ -784,8 +810,8 @@ public class AccessPath implements Cloneable {
 	 * @return True if this access paths points refers to the length of an array
 	 * instead of to its contents
 	 */
-	public boolean isArrayLength() {
-		return this.isArrayLength;
+	public ArrayTaintType getArrayTaintType() {
+		return this.arrayTaintType;
 	}
 	
 }

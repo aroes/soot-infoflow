@@ -25,6 +25,7 @@ import soot.jimple.Stmt;
 import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.collect.AtomicBitSet;
 import soot.jimple.infoflow.collect.ConcurrentHashSet;
+import soot.jimple.infoflow.data.AccessPath.ArrayTaintType;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG.UnitContainer;
 import soot.jimple.infoflow.solver.fastSolver.FastSolverLinkedNode;
 import soot.jimple.internal.JimpleLocal;
@@ -191,15 +192,16 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	
 	public final Abstraction deriveNewAbstraction(Value taint, boolean cutFirstField, Stmt currentStmt,
 			Type baseType) {
-		return deriveNewAbstraction(taint, cutFirstField, currentStmt, baseType, false);
+		return deriveNewAbstraction(taint, cutFirstField, currentStmt, baseType,
+				getAccessPath().getArrayTaintType());
 	}
 	
 	public final Abstraction deriveNewAbstraction(Value taint, boolean cutFirstField, Stmt currentStmt,
-			Type baseType, boolean isArrayLength) {
+			Type baseType, ArrayTaintType arrayTaintType) {
 		assert !this.getAccessPath().isEmpty();
 		
 		AccessPath newAP = accessPath.copyWithNewValue(taint, baseType, cutFirstField, true,
-				isArrayLength);
+				arrayTaintType);
 		if (this.getAccessPath().equals(newAP) && this.currentStmt == currentStmt)
 			return this;
 		return deriveNewAbstractionMutable(newAP, currentStmt);
@@ -532,6 +534,11 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	
 	public void setCorrespondingCallSite(Stmt callSite) {
 		this.correspondingCallSite = callSite;
+		
+		if (predecessor != null
+				&& predecessor.toString().contains("<length>")
+				&& !this.toString().contains("<length>"))
+			System.out.println("x");
 	}
 	
 	public Stmt getCorrespondingCallSite() {

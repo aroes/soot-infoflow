@@ -188,4 +188,12 @@ public class ArrayTestCode {
 		cm.publish(array.length);
 	}
 	
+	public void arrayLengthTest3() {
+		String[] array = new String[TelephonyManager.getIMEI()];
+		array[0] = TelephonyManager.getDeviceId();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(array.length);
+		cm.publish(array[0]);
+	}
+
 }

@@ -211,6 +211,15 @@ public class HeapTests extends JUnitTests {
 	}
 
 	@Test(timeout = 300000)
+	public void arrayAliasTest2() {
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void arrayAliasTest2()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+	}
+
+	@Test(timeout = 300000)
 	public void functionAliasTest() {
 		Infoflow infoflow = initInfoflow();
 		List<String> epoints = new ArrayList<String>();
@@ -1026,7 +1035,7 @@ public class HeapTests extends JUnitTests {
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void arrayLengthAliasTest1()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
-		checkInfoflow(infoflow, 1);
+		negativeCheckInfoflow(infoflow);
 	}
 	
 	@Test(timeout = 300000)
@@ -1034,6 +1043,33 @@ public class HeapTests extends JUnitTests {
 		Infoflow infoflow = initInfoflow();
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void arrayLengthAliasTest2()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		negativeCheckInfoflow(infoflow);
+	}
+	
+	@Test(timeout = 300000)
+	public void arrayLengthAliasTest3() {
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void arrayLengthAliasTest3()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+	}
+	
+	@Test(timeout = 300000)
+	public void arrayLengthAliasTest4() {
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void arrayLengthAliasTest4()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+	}
+	
+	@Test(timeout = 300000)
+	public void taintPrimitiveFieldTest1() {
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void taintPrimitiveFieldTest1()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
 	}
