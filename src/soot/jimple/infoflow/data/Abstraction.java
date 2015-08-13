@@ -190,10 +190,16 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	}
 	
 	public final Abstraction deriveNewAbstraction(Value taint, boolean cutFirstField, Stmt currentStmt,
-			Type baseType){
+			Type baseType) {
+		return deriveNewAbstraction(taint, cutFirstField, currentStmt, baseType, false);
+	}
+	
+	public final Abstraction deriveNewAbstraction(Value taint, boolean cutFirstField, Stmt currentStmt,
+			Type baseType, boolean isArrayLength) {
 		assert !this.getAccessPath().isEmpty();
 		
-		AccessPath newAP = accessPath.copyWithNewValue(taint, baseType, cutFirstField);
+		AccessPath newAP = accessPath.copyWithNewValue(taint, baseType, cutFirstField, true,
+				isArrayLength);
 		if (this.getAccessPath().equals(newAP) && this.currentStmt == currentStmt)
 			return this;
 		return deriveNewAbstractionMutable(newAP, currentStmt);
