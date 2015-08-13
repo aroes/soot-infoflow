@@ -379,8 +379,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					else if (rightValue instanceof InstanceOfExpr)
 						newAbs = source.deriveNewAbstraction(new AccessPath(leftValue, null,
 								BooleanType.v(), (Type[]) null, true), assignStmt);
-					else if (rightValue instanceof NewArrayExpr)
+					else if (rightValue instanceof NewArrayExpr) {
 						isArrayLength = true;
+						targetType = null;
+					}
 				}
 				else
 					// For implicit taints, we have no type information
