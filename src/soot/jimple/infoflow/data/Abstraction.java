@@ -534,11 +534,6 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	
 	public void setCorrespondingCallSite(Stmt callSite) {
 		this.correspondingCallSite = callSite;
-		
-		if (predecessor != null
-				&& predecessor.toString().contains("<length>")
-				&& !this.toString().contains("<length>"))
-			System.out.println("x");
 	}
 	
 	public Stmt getCorrespondingCallSite() {

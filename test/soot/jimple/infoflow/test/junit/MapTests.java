@@ -69,7 +69,7 @@ public class MapTests extends JUnitTests {
 		checkInfoflow(infoflow, 1);
     }
     
-    @Test//(timeout=300000)
+    @Test(timeout=300000)
     public void concreteMapTest2(){
     	Infoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
