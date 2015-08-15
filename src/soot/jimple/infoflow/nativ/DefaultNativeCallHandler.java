@@ -33,21 +33,23 @@ public class DefaultNativeCallHandler extends AbstractNativeCallHandler {
 		//arraycopy(Object src, int srcPos, Object dest, int destPos, int length)
         //Copies an array from the specified source array, beginning at the specified position,
 		//to the specified position of the destination array.
-		if(call.getInvokeExpr().getMethod().getSignature().equals(SIG_ARRAYCOPY)) {
-			if(params[0].equals(source.getAccessPath().getPlainValue())) {
-				Abstraction abs = source.deriveNewAbstraction(params[2], false, call,
-						source.getAccessPath().getBaseType());
-				abs.setCorrespondingCallSite(call);
-				return Collections.singleton(abs);
+		if (source.isAbstractionActive()) {
+			if(call.getInvokeExpr().getMethod().getSignature().equals(SIG_ARRAYCOPY)) {
+				if(params[0].equals(source.getAccessPath().getPlainValue())) {
+					Abstraction abs = source.deriveNewAbstraction(params[2], false, call,
+							source.getAccessPath().getBaseType());
+					abs.setCorrespondingCallSite(call);
+					return Collections.singleton(abs);
+				}
 			}
-		}
-		else if(call.getInvokeExpr().getMethod().getSignature().equals(SIG_NEW_ARRAY)) {
-			if(params[1].equals(source.getAccessPath().getPlainValue())) {
-				Abstraction abs = source.deriveNewAbstraction(params[1], false, call,
-						source.getAccessPath().getBaseType(), ArrayTaintType.Length);
-				abs.setCorrespondingCallSite(call);
-				return Collections.singleton(abs);
-			}			
+			else if(call.getInvokeExpr().getMethod().getSignature().equals(SIG_NEW_ARRAY)) {
+				if(params[1].equals(source.getAccessPath().getPlainValue())) {
+					Abstraction abs = source.deriveNewAbstraction(params[1], false, call,
+							source.getAccessPath().getBaseType(), ArrayTaintType.Length);
+					abs.setCorrespondingCallSite(call);
+					return Collections.singleton(abs);
+				}			
+			}
 		}
 		
 		return null;
