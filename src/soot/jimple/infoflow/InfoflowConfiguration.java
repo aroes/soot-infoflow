@@ -73,6 +73,7 @@ public class InfoflowConfiguration {
 	private boolean enableImplicitFlows = false;
 	private boolean enableStaticFields = true;
 	private boolean enableExceptions = true;
+	private boolean enableArraySizeTainting = true;
 	private boolean flowSensitiveAliasing = true;
 	private boolean enableTypeChecking = true;
 	private boolean ignoreFlowsInSystemPackages = true;
@@ -311,6 +312,14 @@ public class InfoflowConfiguration {
 	 */
 	public boolean getEnableExceptionTracking() {
 		return enableExceptions;
+	}
+	
+	public void setEnableArraySizeTainting(boolean arrayLengthTainting) {
+		this.enableArraySizeTainting = arrayLengthTainting;
+	}
+	
+	public boolean getEnableArraySizeTainting() {
+		return this.enableArraySizeTainting;
 	}
 	
 	/**

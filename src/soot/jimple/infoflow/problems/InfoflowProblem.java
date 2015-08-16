@@ -724,8 +724,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									// generic case, is true for Locals, ArrayRefs that are equal etc..
 									//y = x && x tainted --> y, x tainted
 									else if (aliasing.mayAlias(rightVal, newSource.getAccessPath().getPlainValue())) {
-										addLeftValue = true;
-										targetType = newSource.getAccessPath().getBaseType();
+										if (config.getEnableArraySizeTainting() || !(rightVal instanceof NewArrayExpr)) {
+											addLeftValue = true;
+											targetType = newSource.getAccessPath().getBaseType();
+										}
 									}
 									
 									// One reason to taint the left side is enough
@@ -1095,6 +1097,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							return Collections.emptySet();
 						if (source == getZeroValue())
 							return Collections.emptySet();
+						
+						if (callee.getName().equals("add"))
+							System.out.println("x");
+						if (callee.getName().equals("listParameter3"))
+							System.out.println("x");
 						
 						// Notify the handler if we have one
 						if (taintPropagationHandlers != null)
