@@ -80,14 +80,14 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 					// Process the predecessor
 					if (processPredecessor(scap, pred))
 						// Schedule the predecessor
-						executor.execute(new SourceFindingTask(pred));
+						spawnSourceFindingTask(pred);
 					
 					// Process the predecessor's neighbors
 					if (pred.getNeighbors() != null)
 						for (Abstraction neighbor : pred.getNeighbors())
 							if (processPredecessor(scap, neighbor))
 								// Schedule the predecessor
-								executor.execute(new SourceFindingTask(neighbor));
+								spawnSourceFindingTask(neighbor);
 				}
 			}
 		}
@@ -172,12 +172,12 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 			return;
 		
 		long beforePathTracking = System.nanoTime();
-    	logger.info("Obtainted {} connections between sources and sinks", res.size());
+    	logger.info("Obtainted {} connections between {} sources and sinks", res.size());
     	
     	// Start the propagation tasks
     	int curResIdx = 0;
     	for (final AbstractionAtSink abs : res) {
-    		logger.info("Building path " + ++curResIdx);    		
+    		logger.info("Building path " + ++curResIdx);
    			buildPathForAbstraction(abs);
    			
    			// Also build paths for the neighbors of our result abstraction
@@ -204,14 +204,22 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 	 * Builds the path for the given abstraction that reached a sink
 	 * @param abs The abstraction that reached a sink
 	 */
-	private void buildPathForAbstraction(final AbstractionAtSink abs) {
+	protected void buildPathForAbstraction(final AbstractionAtSink abs) {
 		SourceContextAndPath scap = new SourceContextAndPath(
 				abs.getAbstraction().getAccessPath(), abs.getSinkStmt());
 		scap = scap.extendPath(abs.getAbstraction());
-		abs.getAbstraction().addPathElement(scap);
 		
-		if (!checkForSource(abs.getAbstraction(), scap))
-			executor.execute(new SourceFindingTask(abs.getAbstraction()));
+		if (abs.getAbstraction().addPathElement(scap))
+			if (!checkForSource(abs.getAbstraction(), scap))
+				spawnSourceFindingTask(abs.getAbstraction());
+	}
+	
+	/**
+	 * Schedules a new propagation task for execution
+	 * @param abs The abstraction for which to schedule a propagation task
+	 */
+	protected void spawnSourceFindingTask(Abstraction abs) {
+		executor.execute(new SourceFindingTask(abs));
 	}
 	
 	@Override

@@ -16,8 +16,8 @@ import soot.jimple.infoflow.InfoflowConfiguration;
  * @author Steven Arzt
  */
 public class SourceContextAndPath extends SourceContext implements Cloneable {
-	private List<Abstraction> path = null;
-	private List<Stmt> callStack = null;
+	protected List<Abstraction> path = null;
+	protected List<Stmt> callStack = null;
 	private int hashCode = 0;
 	
 	public SourceContextAndPath(AccessPath value, Stmt stmt) {
@@ -29,8 +29,7 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 	}
 	
 	public List<Abstraction> getAbstractionPath() {
-		return path == null ? Collections.<Abstraction>emptyList()
-				: Collections.unmodifiableList(this.path);		
+		return path;		
 	}
 	
 	public List<Stmt> getPath() {

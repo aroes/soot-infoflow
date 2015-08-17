@@ -1098,11 +1098,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (source == getZeroValue())
 							return Collections.emptySet();
 						
-						if (callee.getName().equals("add"))
-							System.out.println("x");
-						if (callee.getName().equals("listParameter3"))
-							System.out.println("x");
-						
 						// Notify the handler if we have one
 						if (taintPropagationHandlers != null)
 							for (TaintPropagationHandler tp : taintPropagationHandlers)
