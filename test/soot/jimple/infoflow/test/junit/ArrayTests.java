@@ -149,4 +149,22 @@ public class ArrayTests extends JUnitTests {
 		checkInfoflow(infoflow, 2);
 	}
 
+	@Test(timeout = 300000)
+	public void arrayLengthTest4() {
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.ArrayTestCode: void arrayLengthTest4()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		negativeCheckInfoflow(infoflow);
+	}
+	
+	@Test(timeout = 300000)
+	public void arrayLengthTest5() {
+		Infoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.ArrayTestCode: void arrayLengthTest5()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		negativeCheckInfoflow(infoflow);
+	}
+	
 }

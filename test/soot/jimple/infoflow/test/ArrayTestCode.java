@@ -195,5 +195,20 @@ public class ArrayTestCode {
 		cm.publish(array.length);
 		cm.publish(array[0]);
 	}
-
+	
+	public void arrayLengthTest4() {
+		String[] array = new String[TelephonyManager.getIMEI()];
+		array[0] = "foo";
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(array[0]);
+	}
+	
+	public void arrayLengthTest5() {
+		String[] array = new String[TelephonyManager.getIMEI()];
+		String[] array2 = array;
+		array2[0] = "foo";
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(array[0]);
+	}
+	
 }
