@@ -259,7 +259,7 @@ public class AccessPath implements Cloneable {
 		
 		// We can always merge a.inner.this$0.c to a.c. We do this first so that
 		// we don't create recursive bases for stuff we don't need anyway.
-		if (fields != null) {
+		if (reduceBases && fields != null) {
 			for (int i = 0; i < fields.length; i++) {
 				// Is this a reference to an outer class?
 				if (fields[i].getName().startsWith("this$")) {
