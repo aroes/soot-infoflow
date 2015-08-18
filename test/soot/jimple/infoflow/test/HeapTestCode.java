@@ -871,9 +871,14 @@ public class HeapTestCode {
 			public String get() {
 				return obj.data;
 			}
+			
+			public String getParent() {
+				return parentData;
+			}
 		}
 		
 		public Inner2b obj;
+		public String parentData;
 		
 		public String get() {
 			return obj.data;
@@ -917,6 +922,53 @@ public class HeapTestCode {
 		String untainted = b.obj.get();
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(untainted);		
+	}
+	
+	private class Inner3 {
+		
+		private class Inner2b {
+			
+			private Inner2 foo;
+			
+		}
+
+		private String data;
+		
+		private class Inner2 {
+			
+			public void set() {
+				data = TelephonyManager.getDeviceId();
+			}
+		}
+		
+		private Inner2b obj2;
+		
+		public String get() {
+			return data;
+		}
+	}
+	
+	public void innerClassTest5() {
+		Inner3 a = new Inner3();
+		Inner3 b = new Inner3();
+		
+		a.obj2 = b.new Inner2b();
+		a.obj2.foo = b.new Inner2();
+		
+		a.obj2.foo.set();
+		String untainted = a.get();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(untainted);
+	}
+	
+	public void innerClassTest6() {
+		Inner1b a = new Inner1b();
+		a.obj = a.new Inner2b();
+		a.parentData = TelephonyManager.getDeviceId();
+		
+		Inner1b.Inner2b inner = a.obj;
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(inner.getParent());
 	}
 	
 	private class SimpleTree {

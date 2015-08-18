@@ -787,7 +787,35 @@ public class HeapTests extends JUnitTests {
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		negativeCheckInfoflow(infoflow);
 	}
-
+	
+	@Ignore("We over-approximate here")
+	@Test(timeout = 300000)
+	public void innerClassTest5() {
+		Infoflow infoflow = initInfoflow();
+		infoflow.getConfig().setInspectSources(false);
+		infoflow.getConfig().setInspectSinks(false);
+		infoflow.getConfig().setEnableImplicitFlows(false);
+		
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void innerClassTest5()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		negativeCheckInfoflow(infoflow);
+	}
+	
+	@Ignore("Needs special mapping for reduced this$0 on call")
+	@Test(timeout = 300000)
+	public void innerClassTest6() {
+		Infoflow infoflow = initInfoflow();
+		infoflow.getConfig().setInspectSources(false);
+		infoflow.getConfig().setInspectSinks(false);
+		infoflow.getConfig().setEnableImplicitFlows(false);
+		
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void innerClassTest6()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+	}
+	
 	@Test(timeout = 300000)
 	public void datastructureTest() {
 		Infoflow infoflow = initInfoflow();
