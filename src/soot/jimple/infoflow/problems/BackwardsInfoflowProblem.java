@@ -727,7 +727,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						// pass on the taint
 						if (iStmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
 							InstanceInvokeExpr iinv = (InstanceInvokeExpr) iStmt.getInvokeExpr();
-							if (iinv.getBase() == source.getAccessPath().getPlainValue())
+							if (iinv.getBase() == source.getAccessPath().getPlainValue()
+									&& !interproceduralCFG().getCalleesOfCallAt(call).isEmpty())
 								return Collections.emptySet();
 						}
 						
