@@ -1270,9 +1270,15 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						
 						Set<Abstraction> res = propagationRules.applyCallToReturnFlowFunction(
 								d1, source, iCallStmt);
+						
+						// Do not propagate zero abstractions
+						if (source == getZeroValue())
+							return res == null ? Collections.<Abstraction>emptySet() : res;
+						
+						// Initialize the result set
 						if (res == null)
 							res = new HashSet<>();
-						
+
 						//check inactive elements:
 						final Abstraction newSource;
 						if (!source.isAbstractionActive() && (call == source.getActivationUnit()
