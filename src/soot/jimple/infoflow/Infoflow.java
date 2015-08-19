@@ -509,7 +509,7 @@ public class Infoflow extends AbstractInfoflow {
 				sinkCount);
 		
 		// Initialize the taint wrapper if we have one
-		InfoflowManager manager = new InfoflowManager(forwardSolver, iCfg);
+		InfoflowManager manager = new InfoflowManager(forwardSolver, iCfg, sourcesSinks);
 		if (taintWrapper != null)
 			taintWrapper.initialize(manager);
 		if (nativeCallHandler != null)
