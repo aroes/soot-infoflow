@@ -788,9 +788,11 @@ public class HeapTests extends JUnitTests {
 		negativeCheckInfoflow(infoflow);
 	}
 	
-	@Ignore("We over-approximate here")
 	@Test(timeout = 300000)
 	public void innerClassTest5() {
+		boolean oldUseRecAP = InfoflowConfiguration.getUseRecursiveAccessPaths();
+		InfoflowConfiguration.setUseRecursiveAccessPaths(false);
+		
 		Infoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSources(false);
 		infoflow.getConfig().setInspectSinks(false);
@@ -799,12 +801,16 @@ public class HeapTests extends JUnitTests {
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void innerClassTest5()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		InfoflowConfiguration.setUseRecursiveAccessPaths(oldUseRecAP);
+		
 		negativeCheckInfoflow(infoflow);
 	}
 	
-	@Ignore("Needs special mapping for reduced this$0 on call")
 	@Test(timeout = 300000)
 	public void innerClassTest6() {
+		boolean oldUseRecAP = InfoflowConfiguration.getUseRecursiveAccessPaths();
+		InfoflowConfiguration.setUseRecursiveAccessPaths(false);
+		
 		Infoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSources(false);
 		infoflow.getConfig().setInspectSinks(false);
@@ -813,6 +819,8 @@ public class HeapTests extends JUnitTests {
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void innerClassTest6()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		InfoflowConfiguration.setUseRecursiveAccessPaths(oldUseRecAP);
+		
 		checkInfoflow(infoflow, 1);
 	}
 	

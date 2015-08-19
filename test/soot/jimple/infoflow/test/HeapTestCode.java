@@ -895,7 +895,7 @@ public class HeapTestCode {
 		a.obj.set();
 		String untainted = b.get();
 		ConnectionManager cm = new ConnectionManager();
-		cm.publish(untainted);		
+		cm.publish(untainted);
 	}
 
 	public void innerClassTest3() {
