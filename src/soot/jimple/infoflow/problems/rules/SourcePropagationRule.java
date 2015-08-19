@@ -37,7 +37,7 @@ public class SourcePropagationRule extends AbstractTaintPropagationRule {
 				&& sourceInfo != null
 				&& !sourceInfo.getAccessPaths().isEmpty()) {
 			Set<Abstraction> res = new HashSet<>();
-			Value leftOp = ((DefinitionStmt) stmt).getLeftOp();
+			Value leftOp = stmt instanceof DefinitionStmt ? ((DefinitionStmt) stmt).getLeftOp() : null;
 			for (AccessPath ap : sourceInfo.getAccessPaths()) {
 				Abstraction abs = new Abstraction(ap,
 						stmt,
@@ -47,9 +47,10 @@ public class SourcePropagationRule extends AbstractTaintPropagationRule {
 				res.add(abs);
 				
 				// Compute the aliases
-				if (getAliasing().canHaveAliases(stmt, leftOp, abs))
-					getAliasing().computeAliases(d1, stmt, leftOp,
-							res, getManager().getICFG().getMethodOf(stmt), abs);
+				if (leftOp != null)
+					if (getAliasing().canHaveAliases(stmt, leftOp, abs))
+						getAliasing().computeAliases(d1, stmt, leftOp,
+								res, getManager().getICFG().getMethodOf(stmt), abs);
 				
 				// Set the corresponding call site
 				if (stmt.containsInvokeExpr())

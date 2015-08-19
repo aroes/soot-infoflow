@@ -364,6 +364,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							
 							// Compute the sources
 							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, is);
+							if (source == getZeroValue())
+								return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
 							if (res == null)
 								res = new HashSet<>();
 							
@@ -376,8 +378,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							}
 
 							if (addOriginal)
-								if (source != getZeroValue())
-									res.add(source);
+								res.add(source);
 							return res;
 						}
 					};
@@ -1273,7 +1274,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						
 						// Do not propagate zero abstractions
 						if (source == getZeroValue())
-							return res == null ? Collections.<Abstraction>emptySet() : res;
+							return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
 						
 						// Initialize the result set
 						if (res == null)
