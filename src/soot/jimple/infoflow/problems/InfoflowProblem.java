@@ -37,7 +37,6 @@ import soot.ValueBox;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
 import soot.jimple.CastExpr;
-import soot.jimple.CaughtExceptionRef;
 import soot.jimple.Constant;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.FieldRef;
@@ -55,7 +54,6 @@ import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.TableSwitchStmt;
 import soot.jimple.ThrowStmt;
-import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.aliasing.Aliasing;
 import soot.jimple.infoflow.aliasing.IAliasingStrategy;
@@ -91,10 +89,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			new MyConcurrentHashMap<AbstractionAtSink, Abstraction>();
 	
 	public InfoflowProblem(InfoflowManager manager,
-			InfoflowConfiguration config,
 			IAliasingStrategy aliasingStrategy,
 			Abstraction zeroValue) {
-		super(manager, config);
+		super(manager);
 		
 		if (zeroValue != null)
 			setZeroValue(zeroValue);
@@ -117,7 +114,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			(Abstraction d1,
 			final Stmt iStmt,
 			Abstraction source) {
-		assert config.getInspectSources() || source != getZeroValue();
+		assert manager.getConfig().getInspectSources() || source != getZeroValue();
 		
 		// If we don't have a taint wrapper, there's nothing we can do here
 		if(taintWrapper == null)
@@ -162,7 +159,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					boolean taintsObjectValue = val.getBaseType() instanceof RefType
 							&& abs.getAccessPath().getBaseType() instanceof RefType
 							&& !TypeUtils.isStringType(val.getBaseType());
-					boolean taintsStaticField = config.getEnableStaticFieldTracking()
+					boolean taintsStaticField = manager.getConfig().getEnableStaticFieldTracking()
 							&& abs.getAccessPath().isStaticFieldRef();
 						
 					// If the tainted value gets overwritten, it cannot have aliases afterwards
@@ -204,7 +201,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				
 				@Override
 				public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
-					if (config.getStopAfterFirstFlow() && !results.isEmpty())
+					if (manager.getConfig().getStopAfterFirstFlow() && !results.isEmpty())
 						return Collections.emptySet();
 												
 					// Notify the handler if we have one
@@ -270,7 +267,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				final Value rightValue = assignStmt.getRightOp();
 				
 				// Do not taint static fields unless the option is enabled
-				if (!config.getEnableStaticFieldTracking()
+				if (!manager.getConfig().getEnableStaticFieldTracking()
 						&& leftValue instanceof StaticFieldRef)
 					return;
 				
@@ -364,22 +361,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							
 							// Compute the sources
 							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, is);
-							if (source == getZeroValue())
-								return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
-							if (res == null)
-								res = new HashSet<>();
-							
-							boolean addOriginal = true;
-							if (is.getRightOp() instanceof CaughtExceptionRef) {
-								if (source.getExceptionThrown()) {
-									res.add(source.deriveNewAbstractionOnCatch(is.getLeftOp()));
-									addOriginal = false;
-								}
-							}
-
-							if (addOriginal)
-								res.add(source);
-							return res;
+							return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
 						}
 					};
 
@@ -405,16 +387,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									|| interproceduralCFG().getMethodOf(src).getActiveBody().getUnits().contains
 											(source.getTopPostdominator().getUnit());
 							
-							// Compute the sources
-							{
-								Set<Abstraction> sourceAbs = propagationRules.applyNormalFlowFunction(d1, source, stmt);
-								if (sourceAbs != null && !sourceAbs.isEmpty())
-									return sourceAbs;
-							}
-                            
                             // on NormalFlow taint cannot be created
+							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, stmt);
 							if (source == getZeroValue())
-								return Collections.emptySet();
+								return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
 							
 							// Check whether we must leave a conditional branch
 							if (source.isTopPostdominator(assignStmt)) {
@@ -432,10 +408,13 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								newSource = source;
 							
 							// Create the new taints that may be created by this assignment
-							Set<Abstraction> res = createNewTaintOnAssignment(src, assignStmt,
+							Set<Abstraction> resAssign = createNewTaintOnAssignment(src, assignStmt,
 									rightVals, d1, newSource);
-							if (res != null)
-								return res;
+							if (resAssign != null) {
+								if (res != null)
+									resAssign.addAll(res);
+								return resAssign;
+							}
 							
 							// If we have propagated taint, we have returned from this method by now
 							
@@ -512,7 +491,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							// If we have a non-empty postdominator stack, we taint
 							// every assignment target
 							if (implicitTaint) {
-								assert config.getEnableImplicitFlows();
+								assert manager.getConfig().getEnableImplicitFlows();
 								
 								// We can skip over all local assignments inside conditionally-
 								// called functions since they are not visible in the caller
@@ -555,7 +534,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										// check if static variable is tainted (same name, same class)
 										//y = X.f && X.f tainted --> y, X.f tainted
 										if (rightVal instanceof StaticFieldRef) {
-											if (config.getEnableStaticFieldTracking() && mappedAP != null) {
+											if (manager.getConfig().getEnableStaticFieldTracking() && mappedAP != null) {
 												addLeftValue = true;
 												cutFirstField = true;
 											}
@@ -607,7 +586,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									// generic case, is true for Locals, ArrayRefs that are equal etc..
 									//y = x && x tainted --> y, x tainted
 									else if (aliasing.mayAlias(rightVal, newSource.getAccessPath().getPlainValue())) {
-										if (config.getEnableArraySizeTainting() || !(rightVal instanceof NewArrayExpr)) {
+										if (manager.getConfig().getEnableArraySizeTainting()
+												|| !(rightVal instanceof NewArrayExpr)) {
 											addLeftValue = true;
 											targetType = newSource.getAccessPath().getBaseType();
 										}
@@ -706,7 +686,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						}
 					};
 				}
-				else if (config.getEnableExceptionTracking() && src instanceof ThrowStmt) {
+				else if (src instanceof ThrowStmt) {
 					final ThrowStmt throwStmt = (ThrowStmt) src;
 					return new NotifyingNormalFlowFunction(throwStmt) {
 
@@ -720,10 +700,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									return Collections.emptySet();
 							}
 							
-							if (aliasing.mayAlias(throwStmt.getOp(), source.getAccessPath().getPlainValue()))
-								return Collections.singleton(source.deriveNewAbstractionOnThrow(throwStmt));
-
-							return Collections.singleton(source);
+							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, throwStmt);
+							return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
 						}
 					};
 				}
@@ -737,7 +715,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					
 					// If implicit flow tracking is not enabled, we only need to
 					// check for sinks
-					if (!config.getEnableImplicitFlows())
+					if (!manager.getConfig().getEnableImplicitFlows())
 						return new NotifyingNormalFlowFunction(stmt) {
 							
 							@Override
@@ -858,13 +836,13 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					}
 					
 					private Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
-						if (config.getStopAfterFirstFlow() && !results.isEmpty())
+						if (manager.getConfig().getStopAfterFirstFlow() && !results.isEmpty())
 							return Collections.emptySet();
 						
 						//if we do not have to look into sources or sinks:
-						if (!config.getInspectSources() && sourceInfo != null)
+						if (!manager.getConfig().getInspectSources() && sourceInfo != null)
 							return Collections.emptySet();
-						if (!config.getInspectSinks() && isSink)
+						if (!manager.getConfig().getInspectSinks() && isSink)
 							return Collections.emptySet();
 						if (source == getZeroValue()) {
 							assert sourceInfo != null;
@@ -896,7 +874,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						// pseudo abstraction. We do not map parameters if we are handling an
 						// implicit flow anyway.
 						if (source.getAccessPath().isEmpty()) {
-							assert config.getEnableImplicitFlows();
+							assert manager.getConfig().getEnableImplicitFlows();
 							
 							// Block the call site for further explicit tracking
 							if (d1 != null) {
@@ -918,7 +896,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						
 						// Only propagate the taint if the target field is actually read
 						if (source.getAccessPath().isStaticFieldRef()
-								&& !config.getEnableStaticFieldTracking())
+								&& !manager.getConfig().getEnableStaticFieldTracking())
 							return Collections.emptySet();
 						
 						// Map the source access path into the callee
@@ -953,8 +931,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					return KillAll.v();
 				final Stmt iCallStmt = (Stmt) callSite;
 				
-				final ThrowStmt throwStmt = (exitStmt instanceof ThrowStmt) ? (ThrowStmt) exitStmt : null;
-				
 				final ReturnStmt returnStmt = (exitStmt instanceof ReturnStmt) ? (ReturnStmt) exitStmt : null;
 				
 				final Local[] paramLocals = callee.getActiveBody().getParameterLocals().toArray(
@@ -976,7 +952,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					
 					private Set<Abstraction> computeTargetsInternal(Abstraction source,
 							Collection<Abstraction> callerD1s) {
-						if (config.getStopAfterFirstFlow() && !results.isEmpty())
+						if (manager.getConfig().getStopAfterFirstFlow() && !results.isEmpty())
 							return Collections.emptySet();
 						if (source == getZeroValue())
 							return Collections.emptySet();
@@ -1049,7 +1025,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								return Collections.emptySet();
 						
 						// Static field tracking can be disabled
-						if (!config.getEnableStaticFieldTracking()
+						if (!manager.getConfig().getEnableStaticFieldTracking()
 								&& newSource.getAccessPath().isStaticFieldRef())
 							return Collections.emptySet();
 												
@@ -1076,13 +1052,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (callSite == null)
 							return Collections.emptySet();
 						
-						// If we throw an exception with a tainted operand, we need to
-						// handle this specially
-						if (throwStmt != null && config.getEnableExceptionTracking())
-							if (aliasing.mayAlias(throwStmt.getOp(), source.getAccessPath().getPlainValue()))
-								return Collections.singleton(source.deriveNewAbstractionOnThrow(throwStmt));
-						
-						Set<Abstraction> res = new HashSet<Abstraction>();
+						Set<Abstraction> res = propagationRules.applyReturnFlowFunction(callerD1s,
+								newSource, (Stmt) exitStmt);
+						if (res == null)
+							res = new HashSet<Abstraction>();
 						
 						// if we have a returnStmt we have to look at the returned value:
 						if (returnStmt != null && callSite instanceof DefinitionStmt) {
@@ -1247,7 +1220,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					}
 					
 					private Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
-						if (config.getStopAfterFirstFlow() && !results.isEmpty())
+						if (manager.getConfig().getStopAfterFirstFlow() && !results.isEmpty())
 							return Collections.emptySet();
 						
 						// Notify the handler if we have one
@@ -1265,7 +1238,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						}
 						
 						// Static field tracking can be disabled
-						if (!config.getEnableStaticFieldTracking()
+						if (!manager.getConfig().getEnableStaticFieldTracking()
 								&& source.getAccessPath().isStaticFieldRef())
 							return Collections.emptySet();
 						
@@ -1309,7 +1282,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								&& manager.getSourceSinkManager().isSink(iCallStmt, interproceduralCFG(),
 										newSource.getAccessPath())) {
 							// If we are inside a conditional branch, we consider every sink call a leak
-							boolean conditionalCall = config.getEnableImplicitFlows() 
+							boolean conditionalCall = manager.getConfig().getEnableImplicitFlows() 
 									&& !interproceduralCFG().getMethodOf(call).isStatic()
 									&& aliasing.mayAlias(interproceduralCFG().getMethodOf(call).getActiveBody().getThisLocal(),
 											newSource.getAccessPath().getPlainValue())
@@ -1386,7 +1359,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (passOn
 								&& invExpr instanceof InstanceInvokeExpr
 								&& newSource.getAccessPath().isInstanceFieldRef()
-								&& (config.getInspectSinks() || !isSink)
+								&& (manager.getConfig().getInspectSinks() || !isSink)
 								&& (hasValidCallees
 									|| (taintWrapper != null && taintWrapper.isExclusive(
 											iCallStmt, newSource)))) {
@@ -1554,7 +1527,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 	 */
 	private void addResult(AbstractionAtSink resultAbs) {
 		// Check whether we need to filter a result in a system package
-		if (config.getIgnoreFlowsInSystemPackages() && SystemClassHandler.isClassInSystemPackage
+		if (manager.getConfig().getIgnoreFlowsInSystemPackages() && SystemClassHandler.isClassInSystemPackage
 				(interproceduralCFG().getMethodOf(resultAbs.getSinkStmt()).getDeclaringClass().getName()))
 			return;
 		

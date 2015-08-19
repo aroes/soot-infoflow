@@ -13,15 +13,27 @@ import soot.jimple.infoflow.source.ISourceSinkManager;
  */
 public class InfoflowManager {
 	
+	private final InfoflowConfiguration config;
 	private IInfoflowSolver forwardSolver;
 	private final IInfoflowCFG icfg;
 	private final ISourceSinkManager sourceSinkManager;
 	
-	InfoflowManager(IInfoflowSolver forwardSolver, IInfoflowCFG icfg,
+	InfoflowManager(InfoflowConfiguration config,
+			IInfoflowSolver forwardSolver,
+			IInfoflowCFG icfg,
 			ISourceSinkManager sourceSinkManager) {
+		this.config = config;
 		this.forwardSolver = forwardSolver;
 		this.icfg = icfg;
 		this.sourceSinkManager = sourceSinkManager;
+	}
+	
+	/**
+	 * Gets the configuration for this data flow analysis
+	 * @return The configuration for this data flow analysis
+	 */
+	public InfoflowConfiguration getConfig() {
+		return this.config;
 	}
 	
 	/**

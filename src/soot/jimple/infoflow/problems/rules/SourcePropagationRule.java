@@ -74,4 +74,10 @@ public class SourcePropagationRule extends AbstractTaintPropagationRule {
 		return propagate(d1, source, stmt);
 	}
 
+	@Override
+	public Collection<Abstraction> propagateReturnFlow(
+			Collection<Abstraction> callerD1s, Abstraction source, Stmt stmt) {
+		return null;
+	}
+
 }

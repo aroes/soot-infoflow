@@ -32,7 +32,6 @@ import soot.Value;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InvokeExpr;
 import soot.jimple.StaticFieldRef;
-import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.collect.MyConcurrentHashMap;
@@ -56,7 +55,6 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 			BiDiInterproceduralCFG<Unit, SootMethod>> {
 	
 	protected final InfoflowManager manager;
-	protected final InfoflowConfiguration config;
 	protected final Map<Unit, Set<Abstraction>> initialSeeds = new HashMap<Unit, Set<Abstraction>>();
 	protected ITaintPropagationWrapper taintWrapper;
 	
@@ -73,15 +71,13 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	private MyConcurrentHashMap<Unit, Set<Unit>> activationUnitsToCallSites =
 			new MyConcurrentHashMap<Unit, Set<Unit>>();
 	
-	public AbstractInfoflowProblem(InfoflowManager manager,
-			InfoflowConfiguration config) {
+	public AbstractInfoflowProblem(InfoflowManager manager) {
 		super(manager.getICFG());
 		this.manager = manager;
-		this.config = config;
 	}
 	
 	protected boolean canCastType(Type destType, Type sourceType) {
-		if (!config.getEnableTypeChecking())
+		if (!manager.getConfig().getEnableTypeChecking())
 			return true;
 		
 		// If we don't have a source type, we generally allow the cast
@@ -107,7 +103,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	}
 		
 	protected boolean hasCompatibleTypesForCall(AccessPath apBase, SootClass dest) {
-		if (!config.getEnableTypeChecking())
+		if (!manager.getConfig().getEnableTypeChecking())
 			return true;
 
 		// Cannot invoke a method on a primitive type
@@ -233,7 +229,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	}
 	
 	protected boolean isCallSiteActivatingTaint(Unit callSite, Unit activationUnit) {
-		if (!config.getFlowSensitiveAliasing())
+		if (!manager.getConfig().getFlowSensitiveAliasing())
 			return false;
 
 		if (activationUnit == null)
@@ -243,7 +239,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	}
 	
 	protected boolean registerActivationCallSite(Unit callSite, SootMethod callee, Abstraction activationAbs) {
-		if (!config.getFlowSensitiveAliasing())
+		if (!manager.getConfig().getFlowSensitiveAliasing())
 			return false;
 		Unit activationUnit = activationAbs.getActivationUnit();
 		if (activationUnit == null)
@@ -368,7 +364,8 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	@Override
 	public Abstraction createZeroValue() {
 		if (zeroValue == null)
-			zeroValue = Abstraction.getZeroAbstraction(config.getFlowSensitiveAliasing());
+			zeroValue = Abstraction.getZeroAbstraction(
+					manager.getConfig().getFlowSensitiveAliasing());
 		return zeroValue;
 	}
 	

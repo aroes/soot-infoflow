@@ -420,7 +420,7 @@ public class Infoflow extends AbstractInfoflow {
 		IMemoryManager<Abstraction> memoryManager = new FlowDroidMemoryManager();
 		
 		// Initialize the data flow manager
-		InfoflowManager manager = new InfoflowManager(null, iCfg, sourcesSinks);
+		InfoflowManager manager = new InfoflowManager(config, null, iCfg, sourcesSinks);
 		
 		BackwardsInfoflowProblem backProblem = null;
 		InfoflowManager backwardsManager = null;
@@ -428,10 +428,9 @@ public class Infoflow extends AbstractInfoflow {
 		final IAliasingStrategy aliasingStrategy;
 		switch (getConfig().getAliasingAlgorithm()) {
 			case FlowSensitive:
-				backwardsManager = new InfoflowManager(null,
+				backwardsManager = new InfoflowManager(config, null,
 						new BackwardsInfoflowCFG(iCfg), sourcesSinks);
-				backProblem = new BackwardsInfoflowProblem(config,
-						backwardsManager);
+				backProblem = new BackwardsInfoflowProblem(backwardsManager);
 				backSolver = new InfoflowSolver(backProblem, executor);
 				backSolver.setMemoryManager(memoryManager);
 				backSolver.setJumpPredecessors(!pathBuilderFactory.supportsPathReconstruction());
@@ -452,7 +451,7 @@ public class Infoflow extends AbstractInfoflow {
 		Abstraction zeroValue = backProblem != null
 				? backProblem.createZeroValue() : null;
 		InfoflowProblem forwardProblem  = new InfoflowProblem(manager,
-				config, aliasingStrategy, zeroValue);
+				aliasingStrategy, zeroValue);
 		
 		// Set the options
 		InfoflowSolver forwardSolver = new InfoflowSolver(forwardProblem, executor);

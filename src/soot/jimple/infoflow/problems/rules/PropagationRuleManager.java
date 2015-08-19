@@ -31,6 +31,8 @@ public class PropagationRuleManager {
 		this.zeroValue = zeroValue;
 		
 		rules.add(new SourcePropagationRule(manager, aliasing, zeroValue));
+		if (manager.getConfig().getEnableExceptionTracking())
+			rules.add(new ExceptionPropagationRule(manager, aliasing, zeroValue));
 	}
 	
 	/**
@@ -71,6 +73,30 @@ public class PropagationRuleManager {
 		for (ITaintPropagationRule rule : rules) {
 			Collection<Abstraction> ruleOut = rule.propagateCallToReturnFlow(
 					d1, source, stmt);
+			if (ruleOut != null && !ruleOut.isEmpty()) {
+				if (res == null)
+					res = new HashSet<Abstraction>(ruleOut);
+				else
+					res.addAll(ruleOut);
+			}
+		}
+		return res;
+	}
+	
+	/**
+	 * Applies all rules to the return flow function
+	 * @param callerD1s The context abstraction at the caller side
+	 * @param source The incoming taint to propagate over the given statement
+	 * @param stmt The statement to which to apply the rules
+	 * @return The collection of outgoing taints
+	 */
+	public Set<Abstraction> applyReturnFlowFunction(
+			Collection<Abstraction> callerD1s, Abstraction source, Stmt stmt) {
+		Set<Abstraction> res = null;
+		
+		for (ITaintPropagationRule rule : rules) {
+			Collection<Abstraction> ruleOut = rule.propagateReturnFlow(callerD1s,
+					source, stmt);
 			if (ruleOut != null && !ruleOut.isEmpty()) {
 				if (res == null)
 					res = new HashSet<Abstraction>(ruleOut);
