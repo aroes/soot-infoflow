@@ -34,7 +34,7 @@ public class InFunctionTests extends JUnitTests {
 	private static final String SINK_STRING_RETURN = "secret";
 	private static final String SINK_STRING_RETURN_R5 = "$r5";
 	
-    @Test(timeout=300000)
+    @Test//(timeout=300000)
     public void inFunctionTest1(){
     	Infoflow infoflow = initInfoflow(true);
     	String epoint = "<soot.jimple.infoflow.test.InFunctionCode: java.lang.String infSourceCode1(java.lang.String)>";

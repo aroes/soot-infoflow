@@ -49,6 +49,7 @@ import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.UnopExpr;
 import soot.jimple.infoflow.InfoflowConfiguration;
+import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.collect.MutableTwoElementSet;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
@@ -57,10 +58,9 @@ import soot.jimple.infoflow.solver.functions.SolverCallFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverCallToReturnFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverNormalFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverReturnFlowFunction;
-import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
 import soot.jimple.infoflow.util.BaseSelector;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
+import soot.jimple.infoflow.util.TypeUtils;
 
 /**
  * class which contains the flow functions for the backwards solver. This is
@@ -74,9 +74,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 	}
 	
 	public BackwardsInfoflowProblem(InfoflowConfiguration config,
-			BiDiInterproceduralCFG<Unit, SootMethod> icfg,
-			ISourceSinkManager sourceSinkManager) {
-		super(config, icfg, sourceSinkManager);
+			InfoflowManager manager) {
+		super(manager, config);
 	}
 
 	public void setForwardSolver(IInfoflowSolver forwardSolver) {
@@ -93,13 +92,13 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				if (!abs.getAccessPath().isStaticFieldRef()) {
 					if (abs.getAccessPath().getBaseType() instanceof PrimType)
 						return null;
-					if (isStringType(abs.getAccessPath().getBaseType()))
+					if (TypeUtils.isStringType(abs.getAccessPath().getBaseType()))
 						return null;
 				}
 				else {
 					if (abs.getAccessPath().getFirstFieldType() instanceof PrimType)
 						return null;
-					if (isStringType(abs.getAccessPath().getFirstFieldType()))
+					if (TypeUtils.isStringType(abs.getAccessPath().getFirstFieldType()))
 						return null;
 				}
 				return abs;
@@ -414,10 +413,10 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				for (int i = 0; i < dest.getParameterCount(); i++)
 					paramLocals[i] = dest.getActiveBody().getParameterLocal(i);
 				
-				final boolean isSource = sourceSinkManager != null
-						? sourceSinkManager.getSourceInfo((Stmt) src, interproceduralCFG()) != null : false;
-				final boolean isSink = sourceSinkManager != null
-						? sourceSinkManager.isSink(stmt, interproceduralCFG(), null) : false;
+				final boolean isSource = manager.getSourceSinkManager() != null
+						? manager.getSourceSinkManager().getSourceInfo((Stmt) src, interproceduralCFG()) != null : false;
+				final boolean isSink = manager.getSourceSinkManager() != null
+						? manager.getSourceSinkManager().isSink(stmt, interproceduralCFG(), null) : false;
 				
 				// This is not cached by Soot, so accesses are more expensive
 				// than one might think
@@ -624,7 +623,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 										// never need to be propagated back
 										if (source.getAccessPath().getBaseType() instanceof PrimType)
 											continue;
-										if (isStringType(source.getAccessPath().getBaseType()))
+										if (TypeUtils.isStringType(source.getAccessPath().getBaseType()))
 											continue;
 										
 										Abstraction abs = checkAbstraction(source.deriveNewAbstraction

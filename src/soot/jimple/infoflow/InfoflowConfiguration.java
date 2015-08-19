@@ -65,6 +65,7 @@ public class InfoflowConfiguration {
 	
 	private static int accessPathLength = 5;
 	private static boolean useRecursiveAccessPaths = true;
+	private static boolean useThisChainReduction = true;
 	private static boolean pathAgnosticResults = true;
 	private static boolean oneResultPerAccessPath = false;
 	private static boolean mergeNeighbors = false;
@@ -183,6 +184,26 @@ public class InfoflowConfiguration {
 	 */
 	public static void setUseRecursiveAccessPaths(boolean useRecursiveAccessPaths) {
 		InfoflowConfiguration.useRecursiveAccessPaths = useRecursiveAccessPaths;
+	}
+	
+	/**
+	 * Gets whether access paths pointing to outer objects using this$n shall be
+	 * reduced, e.g. whether we shall propagate a.data instead of a.this$0.a.data.
+	 * @return True if access paths including outer objects shall be reduced,
+	 * otherwise false
+	 */
+	public static boolean getUseThisChainReduction() {
+		return useThisChainReduction;
+	}
+
+	/**
+	 * Sets whether access paths pointing to outer objects using this$n shall be
+	 * reduced, e.g. whether we shall propagate a.data instead of a.this$0.a.data.
+	 * @param useThisChainReduction True if access paths including outer objects
+	 * shall be reduced, otherwise false
+	 */
+	public static void setUseThisChainReduction(boolean useThisChainReduction) {
+		InfoflowConfiguration.useThisChainReduction = useThisChainReduction;
 	}
 	
 	/**

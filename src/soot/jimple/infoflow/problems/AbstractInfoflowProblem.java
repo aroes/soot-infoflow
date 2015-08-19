@@ -33,6 +33,7 @@ import soot.jimple.InstanceFieldRef;
 import soot.jimple.InvokeExpr;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.infoflow.InfoflowConfiguration;
+import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.collect.MyConcurrentHashMap;
 import soot.jimple.infoflow.data.Abstraction;
@@ -41,7 +42,6 @@ import soot.jimple.infoflow.handlers.TaintPropagationHandler;
 import soot.jimple.infoflow.nativ.INativeCallHandler;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
-import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
 import soot.jimple.toolkits.ide.DefaultJimpleIFDSTabulationProblem;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
@@ -55,13 +55,13 @@ import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulationProblem<Abstraction,
 			BiDiInterproceduralCFG<Unit, SootMethod>> {
 	
+	protected final InfoflowManager manager;
 	protected final InfoflowConfiguration config;
 	protected final Map<Unit, Set<Abstraction>> initialSeeds = new HashMap<Unit, Set<Abstraction>>();
 	protected ITaintPropagationWrapper taintWrapper;
 	
 	protected INativeCallHandler ncHandler;
-	protected final ISourceSinkManager sourceSinkManager;
-
+	
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
 	private Abstraction zeroValue = null;
@@ -73,12 +73,11 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	private MyConcurrentHashMap<Unit, Set<Unit>> activationUnitsToCallSites =
 			new MyConcurrentHashMap<Unit, Set<Unit>>();
 	
-	public AbstractInfoflowProblem(InfoflowConfiguration config,
-			BiDiInterproceduralCFG<Unit, SootMethod> icfg,
-			ISourceSinkManager sourceSinkManager) {
-		super(icfg);
+	public AbstractInfoflowProblem(InfoflowManager manager,
+			InfoflowConfiguration config) {
+		super(manager.getICFG());
+		this.manager = manager;
 		this.config = config;
-		this.sourceSinkManager = sourceSinkManager;
 	}
 	
 	protected boolean canCastType(Type destType, Type sourceType) {
@@ -416,16 +415,4 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 		return false;
 	}
 	
-	/**
-	 * Checks whether the given type is a string
-	 * @param tp The type of check
-	 * @return True if the given type is a string, otherwise false
-	 */
-	protected boolean isStringType(Type tp) {
-		if (!(tp instanceof RefType))
-			return false;
-		RefType refType = (RefType) tp;
-		return refType.getClassName().equals("java.lang.String");
-	}
-
 }

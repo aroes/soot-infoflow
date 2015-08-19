@@ -13,7 +13,7 @@ import soot.jimple.infoflow.source.ISourceSinkManager;
  */
 public class InfoflowManager {
 	
-	private final IInfoflowSolver forwardSolver;
+	private IInfoflowSolver forwardSolver;
 	private final IInfoflowCFG icfg;
 	private final ISourceSinkManager sourceSinkManager;
 	
@@ -22,6 +22,14 @@ public class InfoflowManager {
 		this.forwardSolver = forwardSolver;
 		this.icfg = icfg;
 		this.sourceSinkManager = sourceSinkManager;
+	}
+	
+	/**
+	 * Sets the IFDS solver that propagates edges forward
+	 * @param solver The IFDS solver that propagates edges forward
+	 */
+	public void setForwardSolver(IInfoflowSolver solver) {
+		this.forwardSolver = solver;
 	}
 	
 	/**

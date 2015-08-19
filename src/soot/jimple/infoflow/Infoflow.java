@@ -419,13 +419,19 @@ public class Infoflow extends AbstractInfoflow {
 		// Initialize the memory manager
 		IMemoryManager<Abstraction> memoryManager = new FlowDroidMemoryManager();
 		
-		BackwardsInfoflowProblem backProblem;
-		InfoflowSolver backSolver;
+		// Initialize the data flow manager
+		InfoflowManager manager = new InfoflowManager(null, iCfg, sourcesSinks);
+		
+		BackwardsInfoflowProblem backProblem = null;
+		InfoflowManager backwardsManager = null;
+		InfoflowSolver backSolver = null;
 		final IAliasingStrategy aliasingStrategy;
 		switch (getConfig().getAliasingAlgorithm()) {
 			case FlowSensitive:
+				backwardsManager = new InfoflowManager(null,
+						new BackwardsInfoflowCFG(iCfg), sourcesSinks);
 				backProblem = new BackwardsInfoflowProblem(config,
-						new BackwardsInfoflowCFG(iCfg), sourcesSinks);				
+						backwardsManager);
 				backSolver = new InfoflowSolver(backProblem, executor);
 				backSolver.setMemoryManager(memoryManager);
 				backSolver.setJumpPredecessors(!pathBuilderFactory.supportsPathReconstruction());
@@ -442,14 +448,19 @@ public class Infoflow extends AbstractInfoflow {
 				throw new RuntimeException("Unsupported aliasing algorithm");
 		}
 		
-		InfoflowProblem forwardProblem  = new InfoflowProblem(config,
-				iCfg, sourcesSinks, aliasingStrategy);
-		if (backProblem != null)
-			forwardProblem.setZeroValue(backProblem.createZeroValue());
+		// Get the zero fact
+		Abstraction zeroValue = backProblem != null
+				? backProblem.createZeroValue() : null;
+		InfoflowProblem forwardProblem  = new InfoflowProblem(manager,
+				config, aliasingStrategy, zeroValue);
 		
 		// Set the options
 		InfoflowSolver forwardSolver = new InfoflowSolver(forwardProblem, executor);
 		aliasingStrategy.setForwardSolver(forwardSolver);
+		manager.setForwardSolver(forwardSolver);
+		if (backwardsManager != null)
+			backwardsManager.setForwardSolver(forwardSolver);
+		
 		forwardSolver.setMemoryManager(memoryManager);
 		forwardSolver.setJumpPredecessors(!pathBuilderFactory.supportsPathReconstruction());
 //		forwardSolver.setEnableMergePointChecking(true);
@@ -509,7 +520,6 @@ public class Infoflow extends AbstractInfoflow {
 				sinkCount);
 		
 		// Initialize the taint wrapper if we have one
-		InfoflowManager manager = new InfoflowManager(forwardSolver, iCfg, sourcesSinks);
 		if (taintWrapper != null)
 			taintWrapper.initialize(manager);
 		if (nativeCallHandler != null)

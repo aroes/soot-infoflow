@@ -3,8 +3,11 @@ package soot.jimple.infoflow.aliasing;
 import heros.solver.IDESolver;
 
 import java.util.Collection;
+import java.util.Set;
 
+import soot.ArrayType;
 import soot.Local;
+import soot.PrimType;
 import soot.RefLikeType;
 import soot.SootField;
 import soot.SootMethod;
@@ -12,13 +15,16 @@ import soot.Type;
 import soot.Value;
 import soot.jimple.ArrayRef;
 import soot.jimple.Constant;
+import soot.jimple.DefinitionStmt;
 import soot.jimple.FieldRef;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.data.AccessPath.BasePair;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
+import soot.jimple.infoflow.util.TypeUtils;
 import soot.jimple.toolkits.pointer.LocalMustAliasAnalysis;
 import soot.jimple.toolkits.pointer.StrongLocalMustAliasAnalysis;
 import soot.toolkits.graph.UnitGraph;
@@ -34,6 +40,7 @@ import com.google.common.cache.LoadingCache;
 public class Aliasing {
 	
 	private final IAliasingStrategy aliasingStrategy;
+	private final IAliasingStrategy implicitFlowAliasingStrategy;
 	private final IInfoflowCFG cfg;
 	
 	protected final LoadingCache<SootMethod,LocalMustAliasAnalysis> strongAliasAnalysis =
@@ -47,7 +54,45 @@ public class Aliasing {
 	
 	public Aliasing(IAliasingStrategy aliasingStrategy, IInfoflowCFG cfg) {
 		this.aliasingStrategy = aliasingStrategy;
+		this.implicitFlowAliasingStrategy = new ImplicitFlowAliasStrategy(cfg);
 		this.cfg = cfg;
+	}
+	
+	/**
+	 * Computes the taints for the aliases of a given tainted variable
+	 * @param d1 The context in which the variable has been tainted
+	 * @param src The statement that tainted the variable
+	 * @param targetValue The target value which has been tainted
+	 * @param taintSet The set to which all generated alias taints shall be
+	 * added
+	 * @param method The method containing src
+	 * @param newAbs The newly generated abstraction for the variable taint
+	 * @return The set of immediately available alias abstractions. If no such
+	 * abstractions exist, null is returned
+	 */
+	public void computeAliases
+			(final Abstraction d1, final Stmt src,
+			final Value targetValue, Set<Abstraction> taintSet,
+			SootMethod method, Abstraction newAbs) {
+		// We never ever handle primitives as they can never have aliases
+		if (newAbs.getAccessPath().isStaticFieldRef()) {
+			if (newAbs.getAccessPath().getFirstFieldType() instanceof PrimType)
+				return;
+		}
+		else if (newAbs.getAccessPath().getBaseType() instanceof PrimType)
+			return;
+		
+		// If we are not in a conditionally-called method, we run the
+		// full alias analysis algorithm. Otherwise, we use a global
+		// non-flow-sensitive approximation.
+		if (!d1.getAccessPath().isEmpty()) {
+			aliasingStrategy.computeAliasTaints(d1,
+					src, targetValue, taintSet, method, newAbs);
+		}
+		else if (targetValue instanceof InstanceFieldRef) {
+			implicitFlowAliasingStrategy.computeAliasTaints(d1, src,
+					targetValue, taintSet, method, newAbs);
+		}
 	}
 	
 	/**
@@ -270,6 +315,45 @@ public class Aliasing {
 
 		LocalMustAliasAnalysis lmaa = strongAliasAnalysis.getUnchecked(cfg.getMethodOf(position));
 		return lmaa.mustAlias(val1, position, val2, position);
+	}
+	
+	/**
+	 * Checks whether the given newly created taint can have an alias at the
+	 * given statement. Assume a statement a.x = source(). This will check
+	 * whether tainting a.<?> can induce new aliases or not.
+	 * @param val The value which gets tainted
+	 * @param source The source from which the taints comes from
+	 * @return True if the analysis must look for aliases for the newly
+	 * constructed taint, otherwise false
+	 */
+	public boolean canHaveAliases(Stmt stmt, Value val, Abstraction source) {
+		if (stmt instanceof DefinitionStmt) {
+			DefinitionStmt defStmt = (DefinitionStmt) stmt;
+			// If the left side is overwritten completely, we do not need to
+			// look for aliases. This also covers strings.
+			if (defStmt.getLeftOp() instanceof Local
+					&& defStmt.getLeftOp() == source.getAccessPath().getPlainValue())
+				return false;
+			
+			// Arrays are heap objects
+			if (val instanceof ArrayRef)
+				return true;
+			if (val instanceof FieldRef)
+				return true;
+		}
+		
+		// Primitive types or constants do not have aliases
+		if (val.getType() instanceof PrimType)
+			return false;
+		if (val instanceof Constant)
+			return false;
+		
+		// String cannot have aliases
+		if (TypeUtils.isStringType(val.getType()))
+			return false;
+		
+		return val instanceof FieldRef
+				|| (val instanceof Local && ((Local)val).getType() instanceof ArrayType);
 	}
 
 }
