@@ -33,7 +33,6 @@ import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
 import soot.Value;
-import soot.ValueBox;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
 import soot.jimple.CastExpr;
@@ -66,7 +65,6 @@ import soot.jimple.infoflow.data.AccessPath.ArrayTaintType;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler.FlowFunctionType;
 import soot.jimple.infoflow.problems.rules.PropagationRuleManager;
-import soot.jimple.infoflow.solver.cfg.IInfoflowCFG.UnitContainer;
 import soot.jimple.infoflow.solver.functions.SolverCallFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverCallToReturnFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverNormalFlowFunction;
@@ -283,7 +281,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							}
 							
 							// Compute the sources
-							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, is);
+							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, is, null);
 							return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
 						}
 					};
@@ -311,9 +309,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 											(source.getTopPostdominator().getUnit());
 							
                             // on NormalFlow taint cannot be created
-							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, stmt);
-							if (source == getZeroValue())
-								return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
+							ByReferenceBoolean killAll = new ByReferenceBoolean();
+							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, stmt, killAll);
+							if (killAll.value)
+								return Collections.<Abstraction>emptySet();
 							
 							// Check whether we must leave a conditional branch
 							if (source.isTopPostdominator(assignStmt)) {
@@ -622,7 +621,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									return Collections.emptySet();
 							}
 							
-							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, throwStmt);
+							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, throwStmt, null);
 							return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
 						}
 					};
@@ -635,39 +634,14 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							: src instanceof LookupSwitchStmt ? ((LookupSwitchStmt) src).getKey()
 							: ((TableSwitchStmt) src).getKey();
 					
-					// If implicit flow tracking is not enabled, we only need to
-					// check for sinks
-					if (!manager.getConfig().getEnableImplicitFlows())
-						return new NotifyingNormalFlowFunction(stmt) {
-							
-							@Override
-							public Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
-								// Check for a sink
-								if (source.isAbstractionActive()
-										&& manager.getSourceSinkManager() != null
-										&& manager.getSourceSinkManager().isSink(stmt, interproceduralCFG(),
-												source.getAccessPath()))
-									for (Value v : BaseSelector.selectBaseList(condition, false))
-										if (aliasing.mayAlias(v, source.getAccessPath().getPlainValue())) {
-											addResult(new AbstractionAtSink(source, stmt));
-											break;
-										}
-								
-								return Collections.singleton(source);
-							}
-							
-						};
-					
 					// Check for implicit flows
 					return new NotifyingNormalFlowFunction(stmt) {
 
 						@Override
 						public Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
-							if (!source.isAbstractionActive())
-								return Collections.singleton(source);
-							
 							// Check for a sink
-							if (manager.getSourceSinkManager() != null
+							if (source.isAbstractionActive()
+									&& manager.getSourceSinkManager() != null
 									&& manager.getSourceSinkManager().isSink(stmt, interproceduralCFG(),
 											source.getAccessPath()))
 								for (Value v : BaseSelector.selectBaseList(condition, false))
@@ -676,46 +650,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										break;
 									}
 							
-							// Check whether we must leave a conditional branch
-							if (source.isTopPostdominator(src)) {
-								source = source.dropTopPostdominator();
-								// Have we dropped the last postdominator for an empty taint?
-								if (source.getAccessPath().isEmpty() && source.getTopPostdominator() == null)
-									return Collections.emptySet();
-							}
-							
-							// If we are in a conditionally-called method, there is no
-							// need to care about further conditionals, since all
-							// assignment targets will be tainted anyway
-							if (source.getAccessPath().isEmpty())
-								return Collections.singleton(source);
-							
-							Set<Abstraction> res = new HashSet<Abstraction>();
-							res.add(source);
-
-							Set<Value> values = new HashSet<Value>();
-							if (condition instanceof Local)
-								values.add(condition);
-							else
-								for (ValueBox box : condition.getUseBoxes())
-									values.add(box.getValue());
-														
-							for (Value val : values)
-								if (aliasing.mayAlias(val, source.getAccessPath().getPlainValue())) {
-									// ok, we are now in a branch that depends on a secret value.
-									// We now need the postdominator to know when we leave the
-									// branch again.
-									UnitContainer postdom = interproceduralCFG().getPostdominatorOf(src);
-									if (!(postdom.getMethod() == null
-											&& source.getTopPostdominator() != null
-											&& interproceduralCFG().getMethodOf(postdom.getUnit()) == source.getTopPostdominator().getMethod())) {
-										Abstraction newAbs = source.deriveConditionalAbstractionEnter(postdom, stmt);
-										res.add(newAbs);
-										break;
-									}
-								}
-
-							return res;
+							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, stmt, null);
+							return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
 						}
 					};
 				}

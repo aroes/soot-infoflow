@@ -30,7 +30,8 @@ public class WrapperPropagationRule extends AbstractTaintPropagationRule {
 	
 	@Override
 	public Collection<Abstraction> propagateNormalFlow(Abstraction d1,
-			Abstraction source, Stmt stmt, ByReferenceBoolean killSource) {
+			Abstraction source, Stmt stmt, ByReferenceBoolean killSource,
+			ByReferenceBoolean killAll) {
 		return null;
 	}
 	

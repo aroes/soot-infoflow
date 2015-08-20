@@ -36,6 +36,8 @@ public class PropagationRuleManager {
 			rules.add(new ExceptionPropagationRule(manager, aliasing, zeroValue));
 		if (manager.getTaintWrapper() != null)
 			rules.add(new WrapperPropagationRule(manager, aliasing, zeroValue));
+		if (manager.getConfig().getEnableImplicitFlows())
+			rules.add(new ImplicitPropagtionRule(manager, aliasing, zeroValue));
 	}
 	
 	/**
@@ -43,15 +45,17 @@ public class PropagationRuleManager {
 	 * @param d1 The context abstraction
 	 * @param source The incoming taint to propagate over the given statement
 	 * @param stmt The statement to which to apply the rules
+	 * @param killAll Outgoing value that receives whether all taints shall be
+	 * killed and nothing shall be propagated onwards
 	 * @return The collection of outgoing taints
 	 */
 	public Set<Abstraction> applyNormalFlowFunction(Abstraction d1,
-			Abstraction source, Stmt stmt) {
+			Abstraction source, Stmt stmt, ByReferenceBoolean killAll) {
 		Set<Abstraction> res = null;
 		ByReferenceBoolean killSource = new ByReferenceBoolean();
 		for (ITaintPropagationRule rule : rules) {
 			Collection<Abstraction> ruleOut = rule.propagateNormalFlow(d1,
-					source, stmt, killSource);
+					source, stmt, killSource, killAll);
 			if (ruleOut != null && !ruleOut.isEmpty()) {
 				if (res == null)
 					res = new HashSet<Abstraction>(ruleOut);
@@ -61,7 +65,7 @@ public class PropagationRuleManager {
 		}
 		
 		// Do we need to retain the source value?
-		if (!killSource.value) {
+		if ((killAll == null || !killAll.value) && !killSource.value) {
 			if (res == null) {
 				res = new HashSet<>();
 				res.add(source);

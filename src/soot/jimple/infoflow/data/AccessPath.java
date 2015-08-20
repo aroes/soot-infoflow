@@ -247,7 +247,8 @@ public class AccessPath implements Cloneable {
 		// Make sure that only heap objects may have fields
 		assert this.value == null
 				|| this.value.getType() instanceof RefType 
-				|| this.value.getType() instanceof ArrayType
+				|| (this.value.getType() instanceof ArrayType && (((ArrayType) this.value.getType()).getArrayElementType() instanceof ArrayType
+						|| ((ArrayType) this.value.getType()).getArrayElementType() instanceof RefType))
 				|| fields == null || fields.length == 0;
 		
 		// Make sure that the actual types are always as precise as the declared ones

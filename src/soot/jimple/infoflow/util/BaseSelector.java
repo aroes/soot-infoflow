@@ -29,7 +29,7 @@ public class BaseSelector {
 	 * @param val the value which should be pruned
 	 * @param keepArrayRef if false then array refs are pruned to the base array object
 	 * @return the value (possibly pruned to base object)
-	 */ //we want to keep ArrayRef for objects on the right side of the assignment
+	 */
 	public static Value selectBase(Value val, boolean keepArrayRef){
 		//we taint base of array instead of array elements
 		if (val instanceof ArrayRef && !keepArrayRef) {
@@ -49,7 +49,7 @@ public class BaseSelector {
 		
 		return val;
 	}
-
+	
 	/**
 	 * the operations that are not relevant for analysis like "not" or casts
 	 * are removed - array refs are only removed if explicitly stated

@@ -28,10 +28,13 @@ public class SourcePropagationRule extends AbstractTaintPropagationRule {
 	}
 
 	private Collection<Abstraction> propagate(Abstraction d1,
-			Abstraction source, Stmt stmt, ByReferenceBoolean killSource) {
+			Abstraction source, Stmt stmt, ByReferenceBoolean killSource,
+			ByReferenceBoolean killAll) {
 		if (source == getZeroValue()) {
 			// We never propagate zero facts onwards
 			killSource.value = true;
+			if (killAll != null)
+				killAll.value = true;
 			
 			// Is this a source?
 			final SourceInfo sourceInfo = getManager().getSourceSinkManager() != null
@@ -65,14 +68,15 @@ public class SourcePropagationRule extends AbstractTaintPropagationRule {
 
 	@Override
 	public Collection<Abstraction> propagateNormalFlow(Abstraction d1,
-			Abstraction source, Stmt stmt, ByReferenceBoolean killSource) {
-		return propagate(d1, source, stmt, killSource);
+			Abstraction source, Stmt stmt, ByReferenceBoolean killSource,
+			ByReferenceBoolean killAll) {
+		return propagate(d1, source, stmt, killSource, killAll);
 	}
 
 	@Override
 	public Collection<Abstraction> propagateCallToReturnFlow(Abstraction d1,
 			Abstraction source, Stmt stmt, ByReferenceBoolean killSource) {
-		return propagate(d1, source, stmt, killSource);
+		return propagate(d1, source, stmt, killSource, null);
 	}
 
 	@Override
