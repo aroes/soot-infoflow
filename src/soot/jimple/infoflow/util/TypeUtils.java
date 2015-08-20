@@ -102,12 +102,9 @@ public class TypeUtils {
 				return false;
 			
 			// If the target type is a primitive array, we cannot have any
-			// subsequent fields
-			if (type instanceof ArrayType) {
-				ArrayType at = (ArrayType) type;
-				if (at.getArrayElementType() instanceof PrimType)
-					return accessPath.getFieldCount() == 1;
-			}
+			// subsequent field
+			if (isPrimitiveArray(type))
+				return accessPath.getFieldCount() == 1;
 			return true;
 		}
 		else {
@@ -115,13 +112,19 @@ public class TypeUtils {
 				return false;
 			// If the target type is a primitive array, we cannot have any
 			// subsequent fields
-			if (type instanceof ArrayType) {
-				ArrayType at = (ArrayType) type;
-				if (at.getArrayElementType() instanceof PrimType)
-					return accessPath.isLocal();
-			}
+			if (isPrimitiveArray(type))
+				return accessPath.isLocal();
 			return true;
 		}
+	}
+	
+	public static boolean isPrimitiveArray(Type type) {
+		if (type instanceof ArrayType) {
+			ArrayType at = (ArrayType) type;
+			if (at.getArrayElementType() instanceof PrimType)
+				return true;
+		}
+		return false;
 	}
 	
 	public boolean hasCompatibleTypesForCall(AccessPath apBase, SootClass dest) {

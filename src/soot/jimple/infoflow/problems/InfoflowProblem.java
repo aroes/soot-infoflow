@@ -264,7 +264,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						@Override
 						public Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
 							// Compute the sources
-							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, is, null);
+							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, is);
 							return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
 						}
 					};
@@ -276,7 +276,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					final AssignStmt assignStmt = (AssignStmt) src;
 					final Value right = assignStmt.getRightOp();
 					
-					final Value leftValue = assignStmt.getLeftOp();
 					final Value[] rightVals = BaseSelector.selectBaseList(right, true);
 										
 					return new NotifyingNormalFlowFunction(assignStmt) {
@@ -291,12 +290,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									|| interproceduralCFG().getMethodOf(src).getActiveBody().getUnits().contains
 											(source.getTopPostdominator().getUnit());
 							
-                            // on NormalFlow taint cannot be created
-							ByReferenceBoolean killAll = new ByReferenceBoolean();
-							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, stmt, killAll);
-							if (killAll.value)
-								return Collections.<Abstraction>emptySet();
-							
 							// Check whether we must activate a taint
 							final Abstraction newSource;
 							if (!source.isAbstractionActive() && src == source.getActivationUnit())
@@ -304,68 +297,22 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							else
 								newSource = source;
 							
+							// Apply the propagation rules
+							ByReferenceBoolean killSource = new ByReferenceBoolean();
+							ByReferenceBoolean killAll = new ByReferenceBoolean();
+							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, newSource, stmt,
+									killSource, killAll);
+							if (killAll.value)
+								return Collections.<Abstraction>emptySet();
+														
 							// Create the new taints that may be created by this assignment
 							Set<Abstraction> resAssign = createNewTaintOnAssignment(src, assignStmt,
 									rightVals, d1, newSource);
-							if (resAssign != null) {
+							if (resAssign != null && !resAssign.isEmpty())
 								res.addAll(resAssign);
-								return res;
-							}
 							
-							// If we have propagated taint, we have returned from this method by now
-							
-							//if leftvalue contains the tainted value -> it is overwritten - remove taint:
-							//but not for arrayRefs:
-							// x[i] = y --> taint is preserved since we do not distinguish between elements of collections 
-							//because we do not use a MUST-Alias analysis, we cannot delete aliases of taints 
-							if (assignStmt.getLeftOp() instanceof ArrayRef)
-								return Collections.singleton(newSource);
-							
-							if(newSource.getAccessPath().isInstanceFieldRef()) {
-								// Data Propagation: x.f = y && x.f tainted --> no taint propagated
-								// Alias Propagation: Only kill the alias if we directly overwrite it,
-								// otherwise it might just be the creation of yet another alias
-								if (leftValue instanceof InstanceFieldRef) {
-									InstanceFieldRef leftRef = (InstanceFieldRef) leftValue;
-									boolean baseAliases = source.isAbstractionActive()
-											&& aliasing.mustAlias((Local) leftRef.getBase(),
-													newSource.getAccessPath().getPlainValue(), assignStmt);
-									if (baseAliases
-											|| leftRef.getBase() == newSource.getAccessPath().getPlainValue()) {
-										if (aliasing.mustAlias(leftRef.getField(), newSource.getAccessPath().getFirstField())) {
-											return Collections.emptySet();
-										}
-									}
-								}
-								// x = y && x.f tainted -> no taint propagated. This must only check the precise
-								// variable which gets replaced, but not any potential strong aliases
-								else if (leftValue instanceof Local){
-									if (leftValue == newSource.getAccessPath().getPlainValue()) {
-										return Collections.emptySet();
-									}
-								}	
-							}
-							//X.f = y && X.f tainted -> no taint propagated. Kills are allowed even if
-							// static field tracking is disabled
-							else if (newSource.getAccessPath().isStaticFieldRef()){
-								if(leftValue instanceof StaticFieldRef
-										&& aliasing.mustAlias(((StaticFieldRef)leftValue).getField(),
-												newSource.getAccessPath().getFirstField())){
-									return Collections.emptySet();
-								}
-								
-							}
-							//when the fields of an object are tainted, but the base object is overwritten
-							// then the fields should not be tainted any more
-							//x = y && x.f tainted -> no taint propagated
-							else if (newSource.getAccessPath().isLocal()
-									&& leftValue instanceof Local
-									&& leftValue == newSource.getAccessPath().getPlainValue()){
-								return Collections.emptySet();
-							}
-														
 							//nothing applies: z = y && x tainted -> taint is preserved
-							return Collections.singleton(newSource);
+							return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
 						}
 
 						private Set<Abstraction> createNewTaintOnAssignment(final Unit src,
@@ -383,7 +330,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							boolean implicitTaint = newSource.getTopPostdominator() != null
 									&& newSource.getTopPostdominator().getUnit() != null;
 							implicitTaint |= newSource.getAccessPath().isEmpty();
-							
+														
 							// If we have a non-empty postdominator stack, we taint
 							// every assignment target
 							if (implicitTaint) {
@@ -570,7 +517,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 											source.getAccessPath()))
 								addResult(new AbstractionAtSink(source, returnStmt));
 							
-							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, returnStmt, null);
+							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, returnStmt);
 							return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
 						}
 					};
@@ -581,7 +528,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 
 						@Override
 						public Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
-							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, throwStmt, null);
+							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, throwStmt);
 							return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
 						}
 					};
@@ -609,7 +556,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										break;
 									}
 							
-							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, stmt, null);
+							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, stmt);
 							return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
 						}
 					};

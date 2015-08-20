@@ -38,6 +38,7 @@ public class PropagationRuleManager {
 			rules.add(new WrapperPropagationRule(manager, aliasing, zeroValue));
 		if (manager.getConfig().getEnableImplicitFlows())
 			rules.add(new ImplicitPropagtionRule(manager, aliasing, zeroValue));
+		rules.add(new StrongUpdatePropagationRule(manager, aliasing, zeroValue));
 	}
 	
 	/**
@@ -45,14 +46,31 @@ public class PropagationRuleManager {
 	 * @param d1 The context abstraction
 	 * @param source The incoming taint to propagate over the given statement
 	 * @param stmt The statement to which to apply the rules
+	 * @return The collection of outgoing taints
+	 */
+	public Set<Abstraction> applyNormalFlowFunction(Abstraction d1,
+			Abstraction source, Stmt stmt) {
+		return applyNormalFlowFunction(d1, source, stmt, null, null);
+	}
+	
+	/**
+	 * Applies all rules to the normal flow function
+	 * @param d1 The context abstraction
+	 * @param source The incoming taint to propagate over the given statement
+	 * @param stmt The statement to which to apply the rules
+	 * @param killSource Outgoing value for the rule to indicate whether the
+	 * incoming taint abstraction shall be killed
 	 * @param killAll Outgoing value that receives whether all taints shall be
 	 * killed and nothing shall be propagated onwards
 	 * @return The collection of outgoing taints
 	 */
 	public Set<Abstraction> applyNormalFlowFunction(Abstraction d1,
-			Abstraction source, Stmt stmt, ByReferenceBoolean killAll) {
+			Abstraction source, Stmt stmt,
+			ByReferenceBoolean killSource,
+			ByReferenceBoolean killAll) {
 		Set<Abstraction> res = null;
-		ByReferenceBoolean killSource = new ByReferenceBoolean();
+		if (killSource == null)
+			killSource = new ByReferenceBoolean();
 		for (ITaintPropagationRule rule : rules) {
 			Collection<Abstraction> ruleOut = rule.propagateNormalFlow(d1,
 					source, stmt, killSource, killAll);
@@ -121,6 +139,8 @@ public class PropagationRuleManager {
 	 * @param d1 The context abstraction
 	 * @param source The incoming taint to propagate over the given statement
 	 * @param stmt The statement to which to apply the rules
+	 * @param killSource Outgoing value for the rule to indicate whether the
+	 * incoming taint abstraction shall be killed
 	 * @return The collection of outgoing taints
 	 */
 	public Set<Abstraction> applyCallToReturnFlowFunction(Abstraction d1,
