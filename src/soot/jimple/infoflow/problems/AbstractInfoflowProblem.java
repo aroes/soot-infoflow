@@ -286,10 +286,32 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	 * @return True if the cast is possible, otherwise false
 	 */
 	protected boolean checkCast(AccessPath accessPath, Type type) {
-		if (accessPath.isStaticFieldRef())
-			return canCastType(type, accessPath.getFirstFieldType());
-		else
-			return canCastType(type, accessPath.getBaseType());
+		if (accessPath.isStaticFieldRef()) {
+			if (!canCastType(type, accessPath.getFirstFieldType()))
+				return false;
+			
+			// If the target type is a primitive array, we cannot have any
+			// subsequent fields
+			if (type instanceof ArrayType) {
+				ArrayType at = (ArrayType) type;
+				if (at.getArrayElementType() instanceof PrimType)
+					return accessPath.getFieldCount() == 1;
+			}
+			return true;
+		}
+		else {
+			if (!canCastType(type, accessPath.getBaseType()))
+				return false;
+			
+			// If the target type is a primitive array, we cannot have any
+			// subsequent fields
+			if (type instanceof ArrayType) {
+				ArrayType at = (ArrayType) type;
+				if (at.getArrayElementType() instanceof PrimType)
+					return accessPath.isLocal();
+			}
+			return true;
+		}
 	}
 	
 	/**

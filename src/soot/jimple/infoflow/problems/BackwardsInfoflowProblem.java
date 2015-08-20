@@ -469,13 +469,14 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 									if (u instanceof ReturnStmt) {
 										ReturnStmt rStmt = (ReturnStmt) u;
 										if (rStmt.getOp() instanceof Local
-												|| rStmt.getOp() instanceof FieldRef) {
-											Abstraction abs = checkAbstraction(source.deriveNewAbstraction
-													(source.getAccessPath().copyWithNewValue
-															(rStmt.getOp(), null, false), (Stmt) src));
-											if (abs != null)
-												res.add(abs);
-										}
+												|| rStmt.getOp() instanceof FieldRef)
+											if (checkCast(source.getAccessPath(), rStmt.getOp().getType())) {
+												Abstraction abs = checkAbstraction(source.deriveNewAbstraction
+														(source.getAccessPath().copyWithNewValue
+																(rStmt.getOp(), null, false), (Stmt) src));
+												if (abs != null)
+													res.add(abs);
+											}
 									}
 								}
 							}
