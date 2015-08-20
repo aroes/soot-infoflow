@@ -92,7 +92,7 @@ public class Infoflow extends AbstractInfoflow {
     private IInfoflowCFG iCfg;
     
     private Set<ResultsAvailableHandler> onResultsAvailable = new HashSet<ResultsAvailableHandler>();
-    private Set<TaintPropagationHandler> taintPropagationHandlers = new HashSet<TaintPropagationHandler>();
+    private TaintPropagationHandler taintPropagationHandler = null;
     
     private long maxMemoryConsumption = -1;
 
@@ -465,16 +465,14 @@ public class Infoflow extends AbstractInfoflow {
 		forwardSolver.setJumpPredecessors(!pathBuilderFactory.supportsPathReconstruction());
 //		forwardSolver.setEnableMergePointChecking(true);
 		
-		for (TaintPropagationHandler tp : taintPropagationHandlers)
-			forwardProblem.addTaintPropagationHandler(tp);
+		forwardProblem.setTaintPropagationHandler(taintPropagationHandler);
 		forwardProblem.setTaintWrapper(taintWrapper);
 		if (nativeCallHandler != null)
 			forwardProblem.setNativeCallHandler(nativeCallHandler);
 		
 		if (backProblem != null) {
 			backProblem.setForwardSolver(forwardSolver);
-			for (TaintPropagationHandler tp : taintPropagationHandlers)
-				backProblem.addTaintPropagationHandler(tp);
+			backProblem.setTaintPropagationHandler(taintPropagationHandler);
 			backProblem.setTaintWrapper(taintWrapper);
 			if (nativeCallHandler != null)
 				backProblem.setNativeCallHandler(nativeCallHandler);
@@ -760,11 +758,11 @@ public class Infoflow extends AbstractInfoflow {
 	}
 	
 	/**
-	 * Adds a handler which is invoked whenever a taint is propagated
+	 * Sets a handler which is invoked whenever a taint is propagated
 	 * @param handler The handler to be invoked when propagating taints
 	 */
-	public void addTaintPropagationHandler(TaintPropagationHandler handler) {
-		this.taintPropagationHandlers.add(handler);
+	public void setTaintPropagationHandler(TaintPropagationHandler handler) {
+		this.taintPropagationHandler = handler;
 	}
 	
 	/**

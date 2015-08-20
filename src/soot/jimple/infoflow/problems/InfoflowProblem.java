@@ -61,7 +61,6 @@ import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.data.AccessPath.ArrayTaintType;
-import soot.jimple.infoflow.handlers.TaintPropagationHandler;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler.FlowFunctionType;
 import soot.jimple.infoflow.problems.rules.PropagationRuleManager;
 import soot.jimple.infoflow.solver.functions.SolverCallFlowFunction;
@@ -122,10 +121,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						return Collections.emptySet();
 												
 					// Notify the handler if we have one
-					if (taintPropagationHandlers != null)
-						for (TaintPropagationHandler tp : taintPropagationHandlers)
-							tp.notifyFlowIn(stmt, source, interproceduralCFG(),
-									FlowFunctionType.NormalFlowFunction);
+					if (taintPropagationHandler != null)
+						taintPropagationHandler.notifyFlowIn(stmt, source, interproceduralCFG(),
+								FlowFunctionType.NormalFlowFunction);
 					
 					// Compute the new abstractions
 					Set<Abstraction> res = computeTargetsInternal(d1, source);
@@ -154,11 +152,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					Abstraction incoming,
 					Set<Abstraction> outgoing,
 					FlowFunctionType functionType) {
-				if (taintPropagationHandlers != null
+				if (taintPropagationHandler != null
 						&& outgoing != null
 						&& !outgoing.isEmpty())
-					for (TaintPropagationHandler tp : taintPropagationHandlers)
-						outgoing = tp.notifyFlowOut(stmt, d1, incoming, outgoing,
+					outgoing = taintPropagationHandler.notifyFlowOut(stmt, d1, incoming, outgoing,
 								interproceduralCFG(), functionType);
 				return outgoing;
 			}
@@ -670,10 +667,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						}
 						
 						// Notify the handler if we have one
-						if (taintPropagationHandlers != null)
-							for (TaintPropagationHandler tp : taintPropagationHandlers)
-								tp.notifyFlowIn(stmt, source, interproceduralCFG(),
-										FlowFunctionType.CallFlowFunction);
+						if (taintPropagationHandler != null)
+							taintPropagationHandler.notifyFlowIn(stmt, source, interproceduralCFG(),
+									FlowFunctionType.CallFlowFunction);
 						
 						ByReferenceBoolean killAll = new ByReferenceBoolean();
 						Set<Abstraction> res = propagationRules.applyCallFlowFunction(d1,
@@ -748,9 +744,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							return Collections.emptySet();
 						
 						// Notify the handler if we have one
-						if (taintPropagationHandlers != null)
-							for (TaintPropagationHandler tp : taintPropagationHandlers)
-								tp.notifyFlowIn(exitStmt, source, interproceduralCFG(),
+						if (taintPropagationHandler != null)
+								taintPropagationHandler.notifyFlowIn(exitStmt, source, interproceduralCFG(),
 										FlowFunctionType.ReturnFlowFunction);
 						
 						boolean callerD1sConditional = false;
@@ -1004,10 +999,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							return Collections.emptySet();
 						
 						// Notify the handler if we have one
-						if (taintPropagationHandlers != null)
-							for (TaintPropagationHandler tp : taintPropagationHandlers)
-								tp.notifyFlowIn(call, source, interproceduralCFG(),
-										FlowFunctionType.CallToReturnFlowFunction);
+						if (taintPropagationHandler != null)
+							taintPropagationHandler.notifyFlowIn(call, source, interproceduralCFG(),
+									FlowFunctionType.CallToReturnFlowFunction);
 						
 						// Static field tracking can be disabled
 						if (!manager.getConfig().getEnableStaticFieldTracking()

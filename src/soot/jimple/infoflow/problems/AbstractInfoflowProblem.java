@@ -56,7 +56,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	
 	protected IInfoflowSolver solver = null;
 	
-	protected Set<TaintPropagationHandler> taintPropagationHandlers = null;
+	protected TaintPropagationHandler taintPropagationHandler = null;
 
 	private MyConcurrentHashMap<Unit, Set<Unit>> activationUnitsToCallSites =
 			new MyConcurrentHashMap<Unit, Set<Unit>>();
@@ -207,13 +207,11 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	}
 	
 	/**
-	 * Adds a handler which is invoked whenever a taint is propagated
+	 * Sets a handler which is invoked whenever a taint is propagated
 	 * @param handler The handler to be invoked when propagating taints
 	 */
-	public void addTaintPropagationHandler(TaintPropagationHandler handler) {
-		if (this.taintPropagationHandlers == null)
-			this.taintPropagationHandlers = new HashSet<>();
-		this.taintPropagationHandlers.add(handler);
+	public void setTaintPropagationHandler(TaintPropagationHandler handler) {
+		this.taintPropagationHandler = handler;
 	}
 	
 	/**
