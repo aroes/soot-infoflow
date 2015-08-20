@@ -73,6 +73,7 @@ import soot.jimple.infoflow.solver.functions.SolverNormalFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverReturnFlowFunction;
 import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.infoflow.util.BaseSelector;
+import soot.jimple.infoflow.util.ByReferenceBoolean;
 import soot.jimple.infoflow.util.SystemClassHandler;
 import soot.jimple.infoflow.util.TypeUtils;
 
@@ -100,84 +101,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 		this.aliasing = new Aliasing(aliasingStrategy, manager.getICFG());
 		
 		this.propagationRules = new PropagationRuleManager(manager, aliasing, createZeroValue());
-	}
-
-	/**
-	 * Computes the taints produced by a taint wrapper object
-	 * @param d1 The context (abstraction at the method's start node)
-	 * @param iStmt The call statement the taint wrapper shall check for well-
-	 * known methods that introduce black-box taint propagation
-	 * @param source The taint source
-	 * @return The taints computed by the wrapper
-	 */
-	private Set<Abstraction> computeWrapperTaints
-			(Abstraction d1,
-			final Stmt iStmt,
-			Abstraction source) {
-		assert manager.getConfig().getInspectSources() || source != getZeroValue();
-		
-		// If we don't have a taint wrapper, there's nothing we can do here
-		if(taintWrapper == null)
-			return Collections.emptySet();
-		
-		// Do not check taints that are not mentioned anywhere in the call
-		if (!source.getAccessPath().isStaticFieldRef()
-				&& !source.getAccessPath().isEmpty()) {
-			boolean found = false;
-
-			// The base object must be tainted
-			if (iStmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
-				InstanceInvokeExpr iiExpr = (InstanceInvokeExpr) iStmt.getInvokeExpr();
-				found = aliasing.mayAlias(iiExpr.getBase(), source.getAccessPath().getPlainValue());
-			}
-			
-			// or one of the parameters must be tainted
-			if (!found)
-				for (int paramIdx = 0; paramIdx < iStmt.getInvokeExpr().getArgCount(); paramIdx++)
-					if (aliasing.mayAlias(source.getAccessPath().getPlainValue(),
-							iStmt.getInvokeExpr().getArg(paramIdx))) {
-						found = true;
-						break;
-				}
-			
-			// If nothing is tainted, we don't have any taints to propagate
-			if (!found)
-				return Collections.emptySet();
-		}
-		
-		Set<Abstraction> res = taintWrapper.getTaintsForMethod(iStmt, d1, source);
-		if(res != null) {
-			Set<Abstraction> resWithAliases = new HashSet<>(res);
-			for (Abstraction abs : res) {
-				// The new abstraction gets activated where it was generated
-				if (!abs.equals(source)) {
-					// If the taint wrapper creates a new taint, this must be propagated
-					// backwards as there might be aliases for the base object
-					// Note that we don't only need to check for heap writes such as a.x = y,
-					// but also for base object taints ("a" in this case).
-					final AccessPath val = abs.getAccessPath();
-					boolean taintsObjectValue = val.getBaseType() instanceof RefType
-							&& abs.getAccessPath().getBaseType() instanceof RefType
-							&& !TypeUtils.isStringType(val.getBaseType());
-					boolean taintsStaticField = manager.getConfig().getEnableStaticFieldTracking()
-							&& abs.getAccessPath().isStaticFieldRef();
-						
-					// If the tainted value gets overwritten, it cannot have aliases afterwards
-					boolean taintedValueOverwritten = (iStmt instanceof DefinitionStmt)
-							? baseMatches(((DefinitionStmt) iStmt).getLeftOp(), abs) : false;
-					
-					if (!taintedValueOverwritten)
-						if (taintsStaticField
-								|| (taintsObjectValue && abs.getAccessPath().getTaintSubFields())
-								|| aliasing.canHaveAliases(iStmt, val.getPlainValue(), abs))
-							aliasing.computeAliases(d1, iStmt, val.getPlainValue(), resWithAliases,
-									interproceduralCFG().getMethodOf(iStmt), abs);
-				}
-			}
-			res = resWithAliases;
-		}
-		
-		return res;
 	}
 	
 	@Override
@@ -411,9 +334,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							Set<Abstraction> resAssign = createNewTaintOnAssignment(src, assignStmt,
 									rightVals, d1, newSource);
 							if (resAssign != null) {
-								if (res != null)
-									resAssign.addAll(res);
-								return resAssign;
+								res.addAll(resAssign);
+								return res;
 							}
 							
 							// If we have propagated taint, we have returned from this method by now
@@ -509,7 +431,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							// the left side if the tainted value is some "x.y".
 							boolean aliasOverwritten = !addLeftValue
 									&& !newSource.isAbstractionActive()
-									&& baseMatchesStrict(rightValue, newSource)
+									&& Aliasing.baseMatchesStrict(rightValue, newSource)
 									&& rightValue.getType() instanceof RefType
 									&& !newSource.dependsOnCutAP();
 							
@@ -855,12 +777,13 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								tp.notifyFlowIn(stmt, source, interproceduralCFG(),
 										FlowFunctionType.CallFlowFunction);
 						
-						// If we have an exclusive taint wrapper for the target
-						// method, we do not perform an own taint propagation. 
-						if(taintWrapper != null && taintWrapper.isExclusive(stmt, source)) {
-							//taint is propagated in CallToReturnFunction, so we do not need any taint here:
+						ByReferenceBoolean killAll = new ByReferenceBoolean();
+						Set<Abstraction> res = propagationRules.applyCallFlowFunction(d1,
+								source, stmt, killAll);
+						if (killAll.value)
 							return Collections.emptySet();
-						}
+						if (res == null)
+							res = new HashSet<Abstraction>();
 						
 						// Check whether we must leave a conditional branch
 						if (source.isTopPostdominator(stmt)) {
@@ -900,14 +823,15 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							return Collections.emptySet();
 						
 						// Map the source access path into the callee
-						Set<AccessPath> res = mapAccessPathToCallee(dest, ie, paramLocals,
+						Set<AccessPath> resMapping = mapAccessPathToCallee(dest, ie, paramLocals,
 								thisLocal, source.getAccessPath());
-						if (res == null)
-							return Collections.emptySet();
+						if (resMapping == null)
+							return res;
 						
 						// Translate the access paths into abstractions
-						Set<Abstraction> resAbs = new HashSet<Abstraction>(res.size());
-						for (AccessPath ap : res)
+						Set<Abstraction> resAbs = new HashSet<Abstraction>(resMapping.size());
+						resAbs.addAll(res);
+						for (AccessPath ap : resMapping)
 							if (ap.isStaticFieldRef()) {
 								// Do not propagate static fields that are not read inside the callee 
 								if (interproceduralCFG().isStaticFieldRead(dest, ap.getFirstField()))
@@ -1242,17 +1166,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								&& source.getAccessPath().isStaticFieldRef())
 							return Collections.emptySet();
 						
-						Set<Abstraction> res = propagationRules.applyCallToReturnFlowFunction(
-								d1, source, iCallStmt);
-						
-						// Do not propagate zero abstractions
-						if (source == getZeroValue())
-							return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
-						
-						// Initialize the result set
-						if (res == null)
-							res = new HashSet<>();
-
 						//check inactive elements:
 						final Abstraction newSource;
 						if (!source.isAbstractionActive() && (call == source.getActivationUnit()
@@ -1261,21 +1174,18 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						else
 							newSource = source;
 						
-						// Compute the taint wrapper taints
-						boolean passOn = true;
-						Collection<Abstraction> wrapperTaints = computeWrapperTaints(d1, iCallStmt, newSource);
-						if (wrapperTaints != null) {
-							res.addAll(wrapperTaints);
-							
-							// If the taint wrapper generated an abstraction for
-							// the incoming access path, we assume it to be handled
-							// and do not pass on the incoming abstraction on our own
-							for (Abstraction wrapperAbs : wrapperTaints)
-								if (wrapperAbs.getAccessPath().equals(newSource.getAccessPath())) {
-									passOn = false;
-									break;
-								}
-						}
+						ByReferenceBoolean killSource = new ByReferenceBoolean();
+						Set<Abstraction> res = propagationRules.applyCallToReturnFlowFunction(
+								d1, newSource, iCallStmt, killSource, true);
+						boolean passOn = !killSource.value;
+						
+						// Do not propagate zero abstractions
+						if (source == getZeroValue())
+							return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
+						
+						// Initialize the result set
+						if (res == null)
+							res = new HashSet<>();
 						
 						// if we have called a sink we have to store the path from the source - in case one of the params is tainted!
 						if (manager.getSourceSinkManager() != null
@@ -1407,9 +1317,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 												
 						// Implicit taints are always passed over conditionally called methods
 						passOn |= source.getTopPostdominator() != null || source.getAccessPath().isEmpty();
-						if (passOn)
+						if (passOn) {
 							if (newSource != getZeroValue())
 								res.add(newSource);
+						}
 						
 						if (callee.isNative())
 							for (Value callVal : callArgs)
@@ -1553,4 +1464,3 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 	}
     
 }
-

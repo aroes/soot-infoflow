@@ -420,7 +420,8 @@ public class Infoflow extends AbstractInfoflow {
 		IMemoryManager<Abstraction> memoryManager = new FlowDroidMemoryManager();
 		
 		// Initialize the data flow manager
-		InfoflowManager manager = new InfoflowManager(config, null, iCfg, sourcesSinks);
+		InfoflowManager manager = new InfoflowManager(config, null, iCfg, sourcesSinks,
+				taintWrapper);
 		
 		BackwardsInfoflowProblem backProblem = null;
 		InfoflowManager backwardsManager = null;
@@ -429,7 +430,7 @@ public class Infoflow extends AbstractInfoflow {
 		switch (getConfig().getAliasingAlgorithm()) {
 			case FlowSensitive:
 				backwardsManager = new InfoflowManager(config, null,
-						new BackwardsInfoflowCFG(iCfg), sourcesSinks);
+						new BackwardsInfoflowCFG(iCfg), sourcesSinks, taintWrapper);
 				backProblem = new BackwardsInfoflowProblem(backwardsManager);
 				backSolver = new InfoflowSolver(backProblem, executor);
 				backSolver.setMemoryManager(memoryManager);

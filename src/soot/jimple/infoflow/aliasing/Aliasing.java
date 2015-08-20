@@ -355,5 +355,53 @@ public class Aliasing {
 		return val instanceof FieldRef
 				|| (val instanceof Local && ((Local)val).getType() instanceof ArrayType);
 	}
+	
+	/**
+	 * Checks whether the given base value matches the base of the given
+	 * taint abstraction
+	 * @param baseValue The value to check
+	 * @param source The taint abstraction to check
+	 * @return True if the given value has the same base value as the given
+	 * taint abstraction, otherwise false
+	 */
+	public static boolean baseMatches(final Value baseValue, Abstraction source) {
+		if (baseValue instanceof Local) {
+			if (baseValue.equals(source.getAccessPath().getPlainValue()))
+				return true;
+		}
+		else if (baseValue instanceof InstanceFieldRef) {
+			InstanceFieldRef ifr = (InstanceFieldRef) baseValue;
+			if (ifr.getBase().equals(source.getAccessPath().getPlainValue())
+					&& source.getAccessPath().firstFieldMatches(ifr.getField()))
+				return true;
+		}
+		else if (baseValue instanceof StaticFieldRef) {
+			StaticFieldRef sfr = (StaticFieldRef) baseValue;
+			if (source.getAccessPath().firstFieldMatches(sfr.getField()))
+				return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Checks whether the given base value matches the base of the given
+	 * taint abstraction and ends there. So a will match a, but not a.x.
+	 * Not that this function will still match a to a.*.
+	 * @param baseValue The value to check
+	 * @param source The taint abstraction to check
+	 * @return True if the given value has the same base value as the given
+	 * taint abstraction and no further elements, otherwise false
+	 */
+	public static boolean baseMatchesStrict(final Value baseValue, Abstraction source) {
+		if (!baseMatches(baseValue, source))
+			return false;
+		
+		if (baseValue instanceof Local)
+			return source.getAccessPath().isLocal();
+		else if (baseValue instanceof InstanceFieldRef || baseValue instanceof StaticFieldRef)
+			return source.getAccessPath().getFieldCount() == 1;
+		
+		throw new RuntimeException("Unexpected left side");
+	}
 
 }

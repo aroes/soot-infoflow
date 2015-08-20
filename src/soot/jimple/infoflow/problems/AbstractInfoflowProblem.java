@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
 
 import soot.ArrayType;
 import soot.BooleanType;
-import soot.Local;
 import soot.PrimType;
 import soot.RefType;
 import soot.Scene;
@@ -28,10 +27,7 @@ import soot.SootClass;
 import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
-import soot.Value;
-import soot.jimple.InstanceFieldRef;
 import soot.jimple.InvokeExpr;
-import soot.jimple.StaticFieldRef;
 import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.collect.MyConcurrentHashMap;
@@ -178,54 +174,6 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	@Override
 	public boolean autoAddZero() {
 		return false;
-	}
-	
-	/**
-	 * Checks whether the given base value matches the base of the given
-	 * taint abstraction
-	 * @param baseValue The value to check
-	 * @param source The taint abstraction to check
-	 * @return True if the given value has the same base value as the given
-	 * taint abstraction, otherwise false
-	 */
-	protected boolean baseMatches(final Value baseValue, Abstraction source) {
-		if (baseValue instanceof Local) {
-			if (baseValue.equals(source.getAccessPath().getPlainValue()))
-				return true;
-		}
-		else if (baseValue instanceof InstanceFieldRef) {
-			InstanceFieldRef ifr = (InstanceFieldRef) baseValue;
-			if (ifr.getBase().equals(source.getAccessPath().getPlainValue())
-					&& source.getAccessPath().firstFieldMatches(ifr.getField()))
-				return true;
-		}
-		else if (baseValue instanceof StaticFieldRef) {
-			StaticFieldRef sfr = (StaticFieldRef) baseValue;
-			if (source.getAccessPath().firstFieldMatches(sfr.getField()))
-				return true;
-		}
-		return false;
-	}
-	
-	/**
-	 * Checks whether the given base value matches the base of the given
-	 * taint abstraction and ends there. So a will match a, but not a.x.
-	 * Not that this function will still match a to a.*.
-	 * @param baseValue The value to check
-	 * @param source The taint abstraction to check
-	 * @return True if the given value has the same base value as the given
-	 * taint abstraction and no further elements, otherwise false
-	 */
-	protected boolean baseMatchesStrict(final Value baseValue, Abstraction source) {
-		if (!baseMatches(baseValue, source))
-			return false;
-		
-		if (baseValue instanceof Local)
-			return source.getAccessPath().isLocal();
-		else if (baseValue instanceof InstanceFieldRef || baseValue instanceof StaticFieldRef)
-			return source.getAccessPath().getFieldCount() == 1;
-		
-		throw new RuntimeException("Unexpected left side");
 	}
 	
 	protected boolean isCallSiteActivatingTaint(Unit callSite, Unit activationUnit) {

@@ -10,6 +10,7 @@ import soot.jimple.ThrowStmt;
 import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.aliasing.Aliasing;
 import soot.jimple.infoflow.data.Abstraction;
+import soot.jimple.infoflow.util.ByReferenceBoolean;
 
 /**
  * Rule for propagating exceptional data flows
@@ -26,7 +27,7 @@ public class ExceptionPropagationRule extends AbstractTaintPropagationRule {
 
 	@Override
 	public Collection<Abstraction> propagateNormalFlow(Abstraction d1,
-			Abstraction source, Stmt stmt) {
+			Abstraction source, Stmt stmt, ByReferenceBoolean killSource) {
 		if (source == getZeroValue())
 			return null;
 		
@@ -44,12 +45,12 @@ public class ExceptionPropagationRule extends AbstractTaintPropagationRule {
 				return Collections.singleton(source.deriveNewAbstractionOnThrow(throwStmt));
 		}
 		
-		return Collections.singleton(source);
+		return null;
 	}
 
 	@Override
 	public Collection<Abstraction> propagateCallToReturnFlow(Abstraction d1,
-			Abstraction source, Stmt stmt) {
+			Abstraction source, Stmt stmt, ByReferenceBoolean killSource) {
 		// We don't need to do anything here
 		return null;
 	}
@@ -65,6 +66,12 @@ public class ExceptionPropagationRule extends AbstractTaintPropagationRule {
 				return Collections.singleton(source.deriveNewAbstractionOnThrow(throwStmt));
 		}
 		
+		return null;
+	}
+
+	@Override
+	public Collection<Abstraction> propagateCallFlow(Abstraction d1,
+			Abstraction source, Stmt stmt, ByReferenceBoolean killAll) {
 		return null;
 	}
 

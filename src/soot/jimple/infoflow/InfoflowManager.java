@@ -3,6 +3,7 @@ package soot.jimple.infoflow;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 import soot.jimple.infoflow.source.ISourceSinkManager;
+import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
 
 /**
  * Manager class for passing internal data flow objects to interface
@@ -17,15 +18,18 @@ public class InfoflowManager {
 	private IInfoflowSolver forwardSolver;
 	private final IInfoflowCFG icfg;
 	private final ISourceSinkManager sourceSinkManager;
+	private final ITaintPropagationWrapper taintWrapper;
 	
 	InfoflowManager(InfoflowConfiguration config,
 			IInfoflowSolver forwardSolver,
 			IInfoflowCFG icfg,
-			ISourceSinkManager sourceSinkManager) {
+			ISourceSinkManager sourceSinkManager,
+			ITaintPropagationWrapper taintWrapper) {
 		this.config = config;
 		this.forwardSolver = forwardSolver;
 		this.icfg = icfg;
 		this.sourceSinkManager = sourceSinkManager;
+		this.taintWrapper = taintWrapper;
 	}
 	
 	/**
@@ -66,6 +70,14 @@ public class InfoflowManager {
 	 */
 	public ISourceSinkManager getSourceSinkManager() {
 		return this.sourceSinkManager;
+	}
+	
+	/**
+	 * Gets the taint wrapper to be used for handling library calls
+	 * @return The taint wrapper to be used for handling library calls
+	 */
+	public ITaintPropagationWrapper getTaintWrapper() { 
+		return this.taintWrapper;
 	}
 	
 }

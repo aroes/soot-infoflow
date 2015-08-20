@@ -49,6 +49,7 @@ import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.UnopExpr;
 import soot.jimple.infoflow.InfoflowManager;
+import soot.jimple.infoflow.aliasing.Aliasing;
 import soot.jimple.infoflow.collect.MutableTwoElementSet;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
@@ -130,7 +131,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				
 				// Check whether the left side of the assignment matches our
 				// current taint abstraction
-				final boolean leftSideMatches = baseMatches(leftValue, source);
+				final boolean leftSideMatches = Aliasing.baseMatches(leftValue, source);
 				if (!leftSideMatches)
 					res.add(source);
 				else {
@@ -175,7 +176,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					// If we have a = x with the taint "x" being inactive,
 					// we must not taint the left side. We can only taint
 					// the left side if the tainted value is some "x.y".
-					boolean aliasOverwritten = baseMatchesStrict(rightValue, source)
+					boolean aliasOverwritten = Aliasing.baseMatchesStrict(rightValue, source)
 							&& rightValue.getType() instanceof RefType
 							&& !source.dependsOnCutAP();
 					

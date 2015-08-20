@@ -4,6 +4,7 @@ import java.util.Collection;
 
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
+import soot.jimple.infoflow.util.ByReferenceBoolean;
 
 /**
  * Common interface for taint propagation rules
@@ -14,28 +15,44 @@ import soot.jimple.infoflow.data.Abstraction;
 public interface ITaintPropagationRule {
 	
 	/**
-	 * Propagates a glow along a normal statement this is not a call or return
+	 * Propagates a flow along a normal statement this is not a call or return
 	 * site
 	 * @param d1 The context abstraction
 	 * @param source The abstraction to propagate over the statement
 	 * @param stmt The statement at which to propagate the abstraction
+	 * @param killSource Outgoing value for the rule to specify whether
+	 * the incoming taint shall be killed
 	 * @return The new abstractions to be propagated to the next statement
 	 */
 	public Collection<Abstraction> propagateNormalFlow(Abstraction d1,
-			Abstraction source, Stmt stmt);
+			Abstraction source, Stmt stmt, ByReferenceBoolean killSource);
 
 	/**
-	 * Propagates a glow along a the call-to-return edge at a call site
+	 * Propagates a flow across a call site
 	 * @param d1 The context abstraction
 	 * @param source The abstraction to propagate over the statement
 	 * @param stmt The statement at which to propagate the abstraction
+	 * @param killAll Outgoing value for the rule to specify whether
+	 * all taints shall be killed, i.e., nothing shall be propagated
+	 * @return The new abstractions to be propagated to the next statement
+	 */
+	public Collection<Abstraction> propagateCallFlow(Abstraction d1,
+			Abstraction source, Stmt stmt, ByReferenceBoolean killAll);
+	
+	/**
+	 * Propagates a flow along a the call-to-return edge at a call site
+	 * @param d1 The context abstraction
+	 * @param source The abstraction to propagate over the statement
+	 * @param stmt The statement at which to propagate the abstraction
+	 * @param killSource Outgoing value for the rule to specify whether
+	 * the incoming taint shall be killed
 	 * @return The new abstractions to be propagated to the next statement
 	 */
 	public Collection<Abstraction> propagateCallToReturnFlow(Abstraction d1,
-			Abstraction source, Stmt stmt);
+			Abstraction source, Stmt stmt, ByReferenceBoolean killSource);
 	
 	/**
-	 * Propagates a glow along a the return edge
+	 * Propagates a flow along a the return edge
 	 * @param callerD1s The context abstraction at the caller side
 	 * @param source The abstraction to propagate over the statement
 	 * @param stmt The statement at which to propagate the abstraction
