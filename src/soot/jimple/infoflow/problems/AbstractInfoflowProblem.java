@@ -19,11 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import soot.ArrayType;
-import soot.BooleanType;
-import soot.PrimType;
-import soot.RefType;
-import soot.Scene;
-import soot.SootClass;
 import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
@@ -32,7 +27,6 @@ import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.collect.MyConcurrentHashMap;
 import soot.jimple.infoflow.data.Abstraction;
-import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler;
 import soot.jimple.infoflow.nativ.INativeCallHandler;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
@@ -51,9 +45,9 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 			BiDiInterproceduralCFG<Unit, SootMethod>> {
 	
 	protected final InfoflowManager manager;
-	protected final Map<Unit, Set<Abstraction>> initialSeeds = new HashMap<Unit, Set<Abstraction>>();
-	protected ITaintPropagationWrapper taintWrapper;
 	
+	protected final Map<Unit, Set<Abstraction>> initialSeeds = new HashMap<Unit, Set<Abstraction>>();
+	protected ITaintPropagationWrapper taintWrapper;	
 	protected INativeCallHandler ncHandler;
 	
     protected final Logger logger = LoggerFactory.getLogger(getClass());
@@ -72,47 +66,6 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 		this.manager = manager;
 	}
 	
-	protected boolean canCastType(Type destType, Type sourceType) {
-		if (!manager.getConfig().getEnableTypeChecking())
-			return true;
-		
-		// If we don't have a source type, we generally allow the cast
-		if (sourceType == null)
-			return true;
-		
-		// If both types are equal, we allow the cast
-		if (sourceType == destType)
-			return true;
-		
-		// If we have a reference type, we use the Soot hierarchy
-		if (Scene.v().getFastHierarchy().canStoreType(destType, sourceType) // cast-up, i.e. Object to String
-				|| Scene.v().getFastHierarchy().canStoreType(sourceType, destType)) // cast-down, i.e. String to Object
-			return true;
-		
-		// If both types are primitive, they can be cast unless a boolean type
-		// is involved
-		if (destType instanceof PrimType && sourceType instanceof PrimType)
-			if (destType != BooleanType.v() && sourceType != BooleanType.v())
-				return true;
-			
-		return false;
-	}
-		
-	protected boolean hasCompatibleTypesForCall(AccessPath apBase, SootClass dest) {
-		if (!manager.getConfig().getEnableTypeChecking())
-			return true;
-
-		// Cannot invoke a method on a primitive type
-		if (apBase.getBaseType() instanceof PrimType)
-			return false;
-		// Cannot invoke a method on an array
-		if (apBase.getBaseType() instanceof ArrayType)
-			return dest.getName().equals("java.lang.Object");
-		
-		return Scene.v().getOrMakeFastHierarchy().canStoreType(apBase.getBaseType(), dest.getType())
-				|| Scene.v().getOrMakeFastHierarchy().canStoreType(dest.getType(), apBase.getBaseType());
-	}
-
 	public void setSolver(IInfoflowSolver solver) {
 		this.solver = solver;
 	}
@@ -277,60 +230,7 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 		else
 			return ArrayType.v(type, 1);
 	}
-	
-	/**
-	 * Checks whether the type of the given taint can be cast to the given
-	 * target type
-	 * @param accessPath The access path of the taint to be cast
-	 * @param type The target type to which to cast the taint
-	 * @return True if the cast is possible, otherwise false
-	 */
-	protected boolean checkCast(AccessPath accessPath, Type type) {
-		if (accessPath.isStaticFieldRef()) {
-			if (!canCastType(type, accessPath.getFirstFieldType()))
-				return false;
-			
-			// If the target type is a primitive array, we cannot have any
-			// subsequent fields
-			if (type instanceof ArrayType) {
-				ArrayType at = (ArrayType) type;
-				if (at.getArrayElementType() instanceof PrimType)
-					return accessPath.getFieldCount() == 1;
-			}
-			return true;
-		}
-		else {
-			if (!canCastType(type, accessPath.getBaseType()))
-				return false;
-			
-			// If the target type is a primitive array, we cannot have any
-			// subsequent fields
-			if (type instanceof ArrayType) {
-				ArrayType at = (ArrayType) type;
-				if (at.getArrayElementType() instanceof PrimType)
-					return accessPath.isLocal();
-			}
-			return true;
-		}
-	}
-	
-	/**
-	 * Checks whether the given type is java.lang.Object, java.io.Serializable,
-	 * or java.lang.Cloneable.
-	 * @param tp The type to check
-	 * @return True if the given type is one of the three "object-like" types,
-	 * otherwise false
-	 */
-	protected boolean isObjectLikeType(Type tp) {
-		if (!(tp instanceof RefType))
-			return false;
 		
-		RefType rt = (RefType) tp;
-		return rt.getSootClass().getName().equals("java.lang.Object")
-				|| rt.getSootClass().getName().equals("java.io.Serializable")
-				|| rt.getSootClass().getName().equals("java.lang.Cloneable");
-	}
-	
 	@Override
 	public Abstraction createZeroValue() {
 		if (zeroValue == null)

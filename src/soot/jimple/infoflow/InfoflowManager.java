@@ -4,6 +4,7 @@ import soot.jimple.infoflow.solver.IInfoflowSolver;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
+import soot.jimple.infoflow.util.TypeUtils;
 
 /**
  * Manager class for passing internal data flow objects to interface
@@ -19,6 +20,7 @@ public class InfoflowManager {
 	private final IInfoflowCFG icfg;
 	private final ISourceSinkManager sourceSinkManager;
 	private final ITaintPropagationWrapper taintWrapper;
+	private final TypeUtils typeUtils;
 	
 	InfoflowManager(InfoflowConfiguration config,
 			IInfoflowSolver forwardSolver,
@@ -30,6 +32,7 @@ public class InfoflowManager {
 		this.icfg = icfg;
 		this.sourceSinkManager = sourceSinkManager;
 		this.taintWrapper = taintWrapper;
+		this.typeUtils = new TypeUtils(this);
 	}
 	
 	/**
@@ -78,6 +81,14 @@ public class InfoflowManager {
 	 */
 	public ITaintPropagationWrapper getTaintWrapper() { 
 		return this.taintWrapper;
+	}
+	
+	/**
+	 * Gets the utility class for type checks
+	 * @return The utility class for type checks
+	 */
+	public TypeUtils getTypeUtils() {
+		return this.typeUtils;
 	}
 	
 }

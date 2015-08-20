@@ -407,6 +407,32 @@ public class ImplicitFlowTests extends JUnitTests {
 	}
 
 	@Test(timeout=300000)
+	public void callToReturnTest2() throws IOException{
+		Infoflow infoflow = initInfoflow();
+		infoflow.getConfig().setInspectSinks(false);
+		infoflow.getConfig().setEnableImplicitFlows(true);
+		infoflow.setTaintWrapper(new EasyTaintWrapper("EasyTaintWrapperSource.txt"));
+    	infoflow.setSootConfig(new IInfoflowConfig() {
+			
+			@Override
+			public void setSootOptions(Options options) {
+				options.set_include(Collections.<String>emptyList());
+				List<String> excludeList = new ArrayList<String>();
+				excludeList.add("java.");
+				excludeList.add("javax.");
+				options.set_exclude(excludeList);
+				options.set_prepend_classpath(false);
+			}
+			
+		});
+
+		List<String> epoints = new ArrayList<String>();
+	    epoints.add("<soot.jimple.infoflow.test.ImplicitFlowTestCode: void callToReturnTest2()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);	
+	}
+	
+	@Test(timeout=300000)
 	public void createAliasInFunctionTest(){
 		Infoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);

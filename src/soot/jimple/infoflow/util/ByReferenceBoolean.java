@@ -14,4 +14,9 @@ public class ByReferenceBoolean {
 		this.value = false;
 	}
 	
+	@Override
+	public String toString() {
+		return String.valueOf(value);
+	}
+	
 }

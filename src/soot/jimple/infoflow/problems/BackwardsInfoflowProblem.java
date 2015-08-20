@@ -213,7 +213,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							// If this is an unrealizable typecast, drop the abstraction
 							if (defStmt.getRightOp() instanceof CastExpr) {
 								CastExpr ce = (CastExpr) defStmt.getRightOp();
-								if (!checkCast(source.getAccessPath(), ce.getCastType()))
+								if (!manager.getTypeUtils().checkCast(source.getAccessPath(), ce.getCastType()))
 									return Collections.emptySet();
 								
 								// If the cast was realizable, we can assume that we had the
@@ -299,7 +299,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							// but incompatible to the type of b, this cast is impossible
 							if (defStmt.getRightOp() instanceof CastExpr) {
 								CastExpr ce = (CastExpr) defStmt.getRightOp();
-								if (!checkCast(source.getAccessPath(), ce.getOp().getType()))
+								if (!manager.getTypeUtils().checkCast(source.getAccessPath(), ce.getOp().getType()))
 									return Collections.emptySet();
 							}
 						}
@@ -313,14 +313,6 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								else if (leftValue instanceof ArrayRef) {
 									assert source.getAccessPath().getBaseType() instanceof ArrayType;
 									targetType = ((ArrayType) targetType).getElementType();
-									// If the types do not match, the right side cannot be an alias
-									if (!canCastType(rightValue.getType(), targetType))
-										addRightValue = false;
-									else {
-										// If we have a type of java.lang.Object, we try to tighten it
-										if (isObjectLikeType(targetType))
-											targetType = rightValue.getType();
-									}
 								}
 							}
 							
@@ -334,8 +326,10 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							// If the right side's type is not compatible with our current type,
 							// this cannot be an alias
 							if (addRightValue) {
-								if (!canCastType(rightValue.getType(), targetType))
+								if (!manager.getTypeUtils().checkCast(rightValue.getType(), targetType))
 									addRightValue = false;
+								if (TypeUtils.isObjectLikeType(targetType))
+									targetType = rightValue.getType();
 							}
 							
 							// Make sure to only track static fields if it has been enabled
@@ -470,7 +464,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 										ReturnStmt rStmt = (ReturnStmt) u;
 										if (rStmt.getOp() instanceof Local
 												|| rStmt.getOp() instanceof FieldRef)
-											if (checkCast(source.getAccessPath(), rStmt.getOp().getType())) {
+											if (manager.getTypeUtils().checkCast(source.getAccessPath(), rStmt.getOp().getType())) {
 												Abstraction abs = checkAbstraction(source.deriveNewAbstraction
 														(source.getAccessPath().copyWithNewValue
 																(rStmt.getOp(), null, false), (Stmt) src));
@@ -497,8 +491,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								&& !source.getAccessPath().isStaticFieldRef()
 								&& !dest.isStatic()) {
 							InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();
-							if (iIExpr.getBase() == sourceBase
-									&& (hasCompatibleTypesForCall(source.getAccessPath(), dest.getDeclaringClass()))) {
+							if (iIExpr.getBase() == sourceBase && manager.getTypeUtils().hasCompatibleTypesForCall(
+									source.getAccessPath(), dest.getDeclaringClass())) {
 								boolean param = false;
 								// check if it is not one of the params (then we have already fixed it)
 								for (int i = 0; i < dest.getParameterCount(); i++) {
@@ -616,7 +610,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 										// If this is a constant parameter, we can safely ignore it
 										if (!AccessPath.canContainValue(originalCallArg))
 											continue;
-										if (!checkCast(source.getAccessPath(), originalCallArg.getType()))
+										if (!manager.getTypeUtils().checkCast(source.getAccessPath(),
+												originalCallArg.getType()))
 											continue;
 										
 										// Primitive types and strings cannot have aliases and thus
@@ -638,8 +633,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							
 							// Map the "this" local
 							if (!callee.isStatic()) {
-								if (thisLocal == sourceBase && hasCompatibleTypesForCall
-										(source.getAccessPath(), callee.getDeclaringClass())) {
+								if (thisLocal == sourceBase && manager.getTypeUtils().hasCompatibleTypesForCall(
+										source.getAccessPath(), callee.getDeclaringClass())) {
 									// check if it is not one of the params (then we have already fixed it)
 									if (!parameterAliases) {
 										if (callSite instanceof Stmt) {

@@ -551,5 +551,17 @@ public class ImplicitFlowTestCode {
 	private String getConditionalValue() {
 		return TelephonyManager.getIMEI() == 42 ? "a" : "b";
 	}
+	
+	private String getBar() {
+		return Math.random() < 0.5 ? "bar" : "foobar";
+	}
+	
+	public void callToReturnTest2() {
+		String tainted = "foo";
+		if (TelephonyManager.getIMEI() == 42)
+			tainted = getBar();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(tainted);
+	}
 
 }

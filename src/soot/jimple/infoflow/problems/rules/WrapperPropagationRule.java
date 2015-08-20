@@ -47,6 +47,10 @@ public class WrapperPropagationRule extends AbstractTaintPropagationRule {
 			(Abstraction d1,
 			final Stmt iStmt,
 			Abstraction source) {
+		// Do not process zero abstractions
+		if (source == getZeroValue())
+			return null;
+		
 		// If we don't have a taint wrapper, there's nothing we can do here
 		if (getManager().getTaintWrapper() == null)
 			return null;

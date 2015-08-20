@@ -56,7 +56,6 @@ import soot.jimple.ThrowStmt;
 import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.aliasing.Aliasing;
 import soot.jimple.infoflow.aliasing.IAliasingStrategy;
-import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.collect.MyConcurrentHashMap;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
@@ -81,9 +80,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 	private final IAliasingStrategy aliasingStrategy;
 	private final PropagationRuleManager propagationRules;
 	
-    private final MyConcurrentHashMap<Unit, Set<Abstraction>> implicitTargets =
-    		new MyConcurrentHashMap<Unit, Set<Abstraction>>();
-    
 	protected final MyConcurrentHashMap<AbstractionAtSink, Abstraction> results =
 			new MyConcurrentHashMap<AbstractionAtSink, Abstraction>();
 	
@@ -206,8 +202,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						// we must update our typing information
 						CastExpr cast = (CastExpr) assignStmt.getRightOp();
 						if (cast.getType() instanceof ArrayType && !(targetType instanceof ArrayType)) {
-							assert canCastType(targetType, cast.getType());
-							
 							// If the cast was realizable, we can assume that we had the
 							// type to which we cast.
 							targetType = cast.getType();
@@ -272,14 +266,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						
 						@Override
 						public Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
-							// Check whether we must leave a conditional branch
-							if (source.isTopPostdominator(is)) {
-								source = source.dropTopPostdominator();
-								// Have we dropped the last postdominator for an empty taint?
-								if (source.getAccessPath().isEmpty() && source.getTopPostdominator() == null)
-									return Collections.emptySet();
-							}
-							
 							// Compute the sources
 							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, is, null);
 							return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
@@ -313,14 +299,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, stmt, killAll);
 							if (killAll.value)
 								return Collections.<Abstraction>emptySet();
-							
-							// Check whether we must leave a conditional branch
-							if (source.isTopPostdominator(assignStmt)) {
-								source = source.dropTopPostdominator();
-								// Have we dropped the last postdominator for an empty taint?
-								if (source.getAccessPath().isEmpty() && source.getTopPostdominator() == null)
-									return Collections.emptySet();
-							}
 							
 							// Check whether we must activate a taint
 							final Abstraction newSource;
@@ -534,7 +512,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							// or this path is not realizable
 							if (rightValue instanceof CastExpr) {
 								CastExpr ce = (CastExpr) rightValue;
-								if (!checkCast(newSource.getAccessPath(), ce.getCastType()))
+								if (!manager.getTypeUtils().checkCast(newSource.getAccessPath(), ce.getCastType()))
 									return Collections.emptySet();
 							}
 							// Special handling for certain operations
@@ -586,15 +564,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					return new NotifyingNormalFlowFunction(returnStmt) {
 						
 						@Override
-						public Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
-							// Check whether we must leave a conditional branch
-							if (source.isTopPostdominator(returnStmt)) {
-								source = source.dropTopPostdominator();
-								// Have we dropped the last postdominator for an empty taint?
-								if (source.getAccessPath().isEmpty() && source.getTopPostdominator() == null)
-									return Collections.emptySet();
-							}
-							
+						public Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {							
 							// Check whether we have reached a sink
 							if (manager.getSourceSinkManager() != null
 									&& source.isAbstractionActive()
@@ -602,8 +572,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									&& manager.getSourceSinkManager().isSink(returnStmt, interproceduralCFG(),
 											source.getAccessPath()))
 								addResult(new AbstractionAtSink(source, returnStmt));
-
-							return Collections.singleton(source);
+							
+							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, returnStmt, null);
+							return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
 						}
 					};
 				}
@@ -613,14 +584,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 
 						@Override
 						public Set<Abstraction> computeTargetsInternal(Abstraction d1, Abstraction source) {
-							// Check whether we must leave a conditional branch
-							if (source.isTopPostdominator(throwStmt)) {
-								source = source.dropTopPostdominator();
-								// Have we dropped the last postdominator for an empty taint?
-								if (source.getAccessPath().isEmpty() && source.getTopPostdominator() == null)
-									return Collections.emptySet();
-							}
-							
 							Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, source, throwStmt, null);
 							return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
 						}
@@ -634,7 +597,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							: src instanceof LookupSwitchStmt ? ((LookupSwitchStmt) src).getKey()
 							: ((TableSwitchStmt) src).getKey();
 					
-					// Check for implicit flows
 					return new NotifyingNormalFlowFunction(stmt) {
 
 						@Override
@@ -720,38 +682,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							return Collections.emptySet();
 						if (res == null)
 							res = new HashSet<Abstraction>();
-						
-						// Check whether we must leave a conditional branch
-						if (source.isTopPostdominator(stmt)) {
-							source = source.dropTopPostdominator();
-							// Have we dropped the last postdominator for an empty taint?
-							if (source.getAccessPath().isEmpty() && source.getTopPostdominator() == null)
-								return Collections.emptySet();
-						}
-						
-						// If no parameter is tainted, but we are in a conditional, we create a
-						// pseudo abstraction. We do not map parameters if we are handling an
-						// implicit flow anyway.
-						if (source.getAccessPath().isEmpty()) {
-							assert manager.getConfig().getEnableImplicitFlows();
-							
-							// Block the call site for further explicit tracking
-							if (d1 != null) {
-								Set<Abstraction> callSites = implicitTargets.putIfAbsentElseGet
-										(src, new ConcurrentHashSet<Abstraction>());
-								callSites.add(d1);
-							}
-							
-							Abstraction abs = source.deriveConditionalAbstractionCall(src);
-							return Collections.singleton(abs);
-						}
-						else if (source.getTopPostdominator() != null)
-							return Collections.emptySet();
-						
-						// If we have already tracked implicit flows through this method,
-						// there is no point in tracking explicit ones afterwards as well.
-						if (implicitTargets.containsKey(src) && (d1 == null || implicitTargets.get(src).contains(d1)))
-							return Collections.emptySet();
 						
 						// Only propagate the taint if the target field is actually read
 						if (source.getAccessPath().isStaticFieldRef()
@@ -868,17 +798,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						// inside the method.
 						boolean insideConditional = newSource.getTopPostdominator() != null
 								|| newSource.getAccessPath().isEmpty();
-
-						// Check whether we must leave a conditional branch
-						if (newSource.isTopPostdominator(exitStmt) || newSource.isTopPostdominator(callee)) {
-							newSource = newSource.dropTopPostdominator();
-							// Have we dropped the last postdominator for an empty taint?
-							if (!insideConditional
-									&& newSource.getAccessPath().isEmpty()
-									&& newSource.getTopPostdominator() == null)
-								return Collections.emptySet();
-						}
-												
+						
 						//if abstraction is not active and activeStmt was in this method, it will not get activated = it can be removed:
 						if(!newSource.isAbstractionActive() && newSource.getActivationUnit() != null)
 							if (interproceduralCFG().getMethodOf(newSource.getActivationUnit()) == callee)
@@ -984,7 +904,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								// If this is a constant parameter, we can safely ignore it
 								if (!AccessPath.canContainValue(originalCallArg))
 									continue;
-								if (!checkCast(source.getAccessPath(), originalCallArg.getType()))
+								if (!manager.getTypeUtils().checkCast(source.getAccessPath(), originalCallArg.getType()))
 									continue;
 								
 								// Primitive types and strings cannot have aliases and thus
@@ -1089,14 +1009,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								tp.notifyFlowIn(call, source, interproceduralCFG(),
 										FlowFunctionType.CallToReturnFlowFunction);
 						
-						// Check whether we must leave a conditional branch
-						if (source.isTopPostdominator(call)) {
-							source = source.dropTopPostdominator();
-							// Have we dropped the last postdominator for an empty taint?
-							if (source.getAccessPath().isEmpty() && source.getTopPostdominator() == null)
-								return Collections.emptySet();
-						}
-						
 						// Static field tracking can be disabled
 						if (!manager.getConfig().getEnableStaticFieldTracking()
 								&& source.getAccessPath().isStaticFieldRef())
@@ -1164,31 +1076,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (newSource.getTopPostdominator() != null
 								&& newSource.getTopPostdominator().getUnit() == null)
 							return Collections.singleton(newSource);
-						
-						// Implicit flows: taint return value
-						if (call instanceof DefinitionStmt) {
-							// If we have an implicit flow, but the assigned
-							// local is never read outside the condition, we do
-							// not need to taint it.
-							boolean implicitTaint = newSource.getTopPostdominator() != null
-									&& newSource.getTopPostdominator().getUnit() != null;							
-							implicitTaint |= newSource.getAccessPath().isEmpty();
-							
-							if (implicitTaint) {
-								Value leftVal = ((DefinitionStmt) call).getLeftOp();
-								
-								// We can skip over all local assignments inside conditionally-
-								// called functions since they are not visible in the caller
-								// anyway
-								if ((d1 == null || d1.getAccessPath().isEmpty())
-										&& !(leftVal instanceof FieldRef))
-									return Collections.singleton(newSource);
-								
-								Abstraction abs = newSource.deriveNewAbstraction(new AccessPath(leftVal, true),
-										iCallStmt);
-								return new TwoElementSet<Abstraction>(newSource, abs);
-							}
-						}
 						
 						// If this call overwrites the left side, the taint is never passed on.
 						if (passOn) {
@@ -1319,7 +1206,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					InstanceInvokeExpr vie = (InstanceInvokeExpr) ie;
 					// this might be enough because every call must happen with a local variable which is tainted itself:
 					if (aliasing.mayAlias(vie.getBase(), ap.getPlainValue()))
-						if (hasCompatibleTypesForCall(ap, callee.getDeclaringClass())) {
+						if (manager.getTypeUtils().hasCompatibleTypesForCall(ap, callee.getDeclaringClass())) {
 							if (res == null) res = new HashSet<AccessPath>();
 							
 							// Get the "this" local if we don't have it yet

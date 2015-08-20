@@ -36,18 +36,22 @@ public class DefaultNativeCallHandler extends AbstractNativeCallHandler {
 		if (source.isAbstractionActive()) {
 			if(call.getInvokeExpr().getMethod().getSignature().equals(SIG_ARRAYCOPY)) {
 				if(params[0].equals(source.getAccessPath().getPlainValue())) {
-					Abstraction abs = source.deriveNewAbstraction(params[2], false, call,
-							source.getAccessPath().getBaseType());
-					abs.setCorrespondingCallSite(call);
-					return Collections.singleton(abs);
+					if (manager.getTypeUtils().checkCast(source.getAccessPath(), params[2].getType())) {
+						Abstraction abs = source.deriveNewAbstraction(params[2], false, call,
+								source.getAccessPath().getBaseType());
+						abs.setCorrespondingCallSite(call);
+						return Collections.singleton(abs);
+					}
 				}
 			}
 			else if(call.getInvokeExpr().getMethod().getSignature().equals(SIG_NEW_ARRAY)) {
 				if(params[1].equals(source.getAccessPath().getPlainValue())) {
-					Abstraction abs = source.deriveNewAbstraction(params[1], false, call,
-							source.getAccessPath().getBaseType(), ArrayTaintType.Length);
-					abs.setCorrespondingCallSite(call);
-					return Collections.singleton(abs);
+					if (manager.getTypeUtils().checkCast(source.getAccessPath(), params[1].getType())) {
+						Abstraction abs = source.deriveNewAbstraction(params[1], false, call,
+								source.getAccessPath().getBaseType(), ArrayTaintType.Length);
+						abs.setCorrespondingCallSite(call);
+						return Collections.singleton(abs);
+					}
 				}			
 			}
 		}
