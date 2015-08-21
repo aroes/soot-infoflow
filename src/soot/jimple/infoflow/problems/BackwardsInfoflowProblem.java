@@ -257,8 +257,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					// If we have the tainted value on the left side of the assignment,
 					// we also have to look or aliases of the value on the right side of
 					// the assignment.
-					if (rightValue instanceof Local
-							|| rightValue instanceof FieldRef) {
+					if ((rightValue instanceof Local || rightValue instanceof FieldRef)
+							&& !(leftValue.getType() instanceof PrimType)) {
 						boolean addRightValue = false;
 						boolean cutFirstField = false;
 						Type targetType = null;
@@ -285,7 +285,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							// indirect taint propagation:
 							// if leftValue is local and source is instancefield of this local:
 						} else if (leftValue instanceof Local && source.getAccessPath().isInstanceFieldRef()) {
-							Local base = source.getAccessPath().getPlainValue(); // ?
+							Local base = source.getAccessPath().getPlainValue();
 							if (leftValue == base) {
 								targetType = source.getAccessPath().getBaseType();
 								addRightValue = true;
@@ -294,11 +294,9 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							ArrayRef ar = (ArrayRef) leftValue;
 							Local leftBase = (Local) ar.getBase();
 							if (leftBase == source.getAccessPath().getPlainValue()) {
-								if (!(ar.getType() instanceof PrimType)) {
-									addRightValue = true;
-									targetType = source.getAccessPath().getBaseType();
-									assert source.getAccessPath().getBaseType() instanceof ArrayType;
-								}
+								addRightValue = true;
+								targetType = source.getAccessPath().getBaseType();
+								assert source.getAccessPath().getBaseType() instanceof ArrayType;
 							}
 							// generic case, is true for Locals, ArrayRefs that are equal etc..
 						} else if (leftValue == source.getAccessPath().getPlainValue()) {
