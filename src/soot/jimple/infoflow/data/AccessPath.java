@@ -248,7 +248,7 @@ public class AccessPath implements Cloneable {
 		}
 				
 		// Make sure that the actual types are always as precise as the declared ones
-		if (value.getType() != baseType) {
+		if (value != null && value.getType() != baseType) {
 			if (TypeUtils.isObjectLikeType(baseType))
 				baseType = value.getType();
 			else if (Scene.v().getFastHierarchy().canStoreType(value.getType(), baseType))

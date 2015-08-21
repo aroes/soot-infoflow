@@ -273,13 +273,6 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 										targetType = source.getAccessPath().getFirstFieldType();
 										addRightValue = true;
 										cutFirstField = true;
-										
-										// If this is an array of primitives, we may not have
-										// any additional fields
-										if (TypeUtils.isPrimitiveArray(targetType)
-												|| TypeUtils.isPrimitiveArray(rightValue.getType()))
-											if (source.getAccessPath().getFieldCount() > 1)
-												addRightValue = false;
 									}
 								}
 							}
