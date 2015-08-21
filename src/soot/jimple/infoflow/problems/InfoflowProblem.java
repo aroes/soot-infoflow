@@ -715,37 +715,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										|| isCallSiteActivatingTaint(callSite, source.getActivationUnit()))
 									newSource = source.getActiveCopy();
 						
-						// Empty access paths are never propagated over return edges
-						if (source.getAccessPath().isEmpty()) {
-							// If we return a constant, we must taint it
-							if (returnStmt != null && returnStmt.getOp() instanceof Constant)
-								if (callSite instanceof DefinitionStmt) {
-									DefinitionStmt def = (DefinitionStmt) callSite;
-									Abstraction abs = newSource.deriveNewAbstraction
-											(newSource.getAccessPath().copyWithNewValue(def.getLeftOp()), (Stmt) exitStmt);
-
-									Set<Abstraction> res = new HashSet<Abstraction>();
-									res.add(abs);
-									
-									// If we taint a return value because it is implicit,
-									// we must trigger an alias analysis
-									if(aliasing.canHaveAliases(def, def.getLeftOp(), abs) && !callerD1sConditional)
-										for (Abstraction d1 : callerD1s)
-											aliasing.computeAliases(d1, iCallStmt, def.getLeftOp(), res,
-													interproceduralCFG().getMethodOf(callSite), abs);
-									return res;
-								}
-							
-							// Kill the empty abstraction
-							return Collections.emptySet();
-						}
-
-						// Are we still inside a conditional? We check this before we
-						// leave the method since the return value is still assigned
-						// inside the method.
-						boolean insideConditional = newSource.getTopPostdominator() != null
-								|| newSource.getAccessPath().isEmpty();
-						
 						//if abstraction is not active and activeStmt was in this method, it will not get activated = it can be removed:
 						if(!newSource.isAbstractionActive() && newSource.getActivationUnit() != null)
 							if (interproceduralCFG().getMethodOf(newSource.getActivationUnit()) == callee)
@@ -761,6 +730,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							assert returnStmt.getOp() == null
 									|| returnStmt.getOp() instanceof Local
 									|| returnStmt.getOp() instanceof Constant;
+							
+							// Are we still inside a conditional? If so, a call so a sink
+							// method is a leak
+							boolean insideConditional = source.getTopPostdominator() != null
+									|| source.getAccessPath().isEmpty();
 							
 							boolean mustTaintSink = insideConditional;
 							mustTaintSink |= returnStmt.getOp() != null
@@ -779,8 +753,12 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (callSite == null)
 							return Collections.emptySet();
 						
+						ByReferenceBoolean killAll = new ByReferenceBoolean();
 						Set<Abstraction> res = propagationRules.applyReturnFlowFunction(callerD1s,
-								newSource, (Stmt) exitStmt, (Stmt) retSite);
+								newSource, (Stmt) exitStmt, (Stmt) retSite, (Stmt) callSite,
+								killAll);
+						if (killAll.value)
+							return Collections.emptySet();
 						if (res == null)
 							res = new HashSet<Abstraction>();
 						
@@ -790,8 +768,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							DefinitionStmt defnStmt = (DefinitionStmt) callSite;
 							Value leftOp = defnStmt.getLeftOp();
 							
-							if ((insideConditional && leftOp instanceof FieldRef)
-									|| aliasing.mayAlias(retLocal, newSource.getAccessPath().getPlainValue())) {
+							if (aliasing.mayAlias(retLocal, newSource.getAccessPath().getPlainValue())) {
 								Abstraction abs = newSource.deriveNewAbstraction
 										(newSource.getAccessPath().copyWithNewValue(leftOp), (Stmt) exitStmt);
 								res.add(abs);
@@ -799,9 +776,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								// Aliases of implicitly tainted variables must be mapped back
 								// into the caller's context on return when we leave the last
 								// implicitly-called method
-								if ((abs.isImplicit()
-										&& (abs.getAccessPath().isInstanceFieldRef() || abs.getAccessPath().isStaticFieldRef())
-										&& !callerD1sConditional) || aliasingStrategy.requiresAnalysisOnReturn())
+								if (aliasingStrategy.requiresAnalysisOnReturn())
 									for (Abstraction d1 : callerD1s)
 										aliasing.computeAliases(d1, iCallStmt, leftOp, res,
 												interproceduralCFG().getMethodOf(callSite), abs);

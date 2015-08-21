@@ -9,10 +9,12 @@ import soot.Local;
 import soot.Unit;
 import soot.Value;
 import soot.ValueBox;
+import soot.jimple.Constant;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.FieldRef;
 import soot.jimple.IfStmt;
 import soot.jimple.LookupSwitchStmt;
+import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.TableSwitchStmt;
 import soot.jimple.infoflow.InfoflowManager;
@@ -211,8 +213,75 @@ public class ImplicitPropagtionRule extends AbstractTaintPropagationRule {
 
 	@Override
 	public Collection<Abstraction> propagateReturnFlow(
-			Collection<Abstraction> callerD1s, Abstraction source, Stmt stmt,
-			Stmt retSite) {
+			Collection<Abstraction> callerD1s, Abstraction source, Stmt returnStmt,
+			Stmt retSite, Stmt callSite, ByReferenceBoolean killAll) {
+		// Are we inside a conditionally-called method?
+		boolean callerD1sConditional = false;
+		for (Abstraction d1 : callerD1s)
+			if (d1.getAccessPath().isEmpty()) {
+				callerD1sConditional = true;
+				break;
+			}
+		
+		// Empty access paths are never propagated over return edges
+		if (source.getAccessPath().isEmpty()) {
+			// If we return a constant, we must taint it
+			if (returnStmt instanceof ReturnStmt
+					&& ((ReturnStmt) returnStmt).getOp() instanceof Constant)
+				if (callSite instanceof DefinitionStmt) {
+					DefinitionStmt def = (DefinitionStmt) callSite;
+					Abstraction abs = source.deriveNewAbstraction
+							(source.getAccessPath().copyWithNewValue(def.getLeftOp()), returnStmt);
+
+					Set<Abstraction> res = new HashSet<Abstraction>();
+					res.add(abs);
+					
+					// If we taint a return value because it is implicit,
+					// we must trigger an alias analysis
+					if (getAliasing().canHaveAliases(def, def.getLeftOp(), abs) && !callerD1sConditional)
+						for (Abstraction d1 : callerD1s)
+							getAliasing().computeAliases(d1, returnStmt, def.getLeftOp(), res,
+									getManager().getICFG().getMethodOf(callSite), abs);
+					return res;
+				}
+			
+			// Kill the empty abstraction
+			killAll.value = true;
+			return null;
+		}
+		
+		// if we have a returnStmt we have to look at the returned value:
+		if (returnStmt instanceof ReturnStmt && callSite instanceof DefinitionStmt) {
+			DefinitionStmt defnStmt = (DefinitionStmt) callSite;
+			Value leftOp = defnStmt.getLeftOp();
+			
+			// Are we still inside a conditional? We check this before we
+			// leave the method since the return value is still assigned
+			// inside the method.
+			boolean insideConditional = source.getTopPostdominator() != null
+					|| source.getAccessPath().isEmpty();
+
+			if (insideConditional && leftOp instanceof FieldRef) {
+				Abstraction abs = source.deriveNewAbstraction
+						(source.getAccessPath().copyWithNewValue(leftOp), returnStmt);
+				
+				// Aliases of implicitly tainted variables must be mapped back
+				// into the caller's context on return when we leave the last
+				// implicitly-called method
+				if (abs.isImplicit()
+						&& abs.getAccessPath().isFieldRef()
+						&& !callerD1sConditional) {
+					Set<Abstraction> res = new HashSet<>();
+					res.add(abs);
+					for (Abstraction d1 : callerD1s)
+						getAliasing().computeAliases(d1, callSite, leftOp, res,
+								getManager().getICFG().getMethodOf(callSite), abs);
+				}
+				
+				return Collections.singleton(abs);
+			}
+		}
+		
 		return null;
 	}
 

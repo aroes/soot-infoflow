@@ -64,7 +64,8 @@ public class ExceptionPropagationRule extends AbstractTaintPropagationRule {
 
 	@Override
 	public Collection<Abstraction> propagateReturnFlow(Collection<Abstraction> callerD1s,
-			Abstraction source, Stmt stmt, Stmt retSite) {
+			Abstraction source, Stmt stmt, Stmt retSite, Stmt callSite,
+			ByReferenceBoolean killAll) {
 		// If we throw an exception with a tainted operand, we need to
 		// handle this specially
 		if (stmt instanceof ThrowStmt && retSite instanceof DefinitionStmt) {
