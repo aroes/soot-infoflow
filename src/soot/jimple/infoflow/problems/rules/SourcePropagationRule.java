@@ -81,7 +81,8 @@ public class SourcePropagationRule extends AbstractTaintPropagationRule {
 
 	@Override
 	public Collection<Abstraction> propagateReturnFlow(
-			Collection<Abstraction> callerD1s, Abstraction source, Stmt stmt) {
+			Collection<Abstraction> callerD1s, Abstraction source, Stmt stmt,
+			Stmt retSite) {
 		return null;
 	}
 

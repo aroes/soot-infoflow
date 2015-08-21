@@ -246,7 +246,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 		final N n = edge.getTarget(); // a call node; line 14...
 
         logger.trace("Processing call to {}", n);
-
+        
 		final D d2 = edge.factAtTarget();
 		assert d2 != null;
 		Collection<N> returnSiteNs = icfg.getReturnSitesOfCallAt(n);
@@ -516,6 +516,13 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 			sourceVal = memoryManager.handleMemoryObject(sourceVal);
 			targetVal = memoryManager.handleMemoryObject(targetVal);
 		}
+		
+		if (targetVal.toString().equals("specialinvoke $r10.<android.support.v4.app.SuperNotCalledException: void <init>(java.lang.String)>($r4)")
+				&& target.toString().equals("throw $r10"))
+			System.out.println("x");
+		if (targetVal.toString().equals("$r10(android.support.v4.app.SuperNotCalledException) * <+length> | >>")
+				&& target.toString().equals("throw $r10"))
+			System.out.println("x");
 		
 		final PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
 		final D existingVal = (forceRegister || !enableMergePointChecking || isMergePoint(target)) ?

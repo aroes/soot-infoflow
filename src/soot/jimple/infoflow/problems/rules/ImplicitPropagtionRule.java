@@ -210,7 +210,8 @@ public class ImplicitPropagtionRule extends AbstractTaintPropagationRule {
 
 	@Override
 	public Collection<Abstraction> propagateReturnFlow(
-			Collection<Abstraction> callerD1s, Abstraction source, Stmt stmt) {
+			Collection<Abstraction> callerD1s, Abstraction source, Stmt stmt,
+			Stmt retSite) {
 		return null;
 	}
 

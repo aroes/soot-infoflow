@@ -304,12 +304,18 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									killSource, killAll);
 							if (killAll.value)
 								return Collections.<Abstraction>emptySet();
-														
+							
 							// Create the new taints that may be created by this assignment
 							Set<Abstraction> resAssign = createNewTaintOnAssignment(src, assignStmt,
 									rightVals, d1, newSource);
-							if (resAssign != null && !resAssign.isEmpty())
-								res.addAll(resAssign);
+							if (resAssign != null && !resAssign.isEmpty()) {
+								if (res != null) {
+									res.addAll(resAssign);
+									return res;
+								}
+								else
+									return resAssign;
+							}
 							
 							//nothing applies: z = y && x tainted -> taint is preserved
 							return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
@@ -623,8 +629,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								source, stmt, killAll);
 						if (killAll.value)
 							return Collections.emptySet();
-						if (res == null)
-							res = new HashSet<Abstraction>();
 						
 						// Only propagate the taint if the target field is actually read
 						if (source.getAccessPath().isStaticFieldRef()
@@ -635,14 +639,15 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						Set<AccessPath> resMapping = mapAccessPathToCallee(dest, ie, paramLocals,
 								thisLocal, source.getAccessPath());
 						if (resMapping == null)
-							return res;
+							return res == null || res.isEmpty() ? Collections.<Abstraction>emptySet() : res;
 						
 						// Translate the access paths into abstractions
 						Set<Abstraction> resAbs = new HashSet<Abstraction>(resMapping.size());
-						resAbs.addAll(res);
+						if (res != null && !res.isEmpty())
+							resAbs.addAll(res);
 						for (AccessPath ap : resMapping)
 							if (ap.isStaticFieldRef()) {
-								// Do not propagate static fields that are not read inside the callee 
+								// Do not propagate static fields that are not read inside the callee
 								if (interproceduralCFG().isStaticFieldRead(dest, ap.getFirstField()))
 									resAbs.add(source.deriveNewAbstraction(ap, stmt));
 							}
@@ -775,7 +780,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							return Collections.emptySet();
 						
 						Set<Abstraction> res = propagationRules.applyReturnFlowFunction(callerD1s,
-								newSource, (Stmt) exitStmt);
+								newSource, (Stmt) exitStmt, (Stmt) retSite);
 						if (res == null)
 							res = new HashSet<Abstraction>();
 						

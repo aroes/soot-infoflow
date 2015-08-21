@@ -263,53 +263,51 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						boolean cutFirstField = false;
 						Type targetType = null;
 						
-						// TODO: Aliases and static fields?
-						
-						if (leftValue instanceof InstanceFieldRef
-								&& source.getAccessPath().isInstanceFieldRef()) {
-							InstanceFieldRef leftRef = (InstanceFieldRef) leftValue;
-							if (leftRef.getBase() == source.getAccessPath().getPlainValue()) {
-								if (source.getAccessPath().firstFieldMatches(leftRef.getField())) {
-									targetType = source.getAccessPath().getFirstFieldType();
-									addRightValue = true;
-									cutFirstField = true;
-									
-									// If this is an array of primitives, we may not have
-									// any additional fields
-									if (TypeUtils.isPrimitiveArray(targetType)
-											|| TypeUtils.isPrimitiveArray(rightValue.getType()))
-										if (source.getAccessPath().getFieldCount() > 1)
-											addRightValue = false;
+						// if both are fields, we have to compare their fieldName via equals and their bases via PTS
+						if (leftValue instanceof InstanceFieldRef) {
+							if (source.getAccessPath().isInstanceFieldRef()) {
+								InstanceFieldRef leftRef = (InstanceFieldRef) leftValue;
+								if (leftRef.getBase() == source.getAccessPath().getPlainValue()) {
+									if (source.getAccessPath().firstFieldMatches(leftRef.getField())) {
+										targetType = source.getAccessPath().getFirstFieldType();
+										addRightValue = true;
+										cutFirstField = true;
+										
+										// If this is an array of primitives, we may not have
+										// any additional fields
+										if (TypeUtils.isPrimitiveArray(targetType)
+												|| TypeUtils.isPrimitiveArray(rightValue.getType()))
+											if (source.getAccessPath().getFieldCount() > 1)
+												addRightValue = false;
+									}
 								}
 							}
 							// indirect taint propagation:
 							// if leftValue is local and source is instancefield of this local:
-						}
-						else if (leftValue instanceof Local
-								&& source.getAccessPath().isInstanceFieldRef()) {
-							Local base = source.getAccessPath().getPlainValue();
+						} else if (leftValue instanceof Local && source.getAccessPath().isInstanceFieldRef()) {
+							Local base = source.getAccessPath().getPlainValue(); // ?
 							if (leftValue == base) {
 								targetType = source.getAccessPath().getBaseType();
 								addRightValue = true;
 							}
-						}
-						else if (leftValue instanceof ArrayRef) {
+						} else if (leftValue instanceof ArrayRef) {
 							ArrayRef ar = (ArrayRef) leftValue;
 							Local leftBase = (Local) ar.getBase();
 							if (leftBase == source.getAccessPath().getPlainValue()) {
-								if (manager.getTypeUtils().checkCast(source.getAccessPath(), ar.getType())) {
+								if (!(ar.getType() instanceof PrimType)) {
 									addRightValue = true;
 									targetType = source.getAccessPath().getBaseType();
 									assert source.getAccessPath().getBaseType() instanceof ArrayType;
 								}
 							}
 							// generic case, is true for Locals, ArrayRefs that are equal etc..
-						}
-						else if (leftValue == source.getAccessPath().getPlainValue()) {
-							addRightValue = true;
-							targetType = source.getAccessPath().getBaseType();
+						} else if (leftValue == source.getAccessPath().getPlainValue()) {
+							// If this is an unrealizable cast, we can stop propagating
 							if (!manager.getTypeUtils().checkCast(source.getAccessPath(), leftValue.getType()))
 								return Collections.emptySet();
+							
+							addRightValue = true;
+							targetType = source.getAccessPath().getBaseType();
 						}
 						
 						// if one of them is true -> add rightValue
@@ -320,7 +318,15 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 									targetType = buildArrayOrAddDimension(targetType);
 								else if (leftValue instanceof ArrayRef) {
 									assert source.getAccessPath().getBaseType() instanceof ArrayType;
-									targetType = source.getAccessPath().getBaseType();
+									targetType = ((ArrayType) targetType).getElementType();
+									// If the types do not match, the right side cannot be an alias
+									if (!manager.getTypeUtils().checkCast(rightValue.getType(), targetType))
+										addRightValue = false;
+									else {
+										// If we have a type of java.lang.Object, we try to tighten it
+										if (TypeUtils.isObjectLikeType(targetType))
+											targetType = rightValue.getType();
+									}
 								}
 							}
 							
@@ -330,14 +336,12 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							
 							// We do not need to handle casts. Casts only make
 							// types more imprecise when going backwards.
-							
+
 							// If the right side's type is not compatible with our current type,
 							// this cannot be an alias
 							if (addRightValue) {
 								if (!manager.getTypeUtils().checkCast(rightValue.getType(), targetType))
 									addRightValue = false;
-								if (TypeUtils.isObjectLikeType(targetType))
-									targetType = rightValue.getType();
 							}
 							
 							// Make sure to only track static fields if it has been enabled

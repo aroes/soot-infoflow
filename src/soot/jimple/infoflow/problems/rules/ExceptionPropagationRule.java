@@ -36,15 +36,19 @@ public class ExceptionPropagationRule extends AbstractTaintPropagationRule {
 		// Do we catch an exception here?
 		if (source.getExceptionThrown() && stmt instanceof DefinitionStmt) {
 			DefinitionStmt def = (DefinitionStmt) stmt;
-			if (def.getRightOp() instanceof CaughtExceptionRef)
+			if (def.getRightOp() instanceof CaughtExceptionRef) {
+				killSource.value = true;
 				return Collections.singleton(source.deriveNewAbstractionOnCatch(def.getLeftOp()));
+			}
 		}
 		
 		// Do we throw an exception here?
 		if (stmt instanceof ThrowStmt) {
 			ThrowStmt throwStmt = (ThrowStmt) stmt;
-			if (getAliasing().mayAlias(throwStmt.getOp(), source.getAccessPath().getPlainValue()))
+			if (getAliasing().mayAlias(throwStmt.getOp(), source.getAccessPath().getPlainValue())) {
+				killSource.value = true;
 				return Collections.singleton(source.deriveNewAbstractionOnThrow(throwStmt));
+			}
 		}
 		
 		return null;
@@ -59,13 +63,16 @@ public class ExceptionPropagationRule extends AbstractTaintPropagationRule {
 
 	@Override
 	public Collection<Abstraction> propagateReturnFlow(Collection<Abstraction> callerD1s,
-			Abstraction source, Stmt stmt) {
+			Abstraction source, Stmt stmt, Stmt retSite) {
 		// If we throw an exception with a tainted operand, we need to
 		// handle this specially
-		if (stmt instanceof ThrowStmt) {
-			ThrowStmt throwStmt = (ThrowStmt) stmt;
-			if (getAliasing().mayAlias(throwStmt.getOp(), source.getAccessPath().getPlainValue()))
-				return Collections.singleton(source.deriveNewAbstractionOnThrow(throwStmt));
+		if (stmt instanceof ThrowStmt && retSite instanceof DefinitionStmt) {
+			DefinitionStmt defRetStmt = (DefinitionStmt) retSite;
+			if (defRetStmt.getRightOp() instanceof CaughtExceptionRef) {				
+				ThrowStmt throwStmt = (ThrowStmt) stmt;
+				if (getAliasing().mayAlias(throwStmt.getOp(), source.getAccessPath().getPlainValue()))
+					return Collections.singleton(source.deriveNewAbstractionOnThrow(throwStmt));
+			}
 		}
 		
 		return null;

@@ -59,9 +59,12 @@ public interface ITaintPropagationRule {
 	 * @param callerD1s The context abstraction at the caller side
 	 * @param source The abstraction to propagate over the statement
 	 * @param stmt The statement at which to propagate the abstraction
+	 * @param retSite The return site to which the execution returns after
+	 * leaving the current method
 	 * @return The new abstractions to be propagated to the next statement
 	 */
 	public Collection<Abstraction> propagateReturnFlow(
-			Collection<Abstraction> callerD1s, Abstraction source, Stmt stmt);
+			Collection<Abstraction> callerD1s, Abstraction source, Stmt stmt,
+			Stmt retSite);
 	
 }

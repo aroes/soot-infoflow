@@ -175,15 +175,23 @@ public class PropagationRuleManager {
 	 * @param callerD1s The context abstraction at the caller side
 	 * @param source The incoming taint to propagate over the given statement
 	 * @param stmt The statement to which to apply the rules
+	 * @param retSite The return site to which the execution returns after
+	 * leaving the current method
 	 * @return The collection of outgoing taints
 	 */
 	public Set<Abstraction> applyReturnFlowFunction(
-			Collection<Abstraction> callerD1s, Abstraction source, Stmt stmt) {
+			Collection<Abstraction> callerD1s, Abstraction source, Stmt stmt,
+			Stmt retSite) {
 		Set<Abstraction> res = null;
+
+		if (manager.getICFG().getMethodOf(stmt).toString().equals("<android.support.v4.app.FragmentManagerImpl: void moveToState(android.support.v4.app.Fragment,int,int,int,boolean)>")
+				&& stmt.toString().equals("throw $r10")
+				&& source.toString().contains("$r10"))
+			System.out.println("x");
 		
 		for (ITaintPropagationRule rule : rules) {
 			Collection<Abstraction> ruleOut = rule.propagateReturnFlow(callerD1s,
-					source, stmt);
+					source, stmt, retSite);
 			if (ruleOut != null && !ruleOut.isEmpty()) {
 				if (res == null)
 					res = new HashSet<Abstraction>(ruleOut);
