@@ -182,6 +182,8 @@ public class AccessPath implements Cloneable {
 				appendingFieldTypes[i] = appendingFields[i].getType();
 		}
 		
+		Local value;
+		Type baseType;
 		SootField[] fields;
 		Type[] fieldTypes;
 		this.arrayTaintType = arrayTaintType;
@@ -193,12 +195,12 @@ public class AccessPath implements Cloneable {
 			// Set the base value and type if we have one
 			if (val instanceof InstanceFieldRef) {
 				InstanceFieldRef iref = (InstanceFieldRef) val;
-				this.value = (Local) iref.getBase();
-				this.baseType = value.getType();
+				value = (Local) iref.getBase();
+				baseType = value.getType();
 			}
 			else {
-				this.value = null;
-				this.baseType = null;
+				value = null;
+				baseType = null;
 			}
 			
 			// Handle the fields
@@ -214,15 +216,15 @@ public class AccessPath implements Cloneable {
 		}
 		else if (val instanceof ArrayRef) {
 			ArrayRef ref = (ArrayRef) val;
-			this.value = (Local) ref.getBase();
-			this.baseType = valType == null ? value.getType() : valType;
+			value = (Local) ref.getBase();
+			baseType = valType == null ? value.getType() : valType;
 			
 			fields = appendingFields;
 			fieldTypes = appendingFieldTypes;
 		}
 		else {
-			this.value = (Local) val;
-			this.baseType = valType == null ? (this.value == null ? null : value.getType()) : valType;
+			value = (Local) val;
+			baseType = valType == null ? (value == null ? null : value.getType()) : valType;
 			
 			fields = appendingFields;
 			fieldTypes = appendingFieldTypes;
@@ -244,6 +246,27 @@ public class AccessPath implements Cloneable {
 			fields = newFields.length > 0 ? newFields : null;
 			fieldTypes = newTypes.length > 0 ? newTypes : null;
 		}
+				
+		// Make sure that the actual types are always as precise as the declared ones
+		if (value.getType() != baseType) {
+			if (TypeUtils.isObjectLikeType(baseType))
+				baseType = value.getType();
+			else if (Scene.v().getFastHierarchy().canStoreType(value.getType(), baseType))
+				baseType = value.getType();
+		}
+		if (fields != null)
+			for (int i = 0; i < fields.length; i++) {
+				if (fields[i].getType() != fieldTypes[i]) {
+					if (TypeUtils.isObjectLikeType(fieldTypes[i]))
+						fieldTypes[i] = fields[i].getType();
+					else if (Scene.v().getFastHierarchy().canStoreType(fields[i].getType(), fieldTypes[i]))
+						fieldTypes[i] = fields[i].getType();
+				}
+			}
+		
+		// Set the base value and type
+		this.value = value;
+		this.baseType = baseType;
 		
 		// Make sure that only heap objects may have fields
 		assert this.value == null
@@ -251,13 +274,6 @@ public class AccessPath implements Cloneable {
 				|| (this.value.getType() instanceof ArrayType && (((ArrayType) this.value.getType()).getArrayElementType() instanceof ArrayType
 						|| ((ArrayType) this.value.getType()).getArrayElementType() instanceof RefType))
 				|| fields == null || fields.length == 0;
-		
-		// Make sure that the actual types are always as precise as the declared ones
-		if (fields != null)
-			for (int i = 0; i < fields.length; i++)
-				if (fields[i].getType() != fieldTypes[i]
-						&& Scene.v().getFastHierarchy().canStoreType(fields[i].getType(), fieldTypes[i]))
-					fieldTypes[i] = fields[i].getType();
 		
 		// We can always merge a.inner.this$0.c to a.c. We do this first so that
 		// we don't create recursive bases for stuff we don't need anyway.
@@ -388,9 +404,6 @@ public class AccessPath implements Cloneable {
 				&& !TypeUtils.isObjectLikeType(this.value.getType()))
 					: "Type mismatch. Type was " + this.baseType + ", value was: " + (this.value == null ? null : this.value.getType());
 		assert !isEmpty() || this.baseType == null;
-		
-		if (this.toString().startsWith("b(soot.jimple.infoflow.test.HeapTestCode$B) <soot.jimple.infoflow.test.HeapTestCode$B: soot.jimple.infoflow.test.HeapTestCode$A attr> <soot.jimple.infoflow.test.HeapTestCode$A: int i>"))
-			System.out.println("x");
 	}
 	
 	public AccessPath(SootField staticfield, boolean taintSubFields){

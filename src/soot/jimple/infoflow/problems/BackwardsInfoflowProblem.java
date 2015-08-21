@@ -180,7 +180,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							&& rightValue.getType() instanceof RefType
 							&& !source.dependsOnCutAP();
 					
-					if (!aliasOverwritten && !isPrimitiveType(rightValue.getType())) {
+					if (!aliasOverwritten && !(rightValue.getType() instanceof PrimType)) {
 						// If the tainted value 'b' is assigned to variable 'a' and 'b'
 						// is a heap object, we must also look for aliases of 'a' upwards
 						// from the current statement.
@@ -259,7 +259,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					// we also have to look or aliases of the value on the right side of
 					// the assignment.
 					if ((rightValue instanceof Local || rightValue instanceof FieldRef)
-							&& !isPrimitiveType(leftValue.getType())) {
+							&& !(leftValue.getType() instanceof PrimType)) {
 						boolean addRightValue = false;
 						boolean cutFirstField = false;
 						Type targetType = null;
@@ -297,7 +297,6 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							if (leftBase == source.getAccessPath().getPlainValue()) {
 								addRightValue = true;
 								targetType = source.getAccessPath().getBaseType();
-								assert source.getAccessPath().getBaseType() instanceof ArrayType;
 							}
 							// generic case, is true for Locals, ArrayRefs that are equal etc..
 						} else if (leftValue == source.getAccessPath().getPlainValue()) {
@@ -318,14 +317,20 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								else if (leftValue instanceof ArrayRef) {
 									assert source.getAccessPath().getBaseType() instanceof ArrayType;
 									targetType = ((ArrayType) targetType).getElementType();
+									
+									// If we have a type of java.lang.Object, we try to tighten it
+									if (TypeUtils.isObjectLikeType(targetType))
+										targetType = rightValue.getType();
+									
 									// If the types do not match, the right side cannot be an alias
 									if (!manager.getTypeUtils().checkCast(rightValue.getType(), targetType))
 										addRightValue = false;
-									else {
-										// If we have a type of java.lang.Object, we try to tighten it
-										if (TypeUtils.isObjectLikeType(targetType))
-											targetType = rightValue.getType();
-									}
+									
+									// If the source has fields, we may not have a primitive type
+									if (targetType instanceof PrimType || (targetType instanceof ArrayType
+											&& ((ArrayType) targetType).getElementType() instanceof PrimType))
+										if (!source.getAccessPath().isStaticFieldRef() && !source.getAccessPath().isLocal())
+											return Collections.emptySet();
 								}
 							}
 							
@@ -369,15 +374,6 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				return res;
 			}
 			
-			private boolean isPrimitiveType(Type type) {
-				if (type instanceof PrimType)
-					return true;
-				if (type instanceof ArrayType)
-					if (((ArrayType) type).getElementType() instanceof PrimType)
-						return true;
-				return false;
-			}
-
 			@Override
 			public FlowFunction<Abstraction> getNormalFlowFunction(final Unit src, final Unit dest) {
 				
