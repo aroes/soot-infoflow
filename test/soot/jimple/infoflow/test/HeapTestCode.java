@@ -1233,4 +1233,13 @@ public class HeapTestCode {
 		cm.publish(b.i);		
 	}
 	
+	public void taintPrimitiveFieldTest2() {
+		B b = new B();
+		A a = new A();
+		b.attr = a;
+		a.i = TelephonyManager.getIMEI();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(b.attr.i);
+	}
+	
 }

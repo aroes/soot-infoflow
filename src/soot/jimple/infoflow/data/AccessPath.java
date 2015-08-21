@@ -388,6 +388,9 @@ public class AccessPath implements Cloneable {
 				&& !TypeUtils.isObjectLikeType(this.value.getType()))
 					: "Type mismatch. Type was " + this.baseType + ", value was: " + (this.value == null ? null : this.value.getType());
 		assert !isEmpty() || this.baseType == null;
+		
+		if (this.toString().startsWith("b(soot.jimple.infoflow.test.HeapTestCode$B) <soot.jimple.infoflow.test.HeapTestCode$B: soot.jimple.infoflow.test.HeapTestCode$A attr> <soot.jimple.infoflow.test.HeapTestCode$A: int i>"))
+			System.out.println("x");
 	}
 	
 	public AccessPath(SootField staticfield, boolean taintSubFields){

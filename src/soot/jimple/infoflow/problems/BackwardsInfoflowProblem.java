@@ -241,7 +241,10 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						}
 						
 						if (newLeftAbs != null) {
-							assert !(newLeftAbs.getAccessPath().getLastFieldType() instanceof PrimType);
+							// If we ran into a new abstraction that points to a
+							// primitive value, we can remove it
+							if (newLeftAbs.getAccessPath().getLastFieldType() instanceof PrimType)
+								return res;
 							
 							// Propagate the new alias upwards
 							res.add(newLeftAbs);
