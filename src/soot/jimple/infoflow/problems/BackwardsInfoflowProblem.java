@@ -180,7 +180,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							&& rightValue.getType() instanceof RefType
 							&& !source.dependsOnCutAP();
 					
-					if (!aliasOverwritten) {
+					if (!aliasOverwritten && !isPrimitiveType(rightValue.getType())) {
 						// If the tainted value 'b' is assigned to variable 'a' and 'b'
 						// is a heap object, we must also look for aliases of 'a' upwards
 						// from the current statement.
@@ -210,14 +210,15 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							else if (defStmt.getRightOp() instanceof ArrayRef)
 								newType = ((ArrayType) newType).getElementType();
 							
-							// If this is an unrealizable typecast, drop the abstraction
+							// Type check
+							if (!manager.getTypeUtils().checkCast(source.getAccessPath(),
+									defStmt.getRightOp().getType()))
+								return Collections.emptySet();
+							
+							// If the cast was realizable, we can assume that we had the
+							// type to which we cast. Do not loosen types, though.
 							if (defStmt.getRightOp() instanceof CastExpr) {
-								CastExpr ce = (CastExpr) defStmt.getRightOp();
-								if (!manager.getTypeUtils().checkCast(source.getAccessPath(), ce.getCastType()))
-									return Collections.emptySet();
-								
-								// If the cast was realizable, we can assume that we had the
-								// type to which we cast. Do not loosen types, though.
+								CastExpr ce = (CastExpr) defStmt.getRightOp();								
 								if (!Scene.v().getFastHierarchy().canStoreType(newType, ce.getCastType()))
 									newType = ce.getCastType();
 							}
@@ -240,10 +241,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						}
 						
 						if (newLeftAbs != null) {
-							// If we ran into a new abstraction that points to a
-							// primitive value, we can remove it
-							if (newLeftAbs.getAccessPath().getLastFieldType() instanceof PrimType)
-								return res;
+							assert !(newLeftAbs.getAccessPath().getLastFieldType() instanceof PrimType);
 							
 							// Propagate the new alias upwards
 							res.add(newLeftAbs);
@@ -258,7 +256,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					// we also have to look or aliases of the value on the right side of
 					// the assignment.
 					if ((rightValue instanceof Local || rightValue instanceof FieldRef)
-							&& !(leftValue.getType() instanceof PrimType)) {
+							&& !isPrimitiveType(leftValue.getType())) {
 						boolean addRightValue = false;
 						boolean cutFirstField = false;
 						Type targetType = null;
@@ -368,6 +366,15 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				return res;
 			}
 			
+			private boolean isPrimitiveType(Type type) {
+				if (type instanceof PrimType)
+					return true;
+				if (type instanceof ArrayType)
+					if (((ArrayType) type).getElementType() instanceof PrimType)
+						return true;
+				return false;
+			}
+
 			@Override
 			public FlowFunction<Abstraction> getNormalFlowFunction(final Unit src, final Unit dest) {
 				
