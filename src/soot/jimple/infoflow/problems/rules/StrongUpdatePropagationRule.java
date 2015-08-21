@@ -114,7 +114,8 @@ public class StrongUpdatePropagationRule extends AbstractTaintPropagationRule {
 
 	@Override
 	public Collection<Abstraction> propagateCallToReturnFlow(Abstraction d1,
-			Abstraction source, Stmt stmt, ByReferenceBoolean killSource) {
+			Abstraction source, Stmt stmt, ByReferenceBoolean killSource,
+			ByReferenceBoolean killAll) {
 		return null;
 	}
 

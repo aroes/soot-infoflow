@@ -131,7 +131,7 @@ public class PropagationRuleManager {
 	public Set<Abstraction> applyCallToReturnFlowFunction(Abstraction d1,
 			Abstraction source, Stmt stmt) {
 		return applyCallToReturnFlowFunction(d1, source, stmt,
-				new ByReferenceBoolean(), false);
+				new ByReferenceBoolean(), null, false);
 	}
 	
 	/**
@@ -145,11 +145,14 @@ public class PropagationRuleManager {
 	 */
 	public Set<Abstraction> applyCallToReturnFlowFunction(Abstraction d1,
 			Abstraction source, Stmt stmt, ByReferenceBoolean killSource,
+			ByReferenceBoolean killAll,
 			boolean noAddSource) {
 		Set<Abstraction> res = null;
 		for (ITaintPropagationRule rule : rules) {
 			Collection<Abstraction> ruleOut = rule.propagateCallToReturnFlow(
-					d1, source, stmt, killSource);
+					d1, source, stmt, killSource, killAll);
+			if (killAll != null && killAll.value)
+				return null;
 			if (ruleOut != null && !ruleOut.isEmpty()) {
 				if (res == null)
 					res = new HashSet<Abstraction>(ruleOut);

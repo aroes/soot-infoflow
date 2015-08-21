@@ -49,10 +49,13 @@ public interface ITaintPropagationRule {
 	 * @param stmt The statement at which to propagate the abstraction
 	 * @param killSource Outgoing value for the rule to specify whether
 	 * the incoming taint shall be killed
+	 * @param killAll Outgoing value for the rule to specify whether
+	 * all taints shall be killed, i.e., nothing shall be propagated
 	 * @return The new abstractions to be propagated to the next statement
 	 */
 	public Collection<Abstraction> propagateCallToReturnFlow(Abstraction d1,
-			Abstraction source, Stmt stmt, ByReferenceBoolean killSource);
+			Abstraction source, Stmt stmt, ByReferenceBoolean killSource,
+			ByReferenceBoolean killAll);
 	
 	/**
 	 * Propagates a flow along a the return edge

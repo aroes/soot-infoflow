@@ -969,8 +969,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							newSource = source;
 						
 						ByReferenceBoolean killSource = new ByReferenceBoolean();
+						ByReferenceBoolean killAll = new ByReferenceBoolean();
 						Set<Abstraction> res = propagationRules.applyCallToReturnFlowFunction(
-								d1, newSource, iCallStmt, killSource, true);
+								d1, newSource, iCallStmt, killSource, killAll, true);
+						if (killAll.value)
+							return Collections.emptySet();
 						boolean passOn = !killSource.value;
 						
 						// Do not propagate zero abstractions

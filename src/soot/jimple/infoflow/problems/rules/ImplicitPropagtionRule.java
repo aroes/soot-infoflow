@@ -173,7 +173,8 @@ public class ImplicitPropagtionRule extends AbstractTaintPropagationRule {
 
 	@Override
 	public Collection<Abstraction> propagateCallToReturnFlow(Abstraction d1,
-			Abstraction source, Stmt stmt, ByReferenceBoolean killAll) {
+			Abstraction source, Stmt stmt, ByReferenceBoolean killSource,
+			ByReferenceBoolean killAll) {
 		// Do not process zero abstractions
 		if (source == getZeroValue())
 			return null;

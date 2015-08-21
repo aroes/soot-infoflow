@@ -117,7 +117,8 @@ public class WrapperPropagationRule extends AbstractTaintPropagationRule {
 	
 	@Override
 	public Collection<Abstraction> propagateCallToReturnFlow(Abstraction d1,
-			Abstraction source, Stmt stmt, ByReferenceBoolean killSource) {
+			Abstraction source, Stmt stmt, ByReferenceBoolean killSource,
+			ByReferenceBoolean killAll) {
 		// Compute the taint wrapper taints
 		Collection<Abstraction> wrapperTaints = computeWrapperTaints(d1, stmt, source);
 		if (wrapperTaints != null) {
