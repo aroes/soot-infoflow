@@ -210,6 +210,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								BooleanType.v(), (Type[]) null, true,
 								ArrayTaintType.ContentsAndLength), assignStmt);
 					else if (rightValue instanceof NewArrayExpr) {
+						assert manager.getConfig().getEnableArraySizeTainting();
 						arrayTaintType = ArrayTaintType.Length;
 						targetType = null;
 					}
@@ -483,8 +484,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								return new TwoElementSet<Abstraction>(newSource, lenAbs);
 							}
 							
-							// Do we taint the contents of an array?
-							if (leftValue instanceof ArrayRef)
+							// Do we taint the contents of an array? If we do not differentiate,
+							// we do not set any special type.
+							if (leftValue instanceof ArrayRef
+									&& manager.getConfig().getEnableArraySizeTainting())
 								arrayTaintType = ArrayTaintType.Contents;
 							
 							// If this is a sink, we need to report the finding
