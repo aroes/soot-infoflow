@@ -144,108 +144,116 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, source));
 				}
 				
-				if (defStmt instanceof AssignStmt) {
-					// Get the right side of the assignment
-					final Value rightValue = BaseSelector.selectBase(defStmt.getRightOp(), false);
-					
-					// Is the left side overwritten completely?
-					if (leftSideMatches) {
-						// Termination shortcut: If the right side is a value we do not track,
-						// we can stop here.
-						if (!(rightValue instanceof Local || rightValue instanceof FieldRef))
-							return Collections.emptySet();
+				// We only handle assignments and identity statements
+				if (defStmt instanceof IdentityStmt) {
+					res.add(source);
+					return res;
+				}
+				if (!(defStmt instanceof AssignStmt))
+					return res;
+				
+				// Get the right side of the assignment
+				final Value rightValue = BaseSelector.selectBase(defStmt.getRightOp(), false);
+				
+				// Is the left side overwritten completely?
+				if (leftSideMatches) {
+					// Termination shortcut: If the right side is a value we do not track,
+					// we can stop here.
+					if (!(rightValue instanceof Local || rightValue instanceof FieldRef))
+						return Collections.emptySet();
+				}
+				
+				// If we assign a constant, there is no need to track the right side
+				// any further or do any forward propagation since constants cannot
+				// carry taint.
+				if (rightValue instanceof Constant)
+					return res;
+				
+				// If this statement creates a new array, we cannot track upwards the size
+				if (defStmt.getRightOp() instanceof NewArrayExpr)
+					return res;
+				
+				// We only process heap objects. Binary operations can only
+				// be performed on primitive objects.
+				if (defStmt.getRightOp() instanceof BinopExpr)
+					return res;
+				if (defStmt.getRightOp() instanceof UnopExpr)
+					return res;
+				
+				// If we have a = x with the taint "x" being inactive,
+				// we must not taint the left side. We can only taint
+				// the left side if the tainted value is some "x.y".
+				boolean aliasOverwritten = Aliasing.baseMatchesStrict(rightValue, source)
+						&& rightValue.getType() instanceof RefType
+						&& !source.dependsOnCutAP();
+				
+				if (!aliasOverwritten && !(rightValue.getType() instanceof PrimType)) {
+					// If the tainted value 'b' is assigned to variable 'a' and 'b'
+					// is a heap object, we must also look for aliases of 'a' upwards
+					// from the current statement.
+					Abstraction newLeftAbs = null;
+					if (rightValue instanceof InstanceFieldRef) {
+						InstanceFieldRef ref = (InstanceFieldRef) rightValue;
+						if (source.getAccessPath().isInstanceFieldRef()
+								&& ref.getBase() == source.getAccessPath().getPlainValue()
+								&& source.getAccessPath().firstFieldMatches(ref.getField())) {
+							newLeftAbs = checkAbstraction(source.deriveNewAbstraction(leftValue, true,
+									defStmt, source.getAccessPath().getFirstFieldType()));
+						}
 					}
-					
-					// If we assign a constant, there is no need to track the right side
-					// any further or do any forward propagation since constants cannot
-					// carry taint.
-					if (rightValue instanceof Constant)
-						return res;
-					
-					// If this statement creates a new array, we cannot track upwards the size
-					if (defStmt.getRightOp() instanceof NewArrayExpr)
-						return res;
-					
-					// We only process heap objects. Binary operations can only
-					// be performed on primitive objects.
-					if (defStmt.getRightOp() instanceof BinopExpr)
-						return res;
-					if (defStmt.getRightOp() instanceof UnopExpr)
-						return res;
-					
-					// If we have a = x with the taint "x" being inactive,
-					// we must not taint the left side. We can only taint
-					// the left side if the tainted value is some "x.y".
-					boolean aliasOverwritten = Aliasing.baseMatchesStrict(rightValue, source)
-							&& rightValue.getType() instanceof RefType
-							&& !source.dependsOnCutAP();
-					
-					if (!aliasOverwritten && !(rightValue.getType() instanceof PrimType)) {
-						// If the tainted value 'b' is assigned to variable 'a' and 'b'
-						// is a heap object, we must also look for aliases of 'a' upwards
-						// from the current statement.
-						Abstraction newLeftAbs = null;
-						if (rightValue instanceof InstanceFieldRef) {
-							InstanceFieldRef ref = (InstanceFieldRef) rightValue;
-							if (source.getAccessPath().isInstanceFieldRef()
-									&& ref.getBase() == source.getAccessPath().getPlainValue()
-									&& source.getAccessPath().firstFieldMatches(ref.getField())) {
-								newLeftAbs = checkAbstraction(source.deriveNewAbstraction(leftValue, true,
-										defStmt, source.getAccessPath().getFirstFieldType()));
-							}
+					else if (manager.getConfig().getEnableStaticFieldTracking()
+							&& rightValue instanceof StaticFieldRef) {
+						StaticFieldRef ref = (StaticFieldRef) rightValue;
+						if (source.getAccessPath().isStaticFieldRef()
+								&& source.getAccessPath().firstFieldMatches(ref.getField())) {
+							newLeftAbs = checkAbstraction(source.deriveNewAbstraction(leftValue, true,
+									defStmt, source.getAccessPath().getBaseType()));
 						}
-						else if (manager.getConfig().getEnableStaticFieldTracking()
-								&& rightValue instanceof StaticFieldRef) {
-							StaticFieldRef ref = (StaticFieldRef) rightValue;
-							if (source.getAccessPath().isStaticFieldRef()
-									&& source.getAccessPath().firstFieldMatches(ref.getField())) {
-								newLeftAbs = checkAbstraction(source.deriveNewAbstraction(leftValue, true,
-										defStmt, source.getAccessPath().getBaseType()));
-							}
+					}
+					else if (rightValue == source.getAccessPath().getPlainValue()) {
+						Type newType = source.getAccessPath().getBaseType();
+						if (leftValue instanceof ArrayRef)
+							newType = buildArrayOrAddDimension(newType);
+						else if (defStmt.getRightOp() instanceof ArrayRef)
+							newType = ((ArrayType) newType).getElementType();
+						
+						// Type check
+						if (!manager.getTypeUtils().checkCast(source.getAccessPath(),
+								defStmt.getRightOp().getType()))
+							return Collections.emptySet();
+						
+						// If the cast was realizable, we can assume that we had the
+						// type to which we cast. Do not loosen types, though.
+						if (defStmt.getRightOp() instanceof CastExpr) {
+							CastExpr ce = (CastExpr) defStmt.getRightOp();								
+							if (!Scene.v().getFastHierarchy().canStoreType(newType, ce.getCastType()))
+								newType = ce.getCastType();
 						}
-						else if (rightValue == source.getAccessPath().getPlainValue()) {
-							Type newType = source.getAccessPath().getBaseType();
-							if (leftValue instanceof ArrayRef)
-								newType = buildArrayOrAddDimension(newType);
-							else if (defStmt.getRightOp() instanceof ArrayRef)
-								newType = ((ArrayType) newType).getElementType();
-							
-							// Type check
-							if (!manager.getTypeUtils().checkCast(source.getAccessPath(),
-									defStmt.getRightOp().getType()))
-								return Collections.emptySet();
-							
-							// If the cast was realizable, we can assume that we had the
-							// type to which we cast. Do not loosen types, though.
-							if (defStmt.getRightOp() instanceof CastExpr) {
-								CastExpr ce = (CastExpr) defStmt.getRightOp();								
-								if (!Scene.v().getFastHierarchy().canStoreType(newType, ce.getCastType()))
-									newType = ce.getCastType();
-							}
-							// Special type handling for certain operations
-							else if (defStmt.getRightOp() instanceof LengthExpr) {
-								// ignore. The length of an array is a primitive and thus
-								// cannot have aliases
-								return res;
-							}
-							else if (defStmt.getRightOp() instanceof InstanceOfExpr) {
-								// ignore. The type check of an array returns a
-								// boolean which is a primitive and thus cannot
-								// have aliases
-								return res;
-							}
-							
-							if (newLeftAbs == null)
-								newLeftAbs = checkAbstraction(source.deriveNewAbstraction(
-										source.getAccessPath().copyWithNewValue(leftValue, newType, false), defStmt));
+						// Special type handling for certain operations
+						else if (defStmt.getRightOp() instanceof LengthExpr) {
+							// ignore. The length of an array is a primitive and thus
+							// cannot have aliases
+							return res;
+						}
+						else if (defStmt.getRightOp() instanceof InstanceOfExpr) {
+							// ignore. The type check of an array returns a
+							// boolean which is a primitive and thus cannot
+							// have aliases
+							return res;
 						}
 						
-						if (newLeftAbs != null) {
-							// If we ran into a new abstraction that points to a
-							// primitive value, we can remove it
-							if (newLeftAbs.getAccessPath().getLastFieldType() instanceof PrimType)
-								return res;
-							
+						if (newLeftAbs == null)
+							newLeftAbs = checkAbstraction(source.deriveNewAbstraction(
+									source.getAccessPath().copyWithNewValue(leftValue, newType, false), defStmt));
+					}
+					
+					if (newLeftAbs != null) {
+						// If we ran into a new abstraction that points to a
+						// primitive value, we can remove it
+						if (newLeftAbs.getAccessPath().getLastFieldType() instanceof PrimType)
+							return res;
+						
+						if (!newLeftAbs.getAccessPath().equals(source.getAccessPath())) {
 							// Propagate the new alias upwards
 							res.add(newLeftAbs);
 							
@@ -254,115 +262,113 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, newLeftAbs));
 						}
 					}
+				}
+				
+				// If we have the tainted value on the left side of the assignment,
+				// we also have to look or aliases of the value on the right side of
+				// the assignment.
+				if ((rightValue instanceof Local || rightValue instanceof FieldRef)
+						&& !(leftValue.getType() instanceof PrimType)) {
+					boolean addRightValue = false;
+					boolean cutFirstField = false;
+					Type targetType = null;
 					
-					// If we have the tainted value on the left side of the assignment,
-					// we also have to look or aliases of the value on the right side of
-					// the assignment.
-					if ((rightValue instanceof Local || rightValue instanceof FieldRef)
-							&& !(leftValue.getType() instanceof PrimType)) {
-						boolean addRightValue = false;
-						boolean cutFirstField = false;
-						Type targetType = null;
-						
-						// if both are fields, we have to compare their fieldName via equals and their bases via PTS
-						if (leftValue instanceof InstanceFieldRef) {
-							if (source.getAccessPath().isInstanceFieldRef()) {
-								InstanceFieldRef leftRef = (InstanceFieldRef) leftValue;
-								if (leftRef.getBase() == source.getAccessPath().getPlainValue()) {
-									if (source.getAccessPath().firstFieldMatches(leftRef.getField())) {
-										targetType = source.getAccessPath().getFirstFieldType();
-										addRightValue = true;
-										cutFirstField = true;
-									}
+					// if both are fields, we have to compare their fieldName via equals and their bases via PTS
+					if (leftValue instanceof InstanceFieldRef) {
+						if (source.getAccessPath().isInstanceFieldRef()) {
+							InstanceFieldRef leftRef = (InstanceFieldRef) leftValue;
+							if (leftRef.getBase() == source.getAccessPath().getPlainValue()) {
+								if (source.getAccessPath().firstFieldMatches(leftRef.getField())) {
+									targetType = source.getAccessPath().getFirstFieldType();
+									addRightValue = true;
+									cutFirstField = true;
 								}
 							}
-							// indirect taint propagation:
-							// if leftValue is local and source is instancefield of this local:
-						} else if (leftValue instanceof Local && source.getAccessPath().isInstanceFieldRef()) {
-							Local base = source.getAccessPath().getPlainValue();
-							if (leftValue == base) {
-								targetType = source.getAccessPath().getBaseType();
-								addRightValue = true;
-							}
-						} else if (leftValue instanceof ArrayRef) {
-							ArrayRef ar = (ArrayRef) leftValue;
-							Local leftBase = (Local) ar.getBase();
-							if (leftBase == source.getAccessPath().getPlainValue()) {
-								addRightValue = true;
-								targetType = source.getAccessPath().getBaseType();
-							}
-							// generic case, is true for Locals, ArrayRefs that are equal etc..
-						} else if (leftValue == source.getAccessPath().getPlainValue()) {
-							// If this is an unrealizable cast, we can stop propagating
-							if (!manager.getTypeUtils().checkCast(source.getAccessPath(), leftValue.getType()))
-								return Collections.emptySet();
-							
+						}
+						// indirect taint propagation:
+						// if leftValue is local and source is instancefield of this local:
+					} else if (leftValue instanceof Local && source.getAccessPath().isInstanceFieldRef()) {
+						Local base = source.getAccessPath().getPlainValue();
+						if (leftValue == base) {
+							targetType = source.getAccessPath().getBaseType();
+							addRightValue = true;
+						}
+					} else if (leftValue instanceof ArrayRef) {
+						ArrayRef ar = (ArrayRef) leftValue;
+						Local leftBase = (Local) ar.getBase();
+						if (leftBase == source.getAccessPath().getPlainValue()) {
 							addRightValue = true;
 							targetType = source.getAccessPath().getBaseType();
 						}
+						// generic case, is true for Locals, ArrayRefs that are equal etc..
+					} else if (leftValue == source.getAccessPath().getPlainValue()) {
+						// If this is an unrealizable cast, we can stop propagating
+						if (!manager.getTypeUtils().checkCast(source.getAccessPath(), leftValue.getType()))
+							return Collections.emptySet();
 						
-						// if one of them is true -> add rightValue
-						if (addRightValue) {
-							if (targetType != null) {
-								// Special handling for some operations
-								if (defStmt.getRightOp() instanceof ArrayRef)
-									targetType = buildArrayOrAddDimension(targetType);
-								else if (leftValue instanceof ArrayRef) {
-									assert source.getAccessPath().getBaseType() instanceof ArrayType;
-									targetType = ((ArrayType) targetType).getElementType();
-									
-									// If we have a type of java.lang.Object, we try to tighten it
-									if (TypeUtils.isObjectLikeType(targetType))
-										targetType = rightValue.getType();
-									
-									// If the types do not match, the right side cannot be an alias
-									if (!manager.getTypeUtils().checkCast(rightValue.getType(), targetType))
-										addRightValue = false;
-									
-									// If the source has fields, we may not have a primitive type
-									if (targetType instanceof PrimType || (targetType instanceof ArrayType
-											&& ((ArrayType) targetType).getElementType() instanceof PrimType))
-										if (!source.getAccessPath().isStaticFieldRef() && !source.getAccessPath().isLocal())
-											return Collections.emptySet();
-								}
-							}
-							
-							// Special type handling for certain operations
-							if (defStmt.getRightOp() instanceof LengthExpr)
-								targetType = null;
-							
-							// We do not need to handle casts. Casts only make
-							// types more imprecise when going backwards.
-
-							// If the right side's type is not compatible with our current type,
-							// this cannot be an alias
-							if (addRightValue) {
+						addRightValue = true;
+						targetType = source.getAccessPath().getBaseType();
+					}
+					
+					// if one of them is true -> add rightValue
+					if (addRightValue) {
+						if (targetType != null) {
+							// Special handling for some operations
+							if (defStmt.getRightOp() instanceof ArrayRef)
+								targetType = buildArrayOrAddDimension(targetType);
+							else if (leftValue instanceof ArrayRef) {
+								assert source.getAccessPath().getBaseType() instanceof ArrayType;
+								targetType = ((ArrayType) targetType).getElementType();
+								
+								// If we have a type of java.lang.Object, we try to tighten it
+								if (TypeUtils.isObjectLikeType(targetType))
+									targetType = rightValue.getType();
+								
+								// If the types do not match, the right side cannot be an alias
 								if (!manager.getTypeUtils().checkCast(rightValue.getType(), targetType))
 									addRightValue = false;
+								
+								// If the source has fields, we may not have a primitive type
+								if (targetType instanceof PrimType || (targetType instanceof ArrayType
+										&& ((ArrayType) targetType).getElementType() instanceof PrimType))
+									if (!source.getAccessPath().isStaticFieldRef() && !source.getAccessPath().isLocal())
+										return Collections.emptySet();
 							}
-							
-							// Make sure to only track static fields if it has been enabled
-							if (addRightValue)
-								if (!manager.getConfig().getEnableStaticFieldTracking()
-										&& rightValue instanceof StaticFieldRef)
-									addRightValue = false;
+						}
+						
+						// Special type handling for certain operations
+						if (defStmt.getRightOp() instanceof LengthExpr)
+							targetType = null;
+						
+						// We do not need to handle casts. Casts only make
+						// types more imprecise when going backwards.
 
-							if (addRightValue) {
-								Abstraction newAbs = checkAbstraction(source.deriveNewAbstraction(
-										rightValue, cutFirstField, defStmt, targetType));
-								if (newAbs != null) {
-									res.add(newAbs);
-									
-									// Inject the new alias into the forward solver
-									for (Unit u : interproceduralCFG().getPredsOf(defStmt))
-										fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, newAbs));
-								}
+						// If the right side's type is not compatible with our current type,
+						// this cannot be an alias
+						if (addRightValue) {
+							if (!manager.getTypeUtils().checkCast(rightValue.getType(), targetType))
+								addRightValue = false;
+						}
+						
+						// Make sure to only track static fields if it has been enabled
+						if (addRightValue)
+							if (!manager.getConfig().getEnableStaticFieldTracking()
+									&& rightValue instanceof StaticFieldRef)
+								addRightValue = false;
+
+						if (addRightValue) {
+							Abstraction newAbs = checkAbstraction(source.deriveNewAbstraction(
+									rightValue, cutFirstField, defStmt, targetType));
+							if (newAbs != null && !newAbs.getAccessPath().equals(source.getAccessPath())) {
+								res.add(newAbs);
+								
+								// Inject the new alias into the forward solver
+								for (Unit u : interproceduralCFG().getPredsOf(defStmt))
+									fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, newAbs));
 							}
 						}
 					}
 				}
-				else if (defStmt instanceof IdentityStmt)
-					res.add(source);
 				
 				return res;
 			}

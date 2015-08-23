@@ -517,13 +517,6 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 			targetVal = memoryManager.handleMemoryObject(targetVal);
 		}
 		
-		if (targetVal.toString().equals("specialinvoke $r10.<android.support.v4.app.SuperNotCalledException: void <init>(java.lang.String)>($r4)")
-				&& target.toString().equals("throw $r10"))
-			System.out.println("x");
-		if (targetVal.toString().equals("$r10(android.support.v4.app.SuperNotCalledException) * <+length> | >>")
-				&& target.toString().equals("throw $r10"))
-			System.out.println("x");
-		
 		final PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
 		final D existingVal = (forceRegister || !enableMergePointChecking || isMergePoint(target)) ?
 				jumpFn.addFunction(edge) : null;
