@@ -48,7 +48,7 @@ public class TypeUtils {
 			return false;
 		
 		RefType rt = (RefType) tp;
-		return rt.getSootClass().getName().equals("java.lang.Object")
+		return rt.equals(Scene.v().getObjectType())
 				|| rt.getSootClass().getName().equals("java.io.Serializable")
 				|| rt.getSootClass().getName().equals("java.lang.Cloneable");
 	}

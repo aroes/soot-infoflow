@@ -90,6 +90,24 @@ public class SourcePropagationRule extends AbstractTaintPropagationRule {
 	@Override
 	public Collection<Abstraction> propagateCallFlow(Abstraction d1,
 			Abstraction source, Stmt stmt, ByReferenceBoolean killAll) {
+		// Normally, we don't inspect source methods
+		if (!getManager().getConfig().getInspectSources()
+				&& getManager().getSourceSinkManager() != null) {
+			final SourceInfo sourceInfo = getManager().getSourceSinkManager().getSourceInfo(
+					stmt, getManager().getICFG());
+			if (sourceInfo != null)
+				killAll.value = true;
+		}
+		
+		// By default, we don't inspect sinks either
+		if (!getManager().getConfig().getInspectSinks()
+				&& getManager().getSourceSinkManager() != null) {
+			final boolean isSink = getManager().getSourceSinkManager().isSink(
+					stmt, getManager().getICFG(), null);
+			if (isSink)
+				killAll.value = true;
+		}
+		
 		return null;
 	}
 
