@@ -327,12 +327,6 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								// If the types do not match, the right side cannot be an alias
 								if (!manager.getTypeUtils().checkCast(rightValue.getType(), targetType))
 									addRightValue = false;
-								
-								// If the source has fields, we may not have a primitive type
-								if (targetType instanceof PrimType || (targetType instanceof ArrayType
-										&& ((ArrayType) targetType).getElementType() instanceof PrimType))
-									if (!source.getAccessPath().isStaticFieldRef() && !source.getAccessPath().isLocal())
-										return Collections.emptySet();
 							}
 						}
 						
@@ -343,6 +337,12 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						// We do not need to handle casts. Casts only make
 						// types more imprecise when going backwards.
 
+						// If the source has fields, we may not have a primitive type
+						if (targetType instanceof PrimType || (targetType instanceof ArrayType
+								&& ((ArrayType) targetType).getElementType() instanceof PrimType))
+							if (!source.getAccessPath().isStaticFieldRef() && !source.getAccessPath().isLocal())
+								return Collections.emptySet();
+						
 						// If the right side's type is not compatible with our current type,
 						// this cannot be an alias
 						if (addRightValue) {
