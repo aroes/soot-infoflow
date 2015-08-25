@@ -458,6 +458,11 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						if (isCallSiteActivatingTaint(stmt, source.getActivationUnit()))
 							return Collections.emptySet();
 						
+						// Do not analyze static initializers if static field
+						// tracking is disabled
+						if (!manager.getConfig().getEnableStaticFieldTracking() && dest.isStaticInitializer())
+							return Collections.emptySet();
+						
 						// taint is propagated in CallToReturnFunction, so we do not
 						// need any taint here if the taint wrapper is exclusive:
 						if(taintWrapper != null && taintWrapper.isExclusive(stmt, source))
