@@ -520,9 +520,9 @@ public class AccessPath implements Cloneable {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((fields == null) ? 0 : Arrays.hashCode(fields));
-//		result = prime * result + ((fieldTypes == null) ? 0 : Arrays.hashCode(fieldTypes));
+		result = prime * result + ((fieldTypes == null) ? 0 : Arrays.hashCode(fieldTypes));
 		result = prime * result + ((value == null) ? 0 : value.hashCode());
-//		result = prime * result + ((baseType == null) ? 0 : baseType.hashCode());
+		result = prime * result + ((baseType == null) ? 0 : baseType.hashCode());
 		result = prime * result + (this.taintSubFields ? 1 : 0);
 		result = prime * result + this.arrayTaintType.hashCode();
 		this.hashCode = result;
@@ -546,18 +546,18 @@ public class AccessPath implements Cloneable {
 			return false;
 		if (!Arrays.equals(fields, other.fields))
 			return false;
-		
-		if (this.taintSubFields != other.taintSubFields)
-			return false;
-		if (this.arrayTaintType != other.arrayTaintType)
-			return false;
-		
 		if (!Arrays.equals(fieldTypes, other.fieldTypes))
 			return false;
+		
+		if (this.taintSubFields != other.taintSubFields)
+			return false;		
 		if (baseType == null) {
 			if (other.baseType != null)
 				return false;
 		} else if (!baseType.equals(other.baseType))
+			return false;
+		
+		if (this.arrayTaintType != other.arrayTaintType)
 			return false;
 		
 		assert this.hashCode() == obj.hashCode();
