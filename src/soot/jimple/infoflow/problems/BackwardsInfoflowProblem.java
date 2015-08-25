@@ -342,6 +342,10 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								&& ((ArrayType) targetType).getElementType() instanceof PrimType))
 							if (!source.getAccessPath().isStaticFieldRef() && !source.getAccessPath().isLocal())
 								return Collections.emptySet();
+						if (rightValue.getType() instanceof PrimType || (rightValue.getType() instanceof ArrayType
+								&& ((ArrayType) rightValue.getType()).getElementType() instanceof PrimType))
+							if (!source.getAccessPath().isStaticFieldRef() && !source.getAccessPath().isLocal())
+								return Collections.emptySet();
 						
 						// If the right side's type is not compatible with our current type,
 						// this cannot be an alias
