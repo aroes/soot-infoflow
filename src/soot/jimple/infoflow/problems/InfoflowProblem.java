@@ -542,6 +542,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (source == getZeroValue())
 							return Collections.emptySet();
 						
+						// Do not analyze static initializers if static field
+						// tracking is disabled
+						if (!manager.getConfig().getEnableStaticFieldTracking() && dest.isStaticInitializer())
+							return Collections.emptySet();
+						
 						// Notify the handler if we have one
 						if (taintPropagationHandler != null)
 							taintPropagationHandler.notifyFlowIn(stmt, source, interproceduralCFG(),
