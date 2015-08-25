@@ -26,7 +26,7 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	protected INativeCallHandler nativeCallHandler = new DefaultNativeCallHandler();
 	
 	protected final BiDirICFGFactory icfgFactory;
-	protected Collection<PreAnalysisHandler> preProcessors = Collections.emptyList();
+	protected Collection<? extends PreAnalysisHandler> preProcessors = Collections.emptyList();
 	    
     /**
      * Creates a new instance of the abstract info flow problem
@@ -72,7 +72,7 @@ public abstract class AbstractInfoflow implements IInfoflow {
     }
     
 	@Override
-	public void setPreProcessors(Collection<PreAnalysisHandler> preprocessors) {
+	public void setPreProcessors(Collection<? extends PreAnalysisHandler> preprocessors) {
         this.preProcessors = preprocessors;
 	}
 

@@ -248,21 +248,23 @@ public class AccessPath implements Cloneable {
 		}
 				
 		// Make sure that the actual types are always as precise as the declared ones
-		if (value != null && value.getType() != baseType) {
-			if (TypeUtils.isObjectLikeType(baseType))
-				baseType = value.getType();
-			else if (Scene.v().getFastHierarchy().canStoreType(value.getType(), baseType))
-				baseType = value.getType();
-		}
-		if (fields != null)
-			for (int i = 0; i < fields.length; i++) {
-				if (fields[i].getType() != fieldTypes[i]) {
-					if (TypeUtils.isObjectLikeType(fieldTypes[i]))
-						fieldTypes[i] = fields[i].getType();
-					else if (Scene.v().getFastHierarchy().canStoreType(fields[i].getType(), fieldTypes[i]))
-						fieldTypes[i] = fields[i].getType();
-				}
+		if (InfoflowConfiguration.getUseTypeTightening()) {
+			if (value != null && value.getType() != baseType) {
+				if (TypeUtils.isObjectLikeType(baseType))
+					baseType = value.getType();
+				else if (Scene.v().getFastHierarchy().canStoreType(value.getType(), baseType))
+					baseType = value.getType();
 			}
+			if (fields != null)
+				for (int i = 0; i < fields.length; i++) {
+					if (fields[i].getType() != fieldTypes[i]) {
+						if (TypeUtils.isObjectLikeType(fieldTypes[i]))
+							fieldTypes[i] = fields[i].getType();
+						else if (Scene.v().getFastHierarchy().canStoreType(fields[i].getType(), fieldTypes[i]))
+							fieldTypes[i] = fields[i].getType();
+					}
+				}
+		}
 		
 		// Set the base value and type
 		this.value = value;

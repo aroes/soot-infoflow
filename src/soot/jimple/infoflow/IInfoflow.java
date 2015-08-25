@@ -66,7 +66,7 @@ public interface IInfoflow {
      * the information flow.
      * @param preprocessors the pre-processors
      */
-    public void setPreProcessors(Collection<PreAnalysisHandler> preprocessors);
+    public void setPreProcessors(Collection<? extends PreAnalysisHandler> preprocessors);
 
 	/**
 	 * Computes the information flow on a list of entry point methods. This list

@@ -69,6 +69,7 @@ public class InfoflowConfiguration {
 	private static boolean pathAgnosticResults = true;
 	private static boolean oneResultPerAccessPath = false;
 	private static boolean mergeNeighbors = false;
+	private static boolean useTypeTightening = true;
 	
 	private boolean stopAfterFirstFlow = false;
 	private boolean enableImplicitFlows = false;
@@ -165,6 +166,26 @@ public class InfoflowConfiguration {
 	 */
 	public static void setMergeNeighbors(boolean value) {
 		InfoflowConfiguration.mergeNeighbors = value;
+	}
+	
+	/**
+	 * Gets whether runtime type information shall be tightened as much as
+	 * possible when deriving new taints
+	 * @return True if the runtime type information shall automatically be
+	 * tightened when deriving new taints, otherwise false
+	 */
+	public static boolean getUseTypeTightening() {
+		return InfoflowConfiguration.useTypeTightening;
+	}
+	
+	/**
+	 * Sets whether runtime type information shall be tightened as much as
+	 * possible when deriving new taints
+	 * @param useTypeTightening True if the runtime type information shall
+	 * automatically be tightened when deriving new taints, otherwise false
+	 */
+	public static void setUseTypeTightening(boolean useTypeTightening) {
+		InfoflowConfiguration.useTypeTightening = useTypeTightening;
 	}
 	
 	/**
