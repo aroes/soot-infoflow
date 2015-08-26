@@ -22,6 +22,8 @@ import soot.ArrayType;
 import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
+import soot.jimple.CaughtExceptionRef;
+import soot.jimple.DefinitionStmt;
 import soot.jimple.InvokeExpr;
 import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.collect.ConcurrentHashSet;
@@ -276,6 +278,20 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 			if (ieSubSig.equals("java.lang.Object doPrivileged(java.security.PrivilegedExceptionAction,"
 					+ "java.security.AccessControlContext)"))
 				return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Checks whether the given unit is the start of an exception handler
+	 * @param u The unit to check
+	 * @return True if the given unit is the start of an exception handler,
+	 * otherwise false
+	 */
+	protected boolean isExceptionHandler(Unit u) {
+		if (u instanceof DefinitionStmt) {
+			DefinitionStmt defStmt = (DefinitionStmt) u;
+			return defStmt.getRightOp() instanceof CaughtExceptionRef;
 		}
 		return false;
 	}

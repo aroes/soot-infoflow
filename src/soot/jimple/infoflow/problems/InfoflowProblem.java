@@ -696,7 +696,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							DefinitionStmt defnStmt = (DefinitionStmt) callSite;
 							Value leftOp = defnStmt.getLeftOp();
 							
-							if (aliasing.mayAlias(retLocal, newSource.getAccessPath().getPlainValue())) {
+							if (aliasing.mayAlias(retLocal, newSource.getAccessPath().getPlainValue())
+									&& !isExceptionHandler(retSite)) {
 								Abstraction abs = newSource.deriveNewAbstraction
 										(newSource.getAccessPath().copyWithNewValue(leftOp), (Stmt) exitStmt);
 								res.add(abs);
