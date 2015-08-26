@@ -246,7 +246,7 @@ public class AccessPath implements Cloneable {
 			fields = newFields.length > 0 ? newFields : null;
 			fieldTypes = newTypes.length > 0 ? newTypes : null;
 		}
-				
+		
 		// Make sure that the actual types are always as precise as the declared ones
 		if (InfoflowConfiguration.getUseTypeTightening()) {
 			if (value != null && value.getType() != baseType) {
@@ -254,6 +254,11 @@ public class AccessPath implements Cloneable {
 					baseType = value.getType();
 				else if (Scene.v().getFastHierarchy().canStoreType(value.getType(), baseType))
 					baseType = value.getType();
+				
+				// If we have a more precise base type in the first field, we
+				// take that
+				if (TypeUtils.isObjectLikeType(baseType) && fields != null && fields.length > 0)
+					baseType = fields[0].getDeclaringClass().getType();
 			}
 			if (fields != null)
 				for (int i = 0; i < fields.length; i++) {
@@ -263,6 +268,11 @@ public class AccessPath implements Cloneable {
 						else if (Scene.v().getFastHierarchy().canStoreType(fields[i].getType(), fieldTypes[i]))
 							fieldTypes[i] = fields[i].getType();
 					}
+
+					// If we have a more precise base type in the next field, we
+					// take that
+					if (TypeUtils.isObjectLikeType(fieldTypes[i]) && fields.length > i + 1)
+						fieldTypes[i] = fields[i + 1].getDeclaringClass().getType();
 				}
 		}
 		
