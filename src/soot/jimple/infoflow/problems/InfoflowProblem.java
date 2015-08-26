@@ -354,7 +354,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						//y = x && x tainted --> y, x tainted
 						else if (aliasing.mayAlias(rightVal, newSource.getAccessPath().getPlainValue())) {
 							if (manager.getConfig().getEnableArraySizeTainting()
-									|| !(rightVal instanceof NewArrayExpr)) {
+									|| !(rightValue instanceof NewArrayExpr)) {
 								addLeftValue = true;
 								targetType = newSource.getAccessPath().getBaseType();
 							}
@@ -863,6 +863,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (!manager.getConfig().getEnableStaticFieldTracking()
 								&& source.getAccessPath().isStaticFieldRef())
 							return Collections.emptySet();
+						
+						if (iCallStmt.toString().equals("$r1 = virtualinvoke $r1.<java.lang.String: java.lang.String substring(int,int)>(0, $i0)"))
+							System.out.println("x");
 						
 						//check inactive elements:
 						final Abstraction newSource;
