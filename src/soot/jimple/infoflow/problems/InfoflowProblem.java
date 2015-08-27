@@ -864,9 +864,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								&& source.getAccessPath().isStaticFieldRef())
 							return Collections.emptySet();
 						
-						if (iCallStmt.toString().equals("$r1 = virtualinvoke $r1.<java.lang.String: java.lang.String substring(int,int)>(0, $i0)"))
-							System.out.println("x");
-						
 						//check inactive elements:
 						final Abstraction newSource;
 						if (!source.isAbstractionActive() && (call == source.getActivationUnit()

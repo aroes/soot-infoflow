@@ -183,8 +183,13 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		final SootMethod method = stmt.getInvokeExpr().getMethod();
 		
 		// If the callee is a phantom class or has no body, we pass on the taint
-		if (method.isPhantom() || !method.hasActiveBody())
-			taints.add(taintedPath);
+		if (method.isPhantom() || !method.hasActiveBody()) {
+			// Exception: Tainted value is overwritten
+			if (!(!taintedPath.isStaticFieldRef()
+					&& stmt instanceof DefinitionStmt
+					&& ((DefinitionStmt) stmt).getLeftOp() == taintedPath.getPlainValue()))
+				taints.add(taintedPath);
+		}
 		
 		// For the moment, we don't implement static taints on wrappers. Pass it on
 		// not to break anything
@@ -240,7 +245,8 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 			}
 		}
 				
-		//if param is tainted && classList contains classname && if list. contains signature of method -> add propagation
+		//if param is tainted && classList contains classname && if list. contains
+		// signature of method -> add propagation
 		if (isSupported && wrapType == MethodWrapType.CreateTaint) {
 			// If we are inside a conditional, we always taint
 			boolean doTaint = taintedPath.isEmpty();
