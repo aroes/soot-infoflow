@@ -39,6 +39,8 @@ public class PropagationRuleManager {
 		if (manager.getConfig().getEnableImplicitFlows())
 			rules.add(new ImplicitPropagtionRule(manager, aliasing, zeroValue));
 		rules.add(new StrongUpdatePropagationRule(manager, aliasing, zeroValue));
+		if (manager.getConfig().getEnableTypeChecking())
+			rules.add(new TypingPropagationRule(manager, aliasing, zeroValue));
 	}
 	
 	/**

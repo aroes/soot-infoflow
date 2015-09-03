@@ -376,15 +376,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								|| TypeUtils.isStringType(assignStmt.getLeftOp().getType())))
 					return Collections.singleton(newSource);
 				
-				// If the right side is a typecast, it must be compatible,
-				// or this path is not realizable
-				if (rightValue instanceof CastExpr) {
-					CastExpr ce = (CastExpr) rightValue;
-					if (!manager.getTypeUtils().checkCast(newSource.getAccessPath(), ce.getCastType()))
-						return Collections.emptySet();
-				}
 				// Special handling for certain operations
-				else if (rightValue instanceof LengthExpr) {
+				if (rightValue instanceof LengthExpr) {
 					// Check that we really have an array
 					assert newSource.getAccessPath().isEmpty()
 							|| newSource.getAccessPath().getBaseType() instanceof ArrayType;
@@ -783,13 +776,13 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							}
 						}
 						}
-
 						
 						{
 						if (!callee.isStatic()) {
 							if (aliasing.mayAlias(thisLocal, sourceBase)) {
 								// check if it is not one of the params (then we have already fixed it)
-								if (!parameterAliases) {
+								if (!parameterAliases && manager.getTypeUtils().checkCast(
+										source.getAccessPath(), thisLocal.getType())) {
 									if (iCallStmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
 										InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) iCallStmt.getInvokeExpr();
 										Abstraction abs = newSource.deriveNewAbstraction

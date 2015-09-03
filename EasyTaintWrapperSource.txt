@@ -417,3 +417,5 @@
 <android.graphics.Point: void <init>(android.graphics.Point)>
 <android.graphics.PointF: void <init>(float,float)>
 <android.graphics.PointF: void <init>(android.graphics.Point)>
+
+<android.telephony.SmsMessage: android.telephony.SmsMessage createFromPdu(byte[])>
