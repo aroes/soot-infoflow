@@ -89,6 +89,27 @@ public class InfoflowConfiguration {
 	private CodeEliminationMode codeEliminationMode = CodeEliminationMode.PropagateConstants;
 	
 	/**
+	 * Merges the given configuration options into this configuration object
+	 * @param config The configuration data to merge in
+	 */
+	public void merge(InfoflowConfiguration config) {
+		this.stopAfterFirstFlow = config.stopAfterFirstFlow;
+		this.enableImplicitFlows = config.enableImplicitFlows;
+		this.enableStaticFields = config.enableStaticFields;
+		this.enableExceptions = config.enableExceptions;
+		this.enableArraySizeTainting = config.enableArraySizeTainting;
+		this.flowSensitiveAliasing = config.flowSensitiveAliasing;
+		this.enableTypeChecking = config.enableTypeChecking;
+		this.ignoreFlowsInSystemPackages = config.ignoreFlowsInSystemPackages;
+		this.maxThreadNum = config.maxThreadNum;
+		this.inspectSources = config.inspectSources;
+		this.inspectSinks = config.inspectSinks;
+		this.callgraphAlgorithm = config.callgraphAlgorithm;
+		this.aliasingAlgorithm = config.aliasingAlgorithm;
+		this.codeEliminationMode = config.codeEliminationMode;
+	}
+	
+	/**
 	 * Gets the maximum depth of the access paths. All paths will be truncated
 	 * if they exceed the given size.
 	 * @param accessPathLength the maximum value of an access path.
