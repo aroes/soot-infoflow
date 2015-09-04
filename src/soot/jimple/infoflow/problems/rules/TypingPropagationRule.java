@@ -28,15 +28,18 @@ public class TypingPropagationRule extends AbstractTaintPropagationRule {
 			Abstraction source, Stmt stmt, ByReferenceBoolean killSource,
 			ByReferenceBoolean killAll) {
 		// Check for a typecast on the right side of an assignment
-		if (stmt instanceof DefinitionStmt) {
+		if (!source.getAccessPath().isStaticFieldRef() && stmt instanceof DefinitionStmt) {
 			DefinitionStmt defStmt = (DefinitionStmt) stmt;
 			if (defStmt.getRightOp() instanceof CastExpr) {
-				CastExpr ce = (CastExpr) defStmt.getRightOp();
-				// If the typecast is not compatible with the current type, we
-				// have to kill the taint
-				if (!getManager().getTypeUtils().checkCast(
-						source.getAccessPath(), ce.getCastType()))
-					killAll.value = true;
+				CastExpr ce = (CastExpr) defStmt.getRightOp();				
+				if (ce.getOp() == source.getAccessPath().getPlainValue()) {
+					// If the typecast is not compatible with the current type, we
+					// have to kill the taint
+					if (!getManager().getTypeUtils().checkCast(
+							source.getAccessPath(), ce.getCastType())) {
+						killAll.value = true;
+					}
+				}
 			}
 		}
 		
