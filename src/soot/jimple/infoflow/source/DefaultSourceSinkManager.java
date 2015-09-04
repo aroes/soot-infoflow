@@ -22,6 +22,7 @@ import soot.Value;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.IdentityStmt;
 import soot.jimple.InstanceInvokeExpr;
+import soot.jimple.InvokeExpr;
 import soot.jimple.ParameterRef;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
@@ -144,8 +145,22 @@ public class DefaultSourceSinkManager implements ISourceSinkManager  {
 		// Check whether the callee is a sink
 		if (this.sinks != null
 				&& sCallSite.containsInvokeExpr()
-				&& this.sinks.contains(sCallSite.getInvokeExpr().getMethod().getSignature()))
-			return true;
+				&& this.sinks.contains(sCallSite.getInvokeExpr().getMethod().getSignature())) {
+			// If we don't have an access path, we can only over-approximate
+			if (ap == null)
+				return true;
+			
+			// The given access path must at least be referenced somewhere in the sink
+			if (!ap.isStaticFieldRef()) {
+				InvokeExpr iexpr = sCallSite.getInvokeExpr();
+				for (int i = 0; i < iexpr.getArgCount(); i++)
+					if (iexpr.getArg(i) == ap.getPlainValue())
+						return true;
+				if (iexpr instanceof InstanceInvokeExpr)
+					if (((InstanceInvokeExpr) iexpr).getBase() == ap.getPlainValue())
+						return true;
+			}
+		}
 		
 		return false;
 	}
