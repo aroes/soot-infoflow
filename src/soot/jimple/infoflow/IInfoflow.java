@@ -13,6 +13,8 @@ package soot.jimple.infoflow;
 import java.util.Collection;
 import java.util.List;
 
+import soot.jimple.infoflow.config.IInfoflowConfig;
+import soot.jimple.infoflow.data.pathBuilders.IPathBuilderFactory;
 import soot.jimple.infoflow.entryPointCreators.IEntryPointCreator;
 import soot.jimple.infoflow.handlers.PreAnalysisHandler;
 import soot.jimple.infoflow.ipc.IIPCManager;
@@ -154,5 +156,18 @@ public interface IInfoflow {
 	public boolean isResultAvailable();
 	
 	public void setIPCManager(IIPCManager ipcManager);
+	
+	/**
+	 * Sets the Soot configuration callback to be used for this analysis
+	 * @param config The configuration callback to be used for the analysis
+	 */
+	public void setSootConfig(IInfoflowConfig config);
+	
+	/**
+	 * Sets the path builder factory to be used in subsequent data flow analyses
+	 * @param factory The path bilder factory to use for constructing path
+	 * reconstruction algorithms
+	 */
+	public void setPathBuilderFactory(IPathBuilderFactory factory);
 	
 }

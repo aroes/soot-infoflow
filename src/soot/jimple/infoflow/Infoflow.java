@@ -11,7 +11,6 @@ package soot.jimple.infoflow;
 
 import heros.solver.CountingThreadPoolExecutor;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -31,7 +30,6 @@ import soot.MethodOrMethodContext;
 import soot.PackManager;
 import soot.PatchingChain;
 import soot.Scene;
-import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.Stmt;
@@ -41,10 +39,8 @@ import soot.jimple.infoflow.aliasing.FlowSensitiveAliasStrategy;
 import soot.jimple.infoflow.aliasing.IAliasingStrategy;
 import soot.jimple.infoflow.aliasing.PtsBasedAliasStrategy;
 import soot.jimple.infoflow.cfg.BiDirICFGFactory;
-import soot.jimple.infoflow.cfg.LibraryClassPatcher;
 import soot.jimple.infoflow.codeOptimization.DeadCodeEliminator;
 import soot.jimple.infoflow.codeOptimization.ICodeOptimizer;
-import soot.jimple.infoflow.config.IInfoflowConfig;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.AccessPath;
@@ -53,11 +49,8 @@ import soot.jimple.infoflow.data.pathBuilders.DefaultPathBuilderFactory;
 import soot.jimple.infoflow.data.pathBuilders.IAbstractionPathBuilder;
 import soot.jimple.infoflow.data.pathBuilders.IPathBuilderFactory;
 import soot.jimple.infoflow.entryPointCreators.IEntryPointCreator;
-import soot.jimple.infoflow.handlers.PreAnalysisHandler;
 import soot.jimple.infoflow.handlers.ResultsAvailableHandler;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler;
-import soot.jimple.infoflow.ipc.DefaultIPCManager;
-import soot.jimple.infoflow.ipc.IIPCManager;
 import soot.jimple.infoflow.problems.BackwardsInfoflowProblem;
 import soot.jimple.infoflow.problems.InfoflowProblem;
 import soot.jimple.infoflow.results.InfoflowResults;
@@ -81,14 +74,6 @@ public class Infoflow extends AbstractInfoflow {
     private final Logger logger = LoggerFactory.getLogger(getClass());
     
 	private InfoflowResults results = null;
-	private IPathBuilderFactory pathBuilderFactory;
-
-	private final String androidPath;
-	private final boolean forceAndroidJar;
-	private IInfoflowConfig sootConfig;
-	
-	private IIPCManager ipcManager = new DefaultIPCManager(new ArrayList<String>());
-	
     private IInfoflowCFG iCfg;
     
     private Set<ResultsAvailableHandler> onResultsAvailable = new HashSet<ResultsAvailableHandler>();
@@ -100,9 +85,7 @@ public class Infoflow extends AbstractInfoflow {
 	 * Creates a new instance of the InfoFlow class for analyzing plain Java code without any references to APKs or the Android SDK.
 	 */
 	public Infoflow() {
-		this.androidPath = "";
-		this.forceAndroidJar = false;
-		this.pathBuilderFactory = new DefaultPathBuilderFactory();
+		super();
 	}
 
 	/**
@@ -114,9 +97,7 @@ public class Infoflow extends AbstractInfoflow {
 	 * false if Soot shall pick the appropriate platform version 
 	 */
 	public Infoflow(String androidPath, boolean forceAndroidJar) {
-		super();
-		this.androidPath = androidPath;
-		this.forceAndroidJar = forceAndroidJar;
+		super(null, androidPath, forceAndroidJar);
 		this.pathBuilderFactory = new DefaultPathBuilderFactory();
 	}
 
@@ -133,158 +114,8 @@ public class Infoflow extends AbstractInfoflow {
 	 */
 	public Infoflow(String androidPath, boolean forceAndroidJar, BiDirICFGFactory icfgFactory,
 			IPathBuilderFactory pathBuilderFactory) {
-		super(icfgFactory);
-		this.androidPath = androidPath;
-		this.forceAndroidJar = forceAndroidJar;
+		super(icfgFactory, androidPath, forceAndroidJar);
 		this.pathBuilderFactory = pathBuilderFactory;
-	}
-	
-	public void setSootConfig(IInfoflowConfig config){
-		sootConfig = config;
-	}
-	
-	/**
-	 * Initializes Soot.
-	 * @param appPath The application path containing the analysis client
-	 * @param libPath The Soot classpath containing the libraries
-	 * @param classes The set of classes that shall be checked for data flow
-	 * analysis seeds. All sources in these classes are used as seeds.
-	 * @param sourcesSinks The manager object for identifying sources and sinks
-	 */
-	private void initializeSoot(String appPath, String libPath, Collection<String> classes) {
-		initializeSoot(appPath, libPath, classes,  "");
-	}
-	
-	/**
-	 * Initializes Soot.
-	 * @param appPath The application path containing the analysis client
-	 * @param libPath The Soot classpath containing the libraries
-	 * @param classes The set of classes that shall be checked for data flow
-	 * analysis seeds. All sources in these classes are used as seeds. If a
-	 * non-empty extra seed is given, this one is used too.
-	 */
-	private void initializeSoot(String appPath, String libPath, Collection<String> classes,
-			String extraSeed) {
-		// reset Soot:
-		logger.info("Resetting Soot...");
-		soot.G.reset();
-				
-		Options.v().set_no_bodies_for_excluded(true);
-		Options.v().set_allow_phantom_refs(true);
-		if (logger.isDebugEnabled())
-			Options.v().set_output_format(Options.output_format_jimple);
-		else
-			Options.v().set_output_format(Options.output_format_none);
-		
-		// We only need to distinguish between application and library classes
-		// if we use the OnTheFly ICFG
-		if (config.getCallgraphAlgorithm() == CallgraphAlgorithm.OnDemand) {
-			Options.v().set_soot_classpath(libPath);
-			if (appPath != null) {
-				List<String> processDirs = new LinkedList<String>();
-				for (String ap : appPath.split(File.pathSeparator))
-					processDirs.add(ap);
-				Options.v().set_process_dir(processDirs);
-			}
-		}
-		else
-			Options.v().set_soot_classpath(appendClasspath(appPath, libPath));
-		
-		// Configure the callgraph algorithm
-		switch (config.getCallgraphAlgorithm()) {
-			case AutomaticSelection:
-				// If we analyze a distinct entry point which is not static,
-				// SPARK fails due to the missing allocation site and we fall
-				// back to CHA.
-				if (extraSeed == null || extraSeed.isEmpty()) {
-					Options.v().setPhaseOption("cg.spark", "on");
-					Options.v().setPhaseOption("cg.spark", "string-constants:true");
-				}
-				else
-					Options.v().setPhaseOption("cg.cha", "on");
-				break;
-			case CHA:
-				Options.v().setPhaseOption("cg.cha", "on");
-				break;
-			case RTA:
-				Options.v().setPhaseOption("cg.spark", "on");
-				Options.v().setPhaseOption("cg.spark", "rta:true");
-				Options.v().setPhaseOption("cg.spark", "string-constants:true");
-				break;
-			case VTA:
-				Options.v().setPhaseOption("cg.spark", "on");
-				Options.v().setPhaseOption("cg.spark", "vta:true");
-				Options.v().setPhaseOption("cg.spark", "string-constants:true");
-				break;
-			case SPARK:
-				Options.v().setPhaseOption("cg.spark", "on");
-				Options.v().setPhaseOption("cg.spark", "string-constants:true");
-				break;
-			case OnDemand:
-				// nothing to set here
-				break;
-			default:
-				throw new RuntimeException("Invalid callgraph algorithm");
-		}
-		
-		// Specify additional options required for the callgraph
-		if (config.getCallgraphAlgorithm() != CallgraphAlgorithm.OnDemand) {
-			Options.v().set_whole_program(true);
-			Options.v().setPhaseOption("cg", "trim-clinit:false");
-		}
-
-		// do not merge variables (causes problems with PointsToSets)
-		Options.v().setPhaseOption("jb.ulp", "off");
-		
-		if (!this.androidPath.isEmpty()) {
-			Options.v().set_src_prec(Options.src_prec_apk);
-			if (this.forceAndroidJar)
-				soot.options.Options.v().set_force_android_jar(this.androidPath);
-			else
-				soot.options.Options.v().set_android_jars(this.androidPath);
-		} else
-			Options.v().set_src_prec(Options.src_prec_java);
-		
-		//at the end of setting: load user settings:
-		if (sootConfig != null)
-			sootConfig.setSootOptions(Options.v());
-		
-		// load all entryPoint classes with their bodies
-		for (String className : classes)
-			Scene.v().addBasicClass(className, SootClass.BODIES);
-		Scene.v().loadNecessaryClasses();
-		logger.info("Basic class loading done.");
-		
-		boolean hasClasses = false;
-		for (String className : classes) {
-			SootClass c = Scene.v().forceResolve(className, SootClass.BODIES);
-			if (c != null){
-				c.setApplicationClass();
-				if(!c.isPhantomClass() && !c.isPhantom())
-					hasClasses = true;
-			}
-		}
-		if (!hasClasses) {
-			logger.error("Only phantom classes loaded, skipping analysis...");
-			return;
-		}
-	}
-	
-	/**
-	 * Appends two elements to build a classpath
-	 * @param appPath The first entry of the classpath
-	 * @param libPath The second entry of the classpath
-	 * @return The concatenated classpath
-	 */
-	private String appendClasspath(String appPath, String libPath) {
-		String s = (appPath != null && !appPath.isEmpty()) ? appPath : "";
-		
-		if (libPath != null && !libPath.isEmpty()) {
-			if (!s.isEmpty())
-				s += File.pathSeparator;
-			s += libPath;
-		}
-		return s;
 	}
 	
 	@Override
@@ -358,7 +189,6 @@ public class Infoflow extends AbstractInfoflow {
 	 */
 	private void runAnalysis(final ISourceSinkManager sourcesSinks, final Set<String> additionalSeeds) {
 		maxMemoryConsumption = -1;
-		ipcManager.updateJimpleForICC();
 		
 		// Some configuration options do not really make sense in combination
 		if (config.getEnableStaticFieldTracking()
@@ -371,35 +201,9 @@ public class Infoflow extends AbstractInfoflow {
 		// Clear the base registrations from previous runs
 		AccessPath.clearBaseRegister();
 		
-		// Run the preprocessors
-        for (PreAnalysisHandler tr : preProcessors)
-            tr.onBeforeCallgraphConstruction();
-        
-        // Patch the system libraries we need for callgraph construction
-        LibraryClassPatcher patcher = new LibraryClassPatcher();
-        patcher.patchLibraries();
+		// Build the callgraph
+		constructCallgraph();
 		
-        // To cope with broken APK files, we convert all classes that are still
-        // dangling after resolution into phantoms
-        for (SootClass sc : Scene.v().getClasses())
-        	if (sc.resolvingLevel() == SootClass.DANGLING) {
-        		sc.setResolvingLevel(SootClass.BODIES);
-        		sc.setPhantomClass();
-        	}
-        
-		// We explicitly select the packs we want to run for performance
-        // reasons. Do not re-run the callgraph algorithm if the host
-        // application already provides us with a CG.
-		if (config.getCallgraphAlgorithm() != CallgraphAlgorithm.OnDemand
-				&& !Scene.v().hasCallGraph()) {
-	        PackManager.v().getPack("wjpp").apply();
-	        PackManager.v().getPack("cg").apply();
-		}
-		
-		// Run the preprocessors
-        for (PreAnalysisHandler tr : preProcessors)
-            tr.onAfterCallgraphConstruction();
-                
         // Perform constant propagation and remove dead code
         if (config.getCodeEliminationMode() != CodeEliminationMode.NoCodeElimination) {
 			long currentMillis = System.nanoTime();
@@ -773,11 +577,6 @@ public class Infoflow extends AbstractInfoflow {
 		onResultsAvailable.remove(handler);
 	}
 	
-	@Override
-	public void setIPCManager(IIPCManager ipcManager) {
-	    this.ipcManager = ipcManager;
-	}
-	
 	/**
 	 * Gets the maximum memory consumption during the last analysis run
 	 * @return The maximum memory consumption during the last analysis run if
@@ -785,15 +584,6 @@ public class Infoflow extends AbstractInfoflow {
 	 */
 	public long getMaxMemoryConsumption() {
 		return this.maxMemoryConsumption;
-	}
-	
-	/**
-	 * Sets the path builder factory to be used in subsequent data flow analyses
-	 * @param factory The path bilder factory to use for constructing path
-	 * reconstruction algorithms
-	 */
-	public void setPathBuilderFactory(IPathBuilderFactory factory) {
-		this.pathBuilderFactory = factory;
 	}
 	
 }
