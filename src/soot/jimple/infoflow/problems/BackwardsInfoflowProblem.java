@@ -53,6 +53,7 @@ import soot.jimple.infoflow.aliasing.Aliasing;
 import soot.jimple.infoflow.collect.MutableTwoElementSet;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.handlers.TaintPropagationHandler.FlowFunctionType;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
 import soot.jimple.infoflow.solver.functions.SolverCallFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverCallToReturnFlowFunction;
@@ -398,13 +399,19 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								return Collections.emptySet();
 							assert source.isAbstractionActive() || manager.getConfig().getFlowSensitiveAliasing();
 							
+							// Notify the handler if we have one
+							if (taintPropagationHandler != null)
+								taintPropagationHandler.notifyFlowIn(src, source, interproceduralCFG(),
+										FlowFunctionType.NormalFlowFunction);
+							
 							Set<Abstraction> res = computeAliases(defStmt, leftValue, d1, source);
 							
 							if (destDefStmt != null && interproceduralCFG().isExitStmt(destDefStmt))
 								for (Abstraction abs : res)
 									computeAliases(destDefStmt, destLeftValue, d1, abs);
 							
-							return res;
+							return notifyOutFlowHandlers(src, d1, source, res,
+									FlowFunctionType.NormalFlowFunction);
 						}
 
 					};
@@ -445,6 +452,11 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						if (source == getZeroValue())
 							return Collections.emptySet();
 						assert source.isAbstractionActive() || manager.getConfig().getFlowSensitiveAliasing();
+						
+						// Notify the handler if we have one
+						if (taintPropagationHandler != null)
+							taintPropagationHandler.notifyFlowIn(stmt, source, interproceduralCFG(),
+									FlowFunctionType.CallFlowFunction);
 						
 						//if we do not have to look into sources or sinks:
 						if (!manager.getConfig().getInspectSources() && isSource)
@@ -556,7 +568,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							}
 						}
 						
-						return res;
+						return notifyOutFlowHandlers(src, d1, source, res,
+								FlowFunctionType.CallFlowFunction);
 					}
 				};
 			}
@@ -595,11 +608,17 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						if (callSite == null)
 							return Collections.emptySet();
 						
+						// Notify the handler if we have one
+						if (taintPropagationHandler != null)
+							taintPropagationHandler.notifyFlowIn(stmt, source, interproceduralCFG(),
+									FlowFunctionType.ReturnFlowFunction);
+												
 						// easy: static
 						if (manager.getConfig().getEnableStaticFieldTracking()
 								&& source.getAccessPath().isStaticFieldRef()) {
 							registerActivationCallSite(callSite, callee, source);
-							return Collections.singleton(source);
+							return notifyOutFlowHandlers(exitStmt, d1, source, Collections.singleton(source),
+									FlowFunctionType.ReturnFlowFunction);
 						}
 
 						final Value sourceBase = source.getAccessPath().getPlainValue();
@@ -682,7 +701,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							if (abs != source)
 								abs.setCorrespondingCallSite((Stmt) callSite);
 						
-						return res;
+						return notifyOutFlowHandlers(exitStmt, d1, source, res,
+								FlowFunctionType.ReturnFlowFunction);
 					}
 				};
 			}
@@ -708,6 +728,11 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							return Collections.emptySet();
 						assert source.isAbstractionActive() || manager.getConfig().getFlowSensitiveAliasing();
 						
+						// Notify the handler if we have one
+						if (taintPropagationHandler != null)
+							taintPropagationHandler.notifyFlowIn(call, source, interproceduralCFG(),
+									FlowFunctionType.CallToReturnFlowFunction);
+						
 						// Compute wrapper aliases
 						if (taintWrapper != null) {
 							Set<Abstraction> wrapperAliases = taintWrapper.getAliasesForMethod(
@@ -723,7 +748,9 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 									}
 									else
 										passOnSet.add(abs);
-								return passOnSet;
+								
+								return notifyOutFlowHandlers(call, d1, source, passOnSet,
+										FlowFunctionType.CallToReturnFlowFunction);
 							}
 						}
 						
@@ -755,7 +782,8 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							if (callArgs[i] == source.getAccessPath().getPlainValue())
 								return Collections.emptySet();
 												
-						return Collections.singleton(source);
+						return notifyOutFlowHandlers(call, d1, source, Collections.singleton(source),
+								FlowFunctionType.CallToReturnFlowFunction);
 					}
 				};
 			}

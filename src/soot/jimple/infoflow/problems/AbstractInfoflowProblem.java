@@ -30,6 +30,7 @@ import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.collect.MyConcurrentHashMap;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler;
+import soot.jimple.infoflow.handlers.TaintPropagationHandler.FlowFunctionType;
 import soot.jimple.infoflow.nativ.INativeCallHandler;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
@@ -294,6 +295,31 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 			return defStmt.getRightOp() instanceof CaughtExceptionRef;
 		}
 		return false;
+	}
+	
+	/**
+	 * Notifies the outbound flow handlers, if any, about the computed
+	 * result abstractions for the current flow function
+	 * @param d1 The abstraction at the beginning of the method
+	 * @param stmt The statement that has just been processed
+	 * @param incoming The incoming abstraction from which the outbound
+	 * ones were computed
+	 * @param outgoing The outbound abstractions to be propagated on
+	 * @param functionType The type of flow function that was computed
+	 * @return The outbound flow abstracions, potentially changed by the
+	 * flow handlers
+	 */
+	protected Set<Abstraction> notifyOutFlowHandlers(Unit stmt,
+			Abstraction d1,
+			Abstraction incoming,
+			Set<Abstraction> outgoing,
+			FlowFunctionType functionType) {
+		if (taintPropagationHandler != null
+				&& outgoing != null
+				&& !outgoing.isEmpty())
+			outgoing = taintPropagationHandler.notifyFlowOut(stmt, d1, incoming, outgoing,
+						interproceduralCFG(), functionType);
+		return outgoing;
 	}
 	
 }

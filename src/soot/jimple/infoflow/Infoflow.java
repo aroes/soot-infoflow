@@ -78,6 +78,7 @@ public class Infoflow extends AbstractInfoflow {
     
     private Set<ResultsAvailableHandler> onResultsAvailable = new HashSet<ResultsAvailableHandler>();
     private TaintPropagationHandler taintPropagationHandler = null;
+    private TaintPropagationHandler backwardsPropagationHandler = null;
     
     private long maxMemoryConsumption = -1;
 
@@ -276,7 +277,7 @@ public class Infoflow extends AbstractInfoflow {
 		
 		if (backProblem != null) {
 			backProblem.setForwardSolver(forwardSolver);
-			backProblem.setTaintPropagationHandler(taintPropagationHandler);
+			backProblem.setTaintPropagationHandler(backwardsPropagationHandler);
 			backProblem.setTaintWrapper(taintWrapper);
 			if (nativeCallHandler != null)
 				backProblem.setNativeCallHandler(nativeCallHandler);
@@ -567,6 +568,14 @@ public class Infoflow extends AbstractInfoflow {
 	 */
 	public void setTaintPropagationHandler(TaintPropagationHandler handler) {
 		this.taintPropagationHandler = handler;
+	}
+	
+	/**
+	 * Sets a handler which is invoked whenever an alias is propagated backwards
+	 * @param handler The handler to be invoked when propagating aliases
+	 */
+	public void setBackwardsPropagationHandler(TaintPropagationHandler handler) {
+		this.backwardsPropagationHandler = handler;
 	}
 	
 	/**

@@ -132,31 +132,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 			}
 			
 			/**
-			 * Notifies the outbound flow handlers, if any, about the computed
-			 * result abstractions for the current flow function
-			 * @param d1 The abstraction at the beginning of the method
-			 * @param stmt The statement that has just been processed
-			 * @param incoming The incoming abstraction from which the outbound
-			 * ones were computed
-			 * @param outgoing The outbound abstractions to be propagated on
-			 * @param functionType The type of flow function that was computed
-			 * @return The outbound flow abstracions, potentially changed by the
-			 * flow handlers
-			 */
-			private Set<Abstraction> notifyOutFlowHandlers(Unit stmt,
-					Abstraction d1,
-					Abstraction incoming,
-					Set<Abstraction> outgoing,
-					FlowFunctionType functionType) {
-				if (taintPropagationHandler != null
-						&& outgoing != null
-						&& !outgoing.isEmpty())
-					outgoing = taintPropagationHandler.notifyFlowOut(stmt, d1, incoming, outgoing,
-								interproceduralCFG(), functionType);
-				return outgoing;
-			}
-			
-			/**
 			 * Taints the left side of the given assignment
 			 * @param assignStmt The source statement from which the taint originated
 			 * @param targetValue The target value that shall now be tainted
