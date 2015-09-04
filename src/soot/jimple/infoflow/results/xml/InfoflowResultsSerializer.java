@@ -3,8 +3,6 @@ package soot.jimple.infoflow.results.xml;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
-import java.util.Map.Entry;
-import java.util.Set;
 
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
@@ -62,14 +60,13 @@ public class InfoflowResultsSerializer {
 	 */
 	private void writeDataFlows(InfoflowResults results,
 			XMLStreamWriter writer) throws XMLStreamException {
-		for (Entry<ResultSinkInfo, Set<ResultSourceInfo>> entry
-				: results.getResults().entrySet()) {
+		for (ResultSinkInfo sink : results.getResults().keySet()) {
 			writer.writeStartElement(XmlConstants.Tags.result);
-			writeSinkInfo(entry.getKey(), writer);
+			writeSinkInfo(sink, writer);
 			
 			// Write out the sources
 			writer.writeStartElement(XmlConstants.Tags.sources);
-			for (ResultSourceInfo src : entry.getValue())
+			for (ResultSourceInfo src : results.getResults().get(sink))
 				writeSourceInfo(src, writer);
 			writer.writeEndElement();
 			

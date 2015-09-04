@@ -18,7 +18,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -189,8 +188,10 @@ public class Infoflow extends AbstractInfoflow {
 	 * even if they are not sources
 	 */
 	private void runAnalysis(final ISourceSinkManager sourcesSinks, final Set<String> additionalSeeds) {
+		// Clear the data from previous runs
 		maxMemoryConsumption = -1;
-		
+		results = null;
+				
 		// Some configuration options do not really make sense in combination
 		if (config.getEnableStaticFieldTracking()
 				&& InfoflowConfiguration.getAccessPathLength() == 0)
@@ -393,12 +394,12 @@ public class Infoflow extends AbstractInfoflow {
 		
 		computeTaintPaths(res);
 		
-		if (results.getResults().isEmpty())
+		if (results == null || results.getResults().isEmpty())
 			logger.warn("No results found.");
-		else for (Entry<ResultSinkInfo, Set<ResultSourceInfo>> entry : results.getResults().entrySet()) {
+		else for (ResultSinkInfo sink : results.getResults().keySet()) {
 			logger.info("The sink {} in method {} was called with values from the following sources:",
-                    entry.getKey(), iCfg.getMethodOf(entry.getKey().getSink()).getSignature() );
-			for (ResultSourceInfo source : entry.getValue()) {
+                    sink, iCfg.getMethodOf(sink.getSink()).getSignature() );
+			for (ResultSourceInfo source : results.getResults().get(sink)) {
 				logger.info("- {} in method {}",source, iCfg.getMethodOf(source.getSource()).getSignature());
 				if (source.getPath() != null) {
 					logger.info("\ton Path: ");
@@ -456,11 +457,14 @@ public class Infoflow extends AbstractInfoflow {
 	 * Computes the path of tainted data between the source and the sink
 	 * @param res The data flow tracker results
 	 */
-	private void computeTaintPaths(final Set<AbstractionAtSink> res) {
+	protected void computeTaintPaths(final Set<AbstractionAtSink> res) {
 		IAbstractionPathBuilder builder = this.pathBuilderFactory.createPathBuilder
 				(config.getMaxThreadNum(), iCfg);
    		builder.computeTaintPaths(res);
-    	this.results = builder.getResults();
+   		if (this.results == null)
+   			this.results = builder.getResults();
+   		else
+   			this.results.addAll(builder.getResults());
     	builder.shutdown();
 	}
 

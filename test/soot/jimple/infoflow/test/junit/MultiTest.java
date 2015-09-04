@@ -154,7 +154,7 @@ public class MultiTest extends JUnitTests {
 
 		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));
 		Assert.assertEquals(1, infoflow.getResults().size());
-		Assert.assertEquals(2, infoflow.getResults().getResults().entrySet().iterator().next().getValue().size());
+		Assert.assertEquals(2, infoflow.getResults().getResults().size());
     }
 
 }

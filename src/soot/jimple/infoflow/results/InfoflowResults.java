@@ -15,8 +15,6 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -24,10 +22,10 @@ import org.slf4j.LoggerFactory;
 
 import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
-import soot.jimple.infoflow.collect.ConcurrentHashSet;
-import soot.jimple.infoflow.collect.MyConcurrentHashMap;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
+import soot.util.ConcurrentHashMultiMap;
+import soot.util.MultiMap;
 
 /**
  * Class for collecting information flow results
@@ -38,8 +36,8 @@ public class InfoflowResults {
 	
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 		
-	private final MyConcurrentHashMap<ResultSinkInfo, Set<ResultSourceInfo>> results =
-			new MyConcurrentHashMap<ResultSinkInfo, Set<ResultSourceInfo>>();
+	private final MultiMap<ResultSinkInfo, ResultSourceInfo> results =
+			new ConcurrentHashMultiMap<ResultSinkInfo, ResultSourceInfo>();
 	
 	public InfoflowResults() {
 		
@@ -62,8 +60,8 @@ public class InfoflowResults {
 	public int numConnections() {
 		int num = 0;
 		if (this.results != null)
-			for (Entry<ResultSinkInfo, Set<ResultSourceInfo>> entry : this.results.entrySet())
-				num += entry.getValue().size();
+			for (ResultSinkInfo sink : this.results.keySet())
+				num += this.results.get(sink).size();
 		return num;
 	}
 	
@@ -138,20 +136,33 @@ public class InfoflowResults {
 						propagationAccessPath));
 	}
 	
+	/**
+	 * Adds the given result to this data structure
+	 * @param sink The sink at which the taint arrived
+	 * @param source The source from which the taint originated
+	 */
 	public void addResult(ResultSinkInfo sink, ResultSourceInfo source) {
-		assert sink != null;
-		assert source != null;
+		this.results.put(sink, source);
+	}
+	
+	/**
+	 * Adds all results from the given data structure to this one
+	 * @param results The data structure from which to copy the results
+	 */
+	public void addAll(InfoflowResults results) {
+		if (results == null || results.isEmpty())
+			return;
 		
-		Set<ResultSourceInfo> sourceInfo = this.results.putIfAbsentElseGet
-				(sink, new ConcurrentHashSet<ResultSourceInfo>());
-		sourceInfo.add(source);
+		for (ResultSinkInfo sink : results.getResults().keySet())
+			for (ResultSourceInfo source : results.getResults().get(sink))
+				addResult(sink, source);
 	}
 
 	/**
 	 * Gets all results in this object as a hash map.
 	 * @return All results in this object as a hash map.
 	 */
-	public Map<ResultSinkInfo, Set<ResultSourceInfo>> getResults() {
+	public MultiMap<ResultSinkInfo, ResultSourceInfo> getResults() {
 		return this.results;
 	}
 	
