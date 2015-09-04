@@ -22,7 +22,7 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.Stmt;
-import soot.jimple.infoflow.Infoflow;
+import soot.jimple.infoflow.IInfoflow;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.entryPointCreators.DefaultEntryPointCreator;
 import soot.jimple.infoflow.source.ISourceSinkManager;
@@ -108,7 +108,7 @@ public class SourceSinkTests extends JUnitTests {
 	
 	@Test(timeout = 300000)
 	public void fieldTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.SourceSinkTestCode: void testDataObject()>");
 		infoflow.computeInfoflow(appPath, libPath, new DefaultEntryPointCreator(epoints), getSecretSSM);
@@ -119,7 +119,7 @@ public class SourceSinkTests extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void negativeFieldTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.SourceSinkTestCode: void testDataObject()>");
 		infoflow.computeInfoflow(appPath, libPath, new DefaultEntryPointCreator(epoints), noTaintSubFieldsSSM);
@@ -128,7 +128,7 @@ public class SourceSinkTests extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void accessPathTypesTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.SourceSinkTestCode: void testAccessPathTypes()>");
 		infoflow.computeInfoflow(appPath, libPath, new DefaultEntryPointCreator(epoints), getSecretOrSecret2SSM);
@@ -140,7 +140,7 @@ public class SourceSinkTests extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void sourceAccessPathTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.SourceSinkTestCode: void testSourceAccessPaths()>");
 		infoflow.computeInfoflow(appPath, libPath, new DefaultEntryPointCreator(epoints), noTaintSubFieldsSSM);
@@ -149,7 +149,7 @@ public class SourceSinkTests extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void sinkAccessPathTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.SourceSinkTestCode: void testSinkAccessPaths()>");
 		infoflow.computeInfoflow(appPath, libPath, new DefaultEntryPointCreator(epoints), noTaintSubFieldsSSM);
@@ -158,7 +158,7 @@ public class SourceSinkTests extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void sinkAccessPathTest2() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.SourceSinkTestCode: void testSinkAccessPaths2()>");
 		infoflow.computeInfoflow(appPath, libPath, new DefaultEntryPointCreator(epoints), noTaintSubFieldsSSM);

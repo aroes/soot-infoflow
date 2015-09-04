@@ -15,7 +15,7 @@ import java.util.List;
 
 import org.junit.Test;
 
-import soot.jimple.infoflow.Infoflow;
+import soot.jimple.infoflow.IInfoflow;
 import soot.jimple.infoflow.InfoflowConfiguration;
 /**
  * test taint propagation in sets
@@ -25,7 +25,7 @@ public class SetTests extends JUnitTests {
     @Test(timeout=300000)
     public void concreteHashSetTest(){
     	System.out.println("Running test case concreteHashSetTest...");
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
 
     	int oldAPLength = InfoflowConfiguration.getAccessPathLength();
     	InfoflowConfiguration.setAccessPathLength(1);
@@ -42,7 +42,7 @@ public class SetTests extends JUnitTests {
     @Test(timeout=600000)	// implicit flow, takes ~74s
     public void containsTest(){
     	System.out.println("Running test case containsTest...");
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
     	infoflow.getConfig().setEnableImplicitFlows(true);
     	infoflow.getConfig().setEnableStaticFieldTracking(false);
 
@@ -61,7 +61,7 @@ public class SetTests extends JUnitTests {
     @Test(timeout=600000)
     public void concreteTreeSetPos0Test(){
     	System.out.println("Running test case concreteTreeSetPos0Test...");
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
     	
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.SetTestCode: void concreteWriteReadTreePos0Test()>");
@@ -74,7 +74,7 @@ public class SetTests extends JUnitTests {
     @Test(timeout=600000)
     public void concreteTreeSetPos1Test(){
     	System.out.println("Running test case concreteTreeSetPos1Test...");
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
     	
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.SetTestCode: void concreteWriteReadTreePos1Test()>");
@@ -87,7 +87,7 @@ public class SetTests extends JUnitTests {
     @Test(timeout=300000)
     public void concreteLinkedSetPos0Test(){
     	System.out.println("Running test case concreteLinkedSetPos0Test...");
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
     	
     	int oldAPLength = InfoflowConfiguration.getAccessPathLength();
     	InfoflowConfiguration.setAccessPathLength(1);
@@ -104,7 +104,7 @@ public class SetTests extends JUnitTests {
     @Test(timeout=300000)
     public void concreteLinkedSetPos1Test(){
     	System.out.println("Running test case concreteLinkedSetPos1Test...");
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
     	
     	int oldAPLength = InfoflowConfiguration.getAccessPathLength();
     	InfoflowConfiguration.setAccessPathLength(1);
@@ -121,7 +121,7 @@ public class SetTests extends JUnitTests {
     @Test(timeout=300000)
     public void setTest(){
     	System.out.println("Running test case setTest...");
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
     	
     	int oldAPLength = InfoflowConfiguration.getAccessPathLength();
     	InfoflowConfiguration.setAccessPathLength(1);
@@ -138,7 +138,7 @@ public class SetTests extends JUnitTests {
     @Test(timeout=300000)
     public void setIteratorTest(){
     	System.out.println("Running test case setIteratorTest...");
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
     	
     	int oldAPLength = InfoflowConfiguration.getAccessPathLength();
     	InfoflowConfiguration.setAccessPathLength(1);
@@ -155,7 +155,7 @@ public class SetTests extends JUnitTests {
     @Test(timeout=300000)
     public void concreteNegativeTest(){
     	System.out.println("Running test case concreteNegativeTest...");
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
     	
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.SetTestCode: void concreteWriteReadNegativeTest()>");

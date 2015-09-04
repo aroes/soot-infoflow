@@ -25,7 +25,7 @@ import soot.SootMethod;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.Stmt;
-import soot.jimple.infoflow.Infoflow;
+import soot.jimple.infoflow.IInfoflow;
 import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.InfoflowConfiguration.AliasingAlgorithm;
 import soot.jimple.infoflow.data.Abstraction;
@@ -39,7 +39,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void testForEarlyTermination() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void testForEarlyTermination()>");
@@ -49,7 +49,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void testForLoop() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void testForLoop()>");
@@ -59,7 +59,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void testForWrapper() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void testForWrapper()>");
@@ -69,7 +69,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void simpleTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void simpleTest()>");
@@ -81,7 +81,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void argumentTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void argumentTest()>");
@@ -91,7 +91,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void negativeTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void negativeTest()>");
@@ -101,7 +101,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void doubleCallTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void doubleCallTest()>");
@@ -112,7 +112,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void heapTest0() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void methodTest0()>");
@@ -122,7 +122,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void heapTest1() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void methodTest1()>");
@@ -132,7 +132,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void testExample1() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.ForwardBackwardTest: void testMethod()>");
@@ -142,7 +142,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void testReturn() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void methodReturn()>");
@@ -152,7 +152,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void testTwoLevels() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void twoLevelTest()>");
@@ -162,7 +162,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void multiAliasTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void multiAliasTest()>");
@@ -172,7 +172,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void overwriteAliasTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void overwriteAliasTest()>");
@@ -182,7 +182,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void arrayAliasTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void arrayAliasTest()>");
@@ -192,7 +192,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void functionAliasTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void functionAliasTest()>");
@@ -202,7 +202,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void functionAliasTest2() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void functionAliasTest2()>");
@@ -212,7 +212,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void multiLevelTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void multiLevelTaint()>");
@@ -222,7 +222,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void multiLevelTest2() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void multiLevelTaint2()>");
@@ -232,7 +232,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void negativeMultiLevelTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void negativeMultiLevelTaint()>");
@@ -242,7 +242,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void negativeMultiLevelTest2() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void negativeMultiLevelTaint2()>");
@@ -252,7 +252,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void threeLevelTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		infoflow.getConfig().setInspectSinks(false);
 		List<String> epoints = new ArrayList<String>();
@@ -263,7 +263,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void threeLevelShortAPTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 
 		int oldAPLength = InfoflowConfiguration.getAccessPathLength();
@@ -282,7 +282,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void recursionTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		infoflow.getConfig().setInspectSinks(false);
 		List<String> epoints = new ArrayList<String>();
@@ -293,7 +293,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void activationUnitTest1() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		infoflow.getConfig().setInspectSinks(false);
 		List<String> epoints = new ArrayList<String>();
@@ -304,7 +304,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void activationUnitTest2() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		infoflow.getConfig().setInspectSinks(false);
 		List<String> epoints = new ArrayList<String>();
@@ -315,7 +315,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void activationUnitTest3() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		infoflow.getConfig().setInspectSinks(false);
 		List<String> epoints = new ArrayList<String>();
@@ -326,7 +326,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void activationUnitTest4() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		infoflow.getConfig().setInspectSinks(false);
 		List<String> epoints = new ArrayList<String>();
@@ -337,7 +337,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void activationUnitTest4b() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		infoflow.getConfig().setInspectSinks(false);
 		List<String> epoints = new ArrayList<String>();
@@ -348,7 +348,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void activationUnitTest5() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		infoflow.getConfig().setInspectSinks(false);
 		List<String> epoints = new ArrayList<String>();
@@ -359,7 +359,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void returnAliasTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		infoflow.getConfig().setInspectSinks(false);
 		List<String> epoints = new ArrayList<String>();
@@ -370,7 +370,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void callPerformanceTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		infoflow.getConfig().setInspectSinks(false);
 		List<String> epoints = new ArrayList<String>();
@@ -381,7 +381,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void aliasesTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		int oldLength = InfoflowConfiguration.getAccessPathLength();
 		InfoflowConfiguration.setAccessPathLength(3);
@@ -400,7 +400,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void wrapperAliasesTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		int oldLength = InfoflowConfiguration.getAccessPathLength();
 		InfoflowConfiguration.setAccessPathLength(3);
@@ -542,7 +542,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void negativeAliasesTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 
 		infoflow.getConfig().setInspectSources(false);
@@ -557,7 +557,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void aliasPerformanceTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		int oldLength = InfoflowConfiguration.getAccessPathLength();
 		InfoflowConfiguration.setAccessPathLength(3);
@@ -576,7 +576,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 
 	@Test(timeout = 300000)
 	public void backwardsParameterTest() {
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		infoflow.getConfig().setInspectSources(false);
 		infoflow.getConfig().setInspectSinks(false);

@@ -19,7 +19,7 @@ import java.util.Set;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import soot.jimple.infoflow.Infoflow;
+import soot.jimple.infoflow.IInfoflow;
 import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.config.IInfoflowConfig;
 import soot.jimple.infoflow.taintWrappers.EasyTaintWrapper;
@@ -33,7 +33,7 @@ public class ImplicitFlowTests extends JUnitTests {
 	
 	@Test(timeout=300000)
 	public void simpleTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setEnableImplicitFlows(true);
 		infoflow.getConfig().setInspectSinks(false);
 
@@ -45,7 +45,7 @@ public class ImplicitFlowTests extends JUnitTests {
 	
 	@Test(timeout=300000)
 	public void simpleNegativeTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setEnableImplicitFlows(true);
 		infoflow.getConfig().setInspectSinks(false);
 
@@ -57,7 +57,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void simpleOverwriteTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setEnableImplicitFlows(true);
 		infoflow.getConfig().setInspectSinks(false);
 
@@ -69,7 +69,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void switchTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setEnableImplicitFlows(true);
 		infoflow.getConfig().setInspectSinks(false);
 	    
@@ -87,7 +87,7 @@ public class ImplicitFlowTests extends JUnitTests {
     	int oldAPLength = InfoflowConfiguration.getAccessPathLength();
     	InfoflowConfiguration.setAccessPathLength(1);
     	
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
     	infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 		infoflow.getConfig().setEnableStaticFieldTracking(false);
@@ -103,7 +103,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void sinkTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setEnableImplicitFlows(true);
 		infoflow.getConfig().setInspectSinks(false);
 	    
@@ -115,7 +115,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void returnTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 	    
@@ -127,7 +127,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void callTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 	    
@@ -139,7 +139,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void callTest2(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 	    
@@ -151,7 +151,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void negativeCallTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 	    
@@ -163,7 +163,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void recursionTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 	    
@@ -175,7 +175,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void recursionTest2(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 	    
@@ -187,7 +187,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void recursionTest3(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 	    
@@ -199,7 +199,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void exceptionTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 	    
@@ -211,7 +211,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void exceptionTest2(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 	    
@@ -223,7 +223,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void exceptionTest3(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 	    
@@ -235,7 +235,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void fieldTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 	    
@@ -247,7 +247,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void staticFieldTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 	    
@@ -259,7 +259,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void staticFieldTest2(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 	    
@@ -271,7 +271,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void staticFieldTest3(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 	    
@@ -283,7 +283,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void staticFieldTest4(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 	    
@@ -295,7 +295,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void staticFieldTest5(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 	    
@@ -307,7 +307,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void integerClassTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 
@@ -325,7 +325,7 @@ public class ImplicitFlowTests extends JUnitTests {
     	int oldAPLength = InfoflowConfiguration.getAccessPathLength();
     	InfoflowConfiguration.setAccessPathLength(1);
     	
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 		infoflow.getConfig().setEnableStaticFieldTracking(false);
@@ -343,7 +343,7 @@ public class ImplicitFlowTests extends JUnitTests {
 	@Ignore
 	public void conditionalExceptionTest(){
 		// not yet supported
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 
@@ -356,7 +356,7 @@ public class ImplicitFlowTests extends JUnitTests {
 	@Test(timeout=300000)
 	public void passOverTest(){
 		// not yet supported
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 
@@ -369,7 +369,7 @@ public class ImplicitFlowTests extends JUnitTests {
 	@Test(timeout=300000)
 	public void passOverTest2(){
 		// not yet supported
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 
@@ -382,7 +382,7 @@ public class ImplicitFlowTests extends JUnitTests {
 	@Test(timeout=300000)
 	public void callToReturnTest() throws IOException{
 		// not yet supported
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 		infoflow.setTaintWrapper(new EasyTaintWrapper("EasyTaintWrapperSource.txt"));
@@ -408,7 +408,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void callToReturnTest2() throws IOException{
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 		infoflow.setTaintWrapper(new EasyTaintWrapper("EasyTaintWrapperSource.txt"));
@@ -434,7 +434,7 @@ public class ImplicitFlowTests extends JUnitTests {
 	
 	@Test(timeout=300000)
 	public void createAliasInFunctionTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 
@@ -446,7 +446,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void createAliasInFunctionTest2(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 
@@ -458,7 +458,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void implicitFlowTaintWrapperTest() throws IOException{
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 		infoflow.setTaintWrapper(new EasyTaintWrapper("EasyTaintWrapperSource.txt"));
@@ -484,7 +484,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void implicitFlowTaintWrapperNegativeTest() throws IOException{
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 		infoflow.setTaintWrapper(new EasyTaintWrapper(Collections.<String, Set<String>>emptyMap()));
@@ -510,7 +510,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void hierarchicalCallSetTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 
@@ -522,7 +522,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void conditionalAliasingTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 
@@ -534,7 +534,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void conditionalAliasingTest2(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setEnableImplicitFlows(true);
 		infoflow.getConfig().setInspectSinks(false);
 
@@ -546,7 +546,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void conditionalAliasingTest3(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(true);
 
@@ -558,7 +558,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000) 
     public void testStringConvert(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setEnableImplicitFlows(true);
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableStaticFieldTracking(false);
@@ -571,7 +571,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void afterCallNegativeTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setEnableImplicitFlows(true);
 		infoflow.getConfig().setInspectSinks(false);
 
@@ -583,7 +583,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void ifInCalleeTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setEnableImplicitFlows(true);
 		infoflow.getConfig().setInspectSinks(false);
 
@@ -595,7 +595,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void activationConditionalTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setEnableImplicitFlows(true);
 		infoflow.getConfig().setInspectSinks(false);
 
@@ -607,7 +607,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void classTypeTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setEnableImplicitFlows(true);
 		infoflow.getConfig().setInspectSinks(false);
 
@@ -619,7 +619,7 @@ public class ImplicitFlowTests extends JUnitTests {
 
 	@Test(timeout=300000)
 	public void conditionalReturnTest(){
-		Infoflow infoflow = initInfoflow();
+		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setEnableImplicitFlows(true);
 		infoflow.getConfig().setInspectSinks(false);
 

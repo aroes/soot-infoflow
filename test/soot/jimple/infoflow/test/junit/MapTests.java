@@ -16,7 +16,7 @@ import java.util.List;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import soot.jimple.infoflow.Infoflow;
+import soot.jimple.infoflow.IInfoflow;
 
 /**
  * contain test cases for taint propagation in Maps.
@@ -25,7 +25,7 @@ public class MapTests extends JUnitTests {
 
     @Test(timeout=300000)
     public void mapPos0Test(){
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void writeReadPos0Test()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
@@ -34,7 +34,7 @@ public class MapTests extends JUnitTests {
     
     @Test(timeout=300000)
     public void mapPos1Test(){
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void writeReadPos1Test()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
@@ -43,7 +43,7 @@ public class MapTests extends JUnitTests {
 
     @Test(timeout=300000)
     public void concreteMapPos0Test(){
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void concreteWriteReadPos0Test()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
@@ -52,7 +52,7 @@ public class MapTests extends JUnitTests {
     
     @Test(timeout=300000)
     public void concreteLinkedMapPos0Test(){
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
     	infoflow.getConfig().setFlowSensitiveAliasing(false);
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void concreteLinkedWriteReadPos0Test()>");
@@ -62,7 +62,7 @@ public class MapTests extends JUnitTests {
 
     @Test(timeout=300000)
     public void concreteMapPos1Test(){
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void concreteWriteReadPos1Test()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
@@ -71,7 +71,7 @@ public class MapTests extends JUnitTests {
     
     @Test(timeout=300000)
     public void concreteMapTest2(){
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void concreteWriteRead2Test()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
@@ -83,7 +83,7 @@ public class MapTests extends JUnitTests {
     
     @Test(timeout=300000)
     public void mapIteratorTest(){
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void iteratorTest()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
@@ -92,7 +92,7 @@ public class MapTests extends JUnitTests {
     
     @Test(timeout=300000)
     public void mapEntryTest(){
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void entryTest()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
@@ -101,7 +101,7 @@ public class MapTests extends JUnitTests {
     
     @Test(timeout=300000)
     public void concreteTableTest(){
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void concreteWriteReadTableTest()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
@@ -111,7 +111,7 @@ public class MapTests extends JUnitTests {
     @Test(timeout=300000)
     @Ignore // does not work anymore since JRE 1.7.0_45
     public void concreteNegativeTest(){
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void concreteWriteReadNegativeTest()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
@@ -120,7 +120,7 @@ public class MapTests extends JUnitTests {
     
     @Test(timeout=300000)
     public void loopCallTest() {
-    	Infoflow infoflow = initInfoflow();
+    	IInfoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void loopCallTest()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
