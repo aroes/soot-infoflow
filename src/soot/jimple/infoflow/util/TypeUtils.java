@@ -166,10 +166,10 @@ public class TypeUtils {
 			return tp2;
 		else if (TypeUtils.isObjectLikeType(tp2))
 			return tp1;
-		else if (Scene.v().getFastHierarchy().canStoreType(tp1, tp2))
-			return tp1;
-		else
+		else if (Scene.v().getFastHierarchy().canStoreType(tp2, tp1))
 			return tp2;
+		else
+			return tp1;
 	}
 	
 	/**
