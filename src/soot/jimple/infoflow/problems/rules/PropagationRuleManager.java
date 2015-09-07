@@ -10,6 +10,7 @@ import soot.jimple.Stmt;
 import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.aliasing.Aliasing;
 import soot.jimple.infoflow.data.Abstraction;
+import soot.jimple.infoflow.problems.TaintPropagationResults;
 import soot.jimple.infoflow.util.ByReferenceBoolean;
 
 /**
@@ -23,24 +24,26 @@ public class PropagationRuleManager {
 	protected final InfoflowManager manager;
 	protected final Aliasing aliasing;
 	protected final Abstraction zeroValue;
+	protected final TaintPropagationResults results;
 	private final List<ITaintPropagationRule> rules = new ArrayList<>();
 	
 	public PropagationRuleManager(InfoflowManager manager, Aliasing aliasing,
-			Abstraction zeroValue) {
+			Abstraction zeroValue, TaintPropagationResults results) {
 		this.manager = manager;
 		this.aliasing = aliasing;
 		this.zeroValue = zeroValue;
+		this.results = results;
 		
-		rules.add(new SourcePropagationRule(manager, aliasing, zeroValue));
+		rules.add(new SourcePropagationRule(manager, aliasing, zeroValue, results));
 		if (manager.getConfig().getEnableExceptionTracking())
-			rules.add(new ExceptionPropagationRule(manager, aliasing, zeroValue));
+			rules.add(new ExceptionPropagationRule(manager, aliasing, zeroValue, results));
 		if (manager.getTaintWrapper() != null)
-			rules.add(new WrapperPropagationRule(manager, aliasing, zeroValue));
+			rules.add(new WrapperPropagationRule(manager, aliasing, zeroValue, results));
 		if (manager.getConfig().getEnableImplicitFlows())
-			rules.add(new ImplicitPropagtionRule(manager, aliasing, zeroValue));
-		rules.add(new StrongUpdatePropagationRule(manager, aliasing, zeroValue));
+			rules.add(new ImplicitPropagtionRule(manager, aliasing, zeroValue, results));
+		rules.add(new StrongUpdatePropagationRule(manager, aliasing, zeroValue, results));
 		if (manager.getConfig().getEnableTypeChecking())
-			rules.add(new TypingPropagationRule(manager, aliasing, zeroValue));
+			rules.add(new TypingPropagationRule(manager, aliasing, zeroValue, results));
 	}
 	
 	/**

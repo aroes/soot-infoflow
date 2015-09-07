@@ -12,6 +12,7 @@ import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.aliasing.Aliasing;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.problems.TaintPropagationResults;
 import soot.jimple.infoflow.util.ByReferenceBoolean;
 import soot.jimple.infoflow.util.TypeUtils;
 
@@ -24,8 +25,8 @@ import soot.jimple.infoflow.util.TypeUtils;
 public class WrapperPropagationRule extends AbstractTaintPropagationRule {
 	
 	public WrapperPropagationRule(InfoflowManager manager,
-			Aliasing aliasing, Abstraction zeroValue) {
-		super(manager, aliasing, zeroValue);
+			Aliasing aliasing, Abstraction zeroValue, TaintPropagationResults results) {
+		super(manager, aliasing, zeroValue, results);
 	}
 	
 	@Override

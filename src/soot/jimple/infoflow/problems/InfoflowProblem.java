@@ -53,7 +53,6 @@ import soot.jimple.TableSwitchStmt;
 import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.aliasing.Aliasing;
 import soot.jimple.infoflow.aliasing.IAliasingStrategy;
-import soot.jimple.infoflow.collect.MyConcurrentHashMap;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.AccessPath;
@@ -66,7 +65,6 @@ import soot.jimple.infoflow.solver.functions.SolverNormalFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverReturnFlowFunction;
 import soot.jimple.infoflow.util.BaseSelector;
 import soot.jimple.infoflow.util.ByReferenceBoolean;
-import soot.jimple.infoflow.util.SystemClassHandler;
 import soot.jimple.infoflow.util.TypeUtils;
 
 public class InfoflowProblem extends AbstractInfoflowProblem {
@@ -75,8 +73,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 	private final IAliasingStrategy aliasingStrategy;
 	private final PropagationRuleManager propagationRules;
 	
-	protected final MyConcurrentHashMap<AbstractionAtSink, Abstraction> results =
-			new MyConcurrentHashMap<AbstractionAtSink, Abstraction>();
+	protected final TaintPropagationResults results;
 	
 	public InfoflowProblem(InfoflowManager manager,
 			IAliasingStrategy aliasingStrategy,
@@ -88,8 +85,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 		
 		this.aliasingStrategy = aliasingStrategy;
 		this.aliasing = new Aliasing(aliasingStrategy, manager.getICFG());
+		this.results = new TaintPropagationResults(manager);
 		
-		this.propagationRules = new PropagationRuleManager(manager, aliasing, createZeroValue());
+		this.propagationRules = new PropagationRuleManager(manager, aliasing,
+				createZeroValue(), results);
 	}
 	
 	@Override
@@ -381,7 +380,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								newSource.getAccessPath())
 						&& newSource.isAbstractionActive()
 						&& newSource.getAccessPath().isEmpty())
-					addResult(new AbstractionAtSink(newSource, assignStmt));
+					results.addResult(new AbstractionAtSink(newSource, assignStmt));
 				
 				Set<Abstraction> res = new HashSet<Abstraction>();
 				Abstraction targetAB = mappedAP.equals(newSource.getAccessPath())
@@ -446,7 +445,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									&& aliasing.mayAlias(returnStmt.getOp(), source.getAccessPath().getPlainValue())
 									&& manager.getSourceSinkManager().isSink(returnStmt, interproceduralCFG(),
 											source.getAccessPath()))
-								addResult(new AbstractionAtSink(source, returnStmt));
+								results.addResult(new AbstractionAtSink(source, returnStmt));
 						}
 						else if (src instanceof IfStmt
 								|| src instanceof LookupSwitchStmt
@@ -462,7 +461,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 											source.getAccessPath()))
 								for (Value v : BaseSelector.selectBaseList(condition, false))
 									if (aliasing.mayAlias(v, source.getAccessPath().getPlainValue())) {
-										addResult(new AbstractionAtSink(source, stmt));
+										results.addResult(new AbstractionAtSink(source, stmt));
 										break;
 									}
 						}
@@ -641,7 +640,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									&& manager.getSourceSinkManager().isSink(returnStmt, interproceduralCFG(),
 											newSource.getAccessPath())
 									&& newSource.isAbstractionActive())
-								addResult(new AbstractionAtSink(newSource, returnStmt));
+								results.addResult(new AbstractionAtSink(newSource, returnStmt));
 						}
 						
 						// If we have no caller, we have nowhere to propagate. This
@@ -856,42 +855,13 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (res == null)
 							res = new HashSet<>();
 						
-						// if we have called a sink we have to store the path from the source - in case one of the params is tainted!
-						if (manager.getSourceSinkManager() != null
-								&& manager.getSourceSinkManager().isSink(iCallStmt, interproceduralCFG(),
-										newSource.getAccessPath())) {
-							// If we are inside a conditional branch, we consider every sink call a leak
-							boolean conditionalCall = manager.getConfig().getEnableImplicitFlows() 
-									&& !interproceduralCFG().getMethodOf(call).isStatic()
-									&& aliasing.mayAlias(interproceduralCFG().getMethodOf(call).getActiveBody().getThisLocal(),
-											newSource.getAccessPath().getPlainValue())
-									&& newSource.getAccessPath().getFirstField() == null;
-							boolean taintedParam = (conditionalCall
-										|| newSource.getTopPostdominator() != null
-										|| newSource.getAccessPath().isEmpty())
-									&& newSource.isAbstractionActive();
-							
-							// If the base object is tainted, we also consider the "code" associated
-							// with the object's class as tainted.
-							if (!taintedParam) {
-								for (int i = 0; i < callArgs.length; i++) {
-									if (aliasing.mayAlias(callArgs[i], newSource.getAccessPath().getPlainValue())) {
-										taintedParam = true;
-										break;
-									}
-								}
-							}
-							
-							if (taintedParam && newSource.isAbstractionActive())
-								addResult(new AbstractionAtSink(newSource, iCallStmt));
-							
-							// if the base object which executes the method is tainted the sink is reached, too.
-							if (invExpr instanceof InstanceInvokeExpr) {
-								InstanceInvokeExpr vie = (InstanceInvokeExpr) iCallStmt.getInvokeExpr();
-								if (newSource.isAbstractionActive()
-										&& aliasing.mayAlias(vie.getBase(), newSource.getAccessPath().getPlainValue()))
-									addResult(new AbstractionAtSink(newSource, iCallStmt));
-							}
+						// Is this a call to a sink?
+						if (newSource.isAbstractionActive()
+								&& manager.getSourceSinkManager() != null
+								&& manager.getSourceSinkManager().isSink(
+										iCallStmt, interproceduralCFG(),
+										newSource.getAccessPath())) {							
+								results.addResult(new AbstractionAtSink(newSource, iCallStmt));
 						}
 						
 						if (newSource.getTopPostdominator() != null
@@ -1076,34 +1046,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 	}
 	
 	/**
-	 * Adds a new result of the data flow analysis to the collection
-	 * @param resultAbs The abstraction at the sink instruction
-	 */
-	private void addResult(AbstractionAtSink resultAbs) {
-		// Check whether we need to filter a result in a system package
-		if (manager.getConfig().getIgnoreFlowsInSystemPackages() && SystemClassHandler.isClassInSystemPackage
-				(interproceduralCFG().getMethodOf(resultAbs.getSinkStmt()).getDeclaringClass().getName()))
-			return;
-		
-		// Make sure that the sink statement also appears inside the
-		// abstraction
-		resultAbs = new AbstractionAtSink
-				(resultAbs.getAbstraction().deriveNewAbstraction
-						(resultAbs.getAbstraction().getAccessPath(), resultAbs.getSinkStmt()),
-				resultAbs.getSinkStmt());
-		resultAbs.getAbstraction().setCorrespondingCallSite(resultAbs.getSinkStmt());
-		
-		Abstraction newAbs = this.results.putIfAbsentElseGet
-				(resultAbs, resultAbs.getAbstraction());
-		if (newAbs != resultAbs.getAbstraction())
-			newAbs.addNeighbor(resultAbs.getAbstraction());
-	}
-
-	/**
 	 * Gets the results of the data flow analysis
 	 */
     public Set<AbstractionAtSink> getResults(){
-   		return this.results.keySet();
+   		return this.results.getResults();
 	}
     
 }

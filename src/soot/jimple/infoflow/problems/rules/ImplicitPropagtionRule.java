@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import soot.Local;
+import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
 import soot.ValueBox;
@@ -22,7 +23,9 @@ import soot.jimple.infoflow.aliasing.Aliasing;
 import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.collect.MyConcurrentHashMap;
 import soot.jimple.infoflow.data.Abstraction;
+import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.problems.TaintPropagationResults;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG.UnitContainer;
 import soot.jimple.infoflow.util.ByReferenceBoolean;
 
@@ -38,8 +41,8 @@ public class ImplicitPropagtionRule extends AbstractTaintPropagationRule {
     		new MyConcurrentHashMap<Unit, Set<Abstraction>>();
     
     public ImplicitPropagtionRule(InfoflowManager manager, Aliasing aliasing,
-			Abstraction zeroValue) {
-		super(manager, aliasing, zeroValue);
+			Abstraction zeroValue, TaintPropagationResults results) {
+		super(manager, aliasing, zeroValue, results);
 	}
 
 	@Override
@@ -184,6 +187,23 @@ public class ImplicitPropagtionRule extends AbstractTaintPropagationRule {
 		// Check whether we must leave a conditional branch
 		if (leavesConditionalBranch(stmt, source, killAll))
 			return null;
+		
+		// If we are inside a conditional branch, we consider every sink call a leak
+		if (source.isAbstractionActive()) {
+			if (source.getAccessPath().isEmpty() || source.getTopPostdominator() != null) {
+				if (getManager().getSourceSinkManager().isSink(stmt, getManager().getICFG(), null))
+					getResults().addResult(new AbstractionAtSink(source, stmt));
+			}
+			else {
+				SootMethod curMethod = getManager().getICFG().getMethodOf(stmt);
+				if (!curMethod.isStatic()
+						&& source.getAccessPath().getFirstField() == null
+						&& getAliasing().mayAlias(curMethod.getActiveBody().getThisLocal(),
+								source.getAccessPath().getPlainValue())
+						&& getManager().getSourceSinkManager().isSink(stmt, getManager().getICFG(), null))
+					getResults().addResult(new AbstractionAtSink(source, stmt));
+			}
+		}
 		
 		// Implicit flows: taint return value
 		if (stmt instanceof DefinitionStmt) {

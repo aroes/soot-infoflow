@@ -11,6 +11,7 @@ import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.aliasing.Aliasing;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.problems.TaintPropagationResults;
 import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.infoflow.util.ByReferenceBoolean;
 
@@ -23,8 +24,8 @@ import soot.jimple.infoflow.util.ByReferenceBoolean;
 public class SourcePropagationRule extends AbstractTaintPropagationRule {
 
 	public SourcePropagationRule(InfoflowManager manager, Aliasing aliasing,
-			Abstraction zeroValue) {
-		super(manager, aliasing, zeroValue);
+			Abstraction zeroValue, TaintPropagationResults results) {
+		super(manager, aliasing, zeroValue, results);
 	}
 
 	private Collection<Abstraction> propagate(Abstraction d1,
