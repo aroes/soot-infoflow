@@ -160,6 +160,10 @@ public class DefaultSourceSinkManager implements ISourceSinkManager  {
 					if (((InstanceInvokeExpr) iexpr).getBase() == ap.getPlainValue())
 						return true;
 			}
+			
+			// Implicit flow
+			if (ap.isEmpty())
+				return true;
 		}
 		
 		return false;
