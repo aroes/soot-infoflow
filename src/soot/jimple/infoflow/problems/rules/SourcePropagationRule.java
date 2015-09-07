@@ -103,7 +103,7 @@ public class SourcePropagationRule extends AbstractTaintPropagationRule {
 		if (!getManager().getConfig().getInspectSinks()
 				&& getManager().getSourceSinkManager() != null) {
 			final boolean isSink = getManager().getSourceSinkManager().isSink(
-					stmt, getManager().getICFG(), null);
+					stmt, getManager().getICFG(), source.getAccessPath());
 			if (isSink)
 				killAll.value = true;
 		}
