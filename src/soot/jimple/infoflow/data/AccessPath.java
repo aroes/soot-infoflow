@@ -17,7 +17,6 @@ import java.util.Set;
 import soot.ArrayType;
 import soot.Local;
 import soot.RefType;
-import soot.Scene;
 import soot.SootField;
 import soot.Type;
 import soot.Value;
@@ -250,29 +249,23 @@ public class AccessPath implements Cloneable {
 		// Make sure that the actual types are always as precise as the declared ones
 		if (InfoflowConfiguration.getUseTypeTightening()) {
 			if (value != null && value.getType() != baseType) {
-				if (TypeUtils.isObjectLikeType(baseType))
-					baseType = value.getType();
-				else if (Scene.v().getFastHierarchy().canStoreType(value.getType(), baseType))
-					baseType = value.getType();
+				baseType = TypeUtils.getMorePreciseType(baseType, value.getType());
 				
 				// If we have a more precise base type in the first field, we
 				// take that
-				if (TypeUtils.isObjectLikeType(baseType) && fields != null && fields.length > 0)
-					baseType = fields[0].getDeclaringClass().getType();
+				if (fields != null && fields.length > 0)
+					baseType = TypeUtils.getMorePreciseType(baseType,
+							fields[0].getDeclaringClass().getType());
 			}
 			if (fields != null)
 				for (int i = 0; i < fields.length; i++) {
-					if (fields[i].getType() != fieldTypes[i]) {
-						if (TypeUtils.isObjectLikeType(fieldTypes[i]))
-							fieldTypes[i] = fields[i].getType();
-						else if (Scene.v().getFastHierarchy().canStoreType(fields[i].getType(), fieldTypes[i]))
-							fieldTypes[i] = fields[i].getType();
-					}
-
+					fieldTypes[i] = TypeUtils.getMorePreciseType(fieldTypes[i], fields[i].getType());
+					
 					// If we have a more precise base type in the next field, we
 					// take that
-					if (TypeUtils.isObjectLikeType(fieldTypes[i]) && fields.length > i + 1)
-						fieldTypes[i] = fields[i + 1].getDeclaringClass().getType();
+					if (fields.length > i + 1)
+						fieldTypes[i] = TypeUtils.getMorePreciseType(fieldTypes[i],
+								fields[i + 1].getDeclaringClass().getType());
 				}
 		}
 		

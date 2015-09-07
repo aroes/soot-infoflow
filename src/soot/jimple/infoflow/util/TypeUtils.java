@@ -2,9 +2,16 @@ package soot.jimple.infoflow.util;
 
 import soot.ArrayType;
 import soot.BooleanType;
+import soot.ByteType;
+import soot.CharType;
+import soot.DoubleType;
+import soot.FloatType;
+import soot.IntType;
+import soot.LongType;
 import soot.PrimType;
 import soot.RefType;
 import soot.Scene;
+import soot.ShortType;
 import soot.SootClass;
 import soot.Type;
 import soot.jimple.infoflow.InfoflowManager;
@@ -140,6 +147,79 @@ public class TypeUtils {
 		
 		return Scene.v().getOrMakeFastHierarchy().canStoreType(apBase.getBaseType(), dest.getType())
 				|| Scene.v().getOrMakeFastHierarchy().canStoreType(dest.getType(), apBase.getBaseType());
+	}
+	
+	/**
+	 * Gets the more precise one of the two given types
+	 * @param tp1 The first type
+	 * @param tp2 The second type
+	 * @return The more precise one of the two given types
+	 */
+	public static Type getMorePreciseType(Type tp1, Type tp2) {
+		if (tp1 == null)
+			return tp2;
+		else if (tp2 == null)
+			return tp1;
+		else if (tp1 == tp2)
+			return tp1;
+		else if (TypeUtils.isObjectLikeType(tp1))
+			return tp2;
+		else if (TypeUtils.isObjectLikeType(tp2))
+			return tp1;
+		else if (Scene.v().getFastHierarchy().canStoreType(tp1, tp2))
+			return tp1;
+		else
+			return tp2;
+	}
+	
+	/**
+	 * Gets the more precise one of the two given types
+	 * @param tp1 The first type
+	 * @param tp2 The second type
+	 * @return The more precise one of the two given types
+	 */
+	public static String getMorePreciseType(String tp1, String tp2) {
+		return getMorePreciseType(getTypeFromString(tp1),
+				getTypeFromString(tp2)).toString();
+	}
+	
+	/**
+	 * Creates a Soot Type from the given string
+	 * @param type A string representing a Soot type
+	 * @return The Soot Type corresponding to the given string
+	 */
+	public static Type getTypeFromString(String type) {
+		// Reduce arrays
+		int numDimensions = 0;
+		while (type.endsWith("[]")) {
+			numDimensions++;
+			type = type.substring(0, type.length() - 2);
+		}
+		
+		// Generate the target type
+		final Type t;
+		if (type.equals("int"))
+			t = IntType.v();
+		else if (type.equals("long"))
+			t = LongType.v();
+		else if (type.equals("float"))
+			t = FloatType.v();
+		else if (type.equals("double"))
+			t = DoubleType.v();
+		else if (type.equals("boolean"))
+			t = BooleanType.v();
+		else if (type.equals("char"))
+			t = CharType.v();
+		else if (type.equals("short"))
+			t = ShortType.v();
+		else if (type.equals("byte"))
+			t = ByteType.v();
+		else
+			t = RefType.v(type);
+		
+		if (numDimensions == 0)
+			return t;
+		return ArrayType.v(t, numDimensions);
 	}
 	
 }
