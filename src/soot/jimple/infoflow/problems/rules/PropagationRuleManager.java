@@ -35,6 +35,8 @@ public class PropagationRuleManager {
 		this.results = results;
 		
 		rules.add(new SourcePropagationRule(manager, aliasing, zeroValue, results));
+		rules.add(new SinkPropagationRule(manager, aliasing, zeroValue, results));
+		
 		if (manager.getConfig().getEnableExceptionTracking())
 			rules.add(new ExceptionPropagationRule(manager, aliasing, zeroValue, results));
 		if (manager.getTaintWrapper() != null)

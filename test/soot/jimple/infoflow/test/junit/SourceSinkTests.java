@@ -48,13 +48,14 @@ public class SourceSinkTests extends JUnitTests {
 			if (!sCallSite.containsInvokeExpr())
 				return false;
 			SootMethod target = sCallSite.getInvokeExpr().getMethod();
-			if (target.getSignature().equals(sink))
-				return true;
-			
-			if (target.getSignature().equals(sinkAP)
-					&& sCallSite.getInvokeExpr().getArgCount() > 0
-					&& ap.getPlainValue() == sCallSite.getInvokeExpr().getArg(0))
-				return true;
+			if ((target.getSignature().equals(sinkAP) || target.getSignature().equals(sink))
+					&& sCallSite.getInvokeExpr().getArgCount() > 0) {
+				if (ap == null)
+					return true;
+				else if (ap.getPlainValue() == sCallSite.getInvokeExpr().getArg(0))
+					if (ap.isLocal() || ap.getTaintSubFields())
+						return true;
+			}
 			return false;
 		}
 

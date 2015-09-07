@@ -154,8 +154,10 @@ public class DefaultSourceSinkManager implements ISourceSinkManager  {
 			if (!ap.isStaticFieldRef()) {
 				InvokeExpr iexpr = sCallSite.getInvokeExpr();
 				for (int i = 0; i < iexpr.getArgCount(); i++)
-					if (iexpr.getArg(i) == ap.getPlainValue())
-						return true;
+					if (iexpr.getArg(i) == ap.getPlainValue()) {
+						if (ap.getTaintSubFields() || ap.isLocal())
+							return true;
+					}
 				if (iexpr instanceof InstanceInvokeExpr)
 					if (((InstanceInvokeExpr) iexpr).getBase() == ap.getPlainValue())
 						return true;

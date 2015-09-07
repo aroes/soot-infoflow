@@ -35,21 +35,17 @@ import soot.Value;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
 import soot.jimple.CastExpr;
-import soot.jimple.Constant;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.FieldRef;
-import soot.jimple.IfStmt;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InstanceOfExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.LengthExpr;
-import soot.jimple.LookupSwitchStmt;
 import soot.jimple.NewArrayExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
-import soot.jimple.TableSwitchStmt;
 import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.aliasing.Aliasing;
 import soot.jimple.infoflow.aliasing.IAliasingStrategy;
@@ -374,14 +370,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						&& manager.getConfig().getEnableArraySizeTainting())
 					arrayTaintType = ArrayTaintType.Contents;
 				
-				// If this is a sink, we need to report the finding
-				if (manager.getSourceSinkManager() != null
-						&& manager.getSourceSinkManager().isSink(assignStmt, interproceduralCFG(),
-								newSource.getAccessPath())
-						&& newSource.isAbstractionActive()
-						&& newSource.getAccessPath().isEmpty())
-					results.addResult(new AbstractionAtSink(newSource, assignStmt));
-				
 				Set<Abstraction> res = new HashSet<Abstraction>();
 				Abstraction targetAB = mappedAP.equals(newSource.getAccessPath())
 						? newSource : newSource.deriveNewAbstraction(mappedAP, null);							
@@ -434,36 +422,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								else
 									res = resAssign;
 							}
-						}
-						// Propagate over a return statement
-						else if (src instanceof ReturnStmt) {
-							final ReturnStmt returnStmt = (ReturnStmt) src;
-							
-							// Check whether we have reached a sink
-							if (manager.getSourceSinkManager() != null
-									&& source.isAbstractionActive()
-									&& aliasing.mayAlias(returnStmt.getOp(), source.getAccessPath().getPlainValue())
-									&& manager.getSourceSinkManager().isSink(returnStmt, interproceduralCFG(),
-											source.getAccessPath()))
-								results.addResult(new AbstractionAtSink(source, returnStmt));
-						}
-						else if (src instanceof IfStmt
-								|| src instanceof LookupSwitchStmt
-								|| src instanceof TableSwitchStmt) {
-							final Value condition = src instanceof IfStmt ? ((IfStmt) src).getCondition()
-									: src instanceof LookupSwitchStmt ? ((LookupSwitchStmt) src).getKey()
-									: ((TableSwitchStmt) src).getKey();
-							
-							// Check for a sink
-							if (source.isAbstractionActive()
-									&& manager.getSourceSinkManager() != null
-									&& manager.getSourceSinkManager().isSink(stmt, interproceduralCFG(),
-											source.getAccessPath()))
-								for (Value v : BaseSelector.selectBaseList(condition, false))
-									if (aliasing.mayAlias(v, source.getAccessPath().getPlainValue())) {
-										results.addResult(new AbstractionAtSink(source, stmt));
-										break;
-									}
 						}
 						
 						// Return what we have so far
@@ -619,34 +577,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (!manager.getConfig().getEnableStaticFieldTracking()
 								&& newSource.getAccessPath().isStaticFieldRef())
 							return Collections.emptySet();
-												
-						// Check whether this return is treated as a sink
-						if (returnStmt != null) {
-							assert returnStmt.getOp() == null
-									|| returnStmt.getOp() instanceof Local
-									|| returnStmt.getOp() instanceof Constant;
-							
-							// Are we still inside a conditional? If so, a call so a sink
-							// method is a leak
-							boolean insideConditional = source.getTopPostdominator() != null
-									|| source.getAccessPath().isEmpty();
-							
-							boolean mustTaintSink = insideConditional;
-							mustTaintSink |= returnStmt.getOp() != null
-									&& newSource.getAccessPath().isLocal()
-									&& aliasing.mayAlias(newSource.getAccessPath().getPlainValue(), returnStmt.getOp());
-							if (mustTaintSink
-									&& manager.getSourceSinkManager() != null
-									&& manager.getSourceSinkManager().isSink(returnStmt, interproceduralCFG(),
-											newSource.getAccessPath())
-									&& newSource.isAbstractionActive())
-								results.addResult(new AbstractionAtSink(newSource, returnStmt));
-						}
-						
-						// If we have no caller, we have nowhere to propagate. This
-						// can happen when leaving the main method.
-						if (callSite == null)
-							return Collections.emptySet();
 						
 						ByReferenceBoolean killAll = new ByReferenceBoolean();
 						Set<Abstraction> res = propagationRules.applyReturnFlowFunction(callerD1s,
@@ -656,6 +586,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							return Collections.emptySet();
 						if (res == null)
 							res = new HashSet<Abstraction>();
+						
+						// If we have no caller, we have nowhere to propagate. This
+						// can happen when leaving the main method.
+						if (callSite == null)
+							return Collections.emptySet();
 						
 						// if we have a returnStmt we have to look at the returned value:
 						if (returnStmt != null && callSite instanceof DefinitionStmt) {
@@ -854,15 +789,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						// Initialize the result set
 						if (res == null)
 							res = new HashSet<>();
-						
-						// Is this a call to a sink?
-						if (newSource.isAbstractionActive()
-								&& manager.getSourceSinkManager() != null
-								&& manager.getSourceSinkManager().isSink(
-										iCallStmt, interproceduralCFG(),
-										newSource.getAccessPath())) {							
-								results.addResult(new AbstractionAtSink(newSource, iCallStmt));
-						}
 						
 						if (newSource.getTopPostdominator() != null
 								&& newSource.getTopPostdominator().getUnit() == null)

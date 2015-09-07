@@ -150,7 +150,8 @@ public class TypeUtils {
 	}
 	
 	/**
-	 * Gets the more precise one of the two given types
+	 * Gets the more precise one of the two given types. If there is no ordering
+	 * (i.e., the two types are not cast-compatible) null is returned.
 	 * @param tp1 The first type
 	 * @param tp2 The second type
 	 * @return The more precise one of the two given types
@@ -168,8 +169,10 @@ public class TypeUtils {
 			return tp1;
 		else if (Scene.v().getFastHierarchy().canStoreType(tp2, tp1))
 			return tp2;
-		else
+		else if (Scene.v().getFastHierarchy().canStoreType(tp1, tp2))
 			return tp1;
+		else
+			return null;
 	}
 	
 	/**
@@ -179,8 +182,8 @@ public class TypeUtils {
 	 * @return The more precise one of the two given types
 	 */
 	public static String getMorePreciseType(String tp1, String tp2) {
-		return getMorePreciseType(getTypeFromString(tp1),
-				getTypeFromString(tp2)).toString();
+		return "" + getMorePreciseType(getTypeFromString(tp1),
+				getTypeFromString(tp2));
 	}
 	
 	/**
