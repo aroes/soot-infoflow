@@ -182,8 +182,9 @@ public class TypeUtils {
 	 * @return The more precise one of the two given types
 	 */
 	public static String getMorePreciseType(String tp1, String tp2) {
-		return "" + getMorePreciseType(getTypeFromString(tp1),
+		Type newType = getMorePreciseType(getTypeFromString(tp1),
 				getTypeFromString(tp2));
+		return newType == null ? null : "" + newType;
 	}
 	
 	/**
