@@ -104,6 +104,7 @@ public class TypeUtils {
 		if (!manager.getConfig().getEnableTypeChecking())
 			return true;
 		
+		int fieldStartIdx = 0;
 		if (accessPath.isStaticFieldRef()) {
 			if (!checkCast(type, accessPath.getFirstFieldType()))
 				return false;
@@ -111,18 +112,28 @@ public class TypeUtils {
 			// If the target type is a primitive array, we cannot have any
 			// subsequent field
 			if (isPrimitiveArray(type))
-				return accessPath.getFieldCount() == 1;
-			return true;
+				if (accessPath.getFieldCount() > 1)
+					return false;
+			fieldStartIdx = 1;
 		}
 		else {
 			if (!checkCast(type, accessPath.getBaseType()))
 				return false;
 			// If the target type is a primitive array, we cannot have any
-			// subsequent fields
 			if (isPrimitiveArray(type))
-				return accessPath.isLocal();
-			return true;
+				// subsequent fields
+				if (!accessPath.isLocal())
+					return false;
 		}
+		
+		// The next field's base type must also be cast-compatible to the new
+		// base type
+		if (accessPath.isFieldRef() && accessPath.getFieldCount() > fieldStartIdx)
+			if (!checkCast(type, accessPath.getFields()[fieldStartIdx].getDeclaringClass().getType()))
+				return false;
+		
+		// No type problems found
+		return true;
 	}
 	
 	public static boolean isPrimitiveArray(Type type) {
@@ -145,8 +156,7 @@ public class TypeUtils {
 		if (apBase.getBaseType() instanceof ArrayType)
 			return dest.getName().equals("java.lang.Object");
 		
-		return Scene.v().getOrMakeFastHierarchy().canStoreType(apBase.getBaseType(), dest.getType())
-				|| Scene.v().getOrMakeFastHierarchy().canStoreType(dest.getType(), apBase.getBaseType());
+		return checkCast(apBase, dest.getType());
 	}
 	
 	/**
@@ -167,12 +177,25 @@ public class TypeUtils {
 			return tp2;
 		else if (TypeUtils.isObjectLikeType(tp2))
 			return tp1;
+		else if (tp1 instanceof PrimType && tp2 instanceof PrimType)
+			return tp1;		// arbitrary choice
 		else if (Scene.v().getFastHierarchy().canStoreType(tp2, tp1))
 			return tp2;
 		else if (Scene.v().getFastHierarchy().canStoreType(tp1, tp2))
 			return tp1;
-		else
-			return null;
+		else {
+			// If one type is an array type and the other one is the base type,
+			// we still accept the cast
+			if (tp1 instanceof ArrayType) {
+				ArrayType at = (ArrayType) tp1;
+				return getMorePreciseType(at.getElementType(), tp2);
+			}
+			else if (tp2 instanceof ArrayType) {
+				ArrayType at = (ArrayType) tp2;
+				return getMorePreciseType(tp1, at.getElementType());
+			}
+		}
+		return null;
 	}
 	
 	/**
