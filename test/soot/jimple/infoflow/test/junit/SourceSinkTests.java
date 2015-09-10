@@ -20,7 +20,9 @@ import org.junit.Test;
 
 import soot.SootMethod;
 import soot.Unit;
+import soot.Value;
 import soot.jimple.DefinitionStmt;
+import soot.jimple.IfStmt;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.IInfoflow;
 import soot.jimple.infoflow.data.AccessPath;
@@ -107,6 +109,28 @@ public class SourceSinkTests extends JUnitTests {
 		
 	};
 	
+	private final class ifAsSinkSSM implements ISourceSinkManager {
+
+		@Override
+		public SourceInfo getSourceInfo(Stmt sCallSite,
+				InterproceduralCFG<Unit, SootMethod> cfg) {
+			if (sCallSite instanceof DefinitionStmt
+					&& sCallSite.containsInvokeExpr()
+					&& sCallSite.getInvokeExpr().getMethod().getName().equals("currentTimeMillis")) {
+				Value val = ((DefinitionStmt) sCallSite).getLeftOp();
+				return new SourceInfo(new AccessPath(val, true));
+			}
+			return null;
+		}
+
+		@Override
+		public boolean isSink(Stmt sCallSite,
+				InterproceduralCFG<Unit, SootMethod> cfg, AccessPath ap) {
+			return sCallSite instanceof IfStmt;
+		}
+		
+	}
+	
 	@Test(timeout = 300000)
 	public void fieldTest() {
 		IInfoflow infoflow = initInfoflow();
@@ -164,6 +188,16 @@ public class SourceSinkTests extends JUnitTests {
 		epoints.add("<soot.jimple.infoflow.test.SourceSinkTestCode: void testSinkAccessPaths2()>");
 		infoflow.computeInfoflow(appPath, libPath, new DefaultEntryPointCreator(epoints), noTaintSubFieldsSSM);
 		negativeCheckInfoflow(infoflow);
+	}
+
+	@Test(timeout = 300000)
+	public void ifAsSinkTest() {
+		IInfoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.SourceSinkTestCode: void ifAsSinkTest()>");
+		infoflow.computeInfoflow(appPath, libPath, new DefaultEntryPointCreator(epoints), new ifAsSinkSSM());
+		Assert.assertTrue(infoflow.isResultAvailable());
+		Assert.assertEquals(1, infoflow.getResults().size());
 	}
 
 }

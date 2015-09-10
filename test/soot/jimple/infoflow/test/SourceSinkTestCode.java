@@ -85,4 +85,12 @@ public class SourceSinkTestCode {
 		doLeakSecret2(a);
 	}
 
+	public void ifAsSinkTest() {
+		long x = System.currentTimeMillis();
+		if (x > 100)
+			System.out.println("Greater");
+		else
+			System.out.println("Smaller");
+	}
+	
 }

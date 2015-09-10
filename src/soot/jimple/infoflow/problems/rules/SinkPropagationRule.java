@@ -16,6 +16,7 @@ import soot.jimple.infoflow.aliasing.Aliasing;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.problems.TaintPropagationResults;
+import soot.jimple.infoflow.util.BaseSelector;
 import soot.jimple.infoflow.util.ByReferenceBoolean;
 
 /**
@@ -66,13 +67,17 @@ public class SinkPropagationRule extends AbstractTaintPropagationRule {
 	 * @param retVal The value to check
 	 */
 	private void checkForSink(Abstraction source, Stmt stmt, final Value retVal) {
-		if (getManager().getSourceSinkManager() != null
-				&& source.isAbstractionActive()
-				&& getAliasing().mayAlias(retVal, source
-						.getAccessPath().getPlainValue())
-				&& getManager().getSourceSinkManager().isSink(stmt,
-						getManager().getICFG(), source.getAccessPath()))
-			getResults().addResult(new AbstractionAtSink(source, stmt));
+		// The incoming value may be a complex expression. We have to look at
+		// every simple value contained within it.
+		for (Value val : BaseSelector.selectBaseList(retVal, false)) {
+			if (getManager().getSourceSinkManager() != null
+					&& source.isAbstractionActive()
+					&& getAliasing().mayAlias(val, source
+							.getAccessPath().getPlainValue())
+					&& getManager().getSourceSinkManager().isSink(stmt,
+							getManager().getICFG(), source.getAccessPath()))
+				getResults().addResult(new AbstractionAtSink(source, stmt));
+		}
 	}
 
 	@Override
