@@ -80,6 +80,7 @@ public class InfoflowConfiguration {
 	private boolean enableTypeChecking = true;
 	private boolean ignoreFlowsInSystemPackages = true;
 	private int maxThreadNum = -1;
+	private boolean writeOutputFiles = false;
 	
 	private boolean inspectSources = false;
 	private boolean inspectSinks = false;
@@ -474,6 +475,26 @@ public class InfoflowConfiguration {
 	 */
 	public int getMaxThreadNum() {
 		return this.maxThreadNum;
+	}
+	
+	/**
+	 * Gets whether FlowDroid shall write the Jimple files to disk after the
+	 * data flow analysis
+	 * @return True if the Jimple files shall be written to disk after the data
+	 * flow analysis, otherwise false
+	 */
+	public boolean getWriteOutputFiles() {
+		return this.writeOutputFiles;
+	}
+	
+	/**
+	 * Gets whether FlowDroid shall write the Jimple files to disk after the
+	 * data flow analysis
+	 * @param writeOutputFiles True if the Jimple files shall be written to disk
+	 * after the data flow analysis, otherwise false
+	 */
+	public void setWriteOutputFiles(boolean writeOutputFiles) {
+		this.writeOutputFiles = writeOutputFiles;
 	}
 	
 	/**

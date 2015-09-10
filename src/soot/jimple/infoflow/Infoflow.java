@@ -414,7 +414,7 @@ public class Infoflow extends AbstractInfoflow {
 		for (ResultsAvailableHandler handler : onResultsAvailable)
 			handler.onResultsAvailable(iCfg, results);
 		
-		if (logger.isDebugEnabled())
+		if (config.getWriteOutputFiles())
 			PackManager.v().writeOutput();
 		
 		maxMemoryConsumption = Math.max(maxMemoryConsumption, getUsedMemory());
