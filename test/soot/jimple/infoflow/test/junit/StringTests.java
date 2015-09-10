@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import soot.jimple.infoflow.IInfoflow;
@@ -311,5 +312,23 @@ public class StringTests extends JUnitTests {
         infoflow.computeInfoflow(appPath, libPath, epoints,sources, sinks);
         checkInfoflow(infoflow, 1);
     }
+    
+    @Test
+    public void stringFileStreamTest1(){
+        IInfoflow infoflow = initInfoflow();
+        
+        List<String> sources = new LinkedList<String>();
+        sources.add("<soot.jimple.infoflow.test.StringTestCode: byte[] read(byte[],java.io.FileInputStream)>");
 
+        List<String> sinks = new LinkedList<String>();
+        sinks.add("<java.io.FileOutputStream: void write(byte[])>");
+        
+        List<String> epoints = new ArrayList<String>();
+        epoints.add("<soot.jimple.infoflow.test.StringTestCode: void stringFileStreamTest1()>");
+        
+        infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+        Assert.assertNotNull(infoflow.getResults());
+		assertTrue(infoflow.getResults().isPathBetweenMethods(sinks.get(0), sources.get(0)));
+    }
+    
 }
