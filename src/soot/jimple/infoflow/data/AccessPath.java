@@ -256,6 +256,9 @@ public class AccessPath implements Cloneable {
 				if (fields != null && fields.length > 0  && !(baseType instanceof ArrayType))
 					baseType = TypeUtils.getMorePreciseType(baseType,
 							fields[0].getDeclaringClass().getType());
+				
+				// Make sure that we don't get anything weird
+				assert baseType != null;
 			}
 			if (fields != null)
 				for (int i = 0; i < fields.length; i++) {
@@ -266,6 +269,9 @@ public class AccessPath implements Cloneable {
 					if (fields.length > i + 1 && !(fieldTypes[i] instanceof ArrayType))
 						fieldTypes[i] = TypeUtils.getMorePreciseType(fieldTypes[i],
 								fields[i + 1].getDeclaringClass().getType());
+					
+					// Make sure that we don't get anything weird
+					assert fieldTypes[i] != null;
 				}
 		}
 		
