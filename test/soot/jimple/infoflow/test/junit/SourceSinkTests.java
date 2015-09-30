@@ -26,6 +26,7 @@ import soot.jimple.IfStmt;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.IInfoflow;
 import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.data.AccessPathFactory;
 import soot.jimple.infoflow.entryPointCreators.DefaultEntryPointCreator;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.source.SourceInfo;
@@ -70,7 +71,8 @@ public class SourceSinkTests extends JUnitTests {
 			if (sCallSite.containsInvokeExpr()
 					&& sCallSite instanceof DefinitionStmt
 					&& sCallSite.getInvokeExpr().getMethod().getName().equals("getSecret")) {
-				AccessPath ap = new AccessPath(((DefinitionStmt) sCallSite).getLeftOp(), true);
+				AccessPath ap = AccessPathFactory.v().createAccessPath(
+						((DefinitionStmt) sCallSite).getLeftOp(), true);
 				return new SourceInfo(ap);
 			}
 			return null;
@@ -86,7 +88,8 @@ public class SourceSinkTests extends JUnitTests {
 					&& sCallSite instanceof DefinitionStmt
 					&& (sCallSite.getInvokeExpr().getMethod().getName().equals("getSecret")
 							|| (sCallSite.getInvokeExpr().getMethod().getName().equals("getSecret2")))) {
-				AccessPath ap = new AccessPath(((DefinitionStmt) sCallSite).getLeftOp(), true);
+				AccessPath ap = AccessPathFactory.v().createAccessPath(
+						((DefinitionStmt) sCallSite).getLeftOp(), true);
 				return new SourceInfo(ap);
 			}
 			return null;
@@ -101,7 +104,8 @@ public class SourceSinkTests extends JUnitTests {
 			if (sCallSite.containsInvokeExpr()
 					&& sCallSite instanceof DefinitionStmt
 					&& sCallSite.getInvokeExpr().getMethod().getName().equals("getSecret")) {
-				AccessPath ap = new AccessPath(((DefinitionStmt) sCallSite).getLeftOp(), false);
+				AccessPath ap = AccessPathFactory.v().createAccessPath(
+						((DefinitionStmt) sCallSite).getLeftOp(), false);
 				return new SourceInfo(ap);
 			}
 			return null;
@@ -118,7 +122,7 @@ public class SourceSinkTests extends JUnitTests {
 					&& sCallSite.containsInvokeExpr()
 					&& sCallSite.getInvokeExpr().getMethod().getName().equals("currentTimeMillis")) {
 				Value val = ((DefinitionStmt) sCallSite).getLeftOp();
-				return new SourceInfo(new AccessPath(val, true));
+				return new SourceInfo(AccessPathFactory.v().createAccessPath(val, true));
 			}
 			return null;
 		}

@@ -38,6 +38,7 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.data.AccessPathFactory;
 import soot.jimple.infoflow.util.SootMethodRepresentationParser;
 
 import com.google.common.cache.CacheBuilder;
@@ -237,7 +238,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 
 					// Check for exclusions
 					if (wrapType != MethodWrapType.Exclude)
-						taints.add(new AccessPath(def.getLeftOp(), true));
+						taints.add(AccessPathFactory.v().createAccessPath(def.getLeftOp(), true));
 				}
 
 				// If the base object is tainted, we pass this taint on
@@ -269,11 +270,12 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 				// If make sure to also taint the left side of an assignment
 				// if the object just got tainted 
 				if (stmt instanceof DefinitionStmt)
-					taints.add(new AccessPath(((DefinitionStmt) stmt).getLeftOp(), true));
+					taints.add(AccessPathFactory.v().createAccessPath(((DefinitionStmt) stmt).getLeftOp(), true));
 				
 				// Taint the base object
 				if (stmt.getInvokeExprBox().getValue() instanceof InstanceInvokeExpr)
-					taints.add(new AccessPath(((InstanceInvokeExpr) stmt.getInvokeExprBox().getValue()).getBase(), true));
+					taints.add(AccessPathFactory.v().createAccessPath(((InstanceInvokeExpr)
+							stmt.getInvokeExprBox().getValue()).getBase(), true));
 				
 				// The originally tainted parameter or base object as such
 				// stays tainted
@@ -296,8 +298,8 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		// If the base object is tainted, the third argument gets tainted as
 		// well
 		if (((InstanceInvokeExpr) invokeExpr).getBase() == taintedPath.getPlainValue())
-			return new TwoElementSet<AccessPath>(taintedPath, new AccessPath(
-					invokeExpr.getArg(2), true));
+			return new TwoElementSet<AccessPath>(taintedPath,
+					AccessPathFactory.v().createAccessPath(invokeExpr.getArg(2), true));
 		return Collections.singleton(taintedPath);
 	}
 

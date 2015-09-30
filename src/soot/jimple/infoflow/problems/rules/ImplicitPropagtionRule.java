@@ -24,7 +24,7 @@ import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.collect.MyConcurrentHashMap;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
-import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.data.AccessPathFactory;
 import soot.jimple.infoflow.problems.TaintPropagationResults;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG.UnitContainer;
 import soot.jimple.infoflow.util.ByReferenceBoolean;
@@ -224,7 +224,8 @@ public class ImplicitPropagtionRule extends AbstractTaintPropagationRule {
 						&& !(leftVal instanceof FieldRef))
 					return null;
 				
-				Abstraction abs = source.deriveNewAbstraction(new AccessPath(leftVal, true), stmt);
+				Abstraction abs = source.deriveNewAbstraction(
+						AccessPathFactory.v().createAccessPath(leftVal, true), stmt);
 				return Collections.singleton(abs);
 			}
 		}

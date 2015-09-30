@@ -1242,4 +1242,19 @@ public class HeapTestCode {
 		cm.publish(b.attr.i);
 	}
 	
+	public void multiContextTest1() {
+		A a = new A();
+		a.b = TelephonyManager.getDeviceId();
+		a.c = TelephonyManager.getDeviceId();
+		String data = id(a.b);
+		String data2 = id(a.c);
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(data);
+		cm.publish(data2);
+	}
+	
+	private String id(String val) {
+		return val;
+	}
+	
 }

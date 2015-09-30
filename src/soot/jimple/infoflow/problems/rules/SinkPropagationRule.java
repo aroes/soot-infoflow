@@ -37,23 +37,23 @@ public class SinkPropagationRule extends AbstractTaintPropagationRule {
 			ByReferenceBoolean killAll) {
 		if (stmt instanceof ReturnStmt) {
 			final ReturnStmt returnStmt = (ReturnStmt) stmt;
-			checkForSink(source, stmt, returnStmt.getOp());
+			checkForSink(d1, source, stmt, returnStmt.getOp());
 		}
 		else if (stmt instanceof IfStmt) {
 			final IfStmt ifStmt = (IfStmt) stmt;
-			checkForSink(source, stmt, ifStmt.getCondition());
+			checkForSink(d1, source, stmt, ifStmt.getCondition());
 		}
 		else if (stmt instanceof LookupSwitchStmt) {
 			final LookupSwitchStmt switchStmt = (LookupSwitchStmt) stmt;
-			checkForSink(source, stmt, switchStmt.getKey());
+			checkForSink(d1, source, stmt, switchStmt.getKey());
 		}
 		else if (stmt instanceof TableSwitchStmt) {
 			final TableSwitchStmt switchStmt = (TableSwitchStmt) stmt;
-			checkForSink(source, stmt, switchStmt.getKey());
+			checkForSink(d1, source, stmt, switchStmt.getKey());
 		}
 		else if (stmt instanceof AssignStmt) {
 			final AssignStmt assignStmt = (AssignStmt) stmt;
-			checkForSink(source, stmt, assignStmt.getRightOp());
+			checkForSink(d1, source, stmt, assignStmt.getRightOp());
 		}
 		
 		return null;
@@ -62,11 +62,13 @@ public class SinkPropagationRule extends AbstractTaintPropagationRule {
 	/**
 	 * Checks whether the given taint abstraction at the given satement triggers
 	 * a sink. If so, a new result is recorded
+	 * @param d1 The context abstraction
 	 * @param source The abstraction that has reached the given statement
 	 * @param stmt The statement that was reached
 	 * @param retVal The value to check
 	 */
-	private void checkForSink(Abstraction source, Stmt stmt, final Value retVal) {
+	private void checkForSink(Abstraction d1, Abstraction source, Stmt stmt,
+			final Value retVal) {
 		// The incoming value may be a complex expression. We have to look at
 		// every simple value contained within it.
 		for (Value val : BaseSelector.selectBaseList(retVal, false)) {

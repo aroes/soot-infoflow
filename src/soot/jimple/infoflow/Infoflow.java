@@ -42,7 +42,7 @@ import soot.jimple.infoflow.codeOptimization.DeadCodeEliminator;
 import soot.jimple.infoflow.codeOptimization.ICodeOptimizer;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
-import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.data.AccessPathFactory;
 import soot.jimple.infoflow.data.FlowDroidMemoryManager;
 import soot.jimple.infoflow.data.pathBuilders.DefaultPathBuilderFactory;
 import soot.jimple.infoflow.data.pathBuilders.IAbstractionPathBuilder;
@@ -201,7 +201,7 @@ public class Infoflow extends AbstractInfoflow {
 			throw new RuntimeException("The access path length may not be negative");
 		
 		// Clear the base registrations from previous runs
-		AccessPath.clearBaseRegister();
+		AccessPathFactory.v().clearBaseRegister();
 		
 		// Build the callgraph
 		constructCallgraph();

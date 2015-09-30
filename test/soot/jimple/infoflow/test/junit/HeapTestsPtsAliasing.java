@@ -30,6 +30,7 @@ import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.InfoflowConfiguration.AliasingAlgorithm;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.data.AccessPathFactory;
 import soot.jimple.infoflow.taintWrappers.AbstractTaintWrapper;
 
 /**
@@ -433,7 +434,8 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 							.getInvokeExpr();
 					if (taintedPath.getPlainValue() == iinv.getArg(0)) {
 						RefType rt = (RefType) iinv.getBase().getType();
-						AccessPath ap = new AccessPath(iinv.getBase(),
+						AccessPath ap = AccessPathFactory.v().createAccessPath(
+								iinv.getBase(),
 								new SootField[] { rt.getSootClass()
 										.getFieldByName("b1") /*
 															 * , Scene.v().
@@ -452,7 +454,8 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 					}
 					if (taintedPath.getPlainValue() == iinv.getArg(1)) {
 						RefType rt = (RefType) iinv.getBase().getType();
-						AccessPath ap = new AccessPath(iinv.getBase(),
+						AccessPath ap = AccessPathFactory.v().createAccessPath(
+								iinv.getBase(),
 								new SootField[] { rt.getSootClass()
 										.getFieldByName("b2") /*
 															 * , Scene.v().
@@ -475,7 +478,8 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 							.getInvokeExpr();
 					if (taintedPath.getPlainValue() == iinv.getArg(0)) {
 						RefType rt = (RefType) iinv.getBase().getType();
-						AccessPath ap = new AccessPath(iinv.getBase(),
+						AccessPath ap = AccessPathFactory.v().createAccessPath(
+								iinv.getBase(),
 								new SootField[] { rt.getSootClass()
 										.getFieldByName("b1") /*
 															 * , Scene.v().
@@ -497,12 +501,12 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 					 * .attr && taintedPath.getLastField().getName().equals("b")
 					 */) {
 						DefinitionStmt def = (DefinitionStmt) stmt;
-						AccessPath ap = new AccessPath(
+						AccessPath ap = AccessPathFactory.v().createAccessPath(
 								def.getLeftOp(),
-								Scene.v()
+								new SootField[] { Scene.v()
 										.getSootClass(
 												"soot.jimple.infoflow.test.HeapTestCode$A")
-										.getFieldByName("b"), true);
+										.getFieldByName("b") }, true);
 						res.add(ap);
 					}
 				}

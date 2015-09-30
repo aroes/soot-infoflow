@@ -87,6 +87,9 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 		return new FlowFunctions<Unit, Abstraction, SootMethod>() {
 			
 			private Abstraction checkAbstraction(Abstraction abs) {
+				if (abs == null)
+					return null;
+				
 				// Primitive types and strings cannot have aliases and thus
 				// never need to be propagated back
 				if (!abs.getAccessPath().isStaticFieldRef()) {

@@ -18,6 +18,7 @@ import soot.jimple.Jimple;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.data.AccessPathFactory;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 
@@ -67,8 +68,8 @@ public class ImplicitFlowAliasStrategy extends AbstractBulkAliasStrategy {
 								|| assign.getLeftOp() instanceof Local)))
 					continue;
 			
-			final AccessPath apLeft = new AccessPath(assign.getLeftOp(), true);
-			final AccessPath apRight = new AccessPath(assign.getRightOp(), true);
+			final AccessPath apLeft = AccessPathFactory.v().createAccessPath(assign.getLeftOp(), true);
+			final AccessPath apRight = AccessPathFactory.v().createAccessPath(assign.getRightOp(), true);
 			
 			Set<AccessPath> mapLeft = res.get(apLeft);
 			if (mapLeft == null) {
@@ -93,7 +94,7 @@ public class ImplicitFlowAliasStrategy extends AbstractBulkAliasStrategy {
 		// Use global aliasing
 		Value baseValue = ((InstanceFieldRef) targetValue).getBase();
 		Set<AccessPath> aliases = methodToAliases.getUnchecked(method).get
-				(new AccessPath(baseValue, true));
+				(AccessPathFactory.v().createAccessPath(baseValue, true));
 		if (aliases != null)
 			for (AccessPath ap : aliases) {
 				Abstraction aliasAbs = newAbs.deriveNewAbstraction(

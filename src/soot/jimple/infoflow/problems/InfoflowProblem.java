@@ -53,6 +53,7 @@ import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.data.AccessPath.ArrayTaintType;
+import soot.jimple.infoflow.data.AccessPathFactory;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler.FlowFunctionType;
 import soot.jimple.infoflow.problems.rules.PropagationRuleManager;
 import soot.jimple.infoflow.solver.functions.SolverCallFlowFunction;
@@ -167,8 +168,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					}
 					// Special type handling for certain operations
 					else if (rightValue instanceof InstanceOfExpr)
-						newAbs = source.deriveNewAbstraction(new AccessPath(leftValue, null,
-								BooleanType.v(), (Type[]) null, true,
+						newAbs = source.deriveNewAbstraction(AccessPathFactory.v().createAccessPath(
+								leftValue, BooleanType.v(), true,
 								ArrayTaintType.ContentsAndLength), assignStmt);
 					else if (rightValue instanceof NewArrayExpr) {
 						assert manager.getConfig().getEnableArraySizeTainting();
@@ -183,7 +184,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				// also taint the target of the assignment
 				if (newAbs == null)
 					if (source.getAccessPath().isEmpty())
-						newAbs = source.deriveNewAbstraction(new AccessPath(leftValue, true), assignStmt, true);
+						newAbs = source.deriveNewAbstraction(AccessPathFactory.v().createAccessPath(
+								leftValue, true), assignStmt, true);
 					else
 						newAbs = source.deriveNewAbstraction(leftValue, cutFirstField, assignStmt, targetType,
 								arrayTaintType);
@@ -358,7 +360,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						return Collections.singleton(newSource);
 					
 					// Taint the array length
-					AccessPath ap = new AccessPath(leftValue, null, IntType.v(),
+					AccessPath ap = AccessPathFactory.v().createAccessPath(leftValue, null, IntType.v(),
 							(Type[]) null, true, false, true, ArrayTaintType.ContentsAndLength);
 					Abstraction lenAbs = newSource.deriveNewAbstraction(ap, assignStmt);
 					return new TwoElementSet<Abstraction>(newSource, lenAbs);
@@ -602,15 +604,17 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									&& !isExceptionHandler(retSite)) {
 								Abstraction abs = newSource.deriveNewAbstraction
 										(newSource.getAccessPath().copyWithNewValue(leftOp), (Stmt) exitStmt);
-								res.add(abs);
-								
-								// Aliases of implicitly tainted variables must be mapped back
-								// into the caller's context on return when we leave the last
-								// implicitly-called method
-								if (aliasingStrategy.requiresAnalysisOnReturn())
-									for (Abstraction d1 : callerD1s)
-										aliasing.computeAliases(d1, iCallStmt, leftOp, res,
-												interproceduralCFG().getMethodOf(callSite), abs);
+								if (abs != null) {
+									res.add(abs);
+									
+									// Aliases of implicitly tainted variables must be mapped back
+									// into the caller's context on return when we leave the last
+									// implicitly-called method
+									if (aliasingStrategy.requiresAnalysisOnReturn())
+										for (Abstraction d1 : callerD1s)
+											aliasing.computeAliases(d1, iCallStmt, leftOp, res,
+													interproceduralCFG().getMethodOf(callSite), abs);
+								}
 							}
 						}
 
@@ -669,18 +673,20 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								
 								Abstraction abs = newSource.deriveNewAbstraction
 										(newSource.getAccessPath().copyWithNewValue(originalCallArg), (Stmt) exitStmt);
-								res.add(abs);
-								
-								// Aliases of implicitly tainted variables must be mapped back
-								// into the caller's context on return when we leave the last
-								// implicitly-called method
-								if ((abs.isImplicit()
-										&& !callerD1sConditional) || aliasingStrategy.requiresAnalysisOnReturn()) {
-									assert originalCallArg.getType() instanceof ArrayType
-											|| originalCallArg.getType() instanceof RefType;
-									for (Abstraction d1 : callerD1s)
-										aliasing.computeAliases(d1, iCallStmt, originalCallArg, res,
-											interproceduralCFG().getMethodOf(callSite), abs);
+								if (abs != null) {
+									res.add(abs);
+									
+									// Aliases of implicitly tainted variables must be mapped back
+									// into the caller's context on return when we leave the last
+									// implicitly-called method
+									if ((abs.isImplicit()
+											&& !callerD1sConditional) || aliasingStrategy.requiresAnalysisOnReturn()) {
+										assert originalCallArg.getType() instanceof ArrayType
+												|| originalCallArg.getType() instanceof RefType;
+										for (Abstraction d1 : callerD1s)
+											aliasing.computeAliases(d1, iCallStmt, originalCallArg, res,
+												interproceduralCFG().getMethodOf(callSite), abs);
+									}
 								}
 							}
 						}
@@ -695,18 +701,20 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 									if (iCallStmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
 										InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) iCallStmt.getInvokeExpr();
 										Abstraction abs = newSource.deriveNewAbstraction
-												(newSource.getAccessPath().copyWithNewValue(iIExpr.getBase()), (Stmt) exitStmt);
-										res.add(abs);
+												(newSource.getAccessPath().copyWithNewValue(iIExpr.getBase()), (Stmt) exitStmt);										
+										if (abs != null) {
+											res.add(abs);
 										
-										// Aliases of implicitly tainted variables must be mapped back
-										// into the caller's context on return when we leave the last
-										// implicitly-called method
-										if ((abs.isImplicit()
-												&& aliasing.canHaveAliases(iCallStmt, iIExpr.getBase(), abs)
-												&& !callerD1sConditional) || aliasingStrategy.requiresAnalysisOnReturn())
-											for (Abstraction d1 : callerD1s)
-												aliasing.computeAliases(d1, iCallStmt, iIExpr.getBase(), res,
-														interproceduralCFG().getMethodOf(callSite), abs);											
+											// Aliases of implicitly tainted variables must be mapped back
+											// into the caller's context on return when we leave the last
+											// implicitly-called method
+											if ((abs.isImplicit()
+													&& aliasing.canHaveAliases(iCallStmt, iIExpr.getBase(), abs)
+													&& !callerD1sConditional) || aliasingStrategy.requiresAnalysisOnReturn())
+												for (Abstraction d1 : callerD1s)
+													aliasing.computeAliases(d1, iCallStmt, iIExpr.getBase(), res,
+															interproceduralCFG().getMethodOf(callSite), abs);
+										}
 									}
 								}
 							}

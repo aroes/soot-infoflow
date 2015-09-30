@@ -27,6 +27,7 @@ import soot.jimple.ParameterRef;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.data.AccessPathFactory;
 
 /**
  * A {@link ISourceSinkManager} working on lists of source and sink methods
@@ -105,12 +106,12 @@ public class DefaultSourceSinkManager implements ISourceSinkManager  {
 					&& sCallSite instanceof DefinitionStmt) {
 				// Taint the return value
 				Value leftOp = ((DefinitionStmt) sCallSite).getLeftOp();
-				targetAP = new AccessPath(leftOp, true);
+				targetAP = AccessPathFactory.v().createAccessPath(leftOp, true);
 			}
 			else if (sCallSite.getInvokeExpr() instanceof InstanceInvokeExpr) {
 				// Taint the base object
 				Value base = ((InstanceInvokeExpr) sCallSite.getInvokeExpr()).getBase();
-				targetAP = new AccessPath(base, true);
+				targetAP = AccessPathFactory.v().createAccessPath(base, true);
 			}
 		}
 		// Check whether we need to taint parameters
@@ -120,7 +121,7 @@ public class DefaultSourceSinkManager implements ISourceSinkManager  {
 				ParameterRef pref = (ParameterRef) istmt.getRightOp();
 				SootMethod currentMethod = cfg.getMethodOf(istmt);
 				if (parameterTaintMethods.contains(currentMethod.toString()))
-					targetAP = new AccessPath(currentMethod.getActiveBody()
+					targetAP = AccessPathFactory.v().createAccessPath(currentMethod.getActiveBody()
 							.getParameterLocal(pref.getIndex()), true);
 			}
 		}

@@ -22,7 +22,8 @@ import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
-import soot.jimple.infoflow.data.AccessPath.BasePair;
+import soot.jimple.infoflow.data.AccessPathFactory;
+import soot.jimple.infoflow.data.AccessPathFactory.BasePair;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 import soot.jimple.infoflow.util.TypeUtils;
 import soot.jimple.toolkits.pointer.LocalMustAliasAnalysis;
@@ -150,8 +151,8 @@ public class Aliasing {
 	private AccessPath getReferencedAPBase(AccessPath taintedAP,
 			SootField[] referencedFields) {
 		final Collection<BasePair> bases = taintedAP.isStaticFieldRef()
-				? AccessPath.getBaseForType(taintedAP.getFirstFieldType())
-						: AccessPath.getBaseForType(taintedAP.getBaseType());
+				? AccessPathFactory.v().getBaseForType(taintedAP.getFirstFieldType())
+						: AccessPathFactory.v().getBaseForType(taintedAP.getBaseType());
 		
 		int fieldIdx = 0;
 		while (fieldIdx < referencedFields.length) {
@@ -188,7 +189,7 @@ public class Aliasing {
 							System.arraycopy(taintedAP.getFieldTypes(), fieldIdx, cutFieldTypes,
 									fieldIdx + base.getTypes().length, taintedAP.getFieldCount() - fieldIdx);
 
-							return new AccessPath(taintedAP.getPlainValue(),
+							return AccessPathFactory.v().createAccessPath(taintedAP.getPlainValue(),
 									cutFields, taintedAP.getBaseType(), cutFieldTypes,
 									taintedAP.getTaintSubFields(), false, false, taintedAP.getArrayTaintType());
 						}
@@ -226,7 +227,9 @@ public class Aliasing {
 		
 		// If we have an interactive aliasing algorithm, we check that as well
 		if (aliasingStrategy.isInteractive())
-			return aliasingStrategy.mayAlias(new AccessPath(val1, false), new AccessPath(val2, false));
+			return aliasingStrategy.mayAlias(
+					AccessPathFactory.v().createAccessPath(val1, false),
+					AccessPathFactory.v().createAccessPath(val2, false));
 		
 		return false;		
 	}

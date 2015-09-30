@@ -26,6 +26,7 @@ import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.data.AccessPathFactory;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 
@@ -41,18 +42,18 @@ import com.google.common.collect.Table;
 public class PtsBasedAliasStrategy extends AbstractBulkAliasStrategy {
 	
 	private final Table<SootMethod, Abstraction, Set<Abstraction>> aliases = HashBasedTable.create();
-
+	
 	public PtsBasedAliasStrategy(IInfoflowCFG cfg) {
 		super(cfg);
 	}
-
+	
 	@Override
 	public void computeAliasTaints(Abstraction d1, Stmt src, Value targetValue,
 			Set<Abstraction> taintSet, SootMethod method, Abstraction newAbs) {
 		computeAliasTaintsInternal(d1, method, newAbs, Collections.<SootField>emptyList(),
 				Collections.<Type>emptyList(), newAbs.getAccessPath().getTaintSubFields(), src);
 	}
-
+	
 	public void computeAliasTaintsInternal(Abstraction d1, SootMethod method,
 			Abstraction newAbs, List<SootField> appendFields, List<Type> appendTypes, boolean taintSubFields, Stmt actStmt) {
 		// Record the incoming abstraction
@@ -137,8 +138,9 @@ public class PtsBasedAliasStrategy extends AbstractBulkAliasStrategy {
 						|| assign.getRightOp() instanceof ArrayRef) {
 					if (isAliasedAtStmt(ptsTaint, assign.getRightOp())
 							&& (appendFields != null && appendFields.size() > 0)) {
-						Abstraction aliasAbsLeft = newAbs.deriveNewAbstraction(new AccessPath
-								(assign.getLeftOp(), appendFieldsA, taintSubFields), stmt);
+						Abstraction aliasAbsLeft = newAbs.deriveNewAbstraction(
+								AccessPathFactory.v().createAccessPath(assign.getLeftOp(),
+										appendFieldsA, taintSubFields), stmt);
 						if (beforeActUnit)
 							aliasAbsLeft = aliasAbsLeft.deriveInactiveAbstraction(actStmt);
 						
@@ -154,8 +156,9 @@ public class PtsBasedAliasStrategy extends AbstractBulkAliasStrategy {
 					if (assign.getRightOp() instanceof FieldRef || assign.getRightOp() instanceof Local
 							|| assign.getRightOp() instanceof ArrayRef) {
 						if (isAliasedAtStmt(ptsTaint, assign.getLeftOp())) {
-							Abstraction aliasAbsRight = newAbs.deriveNewAbstraction(new AccessPath
-									(assign.getRightOp(), appendFieldsA, taintSubFields), stmt);
+							Abstraction aliasAbsRight = newAbs.deriveNewAbstraction(
+									AccessPathFactory.v().createAccessPath(assign.getRightOp(),
+											appendFieldsA, taintSubFields), stmt);
 							if (beforeActUnit)
 								aliasAbsRight = aliasAbsRight.deriveInactiveAbstraction(actStmt);
 							getForwardSolver().processEdge(new PathEdge<Unit, Abstraction>(d1, u, aliasAbsRight));

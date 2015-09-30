@@ -627,7 +627,7 @@ public class OtherTestCode {
 
 	private void doLeak(String imei) {
 		ConnectionManager cm = new ConnectionManager();
-		cm.publish(imei);		
+		cm.publish(imei);
 	}
 	
 	public void contextSensitivityTest1() {

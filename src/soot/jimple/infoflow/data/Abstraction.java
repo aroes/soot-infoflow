@@ -11,6 +11,8 @@
 package soot.jimple.infoflow.data;
 
 
+import heros.solver.LinkedNode;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -38,7 +40,8 @@ import com.google.common.collect.Sets;
  * @author Steven Arzt
  * @author Christian Fritz
  */
-public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction, Unit> {
+public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction, Unit>,
+		LinkedNode<Abstraction> {
 	
 	private static boolean flowSensitiveAliasing = true;
 	
@@ -147,6 +150,9 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 			return this;
 
 		Abstraction a = deriveNewAbstractionMutable(accessPath, null);
+		if (a == null)
+			return null;
+		
 		a.postdominators = null;
 		a.activationUnit = activationUnit;
 		a.dependsOnCutAP |= a.getAccessPath().isCutOffApproximation();
@@ -166,11 +172,18 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 			return this;
 		
 		Abstraction abs = deriveNewAbstractionMutable(p, currentStmt);
+		if (abs == null)
+			return null;
+		
 		abs.isImplicit = isImplicit;
 		return abs;
 	}
 	
-	private Abstraction deriveNewAbstractionMutable(AccessPath p, Stmt currentStmt){
+	private Abstraction deriveNewAbstractionMutable(AccessPath p, Stmt currentStmt) {
+		// An abstraction needs an access path
+		if (p == null)
+			return null;
+		
 		if (this.accessPath.equals(p) && this.currentStmt == currentStmt) {
 			Abstraction abs = clone();
 			abs.currentStmt = currentStmt;
@@ -231,7 +244,11 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	 */
 	public final Abstraction deriveNewAbstractionOnCatch(Value taint){
 		assert this.exceptionThrown;
-		Abstraction abs = deriveNewAbstractionMutable(new AccessPath(taint, true), null);
+		Abstraction abs = deriveNewAbstractionMutable(
+				AccessPathFactory.v().createAccessPath(taint, true), null);
+		if (abs == null)
+			return null;
+		
 		abs.exceptionThrown = false;
 		return abs;
 	}
@@ -320,6 +337,9 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 		
 		Abstraction abs = deriveNewAbstractionMutable
 				(AccessPath.getEmptyAccessPath(), conditionalUnit);
+		if (abs == null)
+			return null;
+		
 		if (abs.postdominators == null)
 			abs.postdominators = Collections.singletonList(postdom);
 		else
@@ -333,6 +353,8 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 		
 		Abstraction abs = deriveNewAbstractionMutable
 				(AccessPath.getEmptyAccessPath(), (Stmt) conditionalCallSite);
+		if (abs == null)
+			return null;
 		
 		// Postdominators are only kept intraprocedurally in order to not
 		// mess up the summary functions with caller-side information
@@ -539,10 +561,10 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	public Stmt getCorrespondingCallSite() {
 		return this.correspondingCallSite;
 	}
-		
+	
 	public static Abstraction getZeroAbstraction(boolean flowSensitiveAliasing) {
 		Abstraction zeroValue = new Abstraction(
-				new AccessPath(new JimpleLocal("zero", NullType.v()), false),
+				AccessPathFactory.v().createAccessPath(new JimpleLocal("zero", NullType.v()), false),
 				null,
 				false,
 				false);
@@ -553,10 +575,6 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	@Override
 	public void setPredecessor(Abstraction predecessor) {
 		this.predecessor = predecessor;
-	}
-
-	@Override
-	public void setCallingContext(Abstraction callingContext) {
 	}
 	
 	/**
@@ -614,6 +632,10 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	
 	void setCurrentStmt(Stmt currentStmt) {
 		this.currentStmt = currentStmt;
+	}
+	
+	@Override
+	public void setCallingContext(Abstraction callingContext) {
 	}
 		
 }

@@ -36,6 +36,7 @@ import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.InfoflowConfiguration.AliasingAlgorithm;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
+import soot.jimple.infoflow.data.AccessPathFactory;
 import soot.jimple.infoflow.entryPointCreators.DefaultEntryPointCreator;
 import soot.jimple.infoflow.results.InfoflowResults;
 import soot.jimple.infoflow.source.ISourceSinkManager;
@@ -128,7 +129,7 @@ public class HeapTests extends JUnitTests {
 		negativeCheckInfoflow(infoflow);
 	}
 	
-	@Test(timeout = 300000)
+	@Test//(timeout = 300000)
 	public void heapTest1() {
 		IInfoflow infoflow = initInfoflow();
 		List<String> epoints = new ArrayList<String>();
@@ -442,14 +443,16 @@ public class HeapTests extends JUnitTests {
 							.getInvokeExpr();
 					if (taintedPath.getPlainValue() == iinv.getArg(0)) {
 						RefType rt = (RefType) iinv.getBase().getType();
-						AccessPath ap = new AccessPath(iinv.getBase(),
+						AccessPath ap = AccessPathFactory.v().createAccessPath(
+								iinv.getBase(),
 								new SootField[] { rt.getSootClass()
 										.getFieldByName("b1") }, true);
 						res.add(ap);
 					}
 					if (taintedPath.getPlainValue() == iinv.getArg(1)) {
 						RefType rt = (RefType) iinv.getBase().getType();
-						AccessPath ap = new AccessPath(iinv.getBase(),
+						AccessPath ap = AccessPathFactory.v().createAccessPath(
+								iinv.getBase(),
 								new SootField[] { rt.getSootClass()
 										.getFieldByName("b2") }, true);
 						res.add(ap);
@@ -460,18 +463,19 @@ public class HeapTests extends JUnitTests {
 							.getInvokeExpr();
 					if (taintedPath.getPlainValue() == iinv.getArg(0)) {
 						RefType rt = (RefType) iinv.getBase().getType();
-						AccessPath ap = new AccessPath(iinv.getBase(),
+						AccessPath ap = AccessPathFactory.v().createAccessPath(
+								iinv.getBase(),
 								new SootField[] { rt.getSootClass()
 										.getFieldByName("b1") }, true);
 						res.add(ap);
 					} else if (taintedPath.getPlainValue() == iinv.getBase()) {
 						DefinitionStmt def = (DefinitionStmt) stmt;
-						AccessPath ap = new AccessPath(
+						AccessPath ap = AccessPathFactory.v().createAccessPath(
 								def.getLeftOp(),
-								Scene.v()
+								new SootField[] { Scene.v()
 										.getSootClass(
 												"soot.jimple.infoflow.test.HeapTestCode$A")
-										.getFieldByName("b"), true);
+										.getFieldByName("b") }, true);
 						res.add(ap);
 					}
 				}
@@ -1070,7 +1074,8 @@ public class HeapTests extends JUnitTests {
 				if (sCallSite instanceof AssignStmt) {
 					AssignStmt assignStmt = (AssignStmt) sCallSite;
 					if (assignStmt.getRightOp().toString().contains("taintedBySourceSinkManager"))
-						return new SourceInfo(new AccessPath(assignStmt.getLeftOp(), true));
+						return new SourceInfo(AccessPathFactory.v().createAccessPath(
+								assignStmt.getLeftOp(), true));
 					else
 						return null;
 				}
@@ -1137,6 +1142,15 @@ public class HeapTests extends JUnitTests {
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void taintPrimitiveFieldTest2()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
+	}
+	
+	@Test(timeout = 300000)
+	public void multiContextTest1() {
+		IInfoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void multiContextTest1()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 2);
 	}
 	
 }
