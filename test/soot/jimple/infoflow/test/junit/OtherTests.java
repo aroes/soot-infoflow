@@ -389,7 +389,7 @@ public class OtherTests extends JUnitTests{
 		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));		
 	}
     
-    @Test//(timeout=300000)
+    @Test(timeout=300000)
 	public void multiSinkTest2() {
     	boolean oldPathAgnosticResults = InfoflowConfiguration.getPathAgnosticResults();
     	try {
