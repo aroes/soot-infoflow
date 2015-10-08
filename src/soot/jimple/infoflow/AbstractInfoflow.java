@@ -245,7 +245,7 @@ public abstract class AbstractInfoflow implements IInfoflow {
 		Options.v().setPhaseOption("jb.ulp", "off");
 		
 		if (!this.androidPath.isEmpty()) {
-			Options.v().set_src_prec(Options.src_prec_apk);
+			Options.v().set_src_prec(Options.src_prec_apk_class_jimple);
 			if (this.forceAndroidJar)
 				soot.options.Options.v().set_force_android_jar(this.androidPath);
 			else
