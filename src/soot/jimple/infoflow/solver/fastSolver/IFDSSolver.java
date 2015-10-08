@@ -229,6 +229,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
     	// in submitting new tasks
     	if (executor.isTerminating())
     		return;
+    	
     	executor.execute(new PathEdgeProcessingTask(edge));
     	propagationCount++;
     }
@@ -263,21 +264,23 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 			for(D d3: res) {
 				if (memoryManager != null)
 					d3 = memoryManager.handleGeneratedMemoryObject(d2, d3);
-				
-				//for each callee's start point(s)
-				for(N sP: startPointsOf) {
-					//create initial self-loop
-					propagate(d3, sP, d3, n, false); //line 15
-				}
+				if (d3 == null)
+					continue;
 				
 				//register the fact that <sp,d3> has an incoming edge from <n,d2>
 				//line 15.1 of Naeem/Lhotak/Rodriguez
 				if (!addIncoming(sCalledProcN,d3,n,d1,d2))
 					continue;
 				
+				//for each callee's start point(s)
+				for(N sP: startPointsOf) {
+					//create initial self-loop
+					propagate(d3, sP, d3, n, false, true); //line 15
+				}
+				
 				//line 15.2
 				Set<Pair<N, D>> endSumm = endSummary(sCalledProcN, d3);
-					
+				
 				//still line 15.2 of Naeem/Lhotak/Rodriguez
 				//for each already-queried exit value <eP,d4> reachable from <sP,d3>,
 				//create new caller-side jump functions to the return sites
@@ -300,7 +303,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 									d5p = d2;
 								else if (setJumpPredecessors)
 									d5p.setPredecessor(d3);
-								propagate(d1, retSiteN, d5p, n, false);
+								propagate(d1, retSiteN, d5p, n, false, true);
 							}
 						}
 					}
@@ -313,7 +316,8 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 			for(D d3: computeCallToReturnFlowFunction(callToReturnFlowFunction, d1, d2)) {
 				if (memoryManager != null)
 					d3 = memoryManager.handleGeneratedMemoryObject(d2, d3);
-				propagate(d1, returnSiteN, d3, n, false);
+				if (d3 != null)
+					propagate(d1, returnSiteN, d3, n, false);
 			}
 		}
 	}
@@ -388,6 +392,8 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 						for(D d5: targets) {
 							if (memoryManager != null)
 								d5 = memoryManager.handleGeneratedMemoryObject(d2, d5);
+							if (d5 == null)
+								continue;
 							
 							// If we have not changed anything in the callee, we do not need the facts
 							// from there. Even if we change something: If we don't need the concrete
@@ -397,7 +403,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 								d5p = predVal;
 							else if (setJumpPredecessors)
 								d5p.setPredecessor(d1);
-							propagate(d4, retSiteC, d5p, c, false);
+							propagate(d4, retSiteC, d5p, c, false, true);
 						}
 					}
 				}
@@ -406,16 +412,18 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 		//handling for unbalanced problems where we return out of a method with a fact for which we have no incoming flow
 		//note: we propagate that way only values that originate from ZERO, as conditionally generated values should only
 		//be propagated into callers that have an incoming edge for this condition
-		if(followReturnsPastSeeds && d1 == zeroValue && (inc == null || inc.isEmpty())) {
+		if(followReturnsPastSeeds && d1 == zeroValue && (inc == null || inc.isEmpty())) {			
 			Collection<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
 			for(N c: callers) {
-				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {
+				M callerMethod = icfg.getMethodOf(c);
+				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {					
 					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
 					Set<D> targets = computeReturnFlowFunction(retFunction, d1, d2, c, Collections.singleton(zeroValue));
 					for(D d5: targets) {
 						if (memoryManager != null)
 							d5 = memoryManager.handleGeneratedMemoryObject(d2, d5);
-						propagate(zeroValue, retSiteC, d5, c, true);
+						if (d5 != null)
+							propagate(zeroValue, retSiteC, d5, c, true, callerMethod == methodThatNeedsSummary);
 					}
 				}
 			}
@@ -460,7 +468,8 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 			for (D d3 : res) {
 				if (memoryManager != null)
 					d3 = memoryManager.handleGeneratedMemoryObject(d2, d3);
-				propagate(d1, m, d3, null, false);
+				if (d3 != null)
+					propagate(d1, m, d3, null, false);
 			}
 		}
 	}
@@ -521,8 +530,9 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 		final D existingVal = (forceRegister || !enableMergePointChecking || isMergePoint(target)) ?
 				jumpFn.addFunction(edge) : null;
 		if (existingVal != null) {
-			if (existingVal != targetVal)
+			if (existingVal != targetVal) {
 				existingVal.addNeighbor(targetVal);
+			}
 		}
 		else {
 			scheduleEdgeProcessing(edge);
@@ -538,17 +548,20 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 	 * false
 	 */
 	private boolean isMergePoint(N target) {
-		if (icfg.isStartPoint(target))
-			return true;
-		
+		// Check whether there is more than one possibility to reach this unit
 		List<N> preds = icfg.getPredsOf(target);
 		int size = preds.size();
 		if (size > 1)
-			return true;
-		if (size > 0)
-			for (N pred : preds)
-				if (icfg.isCallStmt(pred))
+			if (!icfg.getEndPointsOf(icfg.getMethodOf(target)).contains(target))
+				return true;
+		
+		// Special case: If this is the first unit in the method, there is an
+		// implicit second way (through method call)
+		if (size == 1) {
+			if (icfg.getStartPointsOf(icfg.getMethodOf(target)).contains(target))
+				if (!icfg.getEndPointsOf(icfg.getMethodOf(target)).contains(target))
 					return true;
+		}
 		
 		return false;
 	}
@@ -583,7 +596,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 	 * Factory method for this solver's thread-pool executor.
 	 */
 	protected CountingThreadPoolExecutor getExecutor() {
-		return new CountingThreadPoolExecutor(1, this.numThreads, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
+		return new SetPoolExecutor(1, this.numThreads, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
 	}
 	
 	/**
@@ -604,6 +617,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 	}
 	
 	private class PathEdgeProcessingTask implements Runnable {
+		
 		private final PathEdge<N,D> edge;
 
 		public PathEdgeProcessingTask(PathEdge<N,D> edge) {
@@ -622,6 +636,32 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 					processNormalFlow(edge);
 			}
 		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((edge == null) ? 0 : edge.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			PathEdgeProcessingTask other = (PathEdgeProcessingTask) obj;
+			if (edge == null) {
+				if (other.edge != null)
+					return false;
+			} else if (!edge.equals(other.edge))
+				return false;
+			return true;
+		}
+		
 	}
 	
 	/**

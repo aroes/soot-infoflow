@@ -1153,4 +1153,13 @@ public class HeapTests extends JUnitTests {
 		checkInfoflow(infoflow, 2);
 	}
 	
+	@Test(timeout = 300000)
+	public void recursiveFollowReturnsPastSeedsTest1() {
+		IInfoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void recursiveFollowReturnsPastSeedsTest1()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+	}
+	
 }

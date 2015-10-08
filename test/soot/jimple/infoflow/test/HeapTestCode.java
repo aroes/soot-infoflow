@@ -11,6 +11,7 @@
 package soot.jimple.infoflow.test;
 
 import java.util.ArrayList;
+import java.util.Random;
 
 import soot.jimple.infoflow.test.android.AccountManager;
 import soot.jimple.infoflow.test.android.ConnectionManager;
@@ -1255,6 +1256,23 @@ public class HeapTestCode {
 	
 	private String id(String val) {
 		return val;
+	}
+	
+	public void recursiveFollowReturnsPastSeedsTest1() {
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(doTaintRecursively(new A()));
+	}
+	
+	private String doTaintRecursively(A a) {
+		if (new Random().nextBoolean()) {
+			a.b = TelephonyManager.getDeviceId();
+			return "";
+		}
+		else {
+			A a2 = new A();
+			doTaintRecursively(a2);
+			return a2.b;
+		}
 	}
 	
 }
