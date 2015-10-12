@@ -267,16 +267,16 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 				if (d3 == null)
 					continue;
 				
-				//register the fact that <sp,d3> has an incoming edge from <n,d2>
-				//line 15.1 of Naeem/Lhotak/Rodriguez
-				if (!addIncoming(sCalledProcN,d3,n,d1,d2))
-					continue;
-				
 				//for each callee's start point(s)
 				for(N sP: startPointsOf) {
 					//create initial self-loop
 					propagate(d3, sP, d3, n, false, true); //line 15
 				}
+				
+				//register the fact that <sp,d3> has an incoming edge from <n,d2>
+				//line 15.1 of Naeem/Lhotak/Rodriguez
+				if (!addIncoming(sCalledProcN,d3,n,d1,d2))
+					continue;
 				
 				//line 15.2
 				Set<Pair<N, D>> endSumm = endSummary(sCalledProcN, d3);
