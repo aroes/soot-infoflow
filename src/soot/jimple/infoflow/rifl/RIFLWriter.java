@@ -25,16 +25,15 @@ import javax.xml.transform.stream.StreamResult;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-import soot.jimple.infoflow.rifl.RIFLDocument.BottomDomain;
+import soot.jimple.infoflow.rifl.RIFLDocument.Assignable;
 import soot.jimple.infoflow.rifl.RIFLDocument.Category;
-import soot.jimple.infoflow.rifl.RIFLDocument.DomPair;
+import soot.jimple.infoflow.rifl.RIFLDocument.DomainAssignment;
 import soot.jimple.infoflow.rifl.RIFLDocument.DomainSpec;
 import soot.jimple.infoflow.rifl.RIFLDocument.FlowPair;
 import soot.jimple.infoflow.rifl.RIFLDocument.JavaFieldSpec;
 import soot.jimple.infoflow.rifl.RIFLDocument.JavaParameterSpec;
-import soot.jimple.infoflow.rifl.RIFLDocument.SourceSinkDomPair;
+import soot.jimple.infoflow.rifl.RIFLDocument.JavaReturnValueSpec;
 import soot.jimple.infoflow.rifl.RIFLDocument.SourceSinkSpec;
-import soot.jimple.infoflow.rifl.RIFLDocument.TopDomain;
 
 /**
  * Class for writing out RIFL-compliant data flow policies
@@ -63,10 +62,9 @@ public class RIFLWriter {
 			Element rootElement = document.createElement("riflspec");
 			document.appendChild(rootElement);
 			
-			writeAttackerIO(document, rootElement);
+			writeInterfaceSpec(document, rootElement);
 			writeDomains(document, rootElement);
 			writeDomainAssignment(document, rootElement);
-			writeDomainHierarchy(document, rootElement);
 			writeFlowPolicy(document, rootElement);
 			
 			// Write it out
@@ -90,29 +88,30 @@ public class RIFLWriter {
 	}
 
 	/**
-	 * Writes out the attackerIO component of the RIFL document
+	 * Writes out the interface specification component of the RIFL document
 	 * @param document The XML document in which to write
 	 * @param rootElement The root element of the document
 	 */
-	private void writeAttackerIO(Document document, Element rootElement) {
-		Element attackerIO = document.createElement("attackerio");
+	private void writeInterfaceSpec(Document document, Element rootElement) {
+		Element attackerIO = document.createElement("interfacespec");
+		rootElement.appendChild(attackerIO);
+		
+		for (Assignable assign : this.document.getInterfaceSpec().getSourcesSinks()) {
+			writeAssignable(assign, document, attackerIO);
+		}
+	}
+	
+	/**
+	 * Writes out an assignable element the RIFL document
+	 * @param document The XML document in which to write
+	 * @param rootElement The root element of the document
+	 */
+	private void writeAssignable(Assignable assign, Document document, Element rootElement) {
+		Element attackerIO = document.createElement("assignable");
 		rootElement.appendChild(attackerIO);
 
-		Element sources = document.createElement("sources");
-		attackerIO.appendChild(sources);
-		for (SourceSinkSpec spec : this.document.getAttackerIO().getSources()) {
-			Element source = document.createElement("source");
-			sources.appendChild(source);
-			writeSourceSinkSpec(spec, document, source);
-		}
-		
-		Element sinks = document.createElement("sinks");
-		attackerIO.appendChild(sinks);
-		for (SourceSinkSpec spec : this.document.getAttackerIO().getSinks()) {
-			Element sink = document.createElement("sink");
-			sinks.appendChild(sink);
-			writeSourceSinkSpec(spec, document, sink);
-		}
+		attackerIO.setAttribute("handle", assign.getHandle());
+		writeSourceSinkSpec(assign.getElement(), document, attackerIO);
 	}
 
 	/**
@@ -124,10 +123,29 @@ public class RIFLWriter {
 	 */
 	private void writeSourceSinkSpec(SourceSinkSpec spec, Document document,
 			Element parentElement) {
+		Element containerElement = null;
+		switch (spec.getType()) {
+		case Source:
+			containerElement = document.createElement("source");
+			break;
+		case Sink:
+			containerElement = document.createElement("sink");
+			break;
+		case Category:
+			containerElement = document.createElement("category");
+			break;
+		default:
+			throw new RuntimeException("Invalid source/sink type");
+		}
+		
 		if (spec instanceof JavaParameterSpec)
-			writeJavaParameterSpec((JavaParameterSpec) spec, document, parentElement);
+			writeJavaParameterSpec((JavaParameterSpec) spec, document, containerElement);
 		else if (spec instanceof JavaFieldSpec)
-			writeJavaFieldSpec((JavaFieldSpec) spec, document, parentElement);
+			writeJavaFieldSpec((JavaFieldSpec) spec, document, containerElement);
+		else if (spec instanceof JavaReturnValueSpec)
+			writeJavaReturnValueSpec((JavaReturnValueSpec) spec, document, containerElement);
+		else if (spec instanceof Category)
+			writeCategory((Category) spec, document, containerElement);
 		else
 			throw new RuntimeException("Unsupported source or sink specification type");
 	}
@@ -144,7 +162,6 @@ public class RIFLWriter {
 		Element parameter = document.createElement("parameter");
 		parentElement.appendChild(parameter);
 		
-		parameter.setAttribute("package", spec.getPackageName());
 		parameter.setAttribute("class", spec.getClassName());
 		parameter.setAttribute("method", spec.getHalfSignature());
 		parameter.setAttribute("parameter", Integer.toString(spec.getParamIdx()));
@@ -159,14 +176,48 @@ public class RIFLWriter {
 	 */
 	private void writeJavaFieldSpec(JavaFieldSpec spec,
 			Document document, Element parentElement) {
-		Element parameter = document.createElement("parameter");
-		parameter.appendChild(parentElement);
+		Element parameter = document.createElement("field");
+		parentElement.appendChild(parameter);
 		
-		parameter.setAttribute("package", spec.getPackageName());
 		parameter.setAttribute("class", spec.getClassName());
 		parameter.setAttribute("field", spec.getFieldName());
 	}
+	
+	/**
+	 * Writes out a source/sink specification object for the return values of
+	 * Java methods
+	 * @param spec The source/sink specification to write out
+	 * @param document The document in which to write the source/sink specification
+	 * @param parentElement The parent element in the DOM tree. This must be
+	 * <source> or <sink>
+	 */
+	private void writeJavaReturnValueSpec(JavaReturnValueSpec spec,
+			Document document, Element parentElement) {
+		Element parameter = document.createElement("returnvalue");
+		parentElement.appendChild(parameter);
+		
+		parameter.setAttribute("class", spec.getClassName());
+		parameter.setAttribute("method", spec.getHalfSignature());
+	}
 
+	/**
+	 * Writes out a category specification object Java methods
+	 * @param spec The source/sink specification to write out
+	 * @param document The document in which to write the source/sink specification
+	 * @param parentElement The parent element in the DOM tree. This must be
+	 * <source> or <sink>
+	 */
+	private void writeCategory(Category category, Document document,
+			Element parentElement) {
+		Element categoryElement = document.createElement("category");
+		parentElement.appendChild(categoryElement);
+		
+		categoryElement.setAttribute("name", category.getName());
+		for (SourceSinkSpec element : category.getElements()) {
+			writeSourceSinkSpec(element, document, categoryElement);
+		}
+	}
+	
 	/**
 	 * Writes out the domains component of the RIFL document
 	 * @param document The XML document in which to write
@@ -187,23 +238,9 @@ public class RIFLWriter {
 	 * @param parentElement The parent element in the DOM tree.
 	 */
 	private void writeDomainSpec(DomainSpec spec, Document document, Element parentElement) {
-		if (spec instanceof TopDomain) {
-			Element topDomain = document.createElement("top");
-			parentElement.appendChild(topDomain);
-		}
-		else if (spec instanceof BottomDomain) {
-			Element bottomDomain = document.createElement("bottom");
-			parentElement.appendChild(bottomDomain);
-		}
-		else if (spec instanceof Category) {
-			Element categoryDomain = document.createElement("category");
-			parentElement.appendChild(categoryDomain);
-
-			Category cat = (Category) spec;
-			categoryDomain.setAttribute("value", cat.getValue());
-		}
-		else
-			throw new RuntimeException("Unsupported source or sink specification type");
+		Element categoryDomain = document.createElement("domain");
+		parentElement.appendChild(categoryDomain);		
+		categoryDomain.setAttribute("name", spec.getName());
 	}
 
 	/**
@@ -215,8 +252,8 @@ public class RIFLWriter {
 		Element domainAssignment = document.createElement("domainassignment");
 		rootElement.appendChild(domainAssignment);
 
-		for (SourceSinkDomPair spec : this.document.getDomainAssignment())
-			writeSourceSinkDomPair(spec, document, domainAssignment);
+		for (DomainAssignment spec : this.document.getDomainAssignment())
+			writeDomainAssignment(spec, document, domainAssignment);
 	}
 
 	/**
@@ -225,54 +262,13 @@ public class RIFLWriter {
 	 * @param document The XML document in which to write
 	 * @param rootElement The root element of the document
 	 */
-	private void writeSourceSinkDomPair(SourceSinkDomPair pair,
+	private void writeDomainAssignment(DomainAssignment pair,
 			Document document, Element rootElement) {
-		final Element pairElement;
-		final Element sourceSinkElement;
-		switch (pair.getType()) {
-			case SourceDomPair:
-				pairElement = document.createElement("sourcedompair");
-				sourceSinkElement = document.createElement("source");
-				break;
-			case SinkDomPair:
-				pairElement = document.createElement("sinkdompair");
-				sourceSinkElement = document.createElement("sink");
-				break;
-			default:
-				throw new RuntimeException("Invalid source/sink domain pair type");
-		}
+		final Element pairElement = document.createElement("assign");
 		rootElement.appendChild(pairElement);
 		
-		pairElement.appendChild(sourceSinkElement);
-		writeSourceSinkSpec(pair.getSourceOrSink(), document, sourceSinkElement);
-		writeDomainSpec(pair.getDomain(), document, pairElement);
-	}
-
-	/**
-	 * Writes out the domain hierarchy component of the RIFL document
-	 * @param document The XML document in which to write
-	 * @param rootElement The root element of the document
-	 */
-	private void writeDomainHierarchy(Document document, Element rootElement) {
-		Element domainHierarchy = document.createElement("domainhierarchy");
-		rootElement.appendChild(domainHierarchy);
-
-		for (DomPair pair : this.document.getDomainHierarchy())
-			writeDomainPair(pair, document, domainHierarchy);
-	}
-
-	/**
-	 * Writes out a domain pair object for the use inside the domain hierarchy
-	 * @param pair The domain pair to write out
-	 * @param document The document in which to write the domain pair
-	 * @param parentElement The parent element in the DOM tree
-	 */
-	private void writeDomainPair(DomPair pair, Document document, Element parentElement) {
-		Element domPair = document.createElement("dompair");
-		parentElement.appendChild(domPair);
-		
-		writeDomainSpec(pair.getFirstDomain(), document, domPair);
-		writeDomainSpec(pair.getSecondDomain(), document, domPair);
+		pairElement.setAttribute("handle", pair.getSourceOrSink().getHandle());
+		pairElement.setAttribute("domain", pair.getDomain().getName());
 	}
 	
 	/**
@@ -281,7 +277,7 @@ public class RIFLWriter {
 	 * @param rootElement The root element of the document
 	 */
 	private void writeFlowPolicy(Document document, Element rootElement) {
-		Element flowPolicy = document.createElement("flowpolicy");
+		Element flowPolicy = document.createElement("flowrelation");
 		rootElement.appendChild(flowPolicy);
 
 		for (FlowPair pair : this.document.getFlowPolicy())
@@ -295,11 +291,11 @@ public class RIFLWriter {
 	 * @param parentElement The parent element in the DOM tree
 	 */
 	private void writeFlowPair(FlowPair pair, Document document, Element parentElement) {
-		Element flowPair = document.createElement("flowpair");
+		Element flowPair = document.createElement("flow");
 		parentElement.appendChild(flowPair);
 		
-		writeDomainSpec(pair.getFirstDomain(), document, flowPair);
-		writeDomainSpec(pair.getSecondDomain(), document, flowPair);
+		flowPair.setAttribute("from", pair.getFirstDomain().getName());
+		flowPair.setAttribute("to", pair.getSecondDomain().getName());
 	}
 
 	/**

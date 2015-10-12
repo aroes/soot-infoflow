@@ -20,68 +20,168 @@ import java.util.List;
  */
 public class RIFLDocument {
 
-	private AttackerIO attackerIO = new AttackerIO();
+	private InterfaceSpec interfaceSpec = new InterfaceSpec();
 	private List<DomainSpec> domains = new ArrayList<DomainSpec>();
-	private List<SourceSinkDomPair> domainAssignment = new ArrayList<SourceSinkDomPair>();
-	private List<DomPair> domainHierarchy = new ArrayList<DomPair>();
+	private List<DomainAssignment> domainAssignment = new ArrayList<DomainAssignment>();
 	private List<FlowPair> flowPolicy = new ArrayList<FlowPair>();
 	
-	private TopDomain topDomain = null;
-	private BottomDomain bottomDomain = null;
-	
-	/**
-	 * The source and sink specification in a RIFL document (the IO channels
-	 * through which an attacker can communicate with an application)
-	 */
-	public class AttackerIO {
-		private List<SourceSinkSpec> sources = new ArrayList<SourceSinkSpec>();
-		private List<SourceSinkSpec> sinks = new ArrayList<SourceSinkSpec>();
+	public class Assignable {
+		private final String handle;
+		private final SourceSinkSpec element;
 		
 		/**
-		 * Gets the list of sources defined in this attacker IO specification
-		 * @return The list of sources defined in this attacker IO specification
+		 * Creates a new instance of the Assignable class
+		 * @param handle The handle by which this interface can be referenced
+		 * @param element The element to which the handle refers
 		 */
-		public List<SourceSinkSpec> getSources() {
-			return this.sources;
+		public Assignable(String handle, SourceSinkSpec element) {
+			this.handle = handle;
+			this.element = element;
+		}
+		
+		/**
+		 * Gets the handle by which this interface can be referenced
+		 * @return The handle by which this interface can be referenced
+		 */
+		public String getHandle() {
+			return this.handle;
+		}
+		
+		/**
+		 * Gets the element to which this assignable refers
+		 * @return The element to which this assignable refers
+		 */
+		public SourceSinkSpec getElement() {
+			return this.element;
 		}
 
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result
+					+ ((handle == null) ? 0 : handle.hashCode());
+			result = prime * result
+					+ ((element == null) ? 0 : element.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			Assignable other = (Assignable) obj;
+			if (handle == null) {
+				if (other.handle != null)
+					return false;
+			} else if (!handle.equals(other.handle))
+				return false;
+			if (element == null) {
+				if (other.element != null)
+					return false;
+			} else if (!element.equals(other.element))
+				return false;
+			return true;
+		}
+	}
+	
+	/**
+	 * The interface specification in a RIFL document (the IO channels
+	 * through which an attacker can communicate with an application)
+	 */
+	public class InterfaceSpec {
+		private final List<Assignable> sourcesSinks = new ArrayList<Assignable>();
+		
 		/**
-		 * Gets the list of sinks defined in this attacker IO specification
-		 * @return The list of sinks defined in this attacker IO specification
+		 * Gets the list of sources and sinks defined in this interface
+		 * specification
+		 * @return The list of sources and sinks defined in this interface
+		 * specification
 		 */
-		public List<SourceSinkSpec> getSinks() {
-			return this.sinks;
+		public List<Assignable> getSourcesSinks() {
+			return this.sourcesSinks;
 		}
 		
 		@Override
 		public int hashCode() {
-			return 31 * this.sources.hashCode()
-					+ 31 * this.sinks.hashCode();
+			return 31 * this.sourcesSinks.hashCode();
 		}
 		
 		@Override
 		public boolean equals(Object other) {
 			if (this == other)
 				return true;
-			if (other == null || !(other instanceof AttackerIO))
+			if (other == null || !(other instanceof InterfaceSpec))
 				return false;
-			AttackerIO otherIO = (AttackerIO) other;
-			return this.sources.equals(otherIO.sources)
-					&& this.sinks.equals(otherIO.sinks);
+			InterfaceSpec otherIO = (InterfaceSpec) other;
+			return this.sourcesSinks.equals(otherIO.sourcesSinks);
 		}
+	}
+	
+	/**
+	 * An enumeration specifying whether an assignable is a source or a sink
+	 */
+	public enum SourceSinkType {
+		Category,
+		Source,
+		Sink
 	}
 	
 	/**
 	 * Abstract base class for all source and sink specifications in RIFL
 	 */
 	public abstract class SourceSinkSpec {
+		protected final SourceSinkType type;
+		
+		public SourceSinkSpec(SourceSinkType type) {
+			this.type = type;
+		}
+		
+		/**
+		 * Gets the type of this specification, i.e., whether it's a source or
+		 * a sink
+		 * @return The type of this specification
+		 */
+		public SourceSinkType getType() {
+			return this.type;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((type == null) ? 0 : type.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			SourceSinkSpec other = (SourceSinkSpec) obj;
+			if (type != other.type)
+				return false;
+			return true;
+		}
 		
 	}
 	
 	/**
 	 * Instance of the {@link SourceSinkSpec} class for Java 
 	 */
-	public class JavaSourceSinkSpec extends SourceSinkSpec {
+	public abstract class JavaSourceSinkSpec extends SourceSinkSpec {
+
+		public JavaSourceSinkSpec(SourceSinkType type) {
+			super(type);
+		}
 		
 	}
 	
@@ -90,16 +190,13 @@ public class RIFLDocument {
 	 * sink in RIFL
 	 */
 	public class JavaParameterSpec extends JavaSourceSinkSpec {
-		private final String packageName;
 		private final String className;
 		private final String halfSignature;
 		private final int paramIdx;
 		
 		/**
 		 * Creates a new instance of the {@link JavaParameterSpec} class
-		 * @param packageName The name of the Java package containing the class
-		 * which contains the method whose parameter is being configured as a
-		 * source or sink.
+		 * @param type Specifies whether this element is a source or a sink
 		 * @param className The name of the class containing the parameter to
 		 * be defined as a source or sink.
 		 * @param halfSignature The method name and the formal parameters with
@@ -108,21 +205,12 @@ public class RIFLDocument {
 		 * @param paramIdx The index of the parameter to be defined as a source
 		 * or sink. 0 refers to the return value, so the list is 1-based.
 		 */
-		public JavaParameterSpec(String packageName, String className,
+		public JavaParameterSpec(SourceSinkType type, String className,
 				String halfSignature, int paramIdx) {
-			this.packageName = packageName;
+			super(type);
 			this.className = className;
 			this.halfSignature = halfSignature;
 			this.paramIdx = paramIdx;
-		}
-		
-		/**
-		 * Gets the name of the Java package containing the class which contains
-		 * the method whose parameter is being configured as a source or sink.
-		 * @return The package name
-		 */
-		public String getPackageName() {
-			return this.packageName;
 		}
 		
 		/**
@@ -156,10 +244,90 @@ public class RIFLDocument {
 
 		@Override
 		public int hashCode() {
-			return 31 * this.packageName.hashCode()
-					+ 31 * this.className.hashCode()
-					+ 31 * this.halfSignature.hashCode()
-					+ 31 * this.paramIdx;
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result
+					+ ((className == null) ? 0 : className.hashCode());
+			result = prime * result
+					+ ((halfSignature == null) ? 0 : halfSignature.hashCode());
+			result = prime * result + paramIdx;
+			return result;
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			JavaParameterSpec other = (JavaParameterSpec) obj;
+			if (className == null) {
+				if (other.className != null)
+					return false;
+			} else if (!className.equals(other.className))
+				return false;
+			if (halfSignature == null) {
+				if (other.halfSignature != null)
+					return false;
+			} else if (!halfSignature.equals(other.halfSignature))
+				return false;
+			if (paramIdx != other.paramIdx)
+				return false;
+			return true;
+		}
+
+	}
+	
+	/**
+	 * Class that models the return value of a Java method specified as a source
+	 * or a sink in a RIFL document
+	 */
+	public class JavaReturnValueSpec extends JavaSourceSinkSpec {
+		private final String className;
+		private final String halfSignature;
+		
+		/**
+		 * Creates a new instance of the {@link JavaReturnValueSpec} class
+		 * @param type Specifies whether this element is a source or a sink
+		 * @param className The name of the class containing the method whose
+		 * return value shall be defined as a source or a sink
+		 * @param halfSignature The method name and the formal parameters with
+		 * fully-qualified names in brackets. This is like a Soot subsignature,
+		 * except for the return type which is omitted.
+		 */
+		public JavaReturnValueSpec(SourceSinkType type, String className,
+				String halfSignature) {
+			super(type);
+			this.className = className;
+			this.halfSignature = halfSignature;
+		}
+		
+		/**
+		 * Gets the name of the class containing the method return value to be
+		 * defined as a source or sink.
+		 * @return The class name
+		 */
+		public String getClassName() {
+			return this.className;
+		}
+		
+		/**
+		 * Gets the method name and the formal parameters with fully-qualified
+		 * names in brackets. This is like a Soot subsignature, except for the
+		 * return type which is omitted.
+		 * @return The method name and the method's fully qualified parameter
+		 * list
+		 */
+		public String getHalfSignature() {
+			return this.halfSignature;
+		}
+		
+		@Override
+		public int hashCode() {
+			return 31 * this.className.hashCode()
+					+ 31 * this.halfSignature.hashCode();
 		}
 		
 		@Override
@@ -169,10 +337,8 @@ public class RIFLDocument {
 			if (other == null || !(other instanceof JavaParameterSpec))
 				return false;
 			JavaParameterSpec otherSpec = (JavaParameterSpec) other;
-			return this.packageName.equals(otherSpec.packageName)
-					&& this.className.equals(otherSpec.className)
-					&& this.halfSignature.equals(otherSpec.halfSignature)
-					&& this.paramIdx == otherSpec.paramIdx;
+			return this.className.equals(otherSpec.className)
+					&& this.halfSignature.equals(otherSpec.halfSignature);
 		}
 	}
 	
@@ -181,32 +347,22 @@ public class RIFLDocument {
 	 * in RIFL
 	 */
 	public class JavaFieldSpec extends JavaSourceSinkSpec {
-		private final String packageName;
 		private final String className;
 		private final String fieldName;
 		
 		/**
 		 * Creates a new instance of the {@link JavaFieldSpec} class
-		 * @param packageName The name of the Java package containing the class
-		 * with the static field to be considered as a source or sink
+		 * @param type Specifies whether this element is a source or a sink
 		 * @param className The name of the class containing the static field to
 		 * be defined as a source or sink.
 		 * @param fieldName The name of the static field to be treated as a source
 		 * or sink
 		 */
-		public JavaFieldSpec(String packageName, String className, String fieldName) {
-			this.packageName = packageName;
+		public JavaFieldSpec(SourceSinkType type, String className,
+				String fieldName) {
+			super(type);
 			this.className = className;
 			this.fieldName = fieldName;
-		}
-		
-		/**
-		 * Gets the name of the Java package containing the class with the static
-		 * field to be considered as a source or sink
-		 * @return The package name
-		 */
-		public String getPackageName() {
-			return this.packageName;
 		}
 		
 		/**
@@ -228,8 +384,7 @@ public class RIFLDocument {
 
 		@Override
 		public int hashCode() {
-			return 31 * this.packageName.hashCode()
-					+ 31 * this.className.hashCode()
+			return 31 * this.className.hashCode()
 					+ 31 * this.fieldName.hashCode();
 		}
 		
@@ -240,8 +395,7 @@ public class RIFLDocument {
 			if (other == null || !(other instanceof JavaFieldSpec))
 				return false;
 			JavaFieldSpec otherSpec = (JavaFieldSpec) other;
-			return this.packageName.equals(otherSpec.packageName)
-					&& this.className.equals(otherSpec.className)
+			return this.className.equals(otherSpec.className)
 					&& this.fieldName.equals(otherSpec.fieldName);
 		}
 	}
@@ -249,46 +403,61 @@ public class RIFLDocument {
 	/**
 	 * Class representing a domain in the RIFL specification
 	 */
-	public abstract class DomainSpec {
-	}
-	
-	/**
-	 * The fixed "TOP" domain
-	 */
-	public class TopDomain extends DomainSpec {
-	}
-	
-	/**
-	 * The fixed "BOTTOM" domain
-	 */
-	public class BottomDomain extends DomainSpec {
+	public class DomainSpec {
+		private final String name;
+		
+		/**
+		 * Creates a new instance of the DomainSpec class
+		 * @param name The name of this domain
+		 */
+		public DomainSpec(String name) {
+			this.name = name;
+		}
+		
+		/**
+		 * Gets the name of this domain
+		 * @return The name of this domain
+		 */
+		public String getName() {
+			return this.name;
+		}
 	}
 	
 	/**
 	 * A category based on a named domain
 	 */
-	public class Category extends DomainSpec {
-		private String value = "";
+	public class Category extends SourceSinkSpec {
+		private final String name;
+		private final List<SourceSinkSpec> elements = new ArrayList<>();
 		
 		/**
 		 * Creates a new instance of the {@link Category} class
-		 * @param value The name of the category
+		 * @param name The name of the category
 		 */
-		public Category(String value) {
-			this.value = value;
+		public Category(String name) {
+			super(SourceSinkType.Category);
+			this.name = name;
 		}
 		
 		/**
 		 * Gets the name of this category
 		 * @return The name of this category
 		 */
-		public String getValue() {
-			return this.value;
+		public String getName() {
+			return this.name;
+		}
+		
+		/**
+		 * Gets the sources and sinks in this category
+		 * @return The sources and sinks in this category
+		 */
+		public List<SourceSinkSpec> getElements() {
+			return this.elements;
 		}
 
 		@Override
 		public int hashCode() {
-			return 31 * this.value.hashCode();
+			return 31 * this.name.hashCode();
 		}
 		
 		@Override
@@ -298,50 +467,32 @@ public class RIFLDocument {
 			if (other == null || !(other instanceof Category))
 				return false;
 			Category otherSpec = (Category) other;
-			return this.value.equals(otherSpec.value);
+			return this.name.equals(otherSpec.name);
 		}
 	}
 	
 	/**
-	 * Enumeration defining whether a domain is associated with a source or a
-	 * sink
+	 * A link between an assignable element and a domain
 	 */
-	public enum DomPairType {
-		/**
-		 * A source is associated with a domain
-		 */
-		SourceDomPair,
-		/**
-		 * A sink is associated with a domain
-		 */
-		SinkDomPair
-	}
-	
-	/**
-	 * A source- or sink-domain pair
-	 */
-	public class SourceSinkDomPair {
-		private final SourceSinkSpec sourceOrSink;
+	public class DomainAssignment {
+		private final Assignable sourceOrSink;
 		private final DomainSpec domain;
-		private final DomPairType type;
 		
 		/**
-		 * Creates a new instance of the {@link SourceSinkDomPair} class
+		 * Creates a new instance of the {@link DomainAssignment} class
 		 * @param sourceOrSink The source or sink to be associated with a domain
 		 * @param domain The domain to associate the source or sink with
 		 */
-		public SourceSinkDomPair(SourceSinkSpec sourceOrSink, DomainSpec domain,
-				DomPairType type) {
+		public DomainAssignment(Assignable sourceOrSink, DomainSpec domain) {
 			this.sourceOrSink = sourceOrSink;
 			this.domain = domain;
-			this.type = type;
 		}
 		
 		/**
 		 * Gets the source or sink associated with a domain
 		 * @return The source or sink associated with a domain
 		 */
-		public SourceSinkSpec getSourceOrSink() {
+		public Assignable getSourceOrSink() {
 			return this.sourceOrSink;
 		}
 		
@@ -353,15 +504,6 @@ public class RIFLDocument {
 			return this.domain;
 		}
 		
-		/**
-		 * Gets whether a source or a sink is associated with a domain in this
-		 * object
-		 * @return The type of the association
-		 */
-		public DomPairType getType() {
-			return this.type;
-		}
-
 		@Override
 		public int hashCode() {
 			return 31 * this.sourceOrSink.hashCode()
@@ -372,62 +514,11 @@ public class RIFLDocument {
 		public boolean equals(Object other) {
 			if (this == other)
 				return true;
-			if (other == null || !(other instanceof SourceSinkDomPair))
+			if (other == null || !(other instanceof DomainAssignment))
 				return false;
-			SourceSinkDomPair otherPair = (SourceSinkDomPair) other;
+			DomainAssignment otherPair = (DomainAssignment) other;
 			return this.sourceOrSink.equals(otherPair.sourceOrSink)
 					&& this.domain.equals(otherPair.domain);
-		}
-	}
-	
-	/**
-	 * A pair of domains to be used in the domain hierarchy
-	 */
-	public class DomPair {
-		private final DomainSpec firstDomain;
-		private final DomainSpec secondDomain;
-		
-		/**
-		 * Creates a new instance of the {@link DomPair} class
-		 * @param firstDomain The first domain in the pair
-		 * @param secondDomain The second domain in the pair
-		 */
-		public DomPair(DomainSpec firstDomain, DomainSpec secondDomain) {
-			this.firstDomain = firstDomain;
-			this.secondDomain = secondDomain;
-		}
-		
-		/**
-		 * Gets the first domain in the pair
-		 * @return The first domain in the pair
-		 */
-		public DomainSpec getFirstDomain() {
-			return this.firstDomain;
-		}
-
-		/**
-		 * Gets the second domain in the pair
-		 * @return The second domain in the pair
-		 */
-		public DomainSpec getSecondDomain() {
-			return this.secondDomain;
-		}
-
-		@Override
-		public int hashCode() {
-			return 31 * this.firstDomain.hashCode()
-					+ 31 * this.secondDomain.hashCode();
-		}
-		
-		@Override
-		public boolean equals(Object other) {
-			if (this == other)
-				return true;
-			if (other == null || !(other instanceof DomPair))
-				return false;
-			DomPair otherPair = (DomPair) other;
-			return this.firstDomain.equals(otherPair.firstDomain)
-					&& this.secondDomain.equals(otherPair.secondDomain);
 		}
 	}
 	
@@ -488,11 +579,11 @@ public class RIFLDocument {
 	}
 
 	/**
-	 * Gets the attacker IO specification
-	 * @return The attacker IO specification
+	 * Gets the interface specification
+	 * @return The interface specification
 	 */
-	public AttackerIO getAttackerIO() {
-		return this.attackerIO;
+	public InterfaceSpec getInterfaceSpec() {
+		return this.interfaceSpec;
 	}
 	
 	/**
@@ -507,16 +598,8 @@ public class RIFLDocument {
 	 * Gets the list of domain assignments
 	 * @return The list of domain assignments
 	 */
-	public List<SourceSinkDomPair> getDomainAssignment() {
+	public List<DomainAssignment> getDomainAssignment() {
 		return this.domainAssignment;
-	}
-	
-	/**
-	 * Gets the domain hierarchy tree
-	 * @return The domain hierarchy tree
-	 */
-	public List<DomPair> getDomainHierarchy() {
-		return this.domainHierarchy;
 	}
 	
 	/**
@@ -537,29 +620,15 @@ public class RIFLDocument {
 		return "1.0";
 	}
 	
-	public TopDomain getTopDomain() {
-		if (topDomain == null)
-			topDomain = new TopDomain();
-		return topDomain;
-	}
-
-	public BottomDomain getBottomDomain() {
-		if (bottomDomain == null)
-			bottomDomain = new BottomDomain();
-		return bottomDomain;
-	}
-
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result
-				+ ((attackerIO == null) ? 0 : attackerIO.hashCode());
+				+ ((interfaceSpec == null) ? 0 : interfaceSpec.hashCode());
 		result = prime
 				* result
 				+ ((domainAssignment == null) ? 0 : domainAssignment.hashCode());
-		result = prime * result
-				+ ((domainHierarchy == null) ? 0 : domainHierarchy.hashCode());
 		result = prime * result + ((domains == null) ? 0 : domains.hashCode());
 		result = prime * result
 				+ ((flowPolicy == null) ? 0 : flowPolicy.hashCode());
@@ -573,9 +642,8 @@ public class RIFLDocument {
 		if (obj == null || !(obj instanceof RIFLDocument))
 			return false;
 		RIFLDocument other = (RIFLDocument) obj;
-		return attackerIO.equals(other.attackerIO)
+		return interfaceSpec.equals(other.interfaceSpec)
 				&& domainAssignment.equals(other.domainAssignment)
-				&& domainHierarchy.equals(other.domainHierarchy)
 				&& domains.equals(other.domains)
 				&& flowPolicy.equals(other.flowPolicy);
 	}
