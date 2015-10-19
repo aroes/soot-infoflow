@@ -113,7 +113,7 @@ public class RIFLWriter {
 		attackerIO.setAttribute("handle", assign.getHandle());
 		writeSourceSinkSpec(assign.getElement(), document, attackerIO);
 	}
-
+	
 	/**
 	 * Writes out a source/sink specification object
 	 * @param spec The source/sink specification to write out
@@ -137,6 +137,7 @@ public class RIFLWriter {
 		default:
 			throw new RuntimeException("Invalid source/sink type");
 		}
+		parentElement.appendChild(containerElement);
 		
 		if (spec instanceof JavaParameterSpec)
 			writeJavaParameterSpec((JavaParameterSpec) spec, document, containerElement);
