@@ -106,6 +106,19 @@ public class RIFLDocument {
 			return this.sourcesSinks;
 		}
 		
+		/**
+		 * Gets the assignable with the given handle
+		 * @param handle The handle of the assignable to retrieve
+		 * @return The assignable with the given handle if it has been found,
+		 * otherwise false
+		 */
+		public Assignable getElementByHandle(String handle) {
+			for (Assignable assign : this.sourcesSinks)
+				if (assign.getHandle().equals(handle))
+					return assign;
+			return null;
+		}
+		
 		@Override
 		public int hashCode() {
 			return 31 * this.sourcesSinks.hashCode();
@@ -178,9 +191,109 @@ public class RIFLDocument {
 	 * Instance of the {@link SourceSinkSpec} class for Java 
 	 */
 	public abstract class JavaSourceSinkSpec extends SourceSinkSpec {
-
-		public JavaSourceSinkSpec(SourceSinkType type) {
+		private final String className;
+		
+		/**
+		 * Creates a new instance of the JavaSourceSinkSpec class
+		 * @param type Specifies whether this element is a source or a sink
+		 * @param className The name of the class containing the parameter to
+		 * be defined as a source or sink.
+		 */
+		public JavaSourceSinkSpec(SourceSinkType type, String className) {
 			super(type);
+			this.className = className;
+		}
+		
+		/**
+		 * Gets the name of the class containing the parameter to be defined as
+		 * a source or sink.
+		 * @return The class name
+		 */
+		public String getClassName() {
+			return this.className;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result
+					+ ((className == null) ? 0 : className.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			JavaSourceSinkSpec other = (JavaSourceSinkSpec) obj;
+			if (className == null) {
+				if (other.className != null)
+					return false;
+			} else if (!className.equals(other.className))
+				return false;
+			return true;
+		}
+		
+	}
+	
+	/**
+	 * Abstract base class for source/sink specifications on methods
+	 */
+	public abstract class JavaMethodSourceSinkSpec extends JavaSourceSinkSpec {
+		private final String halfSignature;
+
+		/**
+		 * Creates a new instance of the JavaSourceSinkSpec class
+		 * @param type Specifies whether this element is a source or a sink
+		 * @param className The name of the class containing the parameter to
+		 * be defined as a source or sink.
+		 */
+		public JavaMethodSourceSinkSpec(SourceSinkType type, String className,
+				String halfSignature) {
+			super(type, className);
+			this.halfSignature = halfSignature;
+		}
+		
+		/**
+		 * Gets the method name and the formal parameters with fully-qualified
+		 * names in brackets. This is like a Soot subsignature, except for the
+		 * return type which is omitted.
+		 * @return The method name and the method's fully qualified parameter
+		 * list
+		 */
+		public String getHalfSignature() {
+			return this.halfSignature;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result
+					+ ((halfSignature == null) ? 0 : halfSignature.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			JavaMethodSourceSinkSpec other = (JavaMethodSourceSinkSpec) obj;
+			if (halfSignature == null) {
+				if (other.halfSignature != null)
+					return false;
+			} else if (!halfSignature.equals(other.halfSignature))
+				return false;
+			return true;
 		}
 		
 	}
@@ -189,9 +302,7 @@ public class RIFLDocument {
 	 * Class that models a method parameter in Java specified as a source or
 	 * sink in RIFL
 	 */
-	public class JavaParameterSpec extends JavaSourceSinkSpec {
-		private final String className;
-		private final String halfSignature;
+	public class JavaParameterSpec extends JavaMethodSourceSinkSpec {
 		private final int paramIdx;
 		
 		/**
@@ -207,30 +318,8 @@ public class RIFLDocument {
 		 */
 		public JavaParameterSpec(SourceSinkType type, String className,
 				String halfSignature, int paramIdx) {
-			super(type);
-			this.className = className;
-			this.halfSignature = halfSignature;
+			super(type, className, halfSignature);
 			this.paramIdx = paramIdx;
-		}
-		
-		/**
-		 * Gets the name of the class containing the parameter to be defined as
-		 * a source or sink.
-		 * @return The class name
-		 */
-		public String getClassName() {
-			return this.className;
-		}
-		
-		/**
-		 * Gets the method name and the formal parameters with fully-qualified
-		 * names in brackets. This is like a Soot subsignature, except for the
-		 * return type which is omitted.
-		 * @return The method name and the method's fully qualified parameter
-		 * list
-		 */
-		public String getHalfSignature() {
-			return this.halfSignature;
 		}
 		
 		/**
@@ -246,10 +335,6 @@ public class RIFLDocument {
 		public int hashCode() {
 			final int prime = 31;
 			int result = super.hashCode();
-			result = prime * result
-					+ ((className == null) ? 0 : className.hashCode());
-			result = prime * result
-					+ ((halfSignature == null) ? 0 : halfSignature.hashCode());
 			result = prime * result + paramIdx;
 			return result;
 		}
@@ -263,16 +348,6 @@ public class RIFLDocument {
 			if (getClass() != obj.getClass())
 				return false;
 			JavaParameterSpec other = (JavaParameterSpec) obj;
-			if (className == null) {
-				if (other.className != null)
-					return false;
-			} else if (!className.equals(other.className))
-				return false;
-			if (halfSignature == null) {
-				if (other.halfSignature != null)
-					return false;
-			} else if (!halfSignature.equals(other.halfSignature))
-				return false;
 			if (paramIdx != other.paramIdx)
 				return false;
 			return true;
@@ -284,9 +359,7 @@ public class RIFLDocument {
 	 * Class that models the return value of a Java method specified as a source
 	 * or a sink in a RIFL document
 	 */
-	public class JavaReturnValueSpec extends JavaSourceSinkSpec {
-		private final String className;
-		private final String halfSignature;
+	public class JavaReturnValueSpec extends JavaMethodSourceSinkSpec {
 		
 		/**
 		 * Creates a new instance of the {@link JavaReturnValueSpec} class
@@ -299,47 +372,9 @@ public class RIFLDocument {
 		 */
 		public JavaReturnValueSpec(SourceSinkType type, String className,
 				String halfSignature) {
-			super(type);
-			this.className = className;
-			this.halfSignature = halfSignature;
+			super(type, className, halfSignature);
 		}
 		
-		/**
-		 * Gets the name of the class containing the method return value to be
-		 * defined as a source or sink.
-		 * @return The class name
-		 */
-		public String getClassName() {
-			return this.className;
-		}
-		
-		/**
-		 * Gets the method name and the formal parameters with fully-qualified
-		 * names in brackets. This is like a Soot subsignature, except for the
-		 * return type which is omitted.
-		 * @return The method name and the method's fully qualified parameter
-		 * list
-		 */
-		public String getHalfSignature() {
-			return this.halfSignature;
-		}
-		
-		@Override
-		public int hashCode() {
-			return 31 * this.className.hashCode()
-					+ 31 * this.halfSignature.hashCode();
-		}
-		
-		@Override
-		public boolean equals(Object other) {
-			if (this == other)
-				return true;
-			if (other == null || !(other instanceof JavaParameterSpec))
-				return false;
-			JavaParameterSpec otherSpec = (JavaParameterSpec) other;
-			return this.className.equals(otherSpec.className)
-					&& this.halfSignature.equals(otherSpec.halfSignature);
-		}
 	}
 	
 	/**
@@ -347,7 +382,6 @@ public class RIFLDocument {
 	 * in RIFL
 	 */
 	public class JavaFieldSpec extends JavaSourceSinkSpec {
-		private final String className;
 		private final String fieldName;
 		
 		/**
@@ -360,18 +394,8 @@ public class RIFLDocument {
 		 */
 		public JavaFieldSpec(SourceSinkType type, String className,
 				String fieldName) {
-			super(type);
-			this.className = className;
+			super(type, className);
 			this.fieldName = fieldName;
-		}
-		
-		/**
-		 * Gets the name of the class containing the static field to be defined as
-		 * a source or sink.
-		 * @return The class name
-		 */
-		public String getClassName() {
-			return this.className;
 		}
 		
 		/**
@@ -384,8 +408,7 @@ public class RIFLDocument {
 
 		@Override
 		public int hashCode() {
-			return 31 * this.className.hashCode()
-					+ 31 * this.fieldName.hashCode();
+			return 31 * this.fieldName.hashCode();
 		}
 		
 		@Override
@@ -395,8 +418,7 @@ public class RIFLDocument {
 			if (other == null || !(other instanceof JavaFieldSpec))
 				return false;
 			JavaFieldSpec otherSpec = (JavaFieldSpec) other;
-			return this.className.equals(otherSpec.className)
-					&& this.fieldName.equals(otherSpec.fieldName);
+			return this.fieldName.equals(otherSpec.fieldName);
 		}
 	}
 
@@ -592,6 +614,19 @@ public class RIFLDocument {
 	 */
 	public List<DomainSpec> getDomains() {
 		return this.domains;
+	}
+	
+	/**
+	 * Gets the flow domain with the given name
+	 * @param domainName The name of the flow domain to retrieve
+	 * @return The flow domain with the given name. If no domain with the given
+	 * name can be found, null is returned.
+	 */
+	public DomainSpec getDomainByName(String domainName) {
+		for (DomainSpec ds : domains)
+			if (ds.getName().equals(domainName))
+				return ds;
+		return null;
 	}
 	
 	/**

@@ -59,7 +59,7 @@ public class RIFLWriter {
 			DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
 			
 			Document document = documentBuilder.newDocument();
-			Element rootElement = document.createElement("riflspec");
+			Element rootElement = document.createElement(RIFLConstants.RIFL_SPEC_TAG);
 			document.appendChild(rootElement);
 			
 			writeInterfaceSpec(document, rootElement);
@@ -93,7 +93,7 @@ public class RIFLWriter {
 	 * @param rootElement The root element of the document
 	 */
 	private void writeInterfaceSpec(Document document, Element rootElement) {
-		Element attackerIO = document.createElement("interfacespec");
+		Element attackerIO = document.createElement(RIFLConstants.INTERFACE_SPEC_TAG);
 		rootElement.appendChild(attackerIO);
 		
 		for (Assignable assign : this.document.getInterfaceSpec().getSourcesSinks()) {
@@ -107,10 +107,10 @@ public class RIFLWriter {
 	 * @param rootElement The root element of the document
 	 */
 	private void writeAssignable(Assignable assign, Document document, Element rootElement) {
-		Element attackerIO = document.createElement("assignable");
+		Element attackerIO = document.createElement(RIFLConstants.ASSIGNABLE_TAG);
 		rootElement.appendChild(attackerIO);
 
-		attackerIO.setAttribute("handle", assign.getHandle());
+		attackerIO.setAttribute(RIFLConstants.HANDLE_ATTRIBUTE, assign.getHandle());
 		writeSourceSinkSpec(assign.getElement(), document, attackerIO);
 	}
 	
@@ -126,13 +126,13 @@ public class RIFLWriter {
 		Element containerElement = null;
 		switch (spec.getType()) {
 		case Source:
-			containerElement = document.createElement("source");
+			containerElement = document.createElement(RIFLConstants.SOURCE_TAG);
 			break;
 		case Sink:
-			containerElement = document.createElement("sink");
+			containerElement = document.createElement(RIFLConstants.SINK_TAG);
 			break;
 		case Category:
-			containerElement = document.createElement("category");
+			containerElement = document.createElement(RIFLConstants.CATEGORY_TAG);
 			break;
 		default:
 			throw new RuntimeException("Invalid source/sink type");
@@ -160,12 +160,12 @@ public class RIFLWriter {
 	 */
 	private void writeJavaParameterSpec(JavaParameterSpec spec,
 			Document document, Element parentElement) {
-		Element parameter = document.createElement("parameter");
+		Element parameter = document.createElement(RIFLConstants.PARAMETER_TAG);
 		parentElement.appendChild(parameter);
 		
-		parameter.setAttribute("class", spec.getClassName());
-		parameter.setAttribute("method", spec.getHalfSignature());
-		parameter.setAttribute("parameter", Integer.toString(spec.getParamIdx()));
+		parameter.setAttribute(RIFLConstants.CLASS_ATTRIBUTE, spec.getClassName());
+		parameter.setAttribute(RIFLConstants.METHOD_ATTRIBUTE, spec.getHalfSignature());
+		parameter.setAttribute(RIFLConstants.PARAMETER_ATTRIBUTE, Integer.toString(spec.getParamIdx()));
 	}
 
 	/**
@@ -177,11 +177,11 @@ public class RIFLWriter {
 	 */
 	private void writeJavaFieldSpec(JavaFieldSpec spec,
 			Document document, Element parentElement) {
-		Element parameter = document.createElement("field");
+		Element parameter = document.createElement(RIFLConstants.FIELD_TAG);
 		parentElement.appendChild(parameter);
 		
-		parameter.setAttribute("class", spec.getClassName());
-		parameter.setAttribute("field", spec.getFieldName());
+		parameter.setAttribute(RIFLConstants.CLASS_ATTRIBUTE, spec.getClassName());
+		parameter.setAttribute(RIFLConstants.FIELD_ATTRIBUTE, spec.getFieldName());
 	}
 	
 	/**
@@ -194,11 +194,11 @@ public class RIFLWriter {
 	 */
 	private void writeJavaReturnValueSpec(JavaReturnValueSpec spec,
 			Document document, Element parentElement) {
-		Element parameter = document.createElement("returnvalue");
+		Element parameter = document.createElement(RIFLConstants.RETURN_VALUE_TAG);
 		parentElement.appendChild(parameter);
 		
-		parameter.setAttribute("class", spec.getClassName());
-		parameter.setAttribute("method", spec.getHalfSignature());
+		parameter.setAttribute(RIFLConstants.CLASS_ATTRIBUTE, spec.getClassName());
+		parameter.setAttribute(RIFLConstants.METHOD_ATTRIBUTE, spec.getHalfSignature());
 	}
 
 	/**
@@ -210,10 +210,10 @@ public class RIFLWriter {
 	 */
 	private void writeCategory(Category category, Document document,
 			Element parentElement) {
-		Element categoryElement = document.createElement("category");
+		Element categoryElement = document.createElement(RIFLConstants.CATEGORY_TAG);
 		parentElement.appendChild(categoryElement);
 		
-		categoryElement.setAttribute("name", category.getName());
+		categoryElement.setAttribute(RIFLConstants.NAME_ATTRIBUTE, category.getName());
 		for (SourceSinkSpec element : category.getElements()) {
 			writeSourceSinkSpec(element, document, categoryElement);
 		}
@@ -225,7 +225,7 @@ public class RIFLWriter {
 	 * @param rootElement The root element of the document
 	 */
 	private void writeDomains(Document document, Element rootElement) {
-		Element domains = document.createElement("domains");
+		Element domains = document.createElement(RIFLConstants.DOMAINS_TAG);
 		rootElement.appendChild(domains);
 
 		for (DomainSpec spec : this.document.getDomains())
@@ -239,9 +239,9 @@ public class RIFLWriter {
 	 * @param parentElement The parent element in the DOM tree.
 	 */
 	private void writeDomainSpec(DomainSpec spec, Document document, Element parentElement) {
-		Element categoryDomain = document.createElement("domain");
-		parentElement.appendChild(categoryDomain);		
-		categoryDomain.setAttribute("name", spec.getName());
+		Element categoryDomain = document.createElement(RIFLConstants.DOMAIN_TAG);
+		parentElement.appendChild(categoryDomain);
+		categoryDomain.setAttribute(RIFLConstants.NAME_ATTRIBUTE, spec.getName());
 	}
 
 	/**
@@ -250,7 +250,7 @@ public class RIFLWriter {
 	 * @param rootElement The root element of the document
 	 */
 	private void writeDomainAssignment(Document document, Element rootElement) {
-		Element domainAssignment = document.createElement("domainassignment");
+		Element domainAssignment = document.createElement(RIFLConstants.DOMAIN_ASSIGNMENT_TAG);
 		rootElement.appendChild(domainAssignment);
 
 		for (DomainAssignment spec : this.document.getDomainAssignment())
@@ -265,11 +265,11 @@ public class RIFLWriter {
 	 */
 	private void writeDomainAssignment(DomainAssignment pair,
 			Document document, Element rootElement) {
-		final Element pairElement = document.createElement("assign");
+		final Element pairElement = document.createElement(RIFLConstants.ASSIGN_TAG);
 		rootElement.appendChild(pairElement);
 		
-		pairElement.setAttribute("handle", pair.getSourceOrSink().getHandle());
-		pairElement.setAttribute("domain", pair.getDomain().getName());
+		pairElement.setAttribute(RIFLConstants.HANDLE_ATTRIBUTE, pair.getSourceOrSink().getHandle());
+		pairElement.setAttribute(RIFLConstants.DOMAIN_ATTRIBUTE, pair.getDomain().getName());
 	}
 	
 	/**
@@ -278,7 +278,7 @@ public class RIFLWriter {
 	 * @param rootElement The root element of the document
 	 */
 	private void writeFlowPolicy(Document document, Element rootElement) {
-		Element flowPolicy = document.createElement("flowrelation");
+		Element flowPolicy = document.createElement(RIFLConstants.FLOW_RELATION_TAG);
 		rootElement.appendChild(flowPolicy);
 
 		for (FlowPair pair : this.document.getFlowPolicy())
@@ -292,11 +292,11 @@ public class RIFLWriter {
 	 * @param parentElement The parent element in the DOM tree
 	 */
 	private void writeFlowPair(FlowPair pair, Document document, Element parentElement) {
-		Element flowPair = document.createElement("flow");
+		Element flowPair = document.createElement(RIFLConstants.FLOW_TAG);
 		parentElement.appendChild(flowPair);
 		
-		flowPair.setAttribute("from", pair.getFirstDomain().getName());
-		flowPair.setAttribute("to", pair.getSecondDomain().getName());
+		flowPair.setAttribute(RIFLConstants.FROM_ATTRIBUTE, pair.getFirstDomain().getName());
+		flowPair.setAttribute(RIFLConstants.TO_ATTRIBUTE, pair.getSecondDomain().getName());
 	}
 
 	/**
