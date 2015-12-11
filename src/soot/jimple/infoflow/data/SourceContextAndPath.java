@@ -140,14 +140,14 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 		if (this.hashCode != 0 && scap.hashCode != 0 && this.hashCode != scap.hashCode)
 			return false;
 		
-		if (!InfoflowConfiguration.getPathAgnosticResults()) {
-			if (this.callStack == null) {
-				if (scap.callStack != null)
-					return false;
-			}
-			else if (!this.callStack.equals(scap.callStack))
+		if (this.callStack == null) {
+			if (scap.callStack != null)
 				return false;
+		}
+		else if (!this.callStack.equals(scap.callStack))
+			return false;
 			
+		if (!InfoflowConfiguration.getPathAgnosticResults()) {	
 			if (!this.path.equals(scap.path))
 				return false;
 		}
@@ -162,7 +162,7 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 		
 		synchronized(this) {
 			hashCode = (!InfoflowConfiguration.getPathAgnosticResults() ? 31 * (path == null ? 0 : path.hashCode()) : 0)
-					+ (!InfoflowConfiguration.getPathAgnosticResults() ? 31 * (callStack == null ? 0 : callStack.hashCode()) : 0)
+					+ 31 * (callStack == null ? 0 : callStack.hashCode())
 					+ 31 * super.hashCode();
 		}
 		return hashCode;
