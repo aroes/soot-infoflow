@@ -78,19 +78,15 @@ public class SourceSinkTestCode {
 		System.out.println(s);
 	}
 	
-	private void doLeakSecret2(A a) {
-		System.out.println(a.data2);
-	}
-	
 	public void testSinkAccessPaths() {
 		A a = getSecret();
-		doLeakSecret2(a);
+		doLeakSecret(a.data);
 	}
 	
 	public void testSinkAccessPaths2() {
 		A a = getSecret();
 		a.data2 = a.data;
-		doLeakSecret2(a);
+		doLeakSecret(a.data2);
 	}
 
 	public void ifAsSinkTest() {
