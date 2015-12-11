@@ -5,7 +5,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 import soot.Value;
-import soot.ValueBox;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.InfoflowManager;
@@ -32,7 +31,6 @@ public class SourcePropagationRule extends AbstractTaintPropagationRule {
 	private Collection<Abstraction> propagate(Abstraction d1,
 			Abstraction source, Stmt stmt, ByReferenceBoolean killSource,
 			ByReferenceBoolean killAll) {
-		
 		if (source == getZeroValue()) {
 			// Check whether this can be a source at all
 			final SourceInfo sourceInfo = getManager().getSourceSinkManager() != null
@@ -67,21 +65,6 @@ public class SourcePropagationRule extends AbstractTaintPropagationRule {
 			}
 			if (killAll != null)
 				killAll.value = true;
-		}
-		else if (!getManager().getConfig().getInspectSources() && killAll != null) {
-			// Check whether this can be a source at all
-			final SourceInfo sourceInfo = getManager().getSourceSinkManager() != null
-					? getManager().getSourceSinkManager().getSourceInfo(stmt, getManager().getICFG()) : null;
-			
-			// If a non-zero values goes through a source, we kill it
-			if (sourceInfo != null) {
-				for (ValueBox vb : stmt.getUseBoxes()) {
-					if (getAliasing().mayAlias(source.getAccessPath(), vb.getValue()) != null) {
-						killAll.value = true;
-						break;
-					}
-				}
-			}
 		}
 		return null;
 	}

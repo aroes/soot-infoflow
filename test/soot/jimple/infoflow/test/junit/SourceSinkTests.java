@@ -30,6 +30,7 @@ import soot.jimple.infoflow.data.AccessPathFactory;
 import soot.jimple.infoflow.entryPointCreators.DefaultEntryPointCreator;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.source.SourceInfo;
+import soot.jimple.infoflow.taintWrappers.EasyTaintWrapper;
 
 /**
  * Test cases for FlowDroid's interaction with non-standard source sink managers
@@ -41,7 +42,8 @@ public class SourceSinkTests extends JUnitTests {
 	private static final String sourceGetSecret = "<soot.jimple.infoflow.test.SourceSinkTestCode: soot.jimple.infoflow.test.SourceSinkTestCode$A getSecret()>";
 	private static final String sourceGetSecret2 = "<soot.jimple.infoflow.test.SourceSinkTestCode: soot.jimple.infoflow.test.SourceSinkTestCode$B getSecret2()>";
 	
-	private static final String sinkAP = "<soot.jimple.infoflow.test.SourceSinkTestCode: void doleakSecret2(soot.jimple.infoflow.test.SourceSinkTestCode$A)>";
+	private static final String sinkAP = "<soot.jimple.infoflow.test.SourceSinkTestCode: void doLeakSecret2(soot.jimple.infoflow.test.SourceSinkTestCode$A)>";
+	private static final String sinkAP2 = "<soot.jimple.infoflow.test.SourceSinkTestCode: void doLeakSecret(java.lang.String)>";
 
 	private abstract class BaseSourceSinkManager implements ISourceSinkManager {
 
@@ -51,7 +53,9 @@ public class SourceSinkTests extends JUnitTests {
 			if (!sCallSite.containsInvokeExpr())
 				return false;
 			SootMethod target = sCallSite.getInvokeExpr().getMethod();
-			if ((target.getSignature().equals(sinkAP) || target.getSignature().equals(sink))
+			if ((target.getSignature().equals(sinkAP)
+						|| target.getSignature().equals(sinkAP2)
+						|| target.getSignature().equals(sink))
 					&& sCallSite.getInvokeExpr().getArgCount() > 0) {
 				if (ap == null)
 					return true;
@@ -135,6 +139,22 @@ public class SourceSinkTests extends JUnitTests {
 		
 	}
 	
+	private final class sourceToSourceSSM extends BaseSourceSinkManager {
+
+		@Override
+		public SourceInfo getSourceInfo(Stmt sCallSite,
+				InterproceduralCFG<Unit, SootMethod> cfg) {
+			if (sCallSite instanceof DefinitionStmt
+					&& sCallSite.containsInvokeExpr()
+					&& sCallSite.getInvokeExpr().getMethod().getName().equals("getSecret")) {
+				Value val = ((DefinitionStmt) sCallSite).getLeftOp();
+				return new SourceInfo(AccessPathFactory.v().createAccessPath(val, true));
+			}
+			return null;
+		}
+		
+	}
+	
 	@Test(timeout = 300000)
 	public void fieldTest() {
 		IInfoflow infoflow = initInfoflow();
@@ -203,5 +223,17 @@ public class SourceSinkTests extends JUnitTests {
 		Assert.assertTrue(infoflow.isResultAvailable());
 		Assert.assertEquals(1, infoflow.getResults().size());
 	}
-
+	
+	@Test(timeout = 300000)
+	public void sourceToSourceTest() {
+		IInfoflow infoflow = initInfoflow(true);
+		((EasyTaintWrapper) infoflow.getTaintWrapper()).addIncludePrefix("soot.jimple.infoflow.test.SourceSinkTestCode");
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.SourceSinkTestCode: void sourceToSourceTest()>");
+		infoflow.computeInfoflow(appPath, libPath, new DefaultEntryPointCreator(epoints), new sourceToSourceSSM());
+		Assert.assertTrue(infoflow.isResultAvailable());
+		Assert.assertEquals(1, infoflow.getResults().size());
+		Assert.assertEquals(1, infoflow.getResults().numConnections());
+	}
+	
 }

@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import soot.RefType;
+import soot.ValueBox;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.Stmt;
@@ -13,6 +14,7 @@ import soot.jimple.infoflow.aliasing.Aliasing;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.problems.TaintPropagationResults;
+import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.infoflow.util.ByReferenceBoolean;
 import soot.jimple.infoflow.util.TypeUtils;
 
@@ -78,6 +80,15 @@ public class WrapperPropagationRule extends AbstractTaintPropagationRule {
 			
 			// If nothing is tainted, we don't have any taints to propagate
 			if (!found)
+				return null;
+		}
+		
+		// Do not apply the taint wrapper to statements that are sources on their own
+		if (!getManager().getConfig().getInspectSources()) {
+			// Check whether this can be a source at all
+			final SourceInfo sourceInfo = getManager().getSourceSinkManager() != null
+					? getManager().getSourceSinkManager().getSourceInfo(iStmt, getManager().getICFG()) : null;
+			if (sourceInfo != null)
 				return null;
 		}
 		

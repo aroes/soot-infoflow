@@ -27,6 +27,7 @@ import heros.solver.PathEdge;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -577,8 +578,26 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 		
 		Set<Pair<N, D>> summaries = endSummary.putIfAbsentElseGet
 				(new Pair<M, D>(m, d1), new ConcurrentHashSet<Pair<N, D>>());
-		return summaries.add(new Pair<N, D>(eP, d2));
-	}	
+		boolean res = summaries.add(new Pair<N, D>(eP, d2));
+		
+		/*
+		if (res) {
+			Map<M, Integer> countMap = new HashMap<M, Integer>();
+			for (Pair<M, D> pair : endSummary.keySet()) {
+				if (countMap.containsKey(pair.getO1()))
+					countMap.put(pair.getO1(), countMap.get(pair.getO1()) + 1);
+				else
+					countMap.put(pair.getO1(), 1);
+				
+				if (countMap.get(pair.getO1()) > 10) {
+					System.out.println(pair.getO1());
+				}
+			}
+		}
+		*/
+		
+		return res;
+	}
 	
 	protected Map<N, Map<D, D>> incoming(D d1, M m) {
 		Map<N, Map<D, D>> map = incoming.get(new Pair<M, D>(m, d1));

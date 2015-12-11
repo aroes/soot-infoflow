@@ -49,7 +49,7 @@ public class DefaultPathBuilderFactory implements IPathBuilderFactory {
 	 * Creates a new instance of the {@link DefaultPathBuilderFactory} class
 	 */
 	public DefaultPathBuilderFactory() {
-		this(PathBuilder.ContextSensitive, false);
+		this(PathBuilder.ContextSensitive, true);
 	}
 
 	/**
