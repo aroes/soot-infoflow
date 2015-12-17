@@ -26,10 +26,10 @@ public class AtomicBitSet {
             int num2 = num | bit;
             
             // If the bit is already set in the current value, we are too late
-            if ((num & bit) != 0)
+            if (num == num2)
             	return false;
             
-            if (num == num2 || array.compareAndSet(idx, num, num2))
+            if (array.compareAndSet(idx, num, num2))
                 return true;
         }
     }
