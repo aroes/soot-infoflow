@@ -4,6 +4,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import soot.jimple.infoflow.solver.IMemoryManager;
 
 /**
@@ -14,7 +17,9 @@ import soot.jimple.infoflow.solver.IMemoryManager;
  */
 public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 	
-	/**
+    private final Logger logger = LoggerFactory.getLogger(getClass());
+    
+    /**
 	 * Special class for encapsulating taint abstractions for a full equality
 	 * check including those fields (predecessor, etc.) that are normally left
 	 * out
@@ -70,21 +75,32 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 	private AtomicInteger reuseCounter = new AtomicInteger();
 	
 	private final boolean tracingEnabled;
+	private final boolean erasePathData;
 	private boolean useAbstractionCache = false;
 	
 	/**
 	 * Constructs a new instance of the AccessPathManager class
 	 */
 	public FlowDroidMemoryManager() {
-		this(false);
+		this(false, false);
 	}
 	
 	/**
 	 * Constructs a new instance of the AccessPathManager class
 	 * @param tracingEnabled True if performance tracing data shall be recorded
+	 * @param erasePathData True if data for tracking paths (current statement,
+	 * corresponding call site) shall be erased.
 	 */	
-	public FlowDroidMemoryManager(boolean tracingEnabled) {
+	public FlowDroidMemoryManager(boolean tracingEnabled,
+			boolean erasePathData) {
 		this.tracingEnabled = tracingEnabled;
+		this.erasePathData = erasePathData;
+		
+		logger.info("Initializing FlowDroid memory manager...");
+		if (this.tracingEnabled)
+			logger.info("FDMM: Tracing enabled. This may negatively affect performance.");
+		if (this.erasePathData)
+			logger.info("FDMM: Path data erasure enabled");
 	}
 	
 	/**
@@ -153,6 +169,12 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 		Abstraction pred = output.getPredecessor();
 		if (pred != null && pred != input)
 			output.setPredecessor(input);
+		
+		// Erase path data if requested
+		if (erasePathData) {
+			output.setCurrentStmt(null);
+			output.setCorrespondingCallSite(null);
+		}
 		
 		// If the abstraction didn't change at all, we can use the old one
 		if (input.equals(output)) {

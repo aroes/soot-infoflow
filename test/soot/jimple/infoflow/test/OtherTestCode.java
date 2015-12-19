@@ -650,4 +650,12 @@ public class OtherTestCode {
 		System.out.println(str2);
 	}
 	
+	public void multipleCallSiteTest1() {
+		String tainted = TelephonyManager.getDeviceId();
+		String x = id(tainted);
+		String y = id(x);
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(y);
+	}
+	
 }

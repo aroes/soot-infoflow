@@ -223,7 +223,8 @@ public class Infoflow extends AbstractInfoflow {
 		CountingThreadPoolExecutor executor = createExecutor(numThreads);
 		
 		// Initialize the memory manager
-		IMemoryManager<Abstraction> memoryManager = new FlowDroidMemoryManager();
+		IMemoryManager<Abstraction> memoryManager = new FlowDroidMemoryManager(false,
+				!pathBuilderFactory.supportsPathReconstruction());
 		
 		// Initialize the data flow manager
 		InfoflowManager manager = new InfoflowManager(config, null, iCfg, sourcesSinks,

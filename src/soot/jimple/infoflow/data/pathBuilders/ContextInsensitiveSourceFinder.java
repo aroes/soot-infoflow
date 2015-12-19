@@ -50,7 +50,7 @@ public class ContextInsensitiveSourceFinder extends AbstractAbstractionPathBuild
 	 */
 	private CountingThreadPoolExecutor createExecutor(int numThreads) {
 		return new CountingThreadPoolExecutor
-				(numThreads, Integer.MAX_VALUE, 30, TimeUnit.SECONDS,
+				(1/*numThreads*/, Integer.MAX_VALUE, 30, TimeUnit.SECONDS,
 				new LinkedBlockingQueue<Runnable>());
 	}
 	
@@ -68,6 +68,7 @@ public class ContextInsensitiveSourceFinder extends AbstractAbstractionPathBuild
 			this.taskId = taskId;
 			this.flagAbs = flagAbs;
 			this.abstractionQueue.add(abstraction);
+			abstraction.registerPathFlag(taskId, numTasks);
 		}
 		
 		@Override
@@ -111,7 +112,7 @@ public class ContextInsensitiveSourceFinder extends AbstractAbstractionPathBuild
     	int curResIdx = 0;
     	numTasks = res.size() + 1;
     	for (final AbstractionAtSink abs : res) {
-    		logger.info("Building path " + ++curResIdx);
+    		logger.info("Building path " + ++curResIdx + " with task id " + lastTaskId);
     		executor.execute(new SourceFindingTask(lastTaskId++, abs, abs.getAbstraction()));
     	}
 

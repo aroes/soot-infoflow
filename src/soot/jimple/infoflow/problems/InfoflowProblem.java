@@ -721,10 +721,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							}
 						}
 						
-						for (Abstraction abs : res)
-							if (abs != newSource)
+						for (Abstraction abs : res) {
+							if (abs != newSource) {
 								abs.setCorrespondingCallSite(iCallStmt);
-						
+							}
+						}
 						return res;
 					}
 
