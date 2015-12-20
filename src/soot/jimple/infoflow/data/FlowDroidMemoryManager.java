@@ -75,31 +75,51 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 	private AtomicInteger reuseCounter = new AtomicInteger();
 	
 	private final boolean tracingEnabled;
-	private final boolean erasePathData;
+	private final PathDataErasureMode erasePathData;
 	private boolean useAbstractionCache = false;
+	
+	/**
+	 * Supported modes that define which path tracking data shall be erased and
+	 * which shall be kept
+	 */
+	public enum PathDataErasureMode {
+		/**
+		 * Keep all path tracking data.
+		 */
+		EraseNothing,
+		/**
+		 * Keep only those path tracking items that are necessary for context-
+		 * sensitive path reconstruction.
+		 */
+		KeepOnlyContextData,
+		/**
+		 * Erase all path tracking data.
+		 */
+		EraseAll
+	}
 	
 	/**
 	 * Constructs a new instance of the AccessPathManager class
 	 */
 	public FlowDroidMemoryManager() {
-		this(false, false);
+		this(false, PathDataErasureMode.EraseNothing);
 	}
 	
 	/**
 	 * Constructs a new instance of the AccessPathManager class
 	 * @param tracingEnabled True if performance tracing data shall be recorded
-	 * @param erasePathData True if data for tracking paths (current statement,
-	 * corresponding call site) shall be erased.
+	 * @param erasePathData Specifies whether data for tracking paths (current
+	 * statement, corresponding call site) shall be erased.
 	 */	
 	public FlowDroidMemoryManager(boolean tracingEnabled,
-			boolean erasePathData) {
+			PathDataErasureMode erasePathData) {
 		this.tracingEnabled = tracingEnabled;
 		this.erasePathData = erasePathData;
 		
 		logger.info("Initializing FlowDroid memory manager...");
 		if (this.tracingEnabled)
 			logger.info("FDMM: Tracing enabled. This may negatively affect performance.");
-		if (this.erasePathData)
+		if (this.erasePathData != PathDataErasureMode.EraseNothing)
 			logger.info("FDMM: Path data erasure enabled");
 	}
 	
@@ -171,7 +191,13 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 			output.setPredecessor(input);
 		
 		// Erase path data if requested
-		if (erasePathData) {
+		boolean doErase = erasePathData == PathDataErasureMode.EraseAll;
+		if (erasePathData == PathDataErasureMode.KeepOnlyContextData
+				&& output.getCorrespondingCallSite() == null) {
+			if (output.getCurrentStmt() != null && !output.getCurrentStmt().containsInvokeExpr())
+				doErase = true;
+		}
+		if (doErase) {
 			output.setCurrentStmt(null);
 			output.setCorrespondingCallSite(null);
 		}

@@ -99,5 +99,10 @@ public class DefaultPathBuilderFactory implements IPathBuilderFactory {
 		}
 		throw new RuntimeException("Unsupported path building algorithm");
 	}
+
+	@Override
+	public boolean isContextSensitive() {
+		return pathBuilder == PathBuilder.ContextSensitive;
+	}
 	
 }

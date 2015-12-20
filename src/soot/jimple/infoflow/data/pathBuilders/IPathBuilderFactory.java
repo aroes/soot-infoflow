@@ -28,5 +28,14 @@ public interface IPathBuilderFactory {
 	 * false if it only reports source-to-sink connections without paths.
 	 */
 	public boolean supportsPathReconstruction();
+	
+	/**
+	 * Gets whether the {@link IAbstractionPathBuilder} object created by this
+	 * factory supports context-sensitive path reconstruction.
+	 * @return True if the {@link IAbstractionPathBuilder} object created by
+	 * this factory supports context-sensitive path reconstruction, otherwise
+	 * false.
+	 */
+	public boolean isContextSensitive();
 
 }

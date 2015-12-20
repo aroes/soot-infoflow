@@ -44,6 +44,7 @@ import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.AccessPathFactory;
 import soot.jimple.infoflow.data.FlowDroidMemoryManager;
+import soot.jimple.infoflow.data.FlowDroidMemoryManager.PathDataErasureMode;
 import soot.jimple.infoflow.data.pathBuilders.DefaultPathBuilderFactory;
 import soot.jimple.infoflow.data.pathBuilders.IAbstractionPathBuilder;
 import soot.jimple.infoflow.data.pathBuilders.IPathBuilderFactory;
@@ -223,8 +224,13 @@ public class Infoflow extends AbstractInfoflow {
 		CountingThreadPoolExecutor executor = createExecutor(numThreads);
 		
 		// Initialize the memory manager
+		PathDataErasureMode erasureMode = PathDataErasureMode.EraseAll;
+		if (pathBuilderFactory.isContextSensitive())
+			erasureMode = PathDataErasureMode.KeepOnlyContextData;
+		if (pathBuilderFactory.supportsPathReconstruction())
+			erasureMode = PathDataErasureMode.EraseNothing;
 		IMemoryManager<Abstraction> memoryManager = new FlowDroidMemoryManager(false,
-				!pathBuilderFactory.supportsPathReconstruction());
+				erasureMode);
 		
 		// Initialize the data flow manager
 		InfoflowManager manager = new InfoflowManager(config, null, iCfg, sourcesSinks,
