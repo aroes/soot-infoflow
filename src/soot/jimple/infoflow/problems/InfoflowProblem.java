@@ -966,7 +966,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								paramLocals = callee.getActiveBody().getParameterLocals().toArray(
 										new Local[callee.getParameterCount()]);
 							
-							res.add(ap.copyWithNewValue(paramLocals[i]));
+							AccessPath newAP = ap.copyWithNewValue(paramLocals[i]);
+							if (newAP != null)
+								res.add(newAP);
 						}
 					}
 				}
