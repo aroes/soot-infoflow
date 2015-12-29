@@ -189,7 +189,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					else
 						newAbs = source.deriveNewAbstraction(leftValue, cutFirstField, assignStmt, targetType,
 								arrayTaintType);
-				taintSet.add(newAbs);
+				if (newAbs != null)
+					taintSet.add(newAbs);
 				
 				if (aliasing.canHaveAliases(assignStmt, leftValue, newAbs))
 					aliasing.computeAliases(d1, assignStmt, leftValue, taintSet,
@@ -503,13 +504,19 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						for (AccessPath ap : resMapping)
 							if (ap.isStaticFieldRef()) {
 								// Do not propagate static fields that are not read inside the callee
-								if (interproceduralCFG().isStaticFieldRead(dest, ap.getFirstField()))
-									resAbs.add(source.deriveNewAbstraction(ap, stmt));
+								if (interproceduralCFG().isStaticFieldRead(dest, ap.getFirstField())) {
+									Abstraction newAbs = source.deriveNewAbstraction(ap, stmt);
+									if (newAbs != null)
+										resAbs.add(newAbs);
+								}
 							}
 							// If the variable is never read in the callee, there is no
 							// need to propagate it through
-							else if (source.isImplicit() || interproceduralCFG().methodReadsValue(dest, ap.getPlainValue()))
-								resAbs.add(source.deriveNewAbstraction(ap, stmt));
+							else if (source.isImplicit() || interproceduralCFG().methodReadsValue(dest, ap.getPlainValue())) {
+								Abstraction newAbs = source.deriveNewAbstraction(ap, stmt);
+								if (newAbs != null)
+									resAbs.add(newAbs);
+							}
 						
 						return resAbs;
 					}
