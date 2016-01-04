@@ -116,7 +116,8 @@ public class Infoflow extends AbstractInfoflow {
 	public Infoflow(String androidPath, boolean forceAndroidJar, BiDirICFGFactory icfgFactory,
 			IPathBuilderFactory pathBuilderFactory) {
 		super(icfgFactory, androidPath, forceAndroidJar);
-		this.pathBuilderFactory = pathBuilderFactory;
+		this.pathBuilderFactory = pathBuilderFactory == null ? new DefaultPathBuilderFactory()
+				: pathBuilderFactory;
 	}
 	
 	@Override
