@@ -212,6 +212,7 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 		}
 		
 		// We can shorten links
+		/*
 		while (obj.getNeighbors() == null
 				&& pred != null
 				&& pred.getNeighbors() == null
@@ -227,6 +228,7 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 				obj.setPredecessor(pred);
 			}
 		}
+		*/
 		
 		return obj;
 	}
