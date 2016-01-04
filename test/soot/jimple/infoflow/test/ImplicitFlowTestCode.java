@@ -1,5 +1,6 @@
 package soot.jimple.infoflow.test;
 
+import soot.jimple.infoflow.test.android.Base64;
 import soot.jimple.infoflow.test.android.ConnectionManager;
 import soot.jimple.infoflow.test.android.TelephonyManager;
 
@@ -562,6 +563,18 @@ public class ImplicitFlowTestCode {
 			tainted = getBar();
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(tainted);
+	}
+	
+	public void stringObfuscationTest1() {
+		String pwdString = TelephonyManager.getDeviceId();
+		String obfPwd = "";
+		for(char c : pwdString.toCharArray())
+			obfPwd += c + "_";
+		String message = " | PWD: " + obfPwd;
+		String message_base64 = Base64.encodeToString(message.getBytes());
+
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(message_base64);
 	}
 	
 	// TODO: Access array index

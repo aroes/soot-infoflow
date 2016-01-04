@@ -629,4 +629,21 @@ public class ImplicitFlowTests extends JUnitTests {
 		checkInfoflow(infoflow, 1);
 	}
 
+	@Test(timeout=300000)
+	public void stringObfuscationTest1(){
+		IInfoflow infoflow = initInfoflow(true);
+		infoflow.getConfig().setEnableImplicitFlows(true);
+		infoflow.getConfig().setInspectSinks(false);
+		
+		((EasyTaintWrapper) infoflow.getTaintWrapper()).addMethodForWrapping(
+				"soot.jimple.infoflow.test.android.Base64",
+				"java.lang.String encodeToString(byte[])");
+		((EasyTaintWrapper) infoflow.getTaintWrapper()).addIncludePrefix("soot.jimple.infoflow.test.android.");
+
+		List<String> epoints = new ArrayList<String>();
+	    epoints.add("<soot.jimple.infoflow.test.ImplicitFlowTestCode: void stringObfuscationTest1()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+	}
+
 }

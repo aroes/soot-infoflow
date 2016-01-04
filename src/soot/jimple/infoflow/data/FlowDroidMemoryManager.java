@@ -1,5 +1,7 @@
 package soot.jimple.infoflow.data;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -189,6 +191,24 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 		Abstraction pred = output.getPredecessor();
 		if (pred != null && pred != input)
 			output.setPredecessor(input);
+		
+		// If the abstraction just made a pass through the alias analysis
+		// without any changes, we can throw away the middle men.
+		// More precisely: Compact a -> r0 -> _r0 -> r0 to a -> r0.
+		if (output.isAbstractionActive()) {
+			Set<Abstraction> doneSet = new HashSet<>();
+			Abstraction curAbs = pred;
+			while (curAbs != null && !curAbs.isAbstractionActive() && doneSet.add(curAbs)) {
+				Abstraction predPred = curAbs.getPredecessor();
+				if (predPred != null && predPred.isAbstractionActive()) {
+					if (predPred.equals(output))
+						output.setPredecessor(predPred.getPredecessor());
+				}
+				else
+					break;
+				curAbs = predPred;
+			}
+		}
 		
 		// Erase path data if requested
 		boolean doErase = erasePathData == PathDataErasureMode.EraseAll;
