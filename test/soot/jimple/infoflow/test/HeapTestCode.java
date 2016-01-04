@@ -1275,4 +1275,20 @@ public class HeapTestCode {
 		}
 	}
 	
+	public void doubleAliasTest1() {
+		A a1 = new A();
+		a1.b = TelephonyManager.getDeviceId();
+		A a2 = new A();
+		a2.b = new AccountManager().getPassword();
+		
+		B b = new B();
+		if (new Random().nextBoolean())
+			b.attr = a1;
+		else
+			b.attr = a2;
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(b.attr.b);
+	}
+	
 }

@@ -29,6 +29,7 @@ import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.problems.AbstractInfoflowProblem;
 import soot.jimple.infoflow.solver.IFollowReturnsPastSeedsHandler;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
+import soot.jimple.infoflow.solver.IMemoryManager;
 import soot.jimple.infoflow.solver.functions.SolverCallFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverCallToReturnFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverNormalFlowFunction;
@@ -219,6 +220,11 @@ public class InfoflowSolver extends PathTrackingIFDSSolver<Unit, Abstraction, So
 	@Override
 	public void setFollowReturnsPastSeedsHandler(IFollowReturnsPastSeedsHandler handler) {
 		this.followReturnsPastSeedsHandler = handler;
+	}
+
+	@Override
+	public IMemoryManager<Abstraction> getMemoryManager() {
+		return null;
 	}
 	
 }

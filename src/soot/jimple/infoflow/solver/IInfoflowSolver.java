@@ -46,4 +46,10 @@ public interface IInfoflowSolver {
 	 */
 	public void setFollowReturnsPastSeedsHandler(IFollowReturnsPastSeedsHandler handler);
 	
+	/**
+	 * Gets the memory manager used by this solver to reduce memory consumption
+	 * @return The memory manager registered with this solver
+	 */
+	public IMemoryManager<Abstraction> getMemoryManager();
+	
 }

@@ -6,6 +6,7 @@ import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.collect.MyConcurrentHashMap;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
+import soot.jimple.infoflow.solver.IMemoryManager;
 import soot.jimple.infoflow.util.SystemClassHandler;
 
 /**
@@ -39,14 +40,21 @@ public class TaintPropagationResults {
 				(manager.getICFG().getMethodOf(resultAbs.getSinkStmt()).getDeclaringClass().getName()))
 			return;
 		
-		// Make sure that the sink statement also appears inside the
-		// abstraction
-		resultAbs = new AbstractionAtSink
-				(resultAbs.getAbstraction().deriveNewAbstraction
-						(resultAbs.getAbstraction().getAccessPath(), resultAbs.getSinkStmt()),
-				resultAbs.getSinkStmt());
-		resultAbs.getAbstraction().setCorrespondingCallSite(resultAbs.getSinkStmt());
+		// Construct the abstraction at the sink
+		Abstraction abs = resultAbs.getAbstraction();
+		abs = abs.deriveNewAbstraction(abs.getAccessPath(), resultAbs.getSinkStmt());
+		abs.setCorrespondingCallSite(resultAbs.getSinkStmt());
 		
+		// Reduce the incoming abstraction
+		IMemoryManager<Abstraction> memoryManager = manager.getForwardSolver().getMemoryManager();
+		if (memoryManager != null) {
+			abs = memoryManager.handleMemoryObject(abs);
+			if (abs == null)
+				return;
+		}
+		
+		// Record the result
+		resultAbs = new AbstractionAtSink(abs, resultAbs.getSinkStmt());
 		Abstraction newAbs = this.results.putIfAbsentElseGet
 				(resultAbs, resultAbs.getAbstraction());
 		if (newAbs != resultAbs.getAbstraction())

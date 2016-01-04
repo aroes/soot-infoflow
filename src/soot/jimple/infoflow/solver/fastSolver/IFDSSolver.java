@@ -712,5 +712,13 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 	public void setMemoryManager(IMemoryManager<D> memoryManager) {
 		this.memoryManager = memoryManager;
 	}
+	
+	/**
+	 * Gets the memory manager used by this solver to reduce memory consumption
+	 * @return The memory manager registered with this solver
+	 */	
+	public IMemoryManager<D> getMemoryManager() {
+		return this.memoryManager;
+	}
 
 }

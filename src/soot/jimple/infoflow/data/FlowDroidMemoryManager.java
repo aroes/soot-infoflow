@@ -176,33 +176,21 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 		// We check for a cached version of the access path
 		AccessPath newAP = getCachedAccessPath(obj.getAccessPath());
 		obj.setAccessPath(newAP);
-		return obj;
-	}
-
-	@Override
-	public Abstraction handleGeneratedMemoryObject(Abstraction input,
-			Abstraction output) {
-		// We we just pass the same object on, there is nothing to optimize
-		if (input == output)
-			return output;
-		
-		// If the flow function gave us a chain of abstractions, we can
-		// compact it
-		Abstraction pred = output.getPredecessor();
-		if (pred != null && pred != input)
-			output.setPredecessor(input);
 		
 		// If the abstraction just made a pass through the alias analysis
 		// without any changes, we can throw away the middle men.
 		// More precisely: Compact a -> r0 -> _r0 -> r0 to a -> r0.
-		if (output.isAbstractionActive()) {
+		Abstraction pred = obj.getPredecessor();
+		if (obj.isAbstractionActive()) {
 			Set<Abstraction> doneSet = new HashSet<>();
 			Abstraction curAbs = pred;
 			while (curAbs != null && !curAbs.isAbstractionActive() && doneSet.add(curAbs)) {
 				Abstraction predPred = curAbs.getPredecessor();
 				if (predPred != null && predPred.isAbstractionActive()) {
-					if (predPred.equals(output))
-						output.setPredecessor(predPred.getPredecessor());
+					if (predPred.equals(obj)) {
+						pred = predPred.getPredecessor();
+						obj.setPredecessor(pred);
+					}
 				}
 				else
 					break;
@@ -213,14 +201,49 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 		// Erase path data if requested
 		boolean doErase = erasePathData == PathDataErasureMode.EraseAll;
 		if (erasePathData == PathDataErasureMode.KeepOnlyContextData
-				&& output.getCorrespondingCallSite() == null) {
-			if (output.getCurrentStmt() != null && !output.getCurrentStmt().containsInvokeExpr())
-				doErase = true;
+				&& obj.getCorrespondingCallSite() == null
+				&& obj.getCurrentStmt() != null 
+				&& !obj.getCurrentStmt().containsInvokeExpr()) {
+			doErase = true;
 		}
 		if (doErase) {
-			output.setCurrentStmt(null);
-			output.setCorrespondingCallSite(null);
+			obj.setCurrentStmt(null);
+			obj.setCorrespondingCallSite(null);
 		}
+		
+		// We can shorten links
+		while (obj.getNeighbors() == null
+				&& pred != null
+				&& pred.getNeighbors() == null
+				&& pred.getCorrespondingCallSite() == null
+				&& pred.getCurrentStmt() == null) {
+			if (pred.getPredecessor() == null) {
+				obj.setSourceContext(pred.getSourceContext());
+				obj.setPredecessor(null);
+				pred = null;
+			}
+			else {
+				pred = pred.getPredecessor();
+				obj.setPredecessor(pred);
+			}
+		}
+		
+		return obj;
+	}
+
+	@Override
+	public Abstraction handleGeneratedMemoryObject(Abstraction input,
+			Abstraction output) {
+		// We we just pass the same object on, there is nothing to optimize
+		if (input == output) {
+			return output;
+		}
+		
+		// If the flow function gave us a chain of abstractions, we can
+		// compact it
+		Abstraction pred = output.getPredecessor();
+		if (pred != null && pred != input)
+			output.setPredecessor(input);
 		
 		// If the abstraction didn't change at all, we can use the old one
 		if (input.equals(output)) {
