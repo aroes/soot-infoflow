@@ -374,7 +374,8 @@ public class Infoflow extends AbstractInfoflow {
 			for (AbstractionAtSink checkAbs : res)
 				if (checkAbs != curAbs
 						&& checkAbs.getSinkStmt() == curAbs.getSinkStmt()
-						&& checkAbs.getAbstraction().isImplicit() == curAbs.getAbstraction().isImplicit())
+						&& checkAbs.getAbstraction().isImplicit() == curAbs.getAbstraction().isImplicit()
+						&& checkAbs.getAbstraction().getSourceContext() == curAbs.getAbstraction().getSourceContext())
 					if (checkAbs.getAbstraction().getAccessPath().entails(
 							curAbs.getAbstraction().getAccessPath())) {
 						absAtSinkIt.remove();
