@@ -165,7 +165,7 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 	}
 
 	@Override
-	public synchronized Abstraction handleMemoryObject(Abstraction obj) {
+	public Abstraction handleMemoryObject(Abstraction obj) {
 		if (useAbstractionCache) {
 			// We check for a cached version of the complete abstraction
 			Abstraction cachedAbs = getCachedAbstraction(obj);
@@ -232,7 +232,7 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 	}
 
 	@Override
-	public synchronized Abstraction handleGeneratedMemoryObject(Abstraction input,
+	public Abstraction handleGeneratedMemoryObject(Abstraction input,
 			Abstraction output) {
 		// We we just pass the same object on, there is nothing to optimize
 		if (input == output) {
