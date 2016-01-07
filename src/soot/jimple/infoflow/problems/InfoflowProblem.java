@@ -282,7 +282,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 							// check for field references
 							//y = x.f && x tainted --> y, x tainted
 							//y = x.f && x.f tainted --> y, x tainted
-							else if (rightVal instanceof InstanceFieldRef) {								
+							else if (rightVal instanceof InstanceFieldRef) {
 								Local rightBase = (Local) ((InstanceFieldRef) rightRef).getBase();
 								Local sourceBase = newSource.getAccessPath().getPlainValue();
 								final SootField rightField = rightRef.getField();
@@ -755,6 +755,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				
 				final boolean isSink = (manager.getSourceSinkManager() != null)
 						? manager.getSourceSinkManager().isSink(iCallStmt, interproceduralCFG(), null) : false;
+				final boolean isSource = (manager.getSourceSinkManager() != null)
+						? manager.getSourceSinkManager().getSourceInfo(iCallStmt, interproceduralCFG()) != null : false;
 				
 				final SootMethod callee = invExpr.getMethod();
 				final boolean hasValidCallees = hasValidCallees(call);
@@ -826,6 +828,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								&& invExpr instanceof InstanceInvokeExpr
 								&& newSource.getAccessPath().isInstanceFieldRef()
 								&& (manager.getConfig().getInspectSinks() || !isSink)
+								&& (manager.getConfig().getInspectSources() || !isSource)
 								&& (hasValidCallees
 									|| (taintWrapper != null && taintWrapper.isExclusive(
 											iCallStmt, newSource)))) {
