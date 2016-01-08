@@ -199,35 +199,26 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 		}
 		
 		// Erase path data if requested
-		boolean doErase = erasePathData == PathDataErasureMode.EraseAll;
-		if (erasePathData == PathDataErasureMode.KeepOnlyContextData
-				&& obj.getCorrespondingCallSite() == null
-				&& obj.getCurrentStmt() != null 
-				&& !obj.getCurrentStmt().containsInvokeExpr()) {
-			doErase = true;
-		}
-		if (doErase) {
-			obj.setCurrentStmt(null);
-			obj.setCorrespondingCallSite(null);
-		}
-		
-		// We can shorten links
-		while (obj.getNeighbors() == null
-				&& pred != null
-				&& pred.getNeighbors() == null
-				&& pred.getCorrespondingCallSite() == null
-				&& pred.getCurrentStmt() == null) {
-			if (pred.getPredecessor() == null) {
-				obj.setSourceContext(pred.getSourceContext());
-				obj.setPredecessor(null);
-				pred = null;
+		Abstraction curAbs = obj;
+		while (curAbs != null) {
+			boolean doErase = erasePathData == PathDataErasureMode.EraseAll;
+			if (erasePathData == PathDataErasureMode.KeepOnlyContextData
+					&& curAbs.getCorrespondingCallSite() == curAbs.getCurrentStmt())
+				doErase = true;
+			if (erasePathData == PathDataErasureMode.KeepOnlyContextData
+					&& curAbs.getCorrespondingCallSite() == null
+					&& curAbs.getCurrentStmt() != null 
+					&& !curAbs.getCurrentStmt().containsInvokeExpr()) {
+				doErase = true;
 			}
-			else {
-				pred = pred.getPredecessor();
-				obj.setPredecessor(pred);
+			if (doErase) {
+				curAbs.setCurrentStmt(null);
+				curAbs.setCorrespondingCallSite(null);
+				curAbs = curAbs.getPredecessor();
 			}
-		}
-		
+			else
+				break;
+		}		
 		return obj;
 	}
 

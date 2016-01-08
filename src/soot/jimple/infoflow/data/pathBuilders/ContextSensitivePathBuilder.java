@@ -177,6 +177,8 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
     	// Start the propagation tasks
     	int curResIdx = 0;
     	for (final AbstractionAtSink abs : res) {
+    		reduceAbstractionPath(abs.getAbstraction());
+    		
     		logger.info("Building path " + ++curResIdx);
    			buildPathForAbstraction(abs);
    			
