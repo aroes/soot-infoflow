@@ -12,7 +12,6 @@ package soot.jimple.infoflow.problems;
 
 import heros.FlowFunction;
 import heros.FlowFunctions;
-import heros.TwoElementSet;
 import heros.flowfunc.KillAll;
 
 import java.util.Collection;
@@ -22,7 +21,6 @@ import java.util.Set;
 
 import soot.ArrayType;
 import soot.BooleanType;
-import soot.IntType;
 import soot.Local;
 import soot.NullType;
 import soot.PrimType;
@@ -41,7 +39,6 @@ import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InstanceOfExpr;
 import soot.jimple.InvokeExpr;
-import soot.jimple.LengthExpr;
 import soot.jimple.NewArrayExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.StaticFieldRef;
@@ -142,8 +139,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					Set<Abstraction> taintSet,
 					boolean cutFirstField,
 					SootMethod method,
-					Type targetType,
-					ArrayTaintType arrayTaintType) {
+					Type targetType) {
 				final Value leftValue = assignStmt.getLeftOp();
 				final Value rightValue = assignStmt.getRightOp();
 				
@@ -154,11 +150,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				
 				Abstraction newAbs = null;
 				if (!source.getAccessPath().isEmpty()) {
-					// Special handling for array (de)construction
+					// Special handling for array construction
 					if (leftValue instanceof ArrayRef && targetType != null)
 						targetType = buildArrayOrAddDimension(targetType);
-					else if (assignStmt.getRightOp() instanceof ArrayRef && targetType != null)
-						targetType = ((ArrayType) targetType).getElementType();
 					
 					// If this is an unrealizable typecast, drop the abstraction
 					if (rightValue instanceof CastExpr) {
@@ -171,15 +165,17 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						newAbs = source.deriveNewAbstraction(AccessPathFactory.v().createAccessPath(
 								leftValue, BooleanType.v(), true,
 								ArrayTaintType.ContentsAndLength), assignStmt);
-					else if (rightValue instanceof NewArrayExpr) {
-						assert manager.getConfig().getEnableArraySizeTainting();
-						arrayTaintType = ArrayTaintType.Length;
-						targetType = null;
-					}
 				}
 				else
 					// For implicit taints, we have no type information
 					assert targetType == null;
+				
+				// Do we taint the contents of an array? If we do not differentiate,
+				// we do not set any special type.
+				ArrayTaintType arrayTaintType = source.getAccessPath().getArrayTaintType();
+				if (leftValue instanceof ArrayRef
+						&& manager.getConfig().getEnableArraySizeTainting())
+					arrayTaintType = ArrayTaintType.Contents;
 				
 				// also taint the target of the assignment
 				if (newAbs == null)
@@ -189,12 +185,13 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 					else
 						newAbs = source.deriveNewAbstraction(leftValue, cutFirstField, assignStmt, targetType,
 								arrayTaintType);
-				if (newAbs != null)
-					taintSet.add(newAbs);
 				
-				if (aliasing.canHaveAliases(assignStmt, leftValue, newAbs))
-					aliasing.computeAliases(d1, assignStmt, leftValue, taintSet,
-							method, newAbs);
+				if (newAbs != null) {
+					taintSet.add(newAbs);
+					if (aliasing.canHaveAliases(assignStmt, leftValue, newAbs))
+						aliasing.computeAliases(d1, assignStmt, leftValue, taintSet,
+								method, newAbs);
+				}
 			}
 			
 			/**
@@ -253,7 +250,6 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						&& rightValue.getType() instanceof RefType
 						&& !newSource.dependsOnCutAP();
 				
-				ArrayTaintType arrayTaintType = newSource.getAccessPath().getArrayTaintType();
 				boolean cutFirstField = false;
 				AccessPath mappedAP = newSource.getAccessPath();
 				Type targetType = null;
@@ -313,23 +309,15 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								targetType = newSource.getAccessPath().getBaseType();
 							}
 						}
-						//y = x[i] && x tainted -> x, y tainted
-						else if (rightVal instanceof ArrayRef) {
-							Local rightBase = (Local) ((ArrayRef) rightVal).getBase();
-							if (newSource.getAccessPath().getArrayTaintType() != ArrayTaintType.Length
-									&& aliasing.mayAlias(rightBase, newSource.getAccessPath().getPlainValue())) {											
-								addLeftValue = true;
-								targetType = newSource.getAccessPath().getBaseType();
-								assert targetType instanceof ArrayType;
-							}
-						}
 						// generic case, is true for Locals, ArrayRefs that are equal etc..
 						//y = x && x tainted --> y, x tainted
 						else if (aliasing.mayAlias(rightVal, newSource.getAccessPath().getPlainValue())) {
-							if (manager.getConfig().getEnableArraySizeTainting()
-									|| !(rightValue instanceof NewArrayExpr)) {
-								addLeftValue = true;
-								targetType = newSource.getAccessPath().getBaseType();
+							if (!(assignStmt.getRightOp() instanceof NewArrayExpr)) {
+								if (manager.getConfig().getEnableArraySizeTainting()
+										|| !(rightValue instanceof NewArrayExpr)) {
+									addLeftValue = true;
+									targetType = newSource.getAccessPath().getBaseType();
+								}
 							}
 						}
 						
@@ -349,36 +337,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								|| TypeUtils.isStringType(assignStmt.getLeftOp().getType())))
 					return Collections.singleton(newSource);
 				
-				// Special handling for certain operations
-				if (rightValue instanceof LengthExpr) {
-					// Check that we really have an array
-					assert newSource.getAccessPath().isEmpty()
-							|| newSource.getAccessPath().getBaseType() instanceof ArrayType;
-					assert leftValue instanceof Local;
-					
-					// Is the length tainted?
-					if (newSource.getAccessPath().getArrayTaintType() == ArrayTaintType.Contents)
-						return Collections.singleton(newSource);
-					
-					// Taint the array length
-					AccessPath ap = AccessPathFactory.v().createAccessPath(leftValue, null, IntType.v(),
-							(Type[]) null, true, false, true, ArrayTaintType.ContentsAndLength);
-					Abstraction lenAbs = newSource.deriveNewAbstraction(ap, assignStmt);
-					return new TwoElementSet<Abstraction>(newSource, lenAbs);
-				}
-				
-				// Do we taint the contents of an array? If we do not differentiate,
-				// we do not set any special type.
-				if (leftValue instanceof ArrayRef
-						&& manager.getConfig().getEnableArraySizeTainting())
-					arrayTaintType = ArrayTaintType.Contents;
-				
 				Set<Abstraction> res = new HashSet<Abstraction>();
 				Abstraction targetAB = mappedAP.equals(newSource.getAccessPath())
 						? newSource : newSource.deriveNewAbstraction(mappedAP, null);							
 				addTaintViaStmt(d1, assignStmt, targetAB, res, cutFirstField,
-						interproceduralCFG().getMethodOf(assignStmt), targetType,
-						arrayTaintType);
+						interproceduralCFG().getMethodOf(assignStmt), targetType);
 				res.add(newSource);
 				return res;
 			}
