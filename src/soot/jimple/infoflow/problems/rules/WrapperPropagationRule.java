@@ -5,7 +5,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 import soot.RefType;
-import soot.ValueBox;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.Stmt;
