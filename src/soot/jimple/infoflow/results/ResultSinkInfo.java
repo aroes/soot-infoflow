@@ -6,8 +6,10 @@ import soot.jimple.infoflow.data.AccessPath;
 import soot.tagkit.LineNumberTag;
 
 /**
- * Class for modeling information flowing into a specific source
+ * Class for modeling information flowing into a specific sink
+ * 
  * @author Steven Arzt
+ * 
  */
 public class ResultSinkInfo {
 	private final AccessPath accessPath;

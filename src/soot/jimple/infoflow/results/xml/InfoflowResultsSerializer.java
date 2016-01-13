@@ -13,6 +13,7 @@ import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.results.InfoflowResults;
 import soot.jimple.infoflow.results.ResultSinkInfo;
 import soot.jimple.infoflow.results.ResultSourceInfo;
+import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 
 /**
  * Class for serializing FlowDroid results to XML
@@ -25,10 +26,27 @@ public class InfoflowResultsSerializer {
 	public static final int FILE_FORMAT_VERSION = 100;
 	
 	private boolean serializeTaintPath = false;
+	private final IInfoflowCFG icfg;
+	
+	/**
+	 * Creates a new instance of the InfoflowResultsSerializer class
+	 */
+	public InfoflowResultsSerializer() {
+		this(null);	
+	}
+	
+	/**
+	 * Creates a new instance of the InfoflowResultsSerializer class
+	 * @param cfg The control flow graph to be used for obtaining additional
+	 * information such as the methods containing source or sink statements
+	 */
+	public InfoflowResultsSerializer(IInfoflowCFG cfg) {
+		this.icfg = cfg;
+	}
 	
 	/**
 	 * Serializes the given FlowDroid result object into the given file
-	 * @param resultxs The result object to serialize
+	 * @param results The result object to serialize
 	 * @param fileName The target file name
 	 * @throws FileNotFoundException Thrown if target file cannot be used
 	 * @throws XMLStreamException Thrown if the XML data cannot be written
@@ -86,6 +104,9 @@ public class InfoflowResultsSerializer {
 		writer.writeStartElement(XmlConstants.Tags.source);
 		writer.writeAttribute(XmlConstants.Attributes.statement,
 				source.getSource().toString());
+		if (icfg != null)
+			writer.writeAttribute(XmlConstants.Attributes.method,
+					icfg.getMethodOf(source.getSource()).getSignature());
 		writeAccessPath(source.getAccessPath(), writer);
 		
 		if (serializeTaintPath && source.getPath() != null) {
@@ -119,6 +140,9 @@ public class InfoflowResultsSerializer {
 		writer.writeStartElement(XmlConstants.Tags.sink);
 		writer.writeAttribute(XmlConstants.Attributes.statement,
 				sink.getSink().toString());
+		if (icfg != null)
+			writer.writeAttribute(XmlConstants.Attributes.method,
+					icfg.getMethodOf(sink.getSink()).getSignature());
 		writeAccessPath(sink.getAccessPath(), writer);
 		writer.writeEndElement();
 	}

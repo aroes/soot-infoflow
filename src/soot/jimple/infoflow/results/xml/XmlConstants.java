@@ -34,6 +34,7 @@ class XmlConstants {
 		
 		public static final String fileFormatVersion = "FileFormatVersion";
 		public static final String statement = "Statement";
+		public static final String method = "Method";
 		
 		public static final String value = "Value";
 		public static final String type = "Type";
