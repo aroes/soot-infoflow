@@ -25,7 +25,7 @@ public class PropagationRuleManager {
 	protected final Aliasing aliasing;
 	protected final Abstraction zeroValue;
 	protected final TaintPropagationResults results;
-	private final List<ITaintPropagationRule> rules = new ArrayList<>();
+	private final ITaintPropagationRule[] rules;
 	
 	public PropagationRuleManager(InfoflowManager manager, Aliasing aliasing,
 			Abstraction zeroValue, TaintPropagationResults results) {
@@ -34,19 +34,23 @@ public class PropagationRuleManager {
 		this.zeroValue = zeroValue;
 		this.results = results;
 		
-		rules.add(new SourcePropagationRule(manager, aliasing, zeroValue, results));
-		rules.add(new SinkPropagationRule(manager, aliasing, zeroValue, results));
-		rules.add(new ArrayPropagationRule(manager, aliasing, zeroValue, results));
+		List<ITaintPropagationRule> ruleList = new ArrayList<>();
+		
+		ruleList.add(new SourcePropagationRule(manager, aliasing, zeroValue, results));
+		ruleList.add(new SinkPropagationRule(manager, aliasing, zeroValue, results));
+		ruleList.add(new ArrayPropagationRule(manager, aliasing, zeroValue, results));
 		
 		if (manager.getConfig().getEnableExceptionTracking())
-			rules.add(new ExceptionPropagationRule(manager, aliasing, zeroValue, results));
+			ruleList.add(new ExceptionPropagationRule(manager, aliasing, zeroValue, results));
 		if (manager.getTaintWrapper() != null)
-			rules.add(new WrapperPropagationRule(manager, aliasing, zeroValue, results));
+			ruleList.add(new WrapperPropagationRule(manager, aliasing, zeroValue, results));
 		if (manager.getConfig().getEnableImplicitFlows())
-			rules.add(new ImplicitPropagtionRule(manager, aliasing, zeroValue, results));
-		rules.add(new StrongUpdatePropagationRule(manager, aliasing, zeroValue, results));
+			ruleList.add(new ImplicitPropagtionRule(manager, aliasing, zeroValue, results));
+		ruleList.add(new StrongUpdatePropagationRule(manager, aliasing, zeroValue, results));
 		if (manager.getConfig().getEnableTypeChecking())
-			rules.add(new TypingPropagationRule(manager, aliasing, zeroValue, results));
+			ruleList.add(new TypingPropagationRule(manager, aliasing, zeroValue, results));
+		
+		this.rules = ruleList.toArray(new ITaintPropagationRule[ruleList.size()]);
 	}
 	
 	/**
@@ -82,6 +86,8 @@ public class PropagationRuleManager {
 		for (ITaintPropagationRule rule : rules) {
 			Collection<Abstraction> ruleOut = rule.propagateNormalFlow(d1,
 					source, stmt, killSource, killAll);
+			if (killAll != null && killAll.value)
+				return null;
 			if (ruleOut != null && !ruleOut.isEmpty()) {
 				if (res == null)
 					res = new HashSet<Abstraction>(ruleOut);
