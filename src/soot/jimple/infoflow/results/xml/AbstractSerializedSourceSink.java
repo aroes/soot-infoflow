@@ -10,16 +10,19 @@ class AbstractSerializedSourceSink {
 	
 	private final SerializedAccessPath accessPath;
 	private final String statement;
+	private final String method;
 	
 	/**
 	 * Creates a new instance of the AbstractSerializedSourceSink class
 	 * @param ap The tainted access path at this source or sink
 	 * @param statement The statement that represents this source or sink
+	 * @param method The method containing the source or sink statement
 	 */
 	protected AbstractSerializedSourceSink(SerializedAccessPath ap,
-			String statement) {
+			String statement, String method) {
 		this.accessPath = ap;
 		this.statement = statement;
+		this.method = method;
 	}
 	
 	@Override
@@ -30,6 +33,8 @@ class AbstractSerializedSourceSink {
 				+ ((accessPath == null) ? 0 : accessPath.hashCode());
 		result = prime * result
 				+ ((statement == null) ? 0 : statement.hashCode());
+		result = prime * result
+				+ ((method == null) ? 0 : method.hashCode());
 		return result;
 	}
 	
@@ -52,6 +57,11 @@ class AbstractSerializedSourceSink {
 				return false;
 		} else if (!statement.equals(other.statement))
 			return false;
+		if (method == null) {
+			if (other.method != null)
+				return false;
+		} else if (!method.equals(other.method))
+			return false;
 		return true;
 	}
 	
@@ -69,6 +79,14 @@ class AbstractSerializedSourceSink {
 	 */
 	public String getStatement() {
 		return this.statement;
+	}
+	
+	/**
+	 * Gets the method containing the source or sink statement
+	 * @return The method containing the source or sink statement
+	 */
+	public String getMethod() {
+		return this.method;
 	}
 
 }
