@@ -117,6 +117,9 @@ public class InfoflowResultsSerializer {
 				Stmt curStmt = source.getPath()[i];
 				writer.writeAttribute(XmlConstants.Attributes.statement,
 						curStmt.toString());
+				if (icfg != null)
+					writer.writeAttribute(XmlConstants.Attributes.method,
+							icfg.getMethodOf(curStmt).getSignature());
 				
 				AccessPath curAP = source.getPathAccessPaths()[i];
 				writeAccessPath(curAP, writer);

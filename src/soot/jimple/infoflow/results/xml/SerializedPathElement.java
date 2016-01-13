@@ -9,8 +9,9 @@ package soot.jimple.infoflow.results.xml;
  */
 public class SerializedPathElement extends AbstractSerializedSourceSink {
 
-	SerializedPathElement(SerializedAccessPath ap, String statement) {
-		super(ap, statement);
+	SerializedPathElement(SerializedAccessPath ap, String statement,
+			String method) {
+		super(ap, statement, method);
 	}
 
 }

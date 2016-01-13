@@ -53,6 +53,7 @@ public class InfoflowResultsReader {
 			SerializedAccessPath ap = null;
 			SerializedSinkInfo sink = null;
 			SerializedSourceInfo source = null;
+			List<SerializedPathElement> pathElements = new ArrayList<>();
 			
 			Stack<State> stateStack = new Stack<>();
 			stateStack.push(State.init);
@@ -139,6 +140,25 @@ public class InfoflowResultsReader {
 					method = getAttributeByName(reader,
 							XmlConstants.Attributes.method);
 				}
+				else if (reader.getLocalName().equals(XmlConstants.Tags.taintPath) 
+						&& reader.isStartElement()
+						&& stateStack.peek() == State.source) {
+					stateStack.push(State.taintPath);
+					
+					// Clear the old state
+					pathElements.clear();
+				}
+				else if (reader.getLocalName().equals(XmlConstants.Tags.pathElement) 
+						&& reader.isStartElement()
+						&& stateStack.peek() == State.source) {
+					stateStack.push(State.taintPath);
+					
+					// Read the attributes
+					statement = getAttributeByName(reader,
+							XmlConstants.Attributes.statement);
+					method = getAttributeByName(reader,
+							XmlConstants.Attributes.method);
+				}
 				else if (reader.isEndElement()) {
 					stateStack.pop();
 					
@@ -149,9 +169,11 @@ public class InfoflowResultsReader {
 					else if (reader.getLocalName().equals(XmlConstants.Tags.sink))
 						sink = new SerializedSinkInfo(ap, statement, method);
 					else if (reader.getLocalName().equals(XmlConstants.Tags.source))
-						source = new SerializedSourceInfo(ap, statement, method);
+						source = new SerializedSourceInfo(ap, statement, method, pathElements);
 					else if (reader.getLocalName().equals(XmlConstants.Tags.result))
 						results.addResult(source, sink);
+					else if (reader.getLocalName().equals(XmlConstants.Tags.pathElement))
+						pathElements.add(new SerializedPathElement(ap, statement, method));
 				}
 			}
 			
