@@ -81,6 +81,9 @@ public class Infoflow extends AbstractInfoflow {
     private TaintPropagationHandler backwardsPropagationHandler = null;
     
     private long maxMemoryConsumption = -1;
+    
+    private Set<Stmt> collectedSources = null;
+    private Set<Stmt> collectedSinks = null;
 
 	/**
 	 * Creates a new instance of the InfoFlow class for analyzing plain Java code without any references to APKs or the Android SDK.
@@ -526,6 +529,11 @@ public class Infoflow extends AbstractInfoflow {
 			final ISourceSinkManager sourcesSinks,
 			InfoflowProblem forwardProblem,
 			SootMethod m) {
+		if (getConfig().getLogSourcesAndSinks() && collectedSources == null) {
+			collectedSources = new HashSet<>();
+			collectedSinks = new HashSet<>();
+		}
+		
 		int sinkCount = 0;
 		if (m.hasActiveBody()) {
 			// Check whether this is a system class we need to ignore
@@ -542,11 +550,15 @@ public class Infoflow extends AbstractInfoflow {
 				Stmt s = (Stmt) u;
 				if (sourcesSinks.getSourceInfo(s, iCfg) != null) {
 					forwardProblem.addInitialSeeds(u, Collections.singleton(forwardProblem.zeroValue()));
+					if (getConfig().getLogSourcesAndSinks())
+						collectedSources.add(s);
 					logger.debug("Source found: {}", u);
 				}
 				if (sourcesSinks.isSink(s, iCfg, null)) {
-		            logger.debug("Sink found: {}", u);
 					sinkCount++;
+					if (getConfig().getLogSourcesAndSinks())
+						collectedSinks.add(s);
+					logger.debug("Sink found: {}", u);
 				}
 			}
 			
@@ -608,4 +620,26 @@ public class Infoflow extends AbstractInfoflow {
 		return this.maxMemoryConsumption;
 	}
 	
+	/**
+	 * Gets the concrete set of sources that have been collected in preparation
+	 * for the taint analysis. This method will return null if source and sink
+	 * logging has not been enabled (see InfoflowConfiguration.
+	 * setLogSourcesAndSinks()),
+	 * @return The set of sources collected for taint analysis
+	 */
+	public Set<Stmt> getCollectedSources() {
+		return this.collectedSources;
+	}
+	
+	/**
+	 * Gets the concrete set of sinks that have been collected in preparation
+	 * for the taint analysis. This method will return null if source and sink
+	 * logging has not been enabled (see InfoflowConfiguration.
+	 * setLogSourcesAndSinks()),
+	 * @return The set of sinks collected for taint analysis
+	 */
+	public Set<Stmt> getCollectedSinks() {
+		return this.collectedSinks;
+	}
+
 }

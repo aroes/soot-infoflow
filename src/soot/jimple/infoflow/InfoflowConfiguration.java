@@ -81,6 +81,7 @@ public class InfoflowConfiguration {
 	private boolean ignoreFlowsInSystemPackages = true;
 	private int maxThreadNum = -1;
 	private boolean writeOutputFiles = false;
+	private boolean logSourcesAndSinks = false;
 	
 	private boolean inspectSources = false;
 	private boolean inspectSinks = false;
@@ -108,6 +109,7 @@ public class InfoflowConfiguration {
 		this.callgraphAlgorithm = config.callgraphAlgorithm;
 		this.aliasingAlgorithm = config.aliasingAlgorithm;
 		this.codeEliminationMode = config.codeEliminationMode;
+		this.logSourcesAndSinks = config.logSourcesAndSinks;
 	}
 	
 	/**
@@ -515,6 +517,24 @@ public class InfoflowConfiguration {
 	 */
 	public CodeEliminationMode getCodeEliminationMode() {
 		return codeEliminationMode;
+	}
+	
+	/**
+	 * Gets whether the discovered sources and sinks shall be logged
+	 * @return True if the discovered sources and sinks shall be logged,
+	 * otherwise false
+	 */
+	public boolean getLogSourcesAndSinks() {
+		return logSourcesAndSinks;
+	}
+	
+	/**
+	 * Sets whether the discovered sources and sinks shall be logged
+	 * @param logSourcesAndSinks True if the discovered sources and sinks shall
+	 * be logged, otherwise false
+	 */
+	public void setLogSourcesAndSinks(boolean logSourcesAndSinks) {
+		this.logSourcesAndSinks = logSourcesAndSinks;
 	}
 	
 	/**
