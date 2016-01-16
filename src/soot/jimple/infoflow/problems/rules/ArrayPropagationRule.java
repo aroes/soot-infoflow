@@ -66,6 +66,7 @@ public class ArrayPropagationRule extends AbstractTaintPropagationRule {
 		//y = x[i] && x tainted -> x, y tainted
 		else if (rightVal instanceof ArrayRef) {
 			Value rightBase = ((ArrayRef) rightVal).getBase();
+			Value rightIndex = ((ArrayRef) rightVal).getIndex();
 			if (source.getAccessPath().getArrayTaintType() != ArrayTaintType.Length
 					&& getAliasing().mayAlias(rightBase, source.getAccessPath().getPlainValue())) {
 				// We must remove one layer of array typing, e.g., A[][] -> A[]
@@ -77,6 +78,15 @@ public class ArrayPropagationRule extends AbstractTaintPropagationRule {
 				ArrayTaintType arrayTaintType = source.getAccessPath().getArrayTaintType();
 				newAbs = source.deriveNewAbstraction(leftVal,
 						false, assignStmt, targetType, arrayTaintType);
+			}
+			
+			// y = x[i] with i tainted
+			if (source.getAccessPath().getArrayTaintType() != ArrayTaintType.Length
+					&& rightIndex == source.getAccessPath().getPlainValue()) {
+				// Create the new taint abstraction
+				ArrayTaintType arrayTaintType = ArrayTaintType.ContentsAndLength;
+				newAbs = source.deriveNewAbstraction(leftVal,
+						false, assignStmt, null, arrayTaintType);
 			}
 		}
 		// y = new A[i] with i tainted

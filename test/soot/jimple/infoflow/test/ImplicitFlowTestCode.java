@@ -577,6 +577,10 @@ public class ImplicitFlowTestCode {
 		cm.publish(message_base64);
 	}
 	
-	// TODO: Access array index
-
+	public void arrayIndexTest1() {
+		String[] arr = new String[] { "hello", "world" };
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(arr[TelephonyManager.getIMEI()]);
+	}
+	
 }
