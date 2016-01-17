@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import soot.Scene;
 import soot.SootClass;
+import soot.SootField;
 import soot.SootMethod;
 import soot.Value;
 import soot.jimple.Constant;
@@ -40,6 +41,7 @@ import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.data.AccessPathFactory;
 import soot.jimple.infoflow.util.SootMethodRepresentationParser;
+import soot.jimple.infoflow.util.SystemClassHandler;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -235,9 +237,21 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 				// tainted values
 				if (stmt instanceof DefinitionStmt) {
 					DefinitionStmt def = (DefinitionStmt) stmt;
-
+					
+					// If the base object is tainted and in a system class, but
+					// we reference some field in an application object derived
+					// from the system class, no tainting happens. The system
+					// cannot access or know about user-code fields.
+					boolean isSafe = taintedPath.isInstanceFieldRef()
+							&& SystemClassHandler.isClassInSystemPackage(
+									method.getDeclaringClass().getName());
+					if (isSafe)
+						for (SootField fld : taintedPath.getFields())
+							isSafe |= SystemClassHandler.isClassInSystemPackage(
+									fld.getType());
+					
 					// Check for exclusions
-					if (wrapType != MethodWrapType.Exclude)
+					if (!isSafe && wrapType != MethodWrapType.Exclude)
 						taints.add(AccessPathFactory.v().createAccessPath(def.getLeftOp(), true));
 				}
 
