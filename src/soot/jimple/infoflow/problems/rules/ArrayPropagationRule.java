@@ -108,7 +108,7 @@ public class ArrayPropagationRule extends AbstractTaintPropagationRule {
 		res.add(newAbs);
 		
 		// Compute the aliases
-		if (getAliasing().canHaveAliases(assignStmt, leftVal, newAbs))
+		if (Aliasing.canHaveAliases(assignStmt, leftVal, newAbs))
 			getAliasing().computeAliases(d1, assignStmt, leftVal, res,
 					getManager().getICFG().getMethodOf(assignStmt), newAbs);
 		
