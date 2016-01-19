@@ -81,7 +81,7 @@ public class ArrayPropagationRule extends AbstractTaintPropagationRule {
 			}
 			
 			// y = x[i] with i tainted
-			if (source.getAccessPath().getArrayTaintType() != ArrayTaintType.Length
+			else if (source.getAccessPath().getArrayTaintType() != ArrayTaintType.Length
 					&& rightIndex == source.getAccessPath().getPlainValue()
 					&& getManager().getConfig().getEnableImplicitFlows()) {
 				// Create the new taint abstraction
