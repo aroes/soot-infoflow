@@ -259,7 +259,7 @@ public class ImplicitPropagtionRule extends AbstractTaintPropagationRule {
 					
 					// If we taint a return value because it is implicit,
 					// we must trigger an alias analysis
-					if (getAliasing().canHaveAliases(def, def.getLeftOp(), abs) && !callerD1sConditional)
+					if (Aliasing.canHaveAliases(def, def.getLeftOp(), abs) && !callerD1sConditional)
 						for (Abstraction d1 : callerD1s)
 							getAliasing().computeAliases(d1, returnStmt, def.getLeftOp(), res,
 									getManager().getICFG().getMethodOf(callSite), abs);

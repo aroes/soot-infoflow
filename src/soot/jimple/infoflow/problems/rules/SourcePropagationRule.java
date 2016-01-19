@@ -53,7 +53,7 @@ public class SourcePropagationRule extends AbstractTaintPropagationRule {
 					
 					// Compute the aliases
 					if (leftOp != null)
-						if (getAliasing().canHaveAliases(stmt, leftOp, abs))
+						if (Aliasing.canHaveAliases(stmt, leftOp, abs))
 							getAliasing().computeAliases(d1, stmt, leftOp,
 									res, getManager().getICFG().getMethodOf(stmt), abs);
 					
