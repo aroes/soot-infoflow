@@ -399,6 +399,7 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 		abs.predecessor = this;
 		abs.neighbors = null;
 		abs.currentStmt = null;
+		abs.correspondingCallSite = null;
 		
 		assert abs.equals(this);
 		return abs;

@@ -55,7 +55,8 @@ public class PtsBasedAliasStrategy extends AbstractBulkAliasStrategy {
 	}
 	
 	public void computeAliasTaintsInternal(Abstraction d1, SootMethod method,
-			Abstraction newAbs, List<SootField> appendFields, List<Type> appendTypes, boolean taintSubFields, Stmt actStmt) {
+			Abstraction newAbs, List<SootField> appendFields, List<Type> appendTypes,
+			boolean taintSubFields, Stmt actStmt) {
 		// Record the incoming abstraction
 		synchronized(aliases) {
 			if (aliases.contains(method, newAbs)) {
@@ -81,7 +82,7 @@ public class PtsBasedAliasStrategy extends AbstractBulkAliasStrategy {
 			typesList.add(0, newAbs.getAccessPath().getLastFieldType());
 			
 			computeAliasTaintsInternal(d1, method, newAbs.deriveNewAbstraction
-					(newAbs.getAccessPath().dropLastField(), actStmt), appendList, typesList, taintSubFields, actStmt);
+					(newAbs.getAccessPath().dropLastField(), null), appendList, typesList, taintSubFields, actStmt);
 		}
 		
 		// Do not try to compute points-to-sets on complex access paths
@@ -151,9 +152,11 @@ public class PtsBasedAliasStrategy extends AbstractBulkAliasStrategy {
 
 				// If we have a = b and our taint is an alias to a, we must add
 				// a taint for b.
-				if (assign.getLeftOp() instanceof FieldRef || assign.getLeftOp() instanceof Local
+				if (assign.getLeftOp() instanceof FieldRef
+						|| assign.getLeftOp() instanceof Local
 						|| assign.getLeftOp() instanceof ArrayRef)
-					if (assign.getRightOp() instanceof FieldRef || assign.getRightOp() instanceof Local
+					if (assign.getRightOp() instanceof FieldRef
+							|| assign.getRightOp() instanceof Local
 							|| assign.getRightOp() instanceof ArrayRef) {
 						if (isAliasedAtStmt(ptsTaint, assign.getLeftOp())) {
 							Abstraction aliasAbsRight = newAbs.deriveNewAbstraction(

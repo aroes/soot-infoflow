@@ -1,6 +1,7 @@
 package soot.jimple.infoflow.data;
 
-import java.util.HashSet;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -9,6 +10,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import soot.jimple.ReturnStmt;
+import soot.jimple.ReturnVoidStmt;
 import soot.jimple.infoflow.solver.IMemoryManager;
 
 /**
@@ -173,52 +176,61 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 				return cachedAbs;
 		}
 		
+		// Sanity check: Abstractions shall not have circles. Really. Trust me.
+		{
+			Set<Abstraction> seenAbstractions = Collections.newSetFromMap(new IdentityHashMap<Abstraction,Boolean>());
+			seenAbstractions.add(obj);
+			Abstraction curAbs = obj;
+			while (curAbs.getPredecessor() != null) {
+				if (!seenAbstractions.add(curAbs.getPredecessor()))
+					System.out.println("ISSUE");
+				curAbs = curAbs.getPredecessor();
+			}
+		}
+		
 		// We check for a cached version of the access path
 		AccessPath newAP = getCachedAccessPath(obj.getAccessPath());
 		obj.setAccessPath(newAP);
 		
-		// If the abstraction just made a pass through the alias analysis
-		// without any changes, we can throw away the middle men.
-		// More precisely: Compact a -> r0 -> _r0 -> r0 to a -> r0.
+		// Erase path data if requested
+		if (erasePathData != PathDataErasureMode.EraseNothing) {
+			Abstraction curAbs = obj;
+			while (curAbs != null) {
+				boolean doErase = erasePathData == PathDataErasureMode.EraseAll;
+				if (erasePathData == PathDataErasureMode.KeepOnlyContextData
+						&& curAbs.getCorrespondingCallSite() == curAbs.getCurrentStmt())
+					doErase = true;
+				if (erasePathData == PathDataErasureMode.KeepOnlyContextData
+						&& curAbs.getCorrespondingCallSite() == null
+						&& curAbs.getCurrentStmt() != null
+						&& !curAbs.getCurrentStmt().containsInvokeExpr()
+						&& !(curAbs.getCurrentStmt() instanceof ReturnStmt)
+						&& !(curAbs.getCurrentStmt() instanceof ReturnVoidStmt)) {
+					doErase = true;
+				}
+				if (doErase) {
+					curAbs.setCurrentStmt(null);
+					curAbs.setCorrespondingCallSite(null);
+				}
+				curAbs = curAbs.getPredecessor();
+			}
+		}
+		
 		Abstraction pred = obj.getPredecessor();
-		if (obj.isAbstractionActive()) {
-			Set<Abstraction> doneSet = new HashSet<>();
+		{
 			Abstraction curAbs = pred;
-			while (curAbs != null && !curAbs.isAbstractionActive() && doneSet.add(curAbs)) {
+			while (curAbs != null && curAbs.getNeighbors() == null) {
 				Abstraction predPred = curAbs.getPredecessor();
-				if (predPred != null && predPred.isAbstractionActive()) {
+				if (predPred != null) {
 					if (predPred.equals(obj)) {
 						pred = predPred.getPredecessor();
 						obj = predPred;
 					}
 				}
-				else
-					break;
 				curAbs = predPred;
 			}
 		}
 		
-		// Erase path data if requested
-		Abstraction curAbs = obj;
-		while (curAbs != null) {
-			boolean doErase = erasePathData == PathDataErasureMode.EraseAll;
-			if (erasePathData == PathDataErasureMode.KeepOnlyContextData
-					&& curAbs.getCorrespondingCallSite() == curAbs.getCurrentStmt())
-				doErase = true;
-			if (erasePathData == PathDataErasureMode.KeepOnlyContextData
-					&& curAbs.getCorrespondingCallSite() == null
-					&& curAbs.getCurrentStmt() != null 
-					&& !curAbs.getCurrentStmt().containsInvokeExpr()) {
-				doErase = true;
-			}
-			if (doErase) {
-				curAbs.setCurrentStmt(null);
-				curAbs.setCorrespondingCallSite(null);
-				curAbs = curAbs.getPredecessor();
-			}
-			else
-				break;
-		}		
 		return obj;
 	}
 

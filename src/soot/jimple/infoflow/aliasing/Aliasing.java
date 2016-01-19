@@ -329,7 +329,7 @@ public class Aliasing {
 	 * @return True if the analysis must look for aliases for the newly
 	 * constructed taint, otherwise false
 	 */
-	public boolean canHaveAliases(Stmt stmt, Value val, Abstraction source) {
+	public static boolean canHaveAliases(Stmt stmt, Value val, Abstraction source) {
 		if (stmt instanceof DefinitionStmt) {
 			DefinitionStmt defStmt = (DefinitionStmt) stmt;
 			// If the left side is overwritten completely, we do not need to

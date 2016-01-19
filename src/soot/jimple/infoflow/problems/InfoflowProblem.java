@@ -188,7 +188,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				
 				if (newAbs != null) {
 					taintSet.add(newAbs);
-					if (aliasing.canHaveAliases(assignStmt, leftValue, newAbs))
+					if (Aliasing.canHaveAliases(assignStmt, leftValue, newAbs))
 						aliasing.computeAliases(d1, assignStmt, leftValue, taintSet,
 								method, newAbs);
 				}
@@ -679,7 +679,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 											// into the caller's context on return when we leave the last
 											// implicitly-called method
 											if ((abs.isImplicit()
-													&& aliasing.canHaveAliases(iCallStmt, iIExpr.getBase(), abs)
+													&& Aliasing.canHaveAliases(iCallStmt, iIExpr.getBase(), abs)
 													&& !callerD1sConditional) || aliasingStrategy.requiresAnalysisOnReturn())
 												for (Abstraction d1 : callerD1s)
 													aliasing.computeAliases(d1, iCallStmt, iIExpr.getBase(), res,
@@ -855,7 +855,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										// Compute the aliases
 										for (Abstraction abs : nativeAbs)
 											if (abs.getAccessPath().isStaticFieldRef()
-													|| aliasing.canHaveAliases(iCallStmt,
+													|| Aliasing.canHaveAliases(iCallStmt,
 															abs.getAccessPath().getPlainValue(), abs))
 												aliasing.computeAliases(d1, iCallStmt,
 														abs.getAccessPath().getPlainValue(), res,

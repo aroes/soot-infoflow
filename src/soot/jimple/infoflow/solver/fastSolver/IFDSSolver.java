@@ -42,6 +42,7 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.collect.MyConcurrentHashMap;
+import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.solver.IMemoryManager;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
@@ -304,8 +305,10 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 								D d5p = d5;
 								if (d5.equals(d2))
 									d5p = d2;
-								else if (setJumpPredecessors && d5p != d3)
-									d5p.setPredecessor(d3);
+								else if (setJumpPredecessors && d5p != d2) {
+									d5p = d5p.clone();
+									d5p.setPredecessor(d2);
+								}
 								propagate(d1, retSiteN, d5p, n, false, true);
 							}
 						}
@@ -404,8 +407,10 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 							D d5p = d5;
 							if (d5.equals(predVal))
 								d5p = predVal;
-							else if (setJumpPredecessors && d5p != d1)
-								d5p.setPredecessor(d1);
+							else if (setJumpPredecessors && d5p != predVal) {
+								d5p = d5p.clone();
+								d5p.setPredecessor(predVal);
+							}
 							propagate(d4, retSiteC, d5p, c, false, true);
 						}
 					}
@@ -469,7 +474,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 			FlowFunction<D> flowFunction = flowFunctions.getNormalFlowFunction(n,m);
 			Set<D> res = computeNormalFlowFunction(flowFunction, d1, d2);
 			for (D d3 : res) {
-				if (memoryManager != null)
+				if (memoryManager != null && d2 != d3)
 					d3 = memoryManager.handleGeneratedMemoryObject(d2, d3);
 				if (d3 != null)
 					propagate(d1, m, d3, null, false);
@@ -527,6 +532,8 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 		if (memoryManager != null) {
 			sourceVal = memoryManager.handleMemoryObject(sourceVal);
 			targetVal = memoryManager.handleMemoryObject(targetVal);
+			if (sourceVal == null || targetVal == null)
+				return;
 		}
 		
 		final PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);

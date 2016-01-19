@@ -8,7 +8,7 @@ import heros.solver.LinkedNode;
  * 
  * @author Steven Arzt
  */
-public interface FastSolverLinkedNode<D, N> extends LinkedNode<D> {
+public interface FastSolverLinkedNode<D, N> extends LinkedNode<D>, Cloneable {
 	
 	/**
 	 * Explicitly sets the predecessor of this node.
@@ -21,5 +21,7 @@ public interface FastSolverLinkedNode<D, N> extends LinkedNode<D> {
 	 * @return The predecessor of this node is applicable, null for source nodes
 	 */
 	public D getPredecessor();
+	
+	public D clone();
 	
 }
