@@ -23,6 +23,7 @@
 <java.util.List: boolean addAll(int,java.util.Collection)>
 -<java.util.List: void clear()>
 <java.util.List: java.util.Iterator iterator()>()
+~<java.util.List: int size()>
 
 <java.util.Iterator: java.lang.Object next()>
 
@@ -32,10 +33,12 @@
 <java.util.Set: boolean add(java.lang.Object)>
 <java.util.Set: boolean addAll(java.util.Collection)>
 -<java.util.Set: void clear()>
+~<java.util.Set: int size()>
 
 <java.util.Collection: boolean add(java.lang.Object)>
 <java.util.Collection: boolean addAll(java.util.Collection)>
 -<java.util.Collection: void clear()>
+~<java.util.Collection: int size()>
 
 <java.util.Vector: void <init>(java.util.Collection)>
 <java.util.Vector: void add(int,java.lang.Object)>
@@ -43,6 +46,7 @@
 <java.util.Vector: boolean addAll(java.util.Collection)>
 <java.util.Vector: void addElement(java.lang.Object)>
 -<java.util.Vector: void clear()>
+~<java.util.Vector: int size()>
 
 <java.io.StringReader: void <init>(java.lang.String)>
 
@@ -52,6 +56,7 @@
 <java.util.Queue: java.lang.Object poll()>
 <java.util.Queue: java.lang.Object element()>
 <java.util.Queue: java.lang.Object peek()>
+~<java.util.Queue: int size()>
 
 <java.lang.StringBuilder: void <init>(java.lang.String)>
 <java.lang.StringBuilder: java.lang.StringBuilder append(boolean)>
