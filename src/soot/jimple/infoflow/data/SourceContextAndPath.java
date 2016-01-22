@@ -29,7 +29,7 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 	}
 	
 	public List<Abstraction> getAbstractionPath() {
-		return path;		
+		return path;
 	}
 	
 	public List<Stmt> getPath() {
@@ -127,6 +127,15 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 		
 		SourceContextAndPath scap = clone();
 		return new Pair<>(scap, scap.callStack.remove(0));
+	}
+	
+	/**
+	 * Gets whether the current call stack is empty, i.e., the path is in the
+	 * method from which it originated
+	 * @return True if the call stack is empty, otherwise false
+	 */
+	public boolean isCallStackEmpty() {
+		return this.callStack == null || this.callStack.isEmpty();
 	}
 	
 	@Override
