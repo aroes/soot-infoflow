@@ -28,6 +28,7 @@ import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.data.AccessPathFactory;
+import soot.jimple.infoflow.util.SystemClassHandler;
 
 /**
  * A {@link ISourceSinkManager} working on lists of source and sink methods
@@ -147,21 +148,25 @@ public class DefaultSourceSinkManager implements ISourceSinkManager  {
 		if (this.sinks != null
 				&& sCallSite.containsInvokeExpr()
 				&& this.sinks.contains(sCallSite.getInvokeExpr().getMethod().getSignature())) {
-			// If we don't have an access path, we can only over-approximate
-			if (ap == null)
-				return true;
+			InvokeExpr iexpr = sCallSite.getInvokeExpr();
 			
-			// The given access path must at least be referenced somewhere in the sink
-			if (!ap.isStaticFieldRef()) {
-				InvokeExpr iexpr = sCallSite.getInvokeExpr();
-				for (int i = 0; i < iexpr.getArgCount(); i++)
-					if (iexpr.getArg(i) == ap.getPlainValue()) {
-						if (ap.getTaintSubFields() || ap.isLocal())
+			// Check that the incoming taint is visible in the callee at all
+			if (SystemClassHandler.isTaintVisible(ap, iexpr.getMethod())) {
+				// If we don't have an access path, we can only over-approximate
+				if (ap == null)
+					return true;
+				
+				// The given access path must at least be referenced somewhere in the sink
+				if (!ap.isStaticFieldRef()) {
+					for (int i = 0; i < iexpr.getArgCount(); i++)
+						if (iexpr.getArg(i) == ap.getPlainValue()) {
+							if (ap.getTaintSubFields() || ap.isLocal())
+								return true;
+						}
+					if (iexpr instanceof InstanceInvokeExpr)
+						if (((InstanceInvokeExpr) iexpr).getBase() == ap.getPlainValue())
 							return true;
-					}
-				if (iexpr instanceof InstanceInvokeExpr)
-					if (((InstanceInvokeExpr) iexpr).getBase() == ap.getPlainValue())
-						return true;
+				}
 			}
 		}
 		
