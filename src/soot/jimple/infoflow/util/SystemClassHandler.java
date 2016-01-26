@@ -60,9 +60,12 @@ public class SystemClassHandler {
 			return true;
 		
 		// Check whether we have a user-defined field
-		for (SootField fld : taintedPath.getFields())
+		for (SootField fld : taintedPath.getFields()) {
 			if (!SystemClassHandler.isClassInSystemPackage(fld.getType()))
 				return false;
+			if (!SystemClassHandler.isClassInSystemPackage(fld.getDeclaringClass().getType()))
+				return false;
+		}
 		
 		// We don't have a reason to believe that this taint is invisible to the
 		// callee
