@@ -50,6 +50,11 @@ public class SystemClassHandler {
 	 * @return True if the given taint is visible to the callee, otherwise false
 	 */
 	public static boolean isTaintVisible(AccessPath taintedPath, SootMethod method) {
+		// If we don't know anything about the tainted access path, we have to
+		// conservatively assume that it's visible in the calllee
+		if (taintedPath == null)
+			return true;
+		
 		// If the complete base object is tainted, this is always visible
 		if (!taintedPath.isInstanceFieldRef())
 			return true;
