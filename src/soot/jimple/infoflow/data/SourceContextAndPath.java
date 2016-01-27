@@ -75,30 +75,42 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 		if (abs.getCorrespondingCallSite() == null && !trackPath)
 			return this;
 		
-		// Do not add the very same abstraction over and over again
-		if (this.path != null)
-			for (Abstraction a : this.path) {
-				if (a == abs)
-					return null;
+		SourceContextAndPath scap = null;
+		if (trackPath && abs.getCurrentStmt() != null) {
+			// Do not add the very same abstraction over and over again. We clone
+			// the data object first to ensure a stable state.
+			scap = this.clone();
+			if (this.path != null) {
+				for (Abstraction a : scap.path) {
+					if (a == abs)
+						return null;
+					
+					// Do not run into loops. If we come back to the same
+					// abstraction, we don't got on with a neighbor
+					if (a.getNeighbors() != null && a.getNeighbors().contains(abs))
+						return null;
+					if (abs.getNeighbors() != null && abs.getNeighbors().contains(a))
+						return null;
+					
+					// If this is exactly the same abstraction as one we have seen
+					// before, we skip it. Otherwise, we would run through loops
+					// infinitely.
+					if (a.equals(abs)
+							&& a.getCurrentStmt() == abs.getCurrentStmt()
+							&& a.getCorrespondingCallSite() == abs.getCorrespondingCallSite())
+						return null;
+				}
 				
-				// Do not run into loops. If we come back to the same
-				// abstraction, we don't got on with a neighbor
-				if (a.getNeighbors() != null && a.getNeighbors().contains(abs))
-					return null;
-				if (abs.getNeighbors() != null && abs.getNeighbors().contains(a))
-					return null;
-				
-				// If this is exactly the same abstraction as one we have seen
-				// before, we skip it. Otherwise, we would run through loops
-				// infinitely.
-				if (a.equals(abs)
-						&& a.getCurrentStmt() == abs.getCurrentStmt()
-						&& a.getCorrespondingCallSite() == abs.getCorrespondingCallSite())
+				// We cannot leave the same method at two different sites
+				Abstraction topAbs = scap.path.get(0);
+				if (topAbs.equals(abs)
+						&& topAbs.getCorrespondingCallSite() != null
+						&& topAbs.getCorrespondingCallSite() == abs.getCorrespondingCallSite()
+						&& topAbs.getCurrentStmt() != abs.getCurrentStmt())
 					return null;
 			}
-		
-		SourceContextAndPath scap = clone();
-		if (trackPath && abs.getCurrentStmt() != null) {
+			
+			// Extend the propagation path
 			if (scap.path == null)
 				scap.path = new ArrayList<Abstraction>();
 			scap.path.add(0, abs);
@@ -107,12 +119,14 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 		// Extend the call stack
 		if (abs.getCorrespondingCallSite() != null
 				&& abs.getCorrespondingCallSite() != abs.getCurrentStmt()) {
+			if (scap == null)
+				scap = this.clone();
 			if (scap.callStack == null)
 				scap.callStack = new ArrayList<Stmt>();
 			scap.callStack.add(0, abs.getCorrespondingCallSite());
 		}
 		
-		return scap;
+		return scap == null ? this : scap;
 	}
 	
 	/**

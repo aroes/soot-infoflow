@@ -629,33 +629,5 @@ public class OtherTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(imei);
 	}
-	
-	public void contextSensitivityTest1() {
-		String tainted1 = TelephonyManager.getDeviceId();
-		String tainted2 = new AccountManager().getPassword();
-		String str1 = id(tainted1);
-		String str2 = id(tainted2);
-		ConnectionManager cm = new ConnectionManager();
-		cm.publish(str1);
-		System.out.println(str2);
-	}
-	
-	public void contextSensitivityTest2() {
-		String tainted1 = TelephonyManager.getDeviceId();
-		String tainted2 = new AccountManager().getPassword();
-		String str1 = id2(tainted1);
-		String str2 = id2(tainted2);
-		ConnectionManager cm = new ConnectionManager();
-		cm.publish(str1);
-		System.out.println(str2);
-	}
-	
-	public void multipleCallSiteTest1() {
-		String tainted = TelephonyManager.getDeviceId();
-		String x = id(tainted);
-		String y = id(x);
-		ConnectionManager cm = new ConnectionManager();
-		cm.publish(y);
-	}
-	
+		
 }
