@@ -409,36 +409,4 @@ public class OtherTests extends JUnitTests{
     	}
 	}
     
-    @Test(timeout=300000)
-	public void contextSensitivityTest1() {
-    	IInfoflow infoflow = initInfoflow();
-    	List<String> epoints = new ArrayList<String>();
-    	epoints.add("<soot.jimple.infoflow.test.OtherTestCode: void contextSensitivityTest1()>");
-		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
-		checkInfoflow(infoflow, 1);
-		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));		
-		Assert.assertFalse(infoflow.getResults().isPathBetweenMethods(sink, sourcePwd));		
-	}
-    
-    @Test(timeout=300000)
-	public void contextSensitivityTest2() {
-    	IInfoflow infoflow = initInfoflow();
-    	List<String> epoints = new ArrayList<String>();
-    	epoints.add("<soot.jimple.infoflow.test.OtherTestCode: void contextSensitivityTest2()>");
-		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
-		checkInfoflow(infoflow, 1);
-		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));		
-		Assert.assertFalse(infoflow.getResults().isPathBetweenMethods(sink, sourcePwd));		
-	}
-
-    @Test(timeout=300000)
-	public void multipleCallSiteTest1() {
-    	IInfoflow infoflow = initInfoflow();
-    	List<String> epoints = new ArrayList<String>();
-    	epoints.add("<soot.jimple.infoflow.test.OtherTestCode: void multipleCallSiteTest1()>");
-		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
-		checkInfoflow(infoflow, 1);
-		Assert.assertTrue(infoflow.getResults().isPathBetweenMethods(sink, sourceDeviceId));		
-	}
-
 }
