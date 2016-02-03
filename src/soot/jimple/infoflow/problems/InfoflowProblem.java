@@ -464,22 +464,25 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						Set<Abstraction> resAbs = new HashSet<Abstraction>(resMapping.size());
 						if (res != null && !res.isEmpty())
 							resAbs.addAll(res);
-						for (AccessPath ap : resMapping)
-							if (ap.isStaticFieldRef()) {
-								// Do not propagate static fields that are not read inside the callee
-								if (interproceduralCFG().isStaticFieldRead(dest, ap.getFirstField())) {
+						for (AccessPath ap : resMapping) {
+							if (ap != null) {
+								if (ap.isStaticFieldRef()) {
+									// Do not propagate static fields that are not read inside the callee
+									if (interproceduralCFG().isStaticFieldRead(dest, ap.getFirstField())) {
+										Abstraction newAbs = source.deriveNewAbstraction(ap, stmt);
+										if (newAbs != null)
+											resAbs.add(newAbs);
+									}
+								}
+								// If the variable is never read in the callee, there is no
+								// need to propagate it through
+								else if (source.isImplicit() || interproceduralCFG().methodReadsValue(dest, ap.getPlainValue())) {
 									Abstraction newAbs = source.deriveNewAbstraction(ap, stmt);
 									if (newAbs != null)
 										resAbs.add(newAbs);
 								}
 							}
-							// If the variable is never read in the callee, there is no
-							// need to propagate it through
-							else if (source.isImplicit() || interproceduralCFG().methodReadsValue(dest, ap.getPlainValue())) {
-								Abstraction newAbs = source.deriveNewAbstraction(ap, stmt);
-								if (newAbs != null)
-									resAbs.add(newAbs);
-							}
+						}
 						
 						return resAbs;
 					}
