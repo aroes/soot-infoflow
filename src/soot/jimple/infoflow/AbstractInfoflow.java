@@ -217,6 +217,7 @@ public abstract class AbstractInfoflow implements IInfoflow {
 			case RTA:
 				Options.v().setPhaseOption("cg.spark", "on");
 				Options.v().setPhaseOption("cg.spark", "rta:true");
+				Options.v().setPhaseOption("cg.spark", "on-fly-cg:false");
 				Options.v().setPhaseOption("cg.spark", "string-constants:true");
 				break;
 			case VTA:
