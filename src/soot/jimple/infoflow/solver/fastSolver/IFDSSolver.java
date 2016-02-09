@@ -587,25 +587,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 		
 		Set<Pair<N, D>> summaries = endSummary.putIfAbsentElseGet
 				(new Pair<M, D>(m, d1), new ConcurrentHashSet<Pair<N, D>>());
-		boolean res = summaries.add(new Pair<N, D>(eP, d2));
-		
-		/*
-		if (res) {
-			Map<M, Integer> countMap = new HashMap<M, Integer>();
-			for (Pair<M, D> pair : endSummary.keySet()) {
-				if (countMap.containsKey(pair.getO1()))
-					countMap.put(pair.getO1(), countMap.get(pair.getO1()) + 1);
-				else
-					countMap.put(pair.getO1(), 1);
-				
-				if (countMap.get(pair.getO1()) > 10) {
-					System.out.println(pair.getO1());
-				}
-			}
-		}
-		*/
-		
-		return res;
+		return summaries.add(new Pair<N, D>(eP, d2));
 	}
 	
 	protected Map<N, Map<D, D>> incoming(D d1, M m) {

@@ -283,7 +283,6 @@
 <android.content.ContentValues: void putAll(android.content.ContentValues)>
 <android.content.ContentValues: void putNull(java.lang.String)>
 
-<android.content.Intent: void <init>(android.content.Context,java.lang.Class)>
 <android.content.Intent: android.content.Intent addFlags(int)>
 <android.content.Intent: android.content.Intent setFlags(int)>
 <android.content.Intent: android.content.Intent parseIntent(android.content.res.Resources,org.xmlpull.v1.XmlPullParser,android.util.AttributeSet)>
@@ -427,3 +426,6 @@
 <android.graphics.PointF: void <init>(android.graphics.Point)>
 
 <android.telephony.SmsMessage: android.telephony.SmsMessage createFromPdu(byte[])>
+<android.telephony.gsm.SmsMessage: android.telephony.gsm.SmsMessage createFromPdu(byte[])>
+
+~<android.content.SharedPreferences: android.content.SharedPreferences$Editor edit()>
