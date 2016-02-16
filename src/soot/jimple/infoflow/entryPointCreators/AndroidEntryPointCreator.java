@@ -43,7 +43,6 @@ import soot.jimple.infoflow.util.SootMethodRepresentationParser;
 import soot.jimple.internal.JAssignStmt;
 import soot.jimple.internal.JEqExpr;
 import soot.jimple.internal.JIfStmt;
-import soot.jimple.internal.JNopStmt;
 import soot.jimple.toolkits.scalar.NopEliminator;
 import soot.options.Options;
 
@@ -173,7 +172,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		// the application object's onCreate() is called.
 		{
 			boolean hasContentProviders = false;
-			JNopStmt beforeContentProvidersStmt = new JNopStmt();
+			NopStmt beforeContentProvidersStmt = Jimple.v().newNopStmt();
 			body.getUnits().add(beforeContentProvidersStmt);
 			for(String className : classMap.keySet()) {
 				SootClass currentClass = Scene.v().getSootClass(className);
@@ -187,7 +186,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 					localVarsForClasses.put(currentClass.getName(), localVal);
 					
 					// Conditionally call the onCreate method
-					JNopStmt thenStmt = new JNopStmt();
+					NopStmt thenStmt = Jimple.v().newNopStmt();
 					createIfStmt(thenStmt);
 					buildMethodCall(findMethod(currentClass, AndroidEntryPointConstants.CONTENTPROVIDER_ONCREATE),
 							body, localVal, generator);
@@ -222,10 +221,10 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 					
 					// Create instances of all application callback classes
 					if (callbackFunctions.containsKey(applicationClass.getName())) {
-						NopStmt beforeCbCons = new JNopStmt();
+						NopStmt beforeCbCons = Jimple.v().newNopStmt();
 						body.getUnits().add(beforeCbCons);
 						for (String appCallback : callbackFunctions.get(applicationClass.getName())) {
-							JNopStmt thenStmt = new JNopStmt();
+							NopStmt thenStmt = Jimple.v().newNopStmt();
 							createIfStmt(thenStmt);
 
 							String callbackClass = SootMethodRepresentationParser.v().parseSootMethodString
@@ -255,17 +254,17 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		}
 		
 		//prepare outer loop:
-		JNopStmt outerStartStmt = new JNopStmt();
+		NopStmt outerStartStmt = Jimple.v().newNopStmt();
 		body.getUnits().add(outerStartStmt);
 		
 		for(Entry<String, Set<String>> entry : classMap.entrySet()){
 			//no execution order given for all apps:
-			JNopStmt entryExitStmt = new JNopStmt();
+			NopStmt entryExitStmt = Jimple.v().newNopStmt();
 			createIfStmt(entryExitStmt);
 			
 			SootClass currentClass = Scene.v().getSootClass(entry.getKey());
 			currentClass.setApplicationClass();
-			JNopStmt endClassStmt = new JNopStmt();
+			NopStmt endClassStmt = Jimple.v().newNopStmt();
 
 			try {
 				ComponentType componentType = getComponentType(currentClass);
@@ -338,7 +337,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 					// Allow the complete class to be skipped
 					createIfStmt(endClassStmt);
 
-					JNopStmt beforeClassStmt = new JNopStmt();
+					NopStmt beforeClassStmt = Jimple.v().newNopStmt();
 					body.getUnits().add(beforeClassStmt);
 					for(SootMethod currentMethod : plainMethods.values()) {
 						if (!currentMethod.isStatic() && classLocal == null) {
@@ -347,7 +346,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 						}
 						
 						// Create a conditional call on the current method
-						JNopStmt thenStmt = new JNopStmt();
+						NopStmt thenStmt = Jimple.v().newNopStmt();
 						createIfStmt(thenStmt);
 						buildMethodCall(currentMethod, body, classLocal, generator);
 						body.getUnits().add(thenStmt);
@@ -479,7 +478,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 	private void generateContentProviderLifecycle
 			(Set<String> entryPoints,
 			SootClass currentClass,
-			JNopStmt endClassStmt,
+			NopStmt endClassStmt,
 			Local classLocal) {
 		// As we don't know the order in which the different Android lifecycles
 		// run, we allow for each single one of them to be skipped
@@ -491,8 +490,8 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		
 		// see: http://developer.android.com/reference/android/content/ContentProvider.html
 		//methods
-		JNopStmt startWhileStmt = new JNopStmt();
-		JNopStmt endWhileStmt = new JNopStmt();
+		NopStmt startWhileStmt = Jimple.v().newNopStmt();
+		NopStmt endWhileStmt = Jimple.v().newNopStmt();
 		body.getUnits().add(startWhileStmt);
 		createIfStmt(endWhileStmt);
 		
@@ -521,7 +520,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 	private void generateBroadcastReceiverLifecycle
 			(Set<String> entryPoints,
 			SootClass currentClass,
-			JNopStmt endClassStmt,
+			NopStmt endClassStmt,
 			Local classLocal) {
 		// As we don't know the order in which the different Android lifecycles
 		// run, we allow for each single one of them to be skipped
@@ -529,8 +528,8 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 
 		Stmt onReceiveStmt = searchAndBuildMethod(AndroidEntryPointConstants.BROADCAST_ONRECEIVE, currentClass, entryPoints, classLocal);
 		//methods
-		JNopStmt startWhileStmt = new JNopStmt();
-		JNopStmt endWhileStmt = new JNopStmt();
+		NopStmt startWhileStmt = Jimple.v().newNopStmt();
+		NopStmt endWhileStmt = Jimple.v().newNopStmt();
 		body.getUnits().add(startWhileStmt);
 		createIfStmt(endWhileStmt);
 		
@@ -558,7 +557,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 	private void generateServiceLifecycle
 			(Set<String> entryPoints,
 			SootClass currentClass,
-			JNopStmt endClassStmt,
+			NopStmt endClassStmt,
 			Local classLocal) {
 		final boolean isGCMBaseIntentService = isGCMBaseIntentService(currentClass);
 		final boolean isGCMListenerService = !isGCMBaseIntentService && isGCMListenerService(currentClass);
@@ -572,8 +571,8 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		searchAndBuildMethod(AndroidEntryPointConstants.SERVICE_ONSTART1, currentClass, entryPoints, classLocal);
 		
 		// onStartCommand can be called an arbitrary number of times, or never
-		JNopStmt beforeStartCommand = new JNopStmt();
-		JNopStmt afterStartCommand = new JNopStmt();		
+		NopStmt beforeStartCommand = Jimple.v().newNopStmt();
+		NopStmt afterStartCommand = Jimple.v().newNopStmt();
 		body.getUnits().add(beforeStartCommand);
 		createIfStmt(afterStartCommand);
 		
@@ -583,8 +582,8 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		
 		//methods: 
 		//all other entryPoints of this class:
-		JNopStmt startWhileStmt = new JNopStmt();
-		JNopStmt endWhileStmt = new JNopStmt();
+		NopStmt startWhileStmt = Jimple.v().newNopStmt();
+		NopStmt endWhileStmt = Jimple.v().newNopStmt();
 		body.getUnits().add(startWhileStmt);
 		createIfStmt(endWhileStmt);
 		
@@ -621,11 +620,11 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		//onBind:
 		searchAndBuildMethod(AndroidEntryPointConstants.SERVICE_ONBIND, currentClass, entryPoints, classLocal);
 		
-		JNopStmt beforemethodsStmt = new JNopStmt();
+		NopStmt beforemethodsStmt = Jimple.v().newNopStmt();
 		body.getUnits().add(beforemethodsStmt);
 		//methods
-		JNopStmt startWhile2Stmt = new JNopStmt();
-		JNopStmt endWhile2Stmt = new JNopStmt();
+		NopStmt startWhile2Stmt = Jimple.v().newNopStmt();
+		NopStmt endWhile2Stmt = Jimple.v().newNopStmt();
 		body.getUnits().add(startWhile2Stmt);
 		hasAdditionalMethods = false;
 		if (modelAdditionalMethods) {
@@ -668,8 +667,8 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		if(AndroidEntryPointConstants.getServiceLifecycleMethods().contains(currentMethod.getSubSignature()))
 			return false;
 		
-		JNopStmt beforeStmt = new JNopStmt();
-		JNopStmt thenStmt = new JNopStmt();
+		NopStmt beforeStmt = Jimple.v().newNopStmt();
+		NopStmt thenStmt = Jimple.v().newNopStmt();
 		body.getUnits().add(beforeStmt);
 		createIfStmt(thenStmt);
 		buildMethodCall(currentMethod, body, classLocal, generator);
@@ -722,7 +721,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 	private void generateActivityLifecycle
 			(Set<String> entryPoints,
 			SootClass currentClass,
-			JNopStmt endClassStmt,
+			NopStmt endClassStmt,
 			Local classLocal) {
 		// As we don't know the order in which the different Android lifecycles
 		// run, we allow for each single one of them to be skipped
@@ -736,7 +735,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		referenceClasses.add(currentClass);
 		
 		// 1. onCreate:
-		Stmt onCreateStmt = new JNopStmt();
+		Stmt onCreateStmt = Jimple.v().newNopStmt();
 		body.getUnits().add(onCreateStmt);
 		{
 			Stmt onCreateStmt2 = searchAndBuildMethod
@@ -748,7 +747,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		}
 		
 		//2. onStart:
-		Stmt onStartStmt = new JNopStmt();
+		Stmt onStartStmt = Jimple.v().newNopStmt();
 		body.getUnits().add(onStartStmt);
 		{
 			Stmt onStartStmt2 = searchAndBuildMethod
@@ -758,11 +757,18 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 			if (found && onStartStmt2 != null)
 				createIfStmt(onStartStmt2);
 		}
-		searchAndBuildMethod(AndroidEntryPointConstants.ACTIVITY_ONRESTOREINSTANCESTATE, currentClass, entryPoints, classLocal);
+		// onRestoreInstanceState is optional, the system only calls it if a
+		// state has previously been stored.
+		{
+			Stmt afterOnRestore = Jimple.v().newNopStmt();
+			createIfStmt(afterOnRestore);
+			searchAndBuildMethod(AndroidEntryPointConstants.ACTIVITY_ONRESTOREINSTANCESTATE, currentClass, entryPoints, classLocal);
+			body.getUnits().add(afterOnRestore);			
+		}
 		searchAndBuildMethod(AndroidEntryPointConstants.ACTIVITY_ONPOSTCREATE, currentClass, entryPoints, classLocal);
 		
 		//3. onResume:
-		Stmt onResumeStmt = new JNopStmt();
+		Stmt onResumeStmt = Jimple.v().newNopStmt();
 		body.getUnits().add(onResumeStmt);
 		{
 			Stmt onResumeStmt2 = searchAndBuildMethod
@@ -785,8 +791,8 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 		boolean hasCallbacks = this.callbackFunctions.containsKey(currentClass.getName());
 		
 		if (!methodsToInvoke.isEmpty() || hasCallbacks) {
-			JNopStmt startWhileStmt = new JNopStmt();
-			JNopStmt endWhileStmt = new JNopStmt();
+			NopStmt startWhileStmt = Jimple.v().newNopStmt();
+			NopStmt endWhileStmt = Jimple.v().newNopStmt();
 			body.getUnits().add(startWhileStmt);
 			createIfStmt(endWhileStmt);
 
@@ -831,7 +837,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 
 		//goTo onDestroy, onRestart or onCreate:
 		// (to restart is fall-through, no need to add)
-		JNopStmt stopToDestroyStmt = new JNopStmt();
+		NopStmt stopToDestroyStmt = Jimple.v().newNopStmt();
 		createIfStmt(stopToDestroyStmt);
 		// createIfStmt(onCreateStmt);	// no, the process gets killed in between
 		
@@ -900,7 +906,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 			}
 
 			// Add a conditional call to the method
-			JNopStmt thenStmt = new JNopStmt();
+			NopStmt thenStmt = Jimple.v().newNopStmt();
 			createIfStmt(thenStmt);
 			buildMethodCall(method, body, local, generator);	
 			body.getUnits().add(thenStmt);
@@ -1011,7 +1017,7 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 			// Build the calls to all callback methods in this class
 			for (Local classLocal : classLocals) {
 				for (SootMethod callbackMethod : callbackClasses.get(callbackClass)) {
-					JNopStmt thenStmt = new JNopStmt();
+					NopStmt thenStmt = Jimple.v().newNopStmt();
 					createIfStmt(thenStmt);
 					buildMethodCall(callbackMethod, body, classLocal, generator, referenceClasses);
 					body.getUnits().add(thenStmt);
