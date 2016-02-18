@@ -63,7 +63,7 @@ public class DefaultBiDiICFGFactory implements BiDirICFGFactory {
     			
     			protected DirectedGraph<Unit> makeGraph(Body body) {
     				return enableExceptions
-    						? new ExceptionalUnitGraph(body, DalvikThrowAnalysis.v() ,true)
+    						? new ExceptionalUnitGraph(body, DalvikThrowAnalysis.interproc(), true)
     						: new BriefUnitGraph(body);
     			}
     			
