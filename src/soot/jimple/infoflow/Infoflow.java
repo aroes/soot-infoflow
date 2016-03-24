@@ -211,7 +211,7 @@ public class Infoflow extends AbstractInfoflow {
 		// Build the callgraph
 		long beforeCallgraph = System.nanoTime();
 		constructCallgraph();
-		logger.info("Cakkgraph construction took " + (System.nanoTime() - beforeCallgraph) / 1E9
+		logger.info("Callgraph construction took " + (System.nanoTime() - beforeCallgraph) / 1E9
 				+ " seconds");
 
         // Perform constant propagation and remove dead code
