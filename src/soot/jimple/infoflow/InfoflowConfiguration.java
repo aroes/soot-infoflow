@@ -24,6 +24,7 @@ public class InfoflowConfiguration {
 		VTA,
 		RTA,
 		SPARK,
+		GEOM,
 		OnDemand
 	}
 	

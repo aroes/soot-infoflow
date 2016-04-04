@@ -208,14 +208,13 @@ public abstract class AbstractInfoflow implements IInfoflow {
 				// SPARK fails due to the missing allocation site and we fall
 				// back to CHA.
 				if (extraSeed == null || extraSeed.isEmpty()) {
-					Options.v().setPhaseOption("cg.spark", "on");
-					Options.v().setPhaseOption("cg.spark", "string-constants:true");
+					setSparkOptions();
+				} else {
+					setChaOptions();
 				}
-				else
-					Options.v().setPhaseOption("cg.cha", "on");
 				break;
 			case CHA:
-				Options.v().setPhaseOption("cg.cha", "on");
+				setChaOptions();
 				break;
 			case RTA:
 				Options.v().setPhaseOption("cg.spark", "on");
@@ -229,8 +228,11 @@ public abstract class AbstractInfoflow implements IInfoflow {
 				Options.v().setPhaseOption("cg.spark", "string-constants:true");
 				break;
 			case SPARK:
-				Options.v().setPhaseOption("cg.spark", "on");
-				Options.v().setPhaseOption("cg.spark", "string-constants:true");
+				setSparkOptions();
+				break;
+			case GEOM:
+				setSparkOptions();
+				setGeomPtaSpecificOptions();
 				break;
 			case OnDemand:
 				// nothing to set here
@@ -281,7 +283,24 @@ public abstract class AbstractInfoflow implements IInfoflow {
 			return;
 		}
 	}
-	
+
+	private void setChaOptions() {
+		Options.v().setPhaseOption("cg.cha", "on");
+	}
+
+	private void setSparkOptions() {
+		Options.v().setPhaseOption("cg.spark", "on");
+		Options.v().setPhaseOption("cg.spark", "string-constants:true");
+	}
+
+	public static void setGeomPtaSpecificOptions() {
+		Options.v().setPhaseOption("cg.spark", "geom-pta:true");
+
+		//options below should be optional, yet they aren't set anywhere in soot.
+		Options.v().setPhaseOption("cg.spark", "geom-encoding:Geom");
+		Options.v().setPhaseOption("cg.spark", "geom-worklist:PQ");
+	}
+
 	@Override
 	public void setSootConfig(IInfoflowConfig config) {
 		sootConfig = config;
