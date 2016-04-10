@@ -38,6 +38,7 @@ import soot.jimple.Jimple;
 import soot.jimple.JimpleBody;
 import soot.jimple.NopStmt;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.cfg.LibraryClassPatcher;
 import soot.jimple.infoflow.data.SootMethodAndClass;
 import soot.jimple.infoflow.util.SootMethodRepresentationParser;
 import soot.jimple.internal.JAssignStmt;
@@ -249,6 +250,17 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 					// Call the onCreate() method
 					searchAndBuildMethod(AndroidEntryPointConstants.APPLICATION_ONCREATE,
 							applicationClass, entry.getValue(), applicationLocal);
+					
+					//////////////
+					// Initializes the ApplicationHolder static field with the singleton application 
+					// instance created above 
+					// (Used by the Activity::getApplication patched in LibraryClassPatcher)
+					SootClass scApplicationHolder = LibraryClassPatcher.createOrGetApplicationHolder();
+					body.getUnits().add(Jimple.v().newAssignStmt(
+							Jimple.v().newStaticFieldRef(scApplicationHolder.getFields().getFirst().makeRef()), 
+							applicationLocal));
+					//////////////
+					
 					break;
 				}
 		}
