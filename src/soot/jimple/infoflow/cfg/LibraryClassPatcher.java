@@ -175,6 +175,50 @@ public class LibraryClassPatcher {
 			patchHandlerPostBody(smPostAtTimeWithToken, runnable);
 		if (smPostDelayed != null && !smPostDelayed.hasActiveBody())
 			patchHandlerPostBody(smPostDelayed, runnable);
+	
+		SootMethod smDispatchMessage = sc.getMethodUnsafe(
+				"void dispatchMessage(android.os.Message)");
+		if(smDispatchMessage != null && !smDispatchMessage.hasActiveBody()) 
+			patchHandlerDispatchBody(smDispatchMessage);
+	}
+	
+	/**
+	 * Creates a new body for one of the dispatchMessage method in android.os.Handler
+	 * @param method The method for which to create the implementation (dispatchMessage)
+	 * @return The newly created body
+	 */
+	private Body patchHandlerDispatchBody(SootMethod method) {
+		SootClass sc = method.getDeclaringClass();
+		Body b = Jimple.v().newBody(method);
+		method.setActiveBody(b);
+		
+		Local thisLocal = Jimple.v().newLocal("this", sc.getType());
+		b.getLocals().add(thisLocal);
+		b.getUnits().add(Jimple.v().newIdentityStmt(thisLocal,
+				Jimple.v().newThisRef(sc.getType())));
+		
+		// Assign the parameters
+		Local firstParam = null;
+		for (int i = 0; i < method.getParameterCount(); ++i)  {
+			Local paramLocal = Jimple.v().newLocal("param" + i, method.getParameterType(i));
+			b.getLocals().add(paramLocal);
+			b.getUnits().add(Jimple.v().newIdentityStmt(paramLocal,
+					Jimple.v().newParameterRef(method.getParameterType(i), i)));
+			if (i == 0)
+				firstParam = paramLocal;
+		}
+			
+		// Invoke handler.handleMessage(Message)
+		b.getUnits().add(Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(thisLocal,
+				Scene.v().makeMethodRef(sc, "handleMessage", 
+						Collections.<Type>singletonList(method.getParameterType(0)), VoidType.v(), false), firstParam)));
+		
+		Unit retStmt = Jimple.v().newReturnVoidStmt();
+		b.getUnits().add(retStmt);
+		
+		b.validate();
+		
+		return b;
 	}
 	
 	/**
