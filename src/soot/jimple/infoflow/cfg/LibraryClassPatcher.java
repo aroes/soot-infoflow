@@ -34,10 +34,10 @@ public class LibraryClassPatcher {
 	 * Patches all supported system libraries
 	 */
 	public void patchLibraries() {
-        // Patch the java.lang.Thread implementation
+		// Patch the android.os.Handler implementation
 		patchHandlerImplementation();
 		
-		// Patch the android.os.Handler implementation
+        // Patch the java.lang.Thread implementation
 		patchThreadImplementation();
 		
 		// Patch the android.app.Activity implementation (getApplication())
