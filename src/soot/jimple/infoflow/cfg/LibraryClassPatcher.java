@@ -4,9 +4,11 @@ import java.util.Collections;
 
 import soot.Body;
 import soot.Local;
+import soot.Modifier;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootField;
+import soot.SootFieldRef;
 import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
@@ -32,11 +34,76 @@ public class LibraryClassPatcher {
 	 * Patches all supported system libraries
 	 */
 	public void patchLibraries() {
-        // Patch the java.lang.Thread implementation
+		// Patch the android.os.Handler implementation
 		patchHandlerImplementation();
 		
-		// Patch the android.os.Handler implementation
+        // Patch the java.lang.Thread implementation
 		patchThreadImplementation();
+		
+		// Patch the android.app.Activity implementation (getApplication())
+		patchActivityImplementation();
+	}
+	
+	/**
+	 * Patch android.app.Activity getApplication method in order to return the singleton
+	 * Application instance created in the dummyMainMethod.
+	 */
+	private void patchActivityImplementation() {
+		SootClass scApplicationHolder = createOrGetApplicationHolder();
+		
+		SootClass sc = Scene.v().getSootClassUnsafe("android.app.Activity");
+		if (sc == null)
+			return;
+		sc.setApplicationClass();
+		
+		SootMethod smRun = sc.getMethodUnsafe("android.app.Application getApplication()");
+		if (smRun == null || smRun.hasActiveBody())
+			return;
+		
+		Body b = Jimple.v().newBody(smRun);
+		smRun.setActiveBody(b);
+		
+		// add "this" local
+		Local thisLocal = Jimple.v().newLocal("this", sc.getType());
+		b.getLocals().add(thisLocal);
+		b.getUnits().add(Jimple.v().newIdentityStmt(thisLocal,
+				Jimple.v().newThisRef(sc.getType())));
+		
+		SootFieldRef appStaticFieldRef = scApplicationHolder.getFields().getFirst().makeRef();
+		// creating local to store the mApplication field
+		Local targetLocal = Jimple.v().newLocal("retApplication", appStaticFieldRef.type());
+		b.getLocals().add(targetLocal);
+		
+		b.getUnits().add(Jimple.v().newAssignStmt(targetLocal, Jimple.v().newStaticFieldRef(appStaticFieldRef)));
+		
+		Unit retStmt = Jimple.v().newReturnStmt(targetLocal);
+		b.getUnits().add(retStmt);
+		
+		b.validate();
+	}
+	
+	/**
+	 * return the ApplicationHolder class (created if needed) 
+	 * This is a class with 1 static field to save the application instance in 
+	 */
+	public static SootClass createOrGetApplicationHolder() {
+		SootClass scApplication = Scene.v().getSootClassUnsafe("android.app.Application");
+		
+		String applicationHolderClassName = "il.ac.tau.MyApplicationHolder";
+		SootClass scApplicationHolder;
+		if(!Scene.v().containsClass(applicationHolderClassName)) {
+			scApplicationHolder = new SootClass(applicationHolderClassName, Modifier.PUBLIC);
+			scApplicationHolder.setSuperclass(Scene.v().getSootClass("java.lang.Object"));
+			
+			scApplicationHolder.addField(new SootField("application", scApplication.getType(), Modifier.PUBLIC | Modifier.STATIC));
+			Scene.v().addClass(scApplicationHolder);
+			
+			scApplicationHolder.validate();
+		} else {
+			scApplicationHolder = Scene.v().getSootClassUnsafe(applicationHolderClassName);
+		}
+		
+		return scApplicationHolder;
 	}
 	
 	/**
@@ -175,6 +242,50 @@ public class LibraryClassPatcher {
 			patchHandlerPostBody(smPostAtTimeWithToken, runnable);
 		if (smPostDelayed != null && !smPostDelayed.hasActiveBody())
 			patchHandlerPostBody(smPostDelayed, runnable);
+	
+		SootMethod smDispatchMessage = sc.getMethodUnsafe(
+				"void dispatchMessage(android.os.Message)");
+		if(smDispatchMessage != null && !smDispatchMessage.hasActiveBody()) 
+			patchHandlerDispatchBody(smDispatchMessage);
+	}
+	
+	/**
+	 * Creates a new body for one of the dispatchMessage method in android.os.Handler
+	 * @param method The method for which to create the implementation (dispatchMessage)
+	 * @return The newly created body
+	 */
+	private Body patchHandlerDispatchBody(SootMethod method) {
+		SootClass sc = method.getDeclaringClass();
+		Body b = Jimple.v().newBody(method);
+		method.setActiveBody(b);
+		
+		Local thisLocal = Jimple.v().newLocal("this", sc.getType());
+		b.getLocals().add(thisLocal);
+		b.getUnits().add(Jimple.v().newIdentityStmt(thisLocal,
+				Jimple.v().newThisRef(sc.getType())));
+		
+		// Assign the parameters
+		Local firstParam = null;
+		for (int i = 0; i < method.getParameterCount(); ++i)  {
+			Local paramLocal = Jimple.v().newLocal("param" + i, method.getParameterType(i));
+			b.getLocals().add(paramLocal);
+			b.getUnits().add(Jimple.v().newIdentityStmt(paramLocal,
+					Jimple.v().newParameterRef(method.getParameterType(i), i)));
+			if (i == 0)
+				firstParam = paramLocal;
+		}
+			
+		// Invoke handler.handleMessage(Message)
+		b.getUnits().add(Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(thisLocal,
+				Scene.v().makeMethodRef(sc, "handleMessage", 
+						Collections.<Type>singletonList(method.getParameterType(0)), VoidType.v(), false), firstParam)));
+		
+		Unit retStmt = Jimple.v().newReturnVoidStmt();
+		b.getUnits().add(retStmt);
+		
+		b.validate();
+		
+		return b;
 	}
 	
 	/**

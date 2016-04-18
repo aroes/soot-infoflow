@@ -428,7 +428,7 @@ public class EasyTaintWrapper extends AbstractTaintWrapper implements Cloneable 
 		SootMethod method = stmt.getInvokeExpr().getMethod();
 		
 		// Do we have an entry for at least one entry in the given class?
-		if (hasWrappedMethodsForClass(method.getDeclaringClass(), true, true, true))
+		if (hasWrappedMethodsForClass(method.getDeclaringClass(), true, true, false))
 			return true;
 
 		// In aggressive mode, we always taint the return value if the base
