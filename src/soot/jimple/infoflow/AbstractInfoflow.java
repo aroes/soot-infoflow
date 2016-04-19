@@ -296,13 +296,9 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	public static void setGeomPtaSpecificOptions() {
 		Options.v().setPhaseOption("cg.spark", "geom-pta:true");
 
-		//options below should be optional, yet they aren't set anywhere in Soot.
+		//Those are default options, not sure whether removing them works.
 		Options.v().setPhaseOption("cg.spark", "geom-encoding:Geom");
 		Options.v().setPhaseOption("cg.spark", "geom-worklist:PQ");
-		//Options.v().setPhaseOption("cg.spark", "dump-html:true");
-		//Options.v().setPhaseOption("cg.spark", "geom-dump-verbose:sootOutput");
-		//Options.v().setPhaseOption("cg.spark", "geom-runs:3");
-		//Options.v().setPhaseOption("cg.spark", "geom-frac-base:100");
 	}
 
 	@Override
