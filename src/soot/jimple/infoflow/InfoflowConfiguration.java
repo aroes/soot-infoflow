@@ -24,6 +24,7 @@ public class InfoflowConfiguration {
 		VTA,
 		RTA,
 		SPARK,
+		GEOM,
 		OnDemand
 	}
 	
@@ -89,6 +90,8 @@ public class InfoflowConfiguration {
 	private CallgraphAlgorithm callgraphAlgorithm = CallgraphAlgorithm.AutomaticSelection;
 	private AliasingAlgorithm aliasingAlgorithm = AliasingAlgorithm.FlowSensitive;
 	private CodeEliminationMode codeEliminationMode = CodeEliminationMode.PropagateConstants;
+
+	private boolean taintAnalysisEnabled = true;
 	
 	/**
 	 * Merges the given configuration options into this configuration object
@@ -536,7 +539,15 @@ public class InfoflowConfiguration {
 	public void setLogSourcesAndSinks(boolean logSourcesAndSinks) {
 		this.logSourcesAndSinks = logSourcesAndSinks;
 	}
-	
+
+	public boolean isTaintAnalysisEnabled() {
+		return taintAnalysisEnabled;
+	}
+
+	public void setTaintAnalysisEnabled(boolean taintAnalysisEnabled) {
+		this.taintAnalysisEnabled = taintAnalysisEnabled;
+	}
+
 	/**
 	 * Prints a summary of this data flow configuration
 	 */
@@ -562,6 +573,7 @@ public class InfoflowConfiguration {
 			logger.info("Recursive access path shortening is enabled");
 		else
 			logger.info("Recursive access path shortening is NOT enabled");
+		logger.info("Taint analysis enabled: " + taintAnalysisEnabled);
 	}
 	
 }
