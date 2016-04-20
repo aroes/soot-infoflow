@@ -136,4 +136,14 @@ public interface IInfoflowCFG extends BiDiInterproceduralCFG<Unit,SootMethod> {
 	 */
 	public boolean methodReadsValue(SootMethod m, Value v);
 	
+	/**
+	 * Gets whether the two given units are connected by an exceptional control
+	 * flow edge
+	 * @param u1 The first unit
+	 * @param u2 The second unit
+	 * @return True if the two given units are directly connetced by an exceptional
+	 * control flow edge, otherwise false
+	 */
+	public boolean isExceptionalEdgeBetween(Unit u1, Unit u2);
+	
 }

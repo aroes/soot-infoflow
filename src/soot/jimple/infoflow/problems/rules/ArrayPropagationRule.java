@@ -37,7 +37,8 @@ public class ArrayPropagationRule extends AbstractTaintPropagationRule {
 
 	@Override
 	public Collection<Abstraction> propagateNormalFlow(Abstraction d1,
-			Abstraction source, Stmt stmt, ByReferenceBoolean killSource,
+			Abstraction source, Stmt stmt, Stmt destStmt,
+			ByReferenceBoolean killSource,
 			ByReferenceBoolean killAll) {
 		// Get the assignment
 		if (!(stmt instanceof AssignStmt))

@@ -47,7 +47,8 @@ public class ImplicitPropagtionRule extends AbstractTaintPropagationRule {
 
 	@Override
 	public Collection<Abstraction> propagateNormalFlow(Abstraction d1,
-			Abstraction source, Stmt stmt, ByReferenceBoolean killSource,
+			Abstraction source, Stmt stmt, Stmt destStmt,
+			ByReferenceBoolean killSource,
 			ByReferenceBoolean killAll) {
 		// Do not process zero abstractions
 		if (source == getZeroValue())
@@ -61,29 +62,40 @@ public class ImplicitPropagtionRule extends AbstractTaintPropagationRule {
 		if (!source.isAbstractionActive())
 			return null;
 		
-		// Get the operand
-		final Value condition;
-		if (stmt instanceof IfStmt)
-			condition = ((IfStmt) stmt).getCondition();
-		else if (stmt instanceof LookupSwitchStmt)
-			condition = ((LookupSwitchStmt) stmt).getKey();
-		else if (stmt instanceof TableSwitchStmt)
-			condition = ((TableSwitchStmt) stmt).getKey();
-		else
-			return null;
-		
 		// If we are in a conditionally-called method, there is no
 		// need to care about further conditionals, since all
 		// assignment targets will be tainted anyway
 		if (source.getAccessPath().isEmpty())
 			return null;
 		
-		Set<Value> values = new HashSet<Value>();
-		if (condition instanceof Local)
-			values.add(condition);
-		else
-			for (ValueBox box : condition.getUseBoxes())
+		// If we get from the current statement to the next one via an
+		// exceptional edge and the current statement uses some tainted
+		// operand, we assume that whether the exception is thrown or not
+		// can potentially depend on the tainted data. Thus, this constitutes
+		// an implicit flow.
+		final Value condition;
+		final Set<Value> values = new HashSet<Value>();
+		if (getManager().getICFG().isExceptionalEdgeBetween(stmt, destStmt)) {
+			for (ValueBox box : stmt.getUseBoxes())
 				values.add(box.getValue());
+		}
+		else {
+			// Get the operand
+			if (stmt instanceof IfStmt)
+				condition = ((IfStmt) stmt).getCondition();
+			else if (stmt instanceof LookupSwitchStmt)
+				condition = ((LookupSwitchStmt) stmt).getKey();
+			else if (stmt instanceof TableSwitchStmt)
+				condition = ((TableSwitchStmt) stmt).getKey();
+			else
+				return null;
+			
+			if (condition instanceof Local)
+				values.add(condition);
+			else
+				for (ValueBox box : condition.getUseBoxes())
+					values.add(box.getValue());
+		}
 		
 		Set<Abstraction> res = null;									
 		for (Value val : values)

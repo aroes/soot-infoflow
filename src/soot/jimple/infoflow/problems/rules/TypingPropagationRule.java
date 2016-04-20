@@ -26,7 +26,8 @@ public class TypingPropagationRule extends AbstractTaintPropagationRule {
 
 	@Override
 	public Collection<Abstraction> propagateNormalFlow(Abstraction d1,
-			Abstraction source, Stmt stmt, ByReferenceBoolean killSource,
+			Abstraction source, Stmt stmt, Stmt destStmt,
+			ByReferenceBoolean killSource,
 			ByReferenceBoolean killAll) {
 		// Check for a typecast on the right side of an assignment
 		if (!source.getAccessPath().isStaticFieldRef() && stmt instanceof DefinitionStmt) {

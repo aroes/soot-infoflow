@@ -58,11 +58,13 @@ public class PropagationRuleManager {
 	 * @param d1 The context abstraction
 	 * @param source The incoming taint to propagate over the given statement
 	 * @param stmt The statement to which to apply the rules
+	 * @param destStmt The next statement to which control flow will continue after
+	 * processing stmt
 	 * @return The collection of outgoing taints
 	 */
 	public Set<Abstraction> applyNormalFlowFunction(Abstraction d1,
-			Abstraction source, Stmt stmt) {
-		return applyNormalFlowFunction(d1, source, stmt, null, null);
+			Abstraction source, Stmt stmt, Stmt destStmt) {
+		return applyNormalFlowFunction(d1, source, stmt, destStmt, null, null);
 	}
 	
 	/**
@@ -70,6 +72,8 @@ public class PropagationRuleManager {
 	 * @param d1 The context abstraction
 	 * @param source The incoming taint to propagate over the given statement
 	 * @param stmt The statement to which to apply the rules
+	 * @param destStmt The next statement to which control flow will continue after
+	 * processing stmt
 	 * @param killSource Outgoing value for the rule to indicate whether the
 	 * incoming taint abstraction shall be killed
 	 * @param killAll Outgoing value that receives whether all taints shall be
@@ -77,7 +81,7 @@ public class PropagationRuleManager {
 	 * @return The collection of outgoing taints
 	 */
 	public Set<Abstraction> applyNormalFlowFunction(Abstraction d1,
-			Abstraction source, Stmt stmt,
+			Abstraction source, Stmt stmt, Stmt destStmt,
 			ByReferenceBoolean killSource,
 			ByReferenceBoolean killAll) {
 		Set<Abstraction> res = null;
@@ -85,7 +89,7 @@ public class PropagationRuleManager {
 			killSource = new ByReferenceBoolean();
 		for (ITaintPropagationRule rule : rules) {
 			Collection<Abstraction> ruleOut = rule.propagateNormalFlow(d1,
-					source, stmt, killSource, killAll);
+					source, stmt, destStmt, killSource, killAll);
 			if (killAll != null && killAll.value)
 				return null;
 			if (ruleOut != null && !ruleOut.isEmpty()) {

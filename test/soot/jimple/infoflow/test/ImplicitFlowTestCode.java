@@ -583,4 +583,29 @@ public class ImplicitFlowTestCode {
 		cm.publish(arr[TelephonyManager.getIMEI()]);
 	}
 	
+	public void exceptionTest1() {
+		int val = TelephonyManager.getIMEI();
+		String[] arr = new String[val];
+		try {
+			arr[42] = "Hello";
+		}
+		catch (ArrayIndexOutOfBoundsException ex) {
+			ConnectionManager cm = new ConnectionManager();
+			cm.publish("Hello World");
+		}
+	}
+	
+	public void exceptionTest4() {
+		int val = TelephonyManager.getIMEI();
+		String[] arr = new String[val];
+		try {
+			System.out.println("Hello World");
+		}
+		catch (ArrayIndexOutOfBoundsException ex) {
+			ConnectionManager cm = new ConnectionManager();
+			cm.publish("Hello World");
+		}
+		arr[42] = "Hello";		
+	}
+	
 }

@@ -29,7 +29,8 @@ public class StrongUpdatePropagationRule extends AbstractTaintPropagationRule {
 
 	@Override
 	public Collection<Abstraction> propagateNormalFlow(Abstraction d1,
-			Abstraction source, Stmt stmt, ByReferenceBoolean killSource,
+			Abstraction source, Stmt stmt, Stmt destStmt,
+			ByReferenceBoolean killSource,
 			ByReferenceBoolean killAll) {
 		if (!(stmt instanceof AssignStmt))
 			return null;

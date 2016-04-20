@@ -36,6 +36,7 @@ import soot.jimple.toolkits.callgraph.Edge;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import soot.toolkits.graph.DirectedGraph;
+import soot.toolkits.graph.ExceptionalUnitGraph;
 import soot.toolkits.graph.MHGPostDominatorsFinder;
 
 import com.google.common.cache.CacheLoader;
@@ -383,6 +384,23 @@ public class InfoflowCFG implements IInfoflowCFG {
 				if (l == v)
 					return true;
 		return false;
+	}
+	
+	@Override
+	public boolean isExceptionalEdgeBetween(Unit u1, Unit u2) {
+		SootMethod m1 = getMethodOf(u1);
+		SootMethod m2 = getMethodOf(u2);
+		if (m1 != m2)
+			throw new RuntimeException("Exceptional edges are only supported "
+					+ "inside the same method");
+		DirectedGraph<Unit> ug1 = getOrCreateUnitGraph(m1);
+		
+		// Exception tracking might be disabled
+		if (!(ug1 instanceof ExceptionalUnitGraph))
+			return false;
+		
+		ExceptionalUnitGraph eug = (ExceptionalUnitGraph) ug1;
+		return eug.getExceptionalSuccsOf(u1).contains(u2);
 	}
 	
 }

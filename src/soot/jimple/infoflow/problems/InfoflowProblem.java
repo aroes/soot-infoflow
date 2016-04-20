@@ -366,8 +366,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						// Apply the propagation rules
 						ByReferenceBoolean killSource = new ByReferenceBoolean();
 						ByReferenceBoolean killAll = new ByReferenceBoolean();
-						Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1, newSource, stmt,
-								killSource, killAll);
+						Set<Abstraction> res = propagationRules.applyNormalFlowFunction(d1,
+								newSource, stmt, (Stmt) dest, killSource, killAll);
 						if (killAll.value)
 							return Collections.<Abstraction>emptySet();
 						
