@@ -90,6 +90,9 @@ public class AccessPath implements Cloneable {
 	 * path
 	 */
 	public static boolean canContainValue(Value val) {
+		if (val == null)
+			return false;
+		
 		return val instanceof Local
 				|| val instanceof InstanceFieldRef
 				|| val instanceof StaticFieldRef
@@ -117,7 +120,14 @@ public class AccessPath implements Cloneable {
 			return null;
 		return fields[0];
 	}
-
+	
+	/**
+	 * Checks whether the first field of this access path matches the given
+	 * field
+	 * @param field The field to check against
+	 * @return True if this access path has a non-empty field list and the first
+	 * field matches the given one, otherwise false
+	 */
 	public boolean firstFieldMatches(SootField field) {
 		if (fields == null || fields.length == 0)
 			return false;
@@ -461,6 +471,33 @@ public class AccessPath implements Cloneable {
 	 */
 	public ArrayTaintType getArrayTaintType() {
 		return this.arrayTaintType;
+	}
+	
+	/**
+	 * Checks whether this access path starts with the given value
+	 * @param val The value that is a potential prefix of the current access path
+	 * @return True if this access paths with the given value (i.e., the given
+	 * value is a prefix of this access path), otherwise false
+	 */
+	public boolean startsWith(Value val) {
+		// Filter out constants, etc.
+		if (!canContainValue(val))
+			return false;
+		
+		// Check the different types of values we can have
+		if (val instanceof Local && this.value == val)
+			return true;
+		else if (val instanceof StaticFieldRef)
+			return this.value == null && this.fields != null && this.fields.length > 0
+					&& this.fields[0] == ((StaticFieldRef) val).getField();
+		else if (val instanceof InstanceFieldRef) {
+			InstanceFieldRef iref = (InstanceFieldRef) val;
+			return this.value == iref.getBase() && this.fields != null
+					&& this.fields.length > 0 && this.fields[0] == iref.getField();
+		}
+		else
+			// Some unsupported value type
+			return false;
 	}
 	
 }

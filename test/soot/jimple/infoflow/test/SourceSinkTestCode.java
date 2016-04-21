@@ -42,6 +42,15 @@ public class SourceSinkTestCode {
 		
 	}
 	
+	private class C {
+		private A a;
+		
+		public C() {
+			a = new A("Hello World");
+		}
+		
+	}
+	
 	private A getSecret() {
 		return new A("Secret");
 	}
@@ -103,4 +112,21 @@ public class SourceSinkTestCode {
 		doLeakSecret(s);
 	}
 	
+	private void source(A a) {
+		a.data = "Hello World";
+	}
+	
+	public void parameterSourceTest1() {
+		A a = new A("x");
+		source(a);
+		doLeakSecret(a.data);
+	}
+	
+	public void parameterSourceTest2() {
+		C c = new C();
+		A a = c.a;
+		source(a);
+		doLeakSecret(c.a.data);
+	}
+
 }

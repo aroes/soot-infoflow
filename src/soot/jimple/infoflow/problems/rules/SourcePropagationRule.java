@@ -4,8 +4,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import soot.Value;
-import soot.jimple.DefinitionStmt;
+import soot.ValueBox;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.aliasing.Aliasing;
@@ -14,6 +13,7 @@ import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.problems.TaintPropagationResults;
 import soot.jimple.infoflow.source.SourceInfo;
 import soot.jimple.infoflow.util.ByReferenceBoolean;
+import soot.jimple.infoflow.util.TypeUtils;
 
 /**
  * Rule to introduce unconditional taints at sources
@@ -42,8 +42,8 @@ public class SourcePropagationRule extends AbstractTaintPropagationRule {
 			// Is this a source?
 			if (sourceInfo != null && !sourceInfo.getAccessPaths().isEmpty()) {
 				Set<Abstraction> res = new HashSet<>();
-				Value leftOp = stmt instanceof DefinitionStmt ? ((DefinitionStmt) stmt).getLeftOp() : null;
 				for (AccessPath ap : sourceInfo.getAccessPaths()) {
+					// Create the new taint abstraction
 					Abstraction abs = new Abstraction(ap,
 							stmt,
 							sourceInfo.getUserData(),
@@ -52,10 +52,17 @@ public class SourcePropagationRule extends AbstractTaintPropagationRule {
 					res.add(abs);
 					
 					// Compute the aliases
-					if (leftOp != null)
-						if (Aliasing.canHaveAliases(stmt, leftOp, abs))
-							getAliasing().computeAliases(d1, stmt, leftOp,
-									res, getManager().getICFG().getMethodOf(stmt), abs);
+					for (ValueBox vb : stmt.getUseAndDefBoxes()) {
+						if (ap.startsWith(vb.getValue())) {
+							// We need a relaxed "can have aliases" check here. Even if we have
+							// a local, the source/sink manager is free to taint the complete local
+							// while keeping alises valid (no overwrite).
+							// The startsWith() above already gets rid of constants, etc.
+							if (!TypeUtils.isStringType(vb.getValue().getType()))
+								getAliasing().computeAliases(d1, stmt, vb.getValue(),
+										res, getManager().getICFG().getMethodOf(stmt), abs);
+						}
+					}
 					
 					// Set the corresponding call site
 					if (stmt.containsInvokeExpr())
