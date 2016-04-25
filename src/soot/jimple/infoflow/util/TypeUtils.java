@@ -186,7 +186,14 @@ public class TypeUtils {
 		else {
 			// If one type is an array type and the other one is the base type,
 			// we still accept the cast
-			if (tp1 instanceof ArrayType) {
+			if (tp1 instanceof ArrayType && tp2 instanceof ArrayType) {
+				ArrayType at1 = (ArrayType) tp1;
+				ArrayType at2 = (ArrayType) tp2;
+				assert at1.numDimensions == at2.numDimensions;
+				
+				return ArrayType.v(getMorePreciseType(at1.getElementType(), at2.getElementType()), at1.numDimensions);
+			}
+			else if (tp1 instanceof ArrayType) {
 				ArrayType at = (ArrayType) tp1;
 				return getMorePreciseType(at.getElementType(), tp2);
 			}
