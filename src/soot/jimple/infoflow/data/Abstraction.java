@@ -84,6 +84,8 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	private boolean dependsOnCutAP = false;
 	
 	private AtomicBitSet pathFlags = null;
+
+	private boolean canHaveImmutableAliases;
 	
 	public Abstraction(AccessPath sourceVal,
 			Stmt sourceStmt,
@@ -133,6 +135,7 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 			
 			dependsOnCutAP = original.dependsOnCutAP;
 			isImplicit = original.isImplicit;
+			canHaveImmutableAliases = original.canHaveImmutableAliases;
 		}
 		accessPath = p;
 		neighbors = null;
@@ -459,6 +462,8 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 			return false;
 		if(this.isImplicit != other.isImplicit)
 			return false;
+		if (this.canHaveImmutableAliases != other.canHaveImmutableAliases)
+			return false;
 		return true;
 	}
 	
@@ -635,6 +640,23 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	
 	@Override
 	public void setCallingContext(Abstraction callingContext) {
+	}
+
+	/**
+	 * Sets whether the tainted object can have immutable aliases.
+	 * @param canHaveImmutableAliases true if the tainted object can have
+	 *                                   immutable aliases
+	 */
+	public void setCanHaveImmutableAliases(boolean canHaveImmutableAliases) {
+		this.canHaveImmutableAliases = canHaveImmutableAliases;
+	}
+
+	/**
+	 * Returns whether the tainted object can have immutable aliases.
+	 * @return true if the tainted object can have immutable aliases.
+	 */
+	public boolean getCanHaveImmutableAliases() {
+		return canHaveImmutableAliases;
 	}
 		
 }

@@ -163,9 +163,14 @@ public class SourceSinkTests extends JUnitTests {
 				InterproceduralCFG<Unit, SootMethod> cfg) {
 			if (sCallSite.containsInvokeExpr()) {
 				InvokeExpr iexpr = sCallSite.getInvokeExpr();
-				if (iexpr.getMethod().getName().equals("source")
-						&& iexpr.getArgCount() > 0)
-					return new SourceInfo(AccessPathFactory.v().createAccessPath(iexpr.getArg(0), true));
+				String name = iexpr.getMethod().getName();
+				boolean includeExistingImmutableAliases = name.equals("annotatedSource");
+				if ((name.equals("source") || includeExistingImmutableAliases)
+						&& iexpr.getArgCount() > 0) {
+					SourceInfo sourceInfo = new SourceInfo(AccessPathFactory.v().createAccessPath(iexpr.getArg(0), true));
+					sourceInfo.setIncludeExistingImmutableAliases(includeExistingImmutableAliases);
+					return sourceInfo;
+				}
 			}
 			return null;
 		}
@@ -271,6 +276,18 @@ public class SourceSinkTests extends JUnitTests {
 		((EasyTaintWrapper) infoflow.getTaintWrapper()).addIncludePrefix("soot.jimple.infoflow.test.SourceSinkTestCode");
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.SourceSinkTestCode: void parameterSourceTest2()>");
+		infoflow.computeInfoflow(appPath, libPath, new DefaultEntryPointCreator(epoints), new parameterSourceSSM());
+		Assert.assertTrue(infoflow.isResultAvailable());
+		Assert.assertEquals(1, infoflow.getResults().size());
+		Assert.assertEquals(1, infoflow.getResults().numConnections());
+	}
+
+	@Test(timeout = 300000)
+	public void parameterSourceTest3() {
+		IInfoflow infoflow = initInfoflow(true);
+		((EasyTaintWrapper) infoflow.getTaintWrapper()).addIncludePrefix("soot.jimple.infoflow.test.SourceSinkTestCode");
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.SourceSinkTestCode: void parameterSourceTest3()>");
 		infoflow.computeInfoflow(appPath, libPath, new DefaultEntryPointCreator(epoints), new parameterSourceSSM());
 		Assert.assertTrue(infoflow.isResultAvailable());
 		Assert.assertEquals(1, infoflow.getResults().size());

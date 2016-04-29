@@ -115,6 +115,8 @@ public class SourceSinkTestCode {
 	private void source(A a) {
 		a.data = "Hello World";
 	}
+
+	private void annotatedSource(Object o) { }
 	
 	public void parameterSourceTest1() {
 		A a = new A("x");
@@ -126,6 +128,13 @@ public class SourceSinkTestCode {
 		C c = new C();
 		A a = c.a;
 		source(a);
+		doLeakSecret(c.a.data);
+	}
+
+	public void parameterSourceTest3() {
+		C c = new C();
+		A a = c.a;
+		annotatedSource(a.data);
 		doLeakSecret(c.a.data);
 	}
 

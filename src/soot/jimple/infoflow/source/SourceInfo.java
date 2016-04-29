@@ -16,6 +16,7 @@ public class SourceInfo {
 	
 	private final Object userData;
 	private final Set<AccessPath> accessPaths;
+	private boolean includeExistingImmutableAliases;
 	
 	/**
 	 * Creates a new instance of the {@link SourceInfo} class. This is a
@@ -98,5 +99,23 @@ public class SourceInfo {
 	public Set<AccessPath> getAccessPaths(){
 		return this.accessPaths;
 	}
-	
+
+	/**
+	 * Sets whether the source should taint aliases of existing, immutable
+	 * objects, such as strings.
+	 * @param includeExistingImmutableAliases true if existing, immutable
+	 *                                           objects should be tainted
+	 */
+	public void setIncludeExistingImmutableAliases(boolean includeExistingImmutableAliases) {
+		this.includeExistingImmutableAliases = includeExistingImmutableAliases;
+	}
+
+	/**
+	 * Returns whether the source should taint aliases of existing, immutable
+	 * objects, such as strings.
+	 * @return true if existing, immutable objects should be tainted
+	 */
+	public boolean getIncludeExistingImmutableAliases() {
+		return this.includeExistingImmutableAliases;
+	}
 }
