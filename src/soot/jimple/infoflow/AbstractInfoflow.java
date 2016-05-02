@@ -138,23 +138,6 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	}
 	
 	/**
-	 * Appends two elements to build a classpath
-	 * @param appPath The first entry of the classpath
-	 * @param libPath The second entry of the classpath
-	 * @return The concatenated classpath
-	 */
-	private String appendClasspath(String appPath, String libPath) {
-		String s = (appPath != null && !appPath.isEmpty()) ? appPath : "";
-		
-		if (libPath != null && !libPath.isEmpty()) {
-			if (!s.isEmpty())
-				s += File.pathSeparator;
-			s += libPath;
-		}
-		return s;
-	}
-	
-	/**
 	 * Initializes Soot.
 	 * @param appPath The application path containing the analysis client
 	 * @param libPath The Soot classpath containing the libraries
@@ -187,19 +170,14 @@ public abstract class AbstractInfoflow implements IInfoflow {
 		else
 			Options.v().set_output_format(Options.output_format_none);
 		
-		// We only need to distinguish between application and library classes
-		// if we use the OnTheFly ICFG
-		if (config.getCallgraphAlgorithm() == CallgraphAlgorithm.OnDemand) {
-			Options.v().set_soot_classpath(libPath);
-			if (appPath != null) {
-				List<String> processDirs = new LinkedList<String>();
-				for (String ap : appPath.split(File.pathSeparator))
-					processDirs.add(ap);
-				Options.v().set_process_dir(processDirs);
-			}
+		// Set the correct application and library paths
+		Options.v().set_soot_classpath(libPath);
+		if (appPath != null) {
+			List<String> processDirs = new LinkedList<String>();
+			for (String ap : appPath.split(File.pathSeparator))
+				processDirs.add(ap);
+			Options.v().set_process_dir(processDirs);
 		}
-		else
-			Options.v().set_soot_classpath(appendClasspath(appPath, libPath));
 		
 		// Configure the callgraph algorithm
 		switch (config.getCallgraphAlgorithm()) {

@@ -541,7 +541,7 @@ public class Infoflow extends AbstractInfoflow {
 			collectedSources = new HashSet<>();
 			collectedSinks = new HashSet<>();
 		}
-
+		
 		int sinkCount = 0;
 		if (m.hasActiveBody()) {
 			// Check whether this is a system class we need to ignore
