@@ -60,6 +60,7 @@ public class LibraryClassPatcher {
 		if (smRun == null || smRun.hasActiveBody())
 			return;
 		
+		smRun.setPhantom(false);
 		Body b = Jimple.v().newBody(smRun);
 		smRun.setActiveBody(b);
 		
@@ -152,10 +153,11 @@ public class LibraryClassPatcher {
 	 */
 	private void patchThreadRunMethod(SootMethod smRun, SootClass runnable,
 			SootField fldTarget) {
-		SootClass sc = smRun.getDeclaringClass();
+		smRun.setPhantom(false);
 		Body b = Jimple.v().newBody(smRun);
 		smRun.setActiveBody(b);
 		
+		SootClass sc = smRun.getDeclaringClass();
 		Local thisLocal = Jimple.v().newLocal("this", sc.getType());
 		b.getLocals().add(thisLocal);
 		b.getUnits().add(Jimple.v().newIdentityStmt(thisLocal,
@@ -189,10 +191,11 @@ public class LibraryClassPatcher {
 	 */
 	private void patchThreadConstructor(SootMethod smCons, SootClass runnable,
 			SootField fldTarget) {
-		SootClass sc = smCons.getDeclaringClass();
+		smCons.setPhantom(false);
 		Body b = Jimple.v().newBody(smCons);
 		smCons.setActiveBody(b);
 		
+		SootClass sc = smCons.getDeclaringClass();
 		Local thisLocal = Jimple.v().newLocal("this", sc.getType());
 		b.getLocals().add(thisLocal);
 		b.getUnits().add(Jimple.v().newIdentityStmt(thisLocal,
@@ -255,10 +258,11 @@ public class LibraryClassPatcher {
 	 * @return The newly created body
 	 */
 	private Body patchHandlerDispatchBody(SootMethod method) {
-		SootClass sc = method.getDeclaringClass();
+		method.setPhantom(false);
 		Body b = Jimple.v().newBody(method);
 		method.setActiveBody(b);
 		
+		SootClass sc = method.getDeclaringClass();
 		Local thisLocal = Jimple.v().newLocal("this", sc.getType());
 		b.getLocals().add(thisLocal);
 		b.getUnits().add(Jimple.v().newIdentityStmt(thisLocal,
@@ -295,10 +299,11 @@ public class LibraryClassPatcher {
 	 * @return The newly created body
 	 */
 	private Body patchHandlerPostBody(SootMethod method, SootClass runnable) {
-		SootClass sc = method.getDeclaringClass();
+		method.setPhantom(false);
 		Body b = Jimple.v().newBody(method);
 		method.setActiveBody(b);
 		
+		SootClass sc = method.getDeclaringClass();
 		Local thisLocal = Jimple.v().newLocal("this", sc.getType());
 		b.getLocals().add(thisLocal);
 		b.getUnits().add(Jimple.v().newIdentityStmt(thisLocal,
