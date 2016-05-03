@@ -353,7 +353,7 @@ public class Aliasing {
 		
 		// String cannot have aliases
 		if (TypeUtils.isStringType(val.getType())
-				&& !source.getCanHaveImmutableAliases())
+				&& !source.getAccessPath().getCanHaveImmutableAliases())
 			return false;
 		
 		return val instanceof FieldRef

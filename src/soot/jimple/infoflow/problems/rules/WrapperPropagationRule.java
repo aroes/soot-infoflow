@@ -105,7 +105,7 @@ public class WrapperPropagationRule extends AbstractTaintPropagationRule {
 					final AccessPath val = abs.getAccessPath();
 					boolean taintsObjectValue = val.getBaseType() instanceof RefType
 							&& abs.getAccessPath().getBaseType() instanceof RefType
-							&& (!TypeUtils.isStringType(val.getBaseType()) || abs.getCanHaveImmutableAliases());
+							&& (!TypeUtils.isStringType(val.getBaseType()) || val.getCanHaveImmutableAliases());
 					boolean taintsStaticField = getManager().getConfig().getEnableStaticFieldTracking()
 							&& abs.getAccessPath().isStaticFieldRef();
 						

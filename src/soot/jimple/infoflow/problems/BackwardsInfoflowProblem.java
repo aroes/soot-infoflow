@@ -96,14 +96,14 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					if (abs.getAccessPath().getBaseType() instanceof PrimType)
 						return null;
 					if (TypeUtils.isStringType(abs.getAccessPath().getBaseType())
-							&& !abs.getCanHaveImmutableAliases())
+							&& !abs.getAccessPath().getCanHaveImmutableAliases())
 						return null;
 				}
 				else {
 					if (abs.getAccessPath().getFirstFieldType() instanceof PrimType)
 						return null;
 					if (TypeUtils.isStringType(abs.getAccessPath().getFirstFieldType())
-							&& !abs.getCanHaveImmutableAliases())
+							&& !abs.getAccessPath().getCanHaveImmutableAliases())
 						return null;
 				}
 				return abs;
@@ -667,7 +667,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 										if (source.getAccessPath().getBaseType() instanceof PrimType)
 											continue;
 										if (TypeUtils.isStringType(source.getAccessPath().getBaseType())
-												&& !source.getCanHaveImmutableAliases())
+												&& !source.getAccessPath().getCanHaveImmutableAliases())
 											continue;
 										
 										Abstraction abs = checkAbstraction(source.deriveNewAbstraction

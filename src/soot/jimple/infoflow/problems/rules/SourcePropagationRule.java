@@ -49,8 +49,6 @@ public class SourcePropagationRule extends AbstractTaintPropagationRule {
 							sourceInfo.getUserData(),
 							false,
 							false);
-					boolean canHaveImmutableAliases = sourceInfo.getIncludeExistingImmutableAliases();
-					abs.setCanHaveImmutableAliases(canHaveImmutableAliases);
 					res.add(abs);
 					
 					// Compute the aliases
@@ -61,7 +59,7 @@ public class SourcePropagationRule extends AbstractTaintPropagationRule {
 							// while keeping alises valid (no overwrite).
 							// The startsWith() above already gets rid of constants, etc.
 							if (!TypeUtils.isStringType(vb.getValue().getType())
-									|| canHaveImmutableAliases)
+									|| ap.getCanHaveImmutableAliases())
 								getAliasing().computeAliases(d1, stmt, vb.getValue(),
 										res, getManager().getICFG().getMethodOf(stmt), abs);
 						}

@@ -335,7 +335,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				if (!newSource.isAbstractionActive()
 						&& (assignStmt.getLeftOp().getType() instanceof PrimType
 								|| (TypeUtils.isStringType(assignStmt.getLeftOp().getType())
-										&& !newSource.getCanHaveImmutableAliases())))
+										&& !newSource.getAccessPath().getCanHaveImmutableAliases())))
 					return Collections.singleton(newSource);
 				
 				Set<Abstraction> res = new HashSet<Abstraction>();
@@ -643,7 +643,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								if (source.getAccessPath().getBaseType() instanceof PrimType)
 									continue;
 								if (TypeUtils.isStringType(source.getAccessPath().getBaseType())
-										&& !source.getCanHaveImmutableAliases())
+										&& !source.getAccessPath().getCanHaveImmutableAliases())
 									continue;
 								
 								Abstraction abs = newSource.deriveNewAbstraction
