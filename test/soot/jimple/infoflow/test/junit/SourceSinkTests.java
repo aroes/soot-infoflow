@@ -294,4 +294,16 @@ public class SourceSinkTests extends JUnitTests {
 		Assert.assertEquals(1, infoflow.getResults().numConnections());
 	}
 
+	@Test(timeout = 300000)
+	public void parameterSourceTest4() {
+		IInfoflow infoflow = initInfoflow(true);
+		((EasyTaintWrapper) infoflow.getTaintWrapper()).addIncludePrefix("soot.jimple.infoflow.test.SourceSinkTestCode");
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.SourceSinkTestCode: void parameterSourceTest4()>");
+		infoflow.computeInfoflow(appPath, libPath, new DefaultEntryPointCreator(epoints), new parameterSourceSSM());
+		Assert.assertTrue(infoflow.isResultAvailable());
+		Assert.assertEquals(1, infoflow.getResults().size());
+		Assert.assertEquals(1, infoflow.getResults().numConnections());
+	}
+
 }

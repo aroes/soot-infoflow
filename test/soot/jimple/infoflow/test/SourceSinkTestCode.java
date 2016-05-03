@@ -138,4 +138,11 @@ public class SourceSinkTestCode {
 		doLeakSecret(c.a.data);
 	}
 
+	public void parameterSourceTest4() {
+		C c = new C();
+		annotatedSource(c.a.data);
+		A a = c.a;
+		doLeakSecret(a.data);
+	}
+
 }
