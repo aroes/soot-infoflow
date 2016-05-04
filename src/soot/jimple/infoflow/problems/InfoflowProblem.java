@@ -334,7 +334,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				// Do not propagate non-active primitive taints
 				if (!newSource.isAbstractionActive()
 						&& (assignStmt.getLeftOp().getType() instanceof PrimType
-								|| TypeUtils.isStringType(assignStmt.getLeftOp().getType())))
+								|| (TypeUtils.isStringType(assignStmt.getLeftOp().getType())
+										&& !newSource.getAccessPath().getCanHaveImmutableAliases())))
 					return Collections.singleton(newSource);
 				
 				Set<Abstraction> res = new HashSet<Abstraction>();
@@ -641,7 +642,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								// never need to be propagated back
 								if (source.getAccessPath().getBaseType() instanceof PrimType)
 									continue;
-								if (TypeUtils.isStringType(source.getAccessPath().getBaseType()))
+								if (TypeUtils.isStringType(source.getAccessPath().getBaseType())
+										&& !source.getAccessPath().getCanHaveImmutableAliases())
 									continue;
 								
 								Abstraction abs = newSource.deriveNewAbstraction

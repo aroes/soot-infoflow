@@ -111,11 +111,19 @@ public class AccessPathFactory {
 		return createAccessPath(val, appendingFields, null, null, taintSubFields,
 				false, true, ArrayTaintType.ContentsAndLength);
 	}
+
+	public AccessPath createAccessPath(Value val, SootField[] appendingFields, Type valType,
+									   Type[] appendingFieldTypes, boolean taintSubFields,
+									   boolean cutFirstField, boolean reduceBases,
+									   ArrayTaintType arrayTaintType) {
+		return createAccessPath(val, appendingFields, valType, appendingFieldTypes, taintSubFields,
+				cutFirstField, reduceBases, arrayTaintType, false);
+	}
 	
 	public AccessPath createAccessPath(Value val, SootField[] appendingFields, Type valType,
 			Type[] appendingFieldTypes, boolean taintSubFields,
 			boolean cutFirstField, boolean reduceBases,
-			ArrayTaintType arrayTaintType) {
+			ArrayTaintType arrayTaintType, boolean canHaveImmutableAliases) {
 		// Make sure that the base object is valid
 		assert (val == null && appendingFields != null && appendingFields.length > 0)
 		 	|| AccessPath.canContainValue(val);
@@ -363,7 +371,7 @@ public class AccessPathFactory {
 					: "Type mismatch. Type was " + baseType + ", value was: " + (value == null ? null : value.getType());
 		
 		return new AccessPath(value, fields, baseType, fieldTypes, taintSubFields,
-				cutOffApproximation, arrayTaintType);
+				cutOffApproximation, arrayTaintType, canHaveImmutableAliases);
 	}
 
 	private void registerBase(Type eiType, SootField[] base,

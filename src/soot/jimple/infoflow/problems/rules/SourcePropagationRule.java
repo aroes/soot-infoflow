@@ -58,7 +58,8 @@ public class SourcePropagationRule extends AbstractTaintPropagationRule {
 							// a local, the source/sink manager is free to taint the complete local
 							// while keeping alises valid (no overwrite).
 							// The startsWith() above already gets rid of constants, etc.
-							if (!TypeUtils.isStringType(vb.getValue().getType()))
+							if (!TypeUtils.isStringType(vb.getValue().getType())
+									|| ap.getCanHaveImmutableAliases())
 								getAliasing().computeAliases(d1, stmt, vb.getValue(),
 										res, getManager().getICFG().getMethodOf(stmt), abs);
 						}
