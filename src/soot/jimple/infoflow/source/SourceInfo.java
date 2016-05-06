@@ -98,5 +98,4 @@ public class SourceInfo {
 	public Set<AccessPath> getAccessPaths(){
 		return this.accessPaths;
 	}
-	
 }

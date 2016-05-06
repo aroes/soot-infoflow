@@ -48,6 +48,8 @@ public class AccessPath implements Cloneable {
 	private final boolean taintSubFields;
 	private final boolean cutOffApproximation;
 	private final ArrayTaintType arrayTaintType;
+
+	private final boolean canHaveImmutableAliases;
 	
 	private int hashCode = 0;
 	
@@ -67,12 +69,14 @@ public class AccessPath implements Cloneable {
 		this.taintSubFields = true;
 		this.cutOffApproximation = false;
 		this.arrayTaintType = ArrayTaintType.ContentsAndLength;
+		this.canHaveImmutableAliases = false;
 	}
-	
+
 	AccessPath(Local val, SootField[] appendingFields, Type valType,
 			Type[] appendingFieldTypes, boolean taintSubFields,
 			boolean isCutOffApproximation,
-			ArrayTaintType arrayTaintType) {		
+			ArrayTaintType arrayTaintType,
+			boolean canHaveImmutableAliases) {
 		this.value = val;
 		this.fields = appendingFields;
 		this.baseType = valType;
@@ -80,6 +84,7 @@ public class AccessPath implements Cloneable {
 		this.taintSubFields = taintSubFields;
 		this.cutOffApproximation = isCutOffApproximation;
 		this.arrayTaintType = arrayTaintType;
+		this.canHaveImmutableAliases = canHaveImmutableAliases;
 	}
 	
 	/**
@@ -201,6 +206,9 @@ public class AccessPath implements Cloneable {
 		
 		if (this.arrayTaintType != other.arrayTaintType)
 			return false;
+
+		if (this.canHaveImmutableAliases != other.canHaveImmutableAliases)
+			return false;
 		
 		assert this.hashCode() == obj.hashCode();
 		return true;
@@ -290,7 +298,7 @@ public class AccessPath implements Cloneable {
 		
 		return AccessPathFactory.v().createAccessPath(val, fields, newType,
 				fieldTypes, this.taintSubFields,
-				cutFirstField, reduceBases, arrayTaintType);
+				cutFirstField, reduceBases, arrayTaintType, this.canHaveImmutableAliases);
 	}
 	
 	@Override
@@ -300,7 +308,7 @@ public class AccessPath implements Cloneable {
 			return this;
 		
 		AccessPath a = new AccessPath(value, fields, baseType, fieldTypes,
-				taintSubFields, cutOffApproximation, arrayTaintType);
+				taintSubFields, cutOffApproximation, arrayTaintType, canHaveImmutableAliases);
 		assert a.equals(this);
 		return a;
 	}
@@ -432,7 +440,7 @@ public class AccessPath implements Cloneable {
 			newTypes = null;
 		}
 		return new AccessPath(value, newFields, baseType, newTypes,
-				taintSubFields, cutOffApproximation, arrayTaintType);
+				taintSubFields, cutOffApproximation, arrayTaintType, canHaveImmutableAliases);
 	}
 	
 	/**
@@ -498,6 +506,14 @@ public class AccessPath implements Cloneable {
 		else
 			// Some unsupported value type
 			return false;
+	}
+
+	/**
+	 * Returns whether the tainted object can have immutable aliases.
+	 * @return true if the tainted object can have immutable aliases.
+	 */
+	public boolean getCanHaveImmutableAliases() {
+		return canHaveImmutableAliases;
 	}
 	
 }
