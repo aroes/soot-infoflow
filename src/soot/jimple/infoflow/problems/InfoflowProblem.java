@@ -807,10 +807,11 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 											invExpr, null, null, source.getAccessPath());
 									if (calleeAPs != null)
 										for (AccessPath ap : calleeAPs)
-											if (!interproceduralCFG().methodReadsValue(callee, ap.getPlainValue())) {
-												allCalleesRead = false;
-												break outer;
-											}
+											if (ap != null)
+												if (!interproceduralCFG().methodReadsValue(callee, ap.getPlainValue())) {
+													allCalleesRead = false;
+													break outer;
+												}
 										}
 							}
 							
