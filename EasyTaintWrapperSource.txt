@@ -432,3 +432,5 @@
 <android.telephony.gsm.SmsMessage: android.telephony.gsm.SmsMessage createFromPdu(byte[])>
 
 ~<android.content.SharedPreferences: android.content.SharedPreferences$Editor edit()>
+
+<android.app.DownloadManager$Request: void <init>(android.net.Uri)>
