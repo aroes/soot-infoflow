@@ -99,5 +99,14 @@ public class SerializedInfoflowResults {
 	public int getFileFormatVersion() {
 		return this.fileFormatVersion;
 	}
+	
+	/**
+	 * Gets the results as a map. Every sink is connected to a number of sources.
+	 * @return The mapping between sinks and sources that denotes the discovered
+	 * data flows
+	 */
+	public MultiMap<SerializedSinkInfo, SerializedSourceInfo> getResults() {
+		return this.results;
+	}
 
 }
