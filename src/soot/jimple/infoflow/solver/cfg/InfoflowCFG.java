@@ -402,5 +402,10 @@ public class InfoflowCFG implements IInfoflowCFG {
 		ExceptionalUnitGraph eug = (ExceptionalUnitGraph) ug1;
 		return eug.getExceptionalSuccsOf(u1).contains(u2);
 	}
+
+	@Override
+	public boolean isReachable(Unit u) {
+		return delegate.isReachable(u);
+	}
 	
 }
