@@ -646,6 +646,10 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 										&& !source.getAccessPath().getCanHaveImmutableAliases())
 									continue;
 								
+								// If only the object itself, but no field is tainted, we can safely ignore it
+								if (!source.getAccessPath().getTaintSubFields())
+									continue;
+								
 								Abstraction abs = newSource.deriveNewAbstraction
 										(newSource.getAccessPath().copyWithNewValue(originalCallArg), (Stmt) exitStmt);
 								if (abs != null) {
@@ -671,8 +675,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 						if (!callee.isStatic()) {
 							if (aliasing.mayAlias(thisLocal, sourceBase)) {
 								// check if it is not one of the params (then we have already fixed it)
-								if (!parameterAliases && manager.getTypeUtils().checkCast(
-										source.getAccessPath(), thisLocal.getType())) {
+								if (!parameterAliases
+										&& manager.getTypeUtils().checkCast(source.getAccessPath(), thisLocal.getType())
+										&& source.getAccessPath().getTaintSubFields()) {
 									if (iCallStmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
 										InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) iCallStmt.getInvokeExpr();
 										Abstraction abs = newSource.deriveNewAbstraction

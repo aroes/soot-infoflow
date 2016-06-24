@@ -55,6 +55,7 @@ public abstract class JUnitTests {
 	protected static final String sourceUserData = "<soot.jimple.infoflow.test.android.AccountManager: java.lang.String[] getUserData(java.lang.String)>";
 	protected static final String sourceBundleGet = "<soot.jimple.infoflow.test.android.Bundle: java.lang.Object get(java.lang.String)>";
 	protected static final String sourceLongitude = "<soot.jimple.infoflow.test.android.LocationManager: double getLongitude()>";
+	protected static final String sourceLocation = "<soot.jimple.infoflow.test.android.LocationManager: soot.jimple.infoflow.test.android.Location getLastKnownLocation()>";
 
 	@BeforeClass
 	public static void setUp() throws IOException {
@@ -82,6 +83,7 @@ public abstract class JUnitTests {
 		sources.add(sourceIMSI);
 		sources.add(sourceBundleGet);
 		sources.add(sourceLongitude);
+		sources.add(sourceLocation);
 
 		sinks = new ArrayList<String>();
 		sinks.add(sink);
@@ -115,7 +117,8 @@ public abstract class JUnitTests {
 					|| map.isPathBetweenMethods(sinkInt, sourceIMSI)
 					|| map.isPathBetweenMethods(sinkInt, sourceLongitude)
 					|| map.isPathBetweenMethods(sinkBoolean, sourceDeviceId)
-					|| map.isPathBetweenMethods(sinkDouble, sourceLongitude));
+					|| map.isPathBetweenMethods(sinkDouble, sourceLongitude)
+					|| map.isPathBetweenMethods(sinkDouble, sourceLocation));
 		} else {
 			fail("result is not available");
 		}
