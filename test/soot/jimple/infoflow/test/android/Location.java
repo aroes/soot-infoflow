@@ -22,4 +22,15 @@ public class Location {
 		return this.latitude;
 	}
 
+	public Location clear() {
+		this.longitude = 0.0d;
+		this.latitude = 0.0d;
+		return this;
+	}
+	
+	public Location clearLongitude() {
+		this.longitude = 0.0d;
+		return new Location();
+	}
+
 }
