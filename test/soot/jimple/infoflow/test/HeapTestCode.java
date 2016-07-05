@@ -1291,4 +1291,20 @@ public class HeapTestCode {
 		cm.publish(b.attr.b);
 	}
 	
+	private class C {
+		private B b;
+	}
+	
+	public void longAPAliasTest1() {
+		C c = new C();
+		c.b = new B();
+		c.b.attr = new A();
+		
+		A a = c.b.attr;
+		a.b = TelephonyManager.getDeviceId();
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(c.b.attr.b);		
+	}
+	
 }
