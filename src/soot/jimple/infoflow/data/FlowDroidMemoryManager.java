@@ -216,8 +216,11 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 			}
 		}
 		
-		Abstraction pred = obj.getPredecessor();
-		{
+		// If an intermediate statement does not change any taint state, skip it.
+		// Note that we should not do this when we're reconstructing paths or we might
+		// lose statements along the way.
+		if (erasePathData != PathDataErasureMode.EraseNothing) {
+			Abstraction pred = obj.getPredecessor();
 			Abstraction curAbs = pred;
 			while (curAbs != null && curAbs.getNeighbors() == null) {
 				Abstraction predPred = curAbs.getPredecessor();
