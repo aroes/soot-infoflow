@@ -152,7 +152,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				if (!source.getAccessPath().isEmpty()) {
 					// Special handling for array construction
 					if (leftValue instanceof ArrayRef && targetType != null)
-						targetType = buildArrayOrAddDimension(targetType);
+						targetType = TypeUtils.buildArrayOrAddDimension(targetType);
 					
 					// If this is an unrealizable typecast, drop the abstraction
 					if (rightValue instanceof CastExpr) {
@@ -915,7 +915,7 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				
 				// Android executor methods are handled specially. getSubSignature()
 				// is slow, so we try to avoid it whenever we can
-				final boolean isExecutorExecute = isExecutorExecute(ie, callee);
+				final boolean isExecutorExecute = interproceduralCFG().isExecutorExecute(ie, callee);
 				
 				Set<AccessPath> res = null;
 				

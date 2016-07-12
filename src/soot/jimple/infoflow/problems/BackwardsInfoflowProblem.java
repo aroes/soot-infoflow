@@ -219,7 +219,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					else if (rightValue == source.getAccessPath().getPlainValue()) {
 						Type newType = source.getAccessPath().getBaseType();
 						if (leftValue instanceof ArrayRef)
-							newType = buildArrayOrAddDimension(newType);
+							newType = TypeUtils.buildArrayOrAddDimension(newType);
 						else if (defStmt.getRightOp() instanceof ArrayRef)
 							newType = ((ArrayType) newType).getElementType();
 						
@@ -321,7 +321,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						if (targetType != null) {
 							// Special handling for some operations
 							if (defStmt.getRightOp() instanceof ArrayRef)
-								targetType = buildArrayOrAddDimension(targetType);
+								targetType = TypeUtils.buildArrayOrAddDimension(targetType);
 							else if (leftValue instanceof ArrayRef) {
 								assert source.getAccessPath().getBaseType() instanceof ArrayType;
 								targetType = ((ArrayType) targetType).getElementType();
@@ -448,7 +448,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				
 				// Android executor methods are handled specially. getSubSignature()
 				// is slow, so we try to avoid it whenever we can
-				final boolean isExecutorExecute = isExecutorExecute(ie, dest);
+				final boolean isExecutorExecute = interproceduralCFG().isExecutorExecute(ie, dest);
 				
 				return new SolverCallFlowFunction() {
 
@@ -596,7 +596,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				
 				// Android executor methods are handled specially. getSubSignature()
 				// is slow, so we try to avoid it whenever we can
-				final boolean isExecutorExecute = isExecutorExecute(ie, callee);
+				final boolean isExecutorExecute = interproceduralCFG().isExecutorExecute(ie, callee);
 				
 				return new SolverReturnFlowFunction() {
 					

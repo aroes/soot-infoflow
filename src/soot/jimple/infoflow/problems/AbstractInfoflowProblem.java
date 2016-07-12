@@ -18,13 +18,10 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import soot.ArrayType;
 import soot.SootMethod;
-import soot.Type;
 import soot.Unit;
 import soot.jimple.CaughtExceptionRef;
 import soot.jimple.DefinitionStmt;
-import soot.jimple.InvokeExpr;
 import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.collect.MyConcurrentHashMap;
@@ -217,21 +214,6 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 		this.taintPropagationHandler = handler;
 	}
 	
-	/**
-	 * Builds a new array of the given type if it is a base type or increments
-	 * the dimensions of the given array by 1 otherwise.
-	 * @param type The base type or incoming array
-	 * @return The resulting array
-	 */
-	public Type buildArrayOrAddDimension(Type type) {
-		if (type instanceof ArrayType) {
-			ArrayType array = (ArrayType) type;
-			return array.makeArrayType();
-		}
-		else
-			return ArrayType.v(type, 1);
-	}
-		
 	@Override
 	public Abstraction createZeroValue() {
 		if (zeroValue == null)
@@ -242,45 +224,6 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 	
 	protected Abstraction getZeroValue() {
 		return zeroValue;
-	}
-	
-	/**
-	 * Checks whether the given call is a call to Executor.execute() or
-	 * AccessController.doPrivileged() and whether the callee matches
-	 * the expected method signature
-	 * @param ie The invocation expression to check
-	 * @param dest The callee of the given invocation expression
-	 * @return True if the given invocation expression and callee are a valid
-	 * call to Executor.execute() or AccessController.doPrivileged()
-	 */
-	protected boolean isExecutorExecute(InvokeExpr ie, SootMethod dest) {
-		if (ie == null || dest == null)
-			return false;
-		
-		SootMethod ieMethod = ie.getMethod();
-		if (!ieMethod.getName().equals("execute") && !ieMethod.getName().equals("doPrivileged"))
-			return false;
-		
-		final String ieSubSig = ieMethod.getSubSignature();
-		final String calleeSubSig = dest.getSubSignature();
-		
-		if (ieSubSig.equals("void execute(java.lang.Runnable)")
-				&& calleeSubSig.equals("void run()"))
-			return true;
-		
-		if (calleeSubSig.equals("java.lang.Object run()")) {
-			if (ieSubSig.equals("java.lang.Object doPrivileged(java.security.PrivilegedAction)"))
-				return true;
-			if (ieSubSig.equals("java.lang.Object doPrivileged(java.security.PrivilegedAction,"
-					+ "java.security.AccessControlContext)"))
-				return true;
-			if (ieSubSig.equals("java.lang.Object doPrivileged(java.security.PrivilegedExceptionAction)"))
-				return true;
-			if (ieSubSig.equals("java.lang.Object doPrivileged(java.security.PrivilegedExceptionAction,"
-					+ "java.security.AccessControlContext)"))
-				return true;
-		}
-		return false;
 	}
 	
 	/**

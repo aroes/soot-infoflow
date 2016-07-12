@@ -30,6 +30,7 @@ import soot.Value;
 import soot.ValueBox;
 import soot.jimple.AssignStmt;
 import soot.jimple.FieldRef;
+import soot.jimple.InvokeExpr;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.callgraph.Edge;
@@ -406,6 +407,49 @@ public class InfoflowCFG implements IInfoflowCFG {
 	@Override
 	public boolean isReachable(Unit u) {
 		return delegate.isReachable(u);
+	}
+	
+	@Override
+	public boolean isExecutorExecute(InvokeExpr ie, SootMethod dest) {
+		if (ie == null || dest == null)
+			return false;
+		
+		SootMethod ieMethod = ie.getMethod();
+		if (!ieMethod.getName().equals("execute") && !ieMethod.getName().equals("doPrivileged"))
+			return false;
+		
+		final String ieSubSig = ieMethod.getSubSignature();
+		final String calleeSubSig = dest.getSubSignature();
+		
+		if (ieSubSig.equals("void execute(java.lang.Runnable)")
+				&& calleeSubSig.equals("void run()"))
+			return true;
+		
+		if (calleeSubSig.equals("java.lang.Object run()")) {
+			if (ieSubSig.equals("java.lang.Object doPrivileged(java.security.PrivilegedAction)"))
+				return true;
+			if (ieSubSig.equals("java.lang.Object doPrivileged(java.security.PrivilegedAction,"
+					+ "java.security.AccessControlContext)"))
+				return true;
+			if (ieSubSig.equals("java.lang.Object doPrivileged(java.security.PrivilegedExceptionAction)"))
+				return true;
+			if (ieSubSig.equals("java.lang.Object doPrivileged(java.security.PrivilegedExceptionAction,"
+					+ "java.security.AccessControlContext)"))
+				return true;
+		}
+		return false;
+	}
+
+	@Override
+	public Collection<SootMethod> getOrdinaryCalleesOfCallAt(Unit u) {
+		InvokeExpr iexpr = ((Stmt) u).getInvokeExpr();
+		
+		Collection<SootMethod> originalCallees = getCalleesOfCallAt(u);
+		List<SootMethod> callees = new ArrayList<>(originalCallees.size());
+		for (SootMethod sm : originalCallees)
+			if (!sm.isStaticInitializer() && !isExecutorExecute(iexpr, sm))
+				callees.add(sm);
+		return callees;
 	}
 	
 }

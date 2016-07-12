@@ -33,4 +33,8 @@ public class Location {
 		return new Location();
 	}
 
+	public void setLongitude(double longitude) {
+		this.longitude = longitude;
+	}
+
 }

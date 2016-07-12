@@ -256,4 +256,19 @@ public class TypeUtils {
 		return ArrayType.v(t, numDimensions);
 	}
 	
+	/**
+	 * Builds a new array of the given type if it is a base type or increments
+	 * the dimensions of the given array by 1 otherwise.
+	 * @param type The base type or incoming array
+	 * @return The resulting array
+	 */
+	public static Type buildArrayOrAddDimension(Type type) {
+		if (type instanceof ArrayType) {
+			ArrayType array = (ArrayType) type;
+			return array.makeArrayType();
+		}
+		else
+			return ArrayType.v(type, 1);
+	}
+	
 }

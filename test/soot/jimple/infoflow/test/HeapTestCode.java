@@ -1304,7 +1304,17 @@ public class HeapTestCode {
 		a.b = TelephonyManager.getDeviceId();
 		
 		ConnectionManager cm = new ConnectionManager();
-		cm.publish(c.b.attr.b);		
+		cm.publish(c.b.attr.b);
+	}
+	
+	public void simpleFieldTest1() {
+		A a = new A();
+		B b = new B();
+		b.attr = a;
+		a.b = TelephonyManager.getDeviceId();
+		
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(b.attr.b);
 	}
 	
 }

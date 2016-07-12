@@ -4,10 +4,13 @@
  */
 package soot.jimple.infoflow.solver.cfg;
 
+import java.util.Collection;
+
 import soot.SootField;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
+import soot.jimple.InvokeExpr;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 public interface IInfoflowCFG extends BiDiInterproceduralCFG<Unit,SootMethod> {
@@ -141,9 +144,28 @@ public interface IInfoflowCFG extends BiDiInterproceduralCFG<Unit,SootMethod> {
 	 * flow edge
 	 * @param u1 The first unit
 	 * @param u2 The second unit
-	 * @return True if the two given units are directly connetced by an exceptional
+	 * @return True if the two given units are directly connected by an exceptional
 	 * control flow edge, otherwise false
 	 */
 	public boolean isExceptionalEdgeBetween(Unit u1, Unit u2);
+	
+	/**
+	 * Gets all ordinary callees of the call at call site u, i.e., those that are not
+	 * \<clinit\> or a fake edge.
+	 * @param u The call site
+	 * @return The set of ordinary callees of the given call site
+	 */
+	public Collection<SootMethod> getOrdinaryCalleesOfCallAt(Unit u);
+	
+	/**
+	 * Checks whether the given call is a call to Executor.execute() or
+	 * AccessController.doPrivileged() and whether the callee matches
+	 * the expected method signature
+	 * @param ie The invocation expression to check
+	 * @param dest The callee of the given invocation expression
+	 * @return True if the given invocation expression and callee are a valid
+	 * call to Executor.execute() or AccessController.doPrivileged()
+	 */
+	public boolean isExecutorExecute(InvokeExpr ie, SootMethod dest);
 	
 }
