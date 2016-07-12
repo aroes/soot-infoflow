@@ -1317,4 +1317,52 @@ public class HeapTestCode {
 		cm.publish(b.attr.b);
 	}
 	
+	public void contextTest1() {
+		A a = new A();
+		A b = new A();
+		String data = TelephonyManager.getDeviceId();
+		copy(a, data);
+		copy(b, "Hello World");
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(b.b);
+	}
+
+	private void copy(A b, String string) {
+		A c = b;
+		c.b = string;
+	}
+	
+	public void contextTest2() {
+		String data = TelephonyManager.getDeviceId();
+		A a = copy(data);
+		A b = copy("Hello World");
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(b.b);
+		System.out.println(a);
+	}
+
+	private A copy(String data) {
+		A a = new A();
+		A b = a;
+		b.b = data;
+		return a;
+	}
+	
+	public void contextTest3() {
+		String data = TelephonyManager.getDeviceId();
+		A a = copy(data, new AccountManager().getPassword());
+		A b = copy("Hello World", "Foobar");
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(b.b);
+		System.out.println(a);
+	}
+	
+	private A copy(String context, String data) {
+		System.out.println(context);
+		A a = new A();
+		A b = a;
+		b.b = data;
+		return a;
+	}
+
 }

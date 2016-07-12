@@ -1174,5 +1174,32 @@ public class HeapTests extends JUnitTests {
 		checkInfoflow(infoflow, 1);
 		Assert.assertEquals(2, infoflow.getResults().numConnections());
 	}
+	
+	@Test(timeout = 300000)
+	public void contextTest1() {
+		IInfoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void contextTest1()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		negativeCheckInfoflow(infoflow);
+	}
+	
+	@Test(timeout = 300000)
+	public void contextTest2() {
+		IInfoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void contextTest2()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		negativeCheckInfoflow(infoflow);
+	}
+	
+	@Test(timeout = 300000)
+	public void contextTest3() {
+		IInfoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void contextTest3()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		negativeCheckInfoflow(infoflow);
+	}
 
 }
