@@ -16,6 +16,7 @@ import soot.VoidType;
 import soot.jimple.IntConstant;
 import soot.jimple.Jimple;
 import soot.jimple.NullConstant;
+import soot.jimple.Stmt;
 
 /**
  * Class for patching OS libraries such as java.lang.Thread so that we get
@@ -42,6 +43,9 @@ public class LibraryClassPatcher {
 		
 		// Patch the android.app.Activity implementation (getApplication())
 		patchActivityImplementation();
+		
+		// Patch the java.util.Timer implementation
+		patchTimerImplementation();
 	}
 	
 	/**
@@ -339,4 +343,78 @@ public class LibraryClassPatcher {
 		return b;
 	}
 
+	/**
+	 * Creates a dummy implementation of java.util.Timer if we don't have one
+	 */
+	private void patchTimerImplementation() {
+		SootClass sc = Scene.v().getSootClassUnsafe("java.util.Timer");
+		if (sc == null)
+			return;
+		sc.setLibraryClass();
+		
+		SootMethod smSchedule1 = sc.getMethodUnsafe("void schedule(java.util.TimerTask,long)");
+		if (smSchedule1 != null && !smSchedule1.hasActiveBody())
+			patchTimerScheduleMethod(smSchedule1);
+
+		SootMethod smSchedule2 = sc.getMethodUnsafe("void schedule(java.util.TimerTask,java.util.Date)");
+		if (smSchedule2 != null && !smSchedule2.hasActiveBody())
+			patchTimerScheduleMethod(smSchedule2);
+		
+		SootMethod smSchedule3 = sc.getMethodUnsafe("void schedule(java.util.TimerTask,java.util.Date,long)");
+		if (smSchedule3 != null && !smSchedule3.hasActiveBody())
+			patchTimerScheduleMethod(smSchedule3);
+		
+		SootMethod smSchedule4 = sc.getMethodUnsafe("void schedule(java.util.TimerTask,long,long)");
+		if (smSchedule4 != null && !smSchedule4.hasActiveBody())
+			patchTimerScheduleMethod(smSchedule4);
+		
+		SootMethod smSchedule5 = sc.getMethodUnsafe("void scheduleAtFixedRate(java.util.TimerTask,java.util.Date,long)");
+		if (smSchedule5 != null && !smSchedule5.hasActiveBody())
+			patchTimerScheduleMethod(smSchedule5);
+		
+		SootMethod smSchedule6 = sc.getMethodUnsafe("void scheduleAtFixedRate(java.util.TimerTask,long,long)");
+		if (smSchedule6 != null && !smSchedule6.hasActiveBody())
+			patchTimerScheduleMethod(smSchedule6);
+	}
+
+	/**
+	 * Patches the schedule() method of java.util.Timer by providing a fake implementation
+	 * @param method The method to patch
+	 */
+	private void patchTimerScheduleMethod(SootMethod method) {
+		SootClass sc = method.getDeclaringClass();
+		sc.setLibraryClass();
+		method.setPhantom(false);
+		
+		Body b = Jimple.v().newBody(method);
+		method.setActiveBody(b);
+		
+		Local thisLocal = Jimple.v().newLocal("this", sc.getType());
+		b.getLocals().add(thisLocal);
+		b.getUnits().add(Jimple.v().newIdentityStmt(thisLocal,
+				Jimple.v().newThisRef(sc.getType())));
+		
+		// Assign the parameters
+		Local firstParam = null;
+		for (int i = 0; i < method.getParameterCount(); i++)  {
+			Local paramLocal = Jimple.v().newLocal("param" + i, method.getParameterType(i));
+			b.getLocals().add(paramLocal);
+			b.getUnits().add(Jimple.v().newIdentityStmt(paramLocal,
+					Jimple.v().newParameterRef(method.getParameterType(i), i)));
+			if (i == 0)
+				firstParam = paramLocal;
+		}
+		
+		// Invoke the run() method on the first parameter local
+		SootMethod runMethod = Scene.v().grabMethod("<java.util.TimerTask: void run()>");
+		if (runMethod != null) {
+			Stmt invokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(
+					firstParam, runMethod.makeRef()));
+			b.getUnits().add(invokeStmt);
+		}
+		
+		// Add the return statement
+		b.getUnits().add(Jimple.v().newReturnVoidStmt());
+	}
+	
 }
