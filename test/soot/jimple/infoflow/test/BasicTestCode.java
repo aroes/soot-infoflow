@@ -3,6 +3,7 @@ package soot.jimple.infoflow.test;
 import soot.jimple.infoflow.test.android.ConnectionManager;
 import soot.jimple.infoflow.test.android.Location;
 import soot.jimple.infoflow.test.android.LocationManager;
+import soot.jimple.infoflow.test.android.TelephonyManager;
 
 /**
  * Simple test targets for very basic functions
@@ -51,6 +52,13 @@ public class BasicTestCode {
 		loc = loc.clearLongitude();
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(loc.getLongitude());
+	}
+	
+	public void simpleArithmeticTest1() {
+		int i = TelephonyManager.getIMEI();
+		i++;
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(i);		
 	}
 
 }
