@@ -60,7 +60,6 @@ import soot.jimple.infoflow.solver.IMemoryManager;
 import soot.jimple.infoflow.solver.cfg.BackwardsInfoflowCFG;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 import soot.jimple.infoflow.solver.fastSolver.InfoflowSolver;
-import soot.jimple.infoflow.solver.fastSolver.SetPoolExecutor;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.util.SootMethodRepresentationParser;
 import soot.jimple.infoflow.util.SystemClassHandler;
@@ -467,7 +466,7 @@ public class Infoflow extends AbstractInfoflow {
 	 * @return The generated executor
 	 */
 	private CountingThreadPoolExecutor createExecutor(int numThreads) {
-		return new SetPoolExecutor
+		return new CountingThreadPoolExecutor
 				(config.getMaxThreadNum() == -1 ? numThreads
 						: Math.min(config.getMaxThreadNum(), numThreads),
 				Integer.MAX_VALUE, 30, TimeUnit.SECONDS,
