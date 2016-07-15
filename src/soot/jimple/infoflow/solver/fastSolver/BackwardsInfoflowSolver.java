@@ -29,7 +29,6 @@ public class BackwardsInfoflowSolver extends InfoflowSolver {
 		Collection<Unit> returnSiteNs = icfg.getReturnSitesOfCallAt(callSite);
 		
 		if (endSumm != null) {
-			System.err.println("Spawning summary based backwards analysis");
 			for(Pair<Unit, Abstraction> entry: endSumm) {
 				Unit eP = entry.getO1();
 				Abstraction d4 = entry.getO2();
