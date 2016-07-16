@@ -110,13 +110,13 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 	protected final boolean followReturnsPastSeeds;
 	
 	@DontSynchronize("readOnly")
-	private boolean setJumpPredecessors = false;
+	protected boolean setJumpPredecessors = false;
 	
 	@DontSynchronize("readOnly")
 	private boolean enableMergePointChecking = false;
 	
 	@DontSynchronize("readOnly")
-	private IMemoryManager<D> memoryManager = null;
+	protected IMemoryManager<D> memoryManager = null;
 	
 	/**
 	 * Creates a solver for the given problem, which caches flow functions and edge functions.
