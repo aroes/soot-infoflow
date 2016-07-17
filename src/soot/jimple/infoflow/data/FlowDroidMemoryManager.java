@@ -202,11 +202,19 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 					doErase = true;
 				if (erasePathData == PathDataErasureMode.KeepOnlyContextData
 						&& curAbs.getCorrespondingCallSite() == null
-						&& curAbs.getCurrentStmt() != null
-						&& !curAbs.getCurrentStmt().containsInvokeExpr()
-						&& !(curAbs.getCurrentStmt() instanceof ReturnStmt)
-						&& !(curAbs.getCurrentStmt() instanceof ReturnVoidStmt)) {
-					doErase = true;
+						&& curAbs.getCurrentStmt() != null) {
+					// Lock the abstraction and check again. This is to make sure that no
+					// other thread has already erased the path data in the meantime and
+					// we access null objects.
+					synchronized (curAbs) {
+						if (curAbs.getCorrespondingCallSite() == null
+								&& curAbs.getCurrentStmt() != null
+								&& !curAbs.getCurrentStmt().containsInvokeExpr()
+								&& !(curAbs.getCurrentStmt() instanceof ReturnStmt)
+								&& !(curAbs.getCurrentStmt() instanceof ReturnVoidStmt)) {
+							doErase = true;
+						}
+					}
 				}
 				if (doErase) {
 					curAbs.setCurrentStmt(null);
