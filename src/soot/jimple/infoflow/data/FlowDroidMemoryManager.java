@@ -216,9 +216,11 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 						}
 					}
 				}
-				if (doErase) {
-					curAbs.setCurrentStmt(null);
-					curAbs.setCorrespondingCallSite(null);
+				synchronized (curAbs) {
+					if (doErase) {
+						curAbs.setCurrentStmt(null);
+						curAbs.setCorrespondingCallSite(null);
+					}
 				}
 				curAbs = curAbs.getPredecessor();
 			}
