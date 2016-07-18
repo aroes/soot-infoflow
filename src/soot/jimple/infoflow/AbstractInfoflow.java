@@ -10,6 +10,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import soot.FastHierarchy;
 import soot.PackManager;
 import soot.Scene;
 import soot.SootClass;
@@ -53,6 +54,7 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	protected final String androidPath;
 	protected final boolean forceAndroidJar;
 	protected IInfoflowConfig sootConfig;
+	protected FastHierarchy hierarchy;
 	
     /**
      * Creates a new instance of the abstract info flow problem
@@ -349,7 +351,7 @@ public abstract class AbstractInfoflow implements IInfoflow {
 		}
 		
 		// If we don't have a FastHierarchy, we need to create it
-		Scene.v().getOrMakeFastHierarchy();
+		hierarchy = Scene.v().getOrMakeFastHierarchy();
 		
 		// Run the preprocessors
         for (PreAnalysisHandler tr : preProcessors)

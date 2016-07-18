@@ -246,8 +246,6 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 		final D d1 = edge.factAtSource();
 		final N n = edge.getTarget(); // a call node; line 14...
 
-        logger.trace("Processing call to {}", n);
-        
 		final D d2 = edge.factAtTarget();
 		assert d2 != null;
 		Collection<N> returnSiteNs = icfg.getReturnSitesOfCallAt(n);
@@ -285,7 +283,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 				//for each already-queried exit value <eP,d4> reachable from <sP,d3>,
 				//create new caller-side jump functions to the return sites
 				//because we have observed a potentially new incoming edge into <sP,d3>
-				if (endSumm != null)
+				if (endSumm != null && !endSumm.isEmpty())
 					for(Pair<N, D> entry: endSumm) {
 						N eP = entry.getO1();
 						D d4 = entry.getO2();
@@ -545,11 +543,34 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 		}
 		else {
 			scheduleEdgeProcessing(edge);
-			if(targetVal!=zeroValue)
-				logger.trace("EDGE: <{},{}> -> <{},{}>", icfg.getMethodOf(target), sourceVal, target, targetVal);
 		}
 	}
 	
+	protected void propagateN(D sourceVal, N target, D targetVal,
+			/* deliberately exposed to clients */ N relatedCallSite,
+			/* deliberately exposed to clients */ boolean isUnbalancedReturn,
+			boolean forceRegister) {
+		// Let the memory manager run
+		if (memoryManager != null) {
+			sourceVal = memoryManager.handleMemoryObject(sourceVal);
+			targetVal = memoryManager.handleMemoryObject(targetVal);
+			if (sourceVal == null || targetVal == null)
+				return;
+		}
+		
+		final PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
+		final boolean doAdd = (forceRegister || !enableMergePointChecking || isMergePoint(target));
+		final D existingVal = doAdd ? jumpFn.addFunction(edge) : null;
+		if (existingVal != null) {
+			if (existingVal != targetVal) {
+				existingVal.addNeighbor(targetVal);
+			}
+		}
+		else {
+			scheduleEdgeProcessing(edge);
+		}
+	}
+
 	/**
 	 * Gets whether the given unit is a merge point in the ICFG
 	 * @param target The unit to check

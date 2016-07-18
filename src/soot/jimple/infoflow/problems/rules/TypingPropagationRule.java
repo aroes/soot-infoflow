@@ -2,6 +2,7 @@ package soot.jimple.infoflow.problems.rules;
 
 import java.util.Collection;
 
+import soot.SootMethod;
 import soot.jimple.CastExpr;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.Stmt;
@@ -50,7 +51,8 @@ public class TypingPropagationRule extends AbstractTaintPropagationRule {
 
 	@Override
 	public Collection<Abstraction> propagateCallFlow(Abstraction d1,
-			Abstraction source, Stmt stmt, ByReferenceBoolean killAll) {
+			Abstraction source, Stmt stmt, SootMethod dest,
+			ByReferenceBoolean killAll) {
 		return null;
 	}
 

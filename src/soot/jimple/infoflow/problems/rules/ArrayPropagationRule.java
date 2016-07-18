@@ -6,6 +6,7 @@ import java.util.Set;
 
 import soot.ArrayType;
 import soot.IntType;
+import soot.SootMethod;
 import soot.Type;
 import soot.Value;
 import soot.jimple.ArrayRef;
@@ -118,7 +119,8 @@ public class ArrayPropagationRule extends AbstractTaintPropagationRule {
 
 	@Override
 	public Collection<Abstraction> propagateCallFlow(Abstraction d1,
-			Abstraction source, Stmt stmt, ByReferenceBoolean killAll) {
+			Abstraction source, Stmt stmt, SootMethod dest,
+			ByReferenceBoolean killAll) {
 		return null;
 	}
 

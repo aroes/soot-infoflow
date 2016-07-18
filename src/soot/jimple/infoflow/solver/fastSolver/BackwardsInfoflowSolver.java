@@ -51,7 +51,7 @@ public class BackwardsInfoflowSolver extends InfoflowSolver {
 							d5p = d5p.clone();
 							d5p.setPredecessor(d2);
 						}
-						propagate(d1, retSiteN, d5p, callSite, false, true);
+						propagateN(d1, retSiteN, d5p, callSite, false, true);
 					}
 				}
 			}

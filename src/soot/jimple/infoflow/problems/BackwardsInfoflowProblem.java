@@ -232,7 +232,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						// type to which we cast. Do not loosen types, though.
 						if (defStmt.getRightOp() instanceof CastExpr) {
 							CastExpr ce = (CastExpr) defStmt.getRightOp();								
-							if (!Scene.v().getFastHierarchy().canStoreType(newType, ce.getCastType()))
+							if (!manager.getHierarchy().canStoreType(newType, ce.getCastType()))
 								newType = ce.getCastType();
 						}
 						// Special type handling for certain operations

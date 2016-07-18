@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import soot.SootMethod;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.aliasing.Aliasing;
@@ -117,16 +118,17 @@ public class PropagationRuleManager {
 	 * @param d1 The context abstraction
 	 * @param source The abstraction to propagate over the statement
 	 * @param stmt The statement at which to propagate the abstraction
+	 * @param dest The destination method into which to propagate the abstraction
 	 * @param killAll Outgoing value for the rule to specify whether
 	 * all taints shall be killed, i.e., nothing shall be propagated
 	 * @return The new abstractions to be propagated to the next statement
 	 */
 	public Set<Abstraction> applyCallFlowFunction(Abstraction d1,
-			Abstraction source, Stmt stmt, ByReferenceBoolean killAll) {
+			Abstraction source, Stmt stmt, SootMethod dest, ByReferenceBoolean killAll) {
 		Set<Abstraction> res = null;
 		for (ITaintPropagationRule rule : rules) {
 			Collection<Abstraction> ruleOut = rule.propagateCallFlow(
-					d1, source, stmt, killAll);
+					d1, source, stmt, dest, killAll);
 			if (killAll.value)
 				return null;
 			if (ruleOut != null && !ruleOut.isEmpty()) {

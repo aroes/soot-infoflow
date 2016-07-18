@@ -80,8 +80,8 @@ public class TypeUtils {
 			return true;
 		
 		// If we have a reference type, we use the Soot hierarchy
-		if (Scene.v().getFastHierarchy().canStoreType(destType, sourceType) // cast-up, i.e. Object to String
-				|| Scene.v().getFastHierarchy().canStoreType(sourceType, destType)) // cast-down, i.e. String to Object
+		if (manager.getHierarchy().canStoreType(destType, sourceType) // cast-up, i.e. Object to String
+				|| manager.getHierarchy().canStoreType(sourceType, destType)) // cast-down, i.e. String to Object
 			return true;
 		
 		// If both types are primitive, they can be cast unless a boolean type

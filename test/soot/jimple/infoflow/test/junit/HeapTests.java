@@ -521,7 +521,6 @@ public class HeapTests extends JUnitTests {
 		InfoflowConfiguration.setAccessPathLength(4);
 		
 		IInfoflow infoflow = initInfoflow();
-		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 		infoflow.getConfig().setInspectSources(false);
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(false);
@@ -1200,6 +1199,19 @@ public class HeapTests extends JUnitTests {
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void contextTest3()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		negativeCheckInfoflow(infoflow);
+	}
+
+	@Test(timeout = 300000)
+	public void summaryTest1() {
+		// This test is highly dependent upon when a summary is created vs.
+		// when it is used, so we run it multiple times.
+		for (int i = 0; i < 10; i++) {
+			IInfoflow infoflow = initInfoflow();
+			List<String> epoints = new ArrayList<String>();
+			epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void summaryTest1()>");
+			infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+			checkInfoflow(infoflow, 1);
+		}
 	}
 
 }

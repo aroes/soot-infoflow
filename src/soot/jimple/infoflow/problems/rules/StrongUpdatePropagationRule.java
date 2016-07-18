@@ -3,6 +3,7 @@ package soot.jimple.infoflow.problems.rules;
 import java.util.Collection;
 
 import soot.Local;
+import soot.SootMethod;
 import soot.ValueBox;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
@@ -122,7 +123,8 @@ public class StrongUpdatePropagationRule extends AbstractTaintPropagationRule {
 
 	@Override
 	public Collection<Abstraction> propagateCallFlow(Abstraction d1,
-			Abstraction source, Stmt stmt, ByReferenceBoolean killAll) {
+			Abstraction source, Stmt stmt, SootMethod dest,
+			ByReferenceBoolean killAll) {
 		return null;
 	}
 

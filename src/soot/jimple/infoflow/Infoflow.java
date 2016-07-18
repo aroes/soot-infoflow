@@ -247,7 +247,7 @@ public class Infoflow extends AbstractInfoflow {
 
 		// Initialize the data flow manager
 		InfoflowManager manager = new InfoflowManager(config, null, iCfg, sourcesSinks,
-				taintWrapper);
+				taintWrapper, hierarchy);
 
 		BackwardsInfoflowProblem backProblem = null;
 		InfoflowManager backwardsManager = null;
@@ -256,7 +256,7 @@ public class Infoflow extends AbstractInfoflow {
 		switch (getConfig().getAliasingAlgorithm()) {
 			case FlowSensitive:
 				backwardsManager = new InfoflowManager(config, null,
-						new BackwardsInfoflowCFG(iCfg), sourcesSinks, taintWrapper);
+						new BackwardsInfoflowCFG(iCfg), sourcesSinks, taintWrapper, hierarchy);
 				backProblem = new BackwardsInfoflowProblem(backwardsManager);
 				backSolver = new BackwardsInfoflowSolver(backProblem, executor);
 				backSolver.setMemoryManager(memoryManager);

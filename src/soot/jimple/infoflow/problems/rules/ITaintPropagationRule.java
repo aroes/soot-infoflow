@@ -2,6 +2,7 @@ package soot.jimple.infoflow.problems.rules;
 
 import java.util.Collection;
 
+import soot.SootMethod;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.util.ByReferenceBoolean;
@@ -38,12 +39,14 @@ public interface ITaintPropagationRule {
 	 * @param d1 The context abstraction
 	 * @param source The abstraction to propagate over the statement
 	 * @param stmt The statement at which to propagate the abstraction
+	 * @param dest The destination method into which to propagate the abstraction
 	 * @param killAll Outgoing value for the rule to specify whether
 	 * all taints shall be killed, i.e., nothing shall be propagated
 	 * @return The new abstractions to be propagated to the next statement
 	 */
 	public Collection<Abstraction> propagateCallFlow(Abstraction d1,
-			Abstraction source, Stmt stmt, ByReferenceBoolean killAll);
+			Abstraction source, Stmt stmt, SootMethod dest,
+			ByReferenceBoolean killAll);
 	
 	/**
 	 * Propagates a flow along a the call-to-return edge at a call site

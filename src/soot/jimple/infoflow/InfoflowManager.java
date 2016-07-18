@@ -1,5 +1,6 @@
 package soot.jimple.infoflow;
 
+import soot.FastHierarchy;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 import soot.jimple.infoflow.source.ISourceSinkManager;
@@ -21,18 +22,21 @@ public class InfoflowManager {
 	private final ISourceSinkManager sourceSinkManager;
 	private final ITaintPropagationWrapper taintWrapper;
 	private final TypeUtils typeUtils;
+	private final FastHierarchy hierarchy;
 	
 	InfoflowManager(InfoflowConfiguration config,
 			IInfoflowSolver forwardSolver,
 			IInfoflowCFG icfg,
 			ISourceSinkManager sourceSinkManager,
-			ITaintPropagationWrapper taintWrapper) {
+			ITaintPropagationWrapper taintWrapper,
+			FastHierarchy hierarchy) {
 		this.config = config;
 		this.forwardSolver = forwardSolver;
 		this.icfg = icfg;
 		this.sourceSinkManager = sourceSinkManager;
 		this.taintWrapper = taintWrapper;
 		this.typeUtils = new TypeUtils(this);
+		this.hierarchy = hierarchy;
 	}
 	
 	/**
@@ -89,6 +93,16 @@ public class InfoflowManager {
 	 */
 	public TypeUtils getTypeUtils() {
 		return this.typeUtils;
+	}
+	
+	/**
+	 * Gets the Soot type hierarchy that was constructed together with the
+	 * callgraph. In contrast to Scene.v().getFastHierarchy, this object is
+	 * guaranteed to be available.
+	 * @return The fast hierarchy
+	 */
+	public FastHierarchy getHierarchy() {
+		return hierarchy;
 	}
 	
 }

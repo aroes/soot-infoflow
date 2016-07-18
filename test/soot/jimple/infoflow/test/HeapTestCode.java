@@ -1364,5 +1364,30 @@ public class HeapTestCode {
 		b.b = data;
 		return a;
 	}
+	
+    public static class Container1 {
+        String g;
+    }
+    
+    public static class Container2 {
+        Container1 f;
+    }
+	
+    private void doWrite(final Container2 base, final String string) {
+        base.f.g = string;
+    }
+    
+	public void summaryTest1() {
+        final Container2 base1 = new Container2();
+        final Container2 base2 = new Container2();
+        final String tainted = TelephonyManager.getDeviceId();
+        doWrite(base1, tainted);
+        
+        final Container1 z = base2.f;
+        doWrite(base2, tainted);
+
+        ConnectionManager cm = new ConnectionManager();
+		cm.publish(z.g);
+	}
 
 }
