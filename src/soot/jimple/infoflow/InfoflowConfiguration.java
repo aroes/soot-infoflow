@@ -72,7 +72,7 @@ public class InfoflowConfiguration {
 	private static boolean mergeNeighbors = false;
 	private static boolean useTypeTightening = true;
 	
-	private boolean stopAfterFirstFlow = false;
+	private int stopAfterFirstKFlows = 0;
 	private boolean enableImplicitFlows = false;
 	private boolean enableStaticFields = true;
 	private boolean enableExceptions = true;
@@ -98,7 +98,7 @@ public class InfoflowConfiguration {
 	 * @param config The configuration data to merge in
 	 */
 	public void merge(InfoflowConfiguration config) {
-		this.stopAfterFirstFlow = config.stopAfterFirstFlow;
+		this.stopAfterFirstKFlows = config.stopAfterFirstKFlows;
 		this.enableImplicitFlows = config.enableImplicitFlows;
 		this.enableStaticFields = config.enableStaticFields;
 		this.enableExceptions = config.enableExceptions;
@@ -253,6 +253,22 @@ public class InfoflowConfiguration {
 	public static void setUseThisChainReduction(boolean useThisChainReduction) {
 		InfoflowConfiguration.useThisChainReduction = useThisChainReduction;
 	}
+
+	/**
+	 * Sets after how many flows the information flow analysis shall stop.
+	 * @param stopAfterFirstKFlows number of flows after which to stop
+	 */
+	public void setStopAfterFirstKFlows(int stopAfterFirstKFlows) {
+		this.stopAfterFirstKFlows = stopAfterFirstKFlows;
+	}
+
+	/**
+	 * Gets after how many flows the information flow analysis shall stop.
+	 * @return number of flows after which to stop
+	 */
+	public int getStopAfterFirstKFlows() {
+		return stopAfterFirstKFlows;
+	}
 	
 	/**
 	 * Sets whether the information flow analysis shall stop after the first
@@ -261,9 +277,9 @@ public class InfoflowConfiguration {
 	 * first flow has been found, otherwise false.
 	 */
 	public void setStopAfterFirstFlow(boolean stopAfterFirstFlow) {
-		this.stopAfterFirstFlow = stopAfterFirstFlow;
+		this.stopAfterFirstKFlows = stopAfterFirstFlow ? 1 : 0;
 	}
-	
+
 	/**
 	 * Gets whether the information flow analysis shall stop after the first
 	 * flow has been found
@@ -271,7 +287,7 @@ public class InfoflowConfiguration {
 	 * flow has been found, otherwise false
 	 */
 	public boolean getStopAfterFirstFlow() {
-		return stopAfterFirstFlow;
+		return stopAfterFirstKFlows == 1;
 	}
 	
 	/**
