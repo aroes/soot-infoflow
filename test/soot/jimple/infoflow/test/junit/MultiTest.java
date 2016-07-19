@@ -157,4 +157,34 @@ public class MultiTest extends JUnitTests {
 		Assert.assertEquals(2, infoflow.getResults().numConnections());
     }
 
+	@Test(timeout=300000)
+	public void stopAfterFirstKFlowsTest0() {
+		IInfoflow infoflow = initInfoflow();
+		infoflow.getConfig().setStopAfterFirstFlow(true);
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.MultiTestCode: void multiSourceCode()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+	}
+
+	@Test(timeout=300000)
+	public void stopAfterFirstKFlowsTest1() {
+		IInfoflow infoflow = initInfoflow();
+		infoflow.getConfig().setStopAfterFirstFlow(false);
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.MultiTestCode: void multiSourceCode()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 2);
+	}
+
+	@Test(timeout=300000)
+	public void stopAfterFirstKFlowsTest2() {
+		IInfoflow infoflow = initInfoflow();
+		infoflow.getConfig().setStopAfterFirstKFlows(1);
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.MultiTestCode: void multiSourceCode()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+	}
+
 }

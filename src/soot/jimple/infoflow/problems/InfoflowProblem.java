@@ -106,9 +106,9 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 				
 				@Override
 				public Set<Abstraction> computeTargets(Abstraction d1, Abstraction source) {
-					if (manager.getConfig().getStopAfterFirstFlow() && !results.isEmpty())
+					if (1 <= manager.getConfig().getStopAfterFirstKFlows() && manager.getConfig().getStopAfterFirstKFlows() <= results.getResults().size())
 						return Collections.emptySet();
-												
+
 					// Notify the handler if we have one
 					if (taintPropagationHandler != null)
 						taintPropagationHandler.notifyFlowIn(stmt, source, interproceduralCFG(),
