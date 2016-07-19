@@ -546,31 +546,6 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 		}
 	}
 	
-	protected void propagateN(D sourceVal, N target, D targetVal,
-			/* deliberately exposed to clients */ N relatedCallSite,
-			/* deliberately exposed to clients */ boolean isUnbalancedReturn,
-			boolean forceRegister) {
-		// Let the memory manager run
-		if (memoryManager != null) {
-			sourceVal = memoryManager.handleMemoryObject(sourceVal);
-			targetVal = memoryManager.handleMemoryObject(targetVal);
-			if (sourceVal == null || targetVal == null)
-				return;
-		}
-		
-		final PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
-		final boolean doAdd = (forceRegister || !enableMergePointChecking || isMergePoint(target));
-		final D existingVal = doAdd ? jumpFn.addFunction(edge) : null;
-		if (existingVal != null) {
-			if (existingVal != targetVal) {
-				existingVal.addNeighbor(targetVal);
-			}
-		}
-		else {
-			scheduleEdgeProcessing(edge);
-		}
-	}
-
 	/**
 	 * Gets whether the given unit is a merge point in the ICFG
 	 * @param target The unit to check

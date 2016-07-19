@@ -96,6 +96,7 @@ public class SetTests extends JUnitTests {
     	int oldAPLength = InfoflowConfiguration.getAccessPathLength();
     	try {
 	    	InfoflowConfiguration.setAccessPathLength(1);
+	    	infoflow.getConfig().setFlowSensitiveAliasing(false);
 	    	List<String> epoints = new ArrayList<String>();
 	    	epoints.add("<soot.jimple.infoflow.test.SetTestCode: void concreteWriteReadLinkedPos0Test()>");
 			infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
@@ -115,6 +116,7 @@ public class SetTests extends JUnitTests {
     	int oldAPLength = InfoflowConfiguration.getAccessPathLength();
     	try {
 	    	InfoflowConfiguration.setAccessPathLength(1);
+	    	infoflow.getConfig().setFlowSensitiveAliasing(false);
 	    	List<String> epoints = new ArrayList<String>();
 	    	epoints.add("<soot.jimple.infoflow.test.SetTestCode: void concreteWriteReadLinkedPos1Test()>");
 			infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
