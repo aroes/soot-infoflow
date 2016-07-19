@@ -24,7 +24,9 @@ public class SystemClassHandler {
 				|| className.startsWith("java.")
 				|| className.startsWith("javax.")
 				|| className.startsWith("sun.")
-				|| className.startsWith("com.google.");
+				|| className.startsWith("com.google.")
+				|| className.startsWith("org.omg.")
+				|| className.startsWith("org.w3c.dom.");
 	}
 	
 	/**
