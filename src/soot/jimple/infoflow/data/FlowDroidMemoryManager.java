@@ -1,8 +1,5 @@
 package soot.jimple.infoflow.data;
 
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -174,18 +171,6 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 			Abstraction cachedAbs = getCachedAbstraction(obj);
 			if (cachedAbs != null)
 				return cachedAbs;
-		}
-		
-		// Sanity check: Abstractions shall not have circles. Really. Trust me.
-		{
-			Set<Abstraction> seenAbstractions = Collections.newSetFromMap(new IdentityHashMap<Abstraction,Boolean>());
-			seenAbstractions.add(obj);
-			Abstraction curAbs = obj;
-			while (curAbs.getPredecessor() != null) {
-				if (!seenAbstractions.add(curAbs.getPredecessor()))
-					System.out.println("ISSUE");
-				curAbs = curAbs.getPredecessor();
-			}
 		}
 		
 		// We check for a cached version of the access path
