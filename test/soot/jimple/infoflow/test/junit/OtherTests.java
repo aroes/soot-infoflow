@@ -369,6 +369,7 @@ public class OtherTests extends JUnitTests{
 				excludeList.add("javax.");
 				options.set_exclude(excludeList);
 				options.set_prepend_classpath(false);
+				Options.v().set_ignore_classpath_errors(true);
 			}
 			
 		});
