@@ -32,6 +32,7 @@ public class SetTests extends JUnitTests {
 	    	InfoflowConfiguration.setAccessPathLength(1);
 	    	List<String> epoints = new ArrayList<String>();
 	    	epoints.add("<soot.jimple.infoflow.test.SetTestCode: void concreteWriteReadHashTest()>");
+			infoflow.getConfig().setFlowSensitiveAliasing(false);
 			infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 			checkInfoflow(infoflow, 1);
 			System.out.println("Test case concreteHashSetTest done.");
@@ -47,6 +48,7 @@ public class SetTests extends JUnitTests {
     	IInfoflow infoflow = initInfoflow();
     	infoflow.getConfig().setEnableImplicitFlows(true);
     	infoflow.getConfig().setEnableStaticFieldTracking(false);
+		infoflow.getConfig().setFlowSensitiveAliasing(false);
 
     	int oldAPLength = InfoflowConfiguration.getAccessPathLength();
     	try {
@@ -69,6 +71,7 @@ public class SetTests extends JUnitTests {
     	
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.SetTestCode: void concreteWriteReadTreePos0Test()>");
+		infoflow.getConfig().setFlowSensitiveAliasing(false);
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
 		
@@ -82,6 +85,7 @@ public class SetTests extends JUnitTests {
     	
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.SetTestCode: void concreteWriteReadTreePos1Test()>");
+		infoflow.getConfig().setFlowSensitiveAliasing(false);
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
 		
@@ -138,6 +142,7 @@ public class SetTests extends JUnitTests {
 	    	InfoflowConfiguration.setAccessPathLength(1);
 	    	List<String> epoints = new ArrayList<String>();
 	    	epoints.add("<soot.jimple.infoflow.test.SetTestCode: void writeReadTest()>");
+			infoflow.getConfig().setFlowSensitiveAliasing(false);
 			infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 			checkInfoflow(infoflow, 1);
 			System.out.println("Test case setTest done.");
@@ -157,6 +162,7 @@ public class SetTests extends JUnitTests {
 	    	InfoflowConfiguration.setAccessPathLength(1);
 	    	List<String> epoints = new ArrayList<String>();
 	    	epoints.add("<soot.jimple.infoflow.test.SetTestCode: void iteratorTest()>");
+			infoflow.getConfig().setFlowSensitiveAliasing(false);
 			infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 			checkInfoflow(infoflow, 1);		
 			System.out.println("Test case setIteratorTest done.");
@@ -173,6 +179,7 @@ public class SetTests extends JUnitTests {
     	
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.SetTestCode: void concreteWriteReadNegativeTest()>");
+		infoflow.getConfig().setFlowSensitiveAliasing(false);
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		negativeCheckInfoflow(infoflow);
 		

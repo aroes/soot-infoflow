@@ -28,6 +28,7 @@ public class MapTests extends JUnitTests {
     	IInfoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void writeReadPos0Test()>");
+		infoflow.getConfig().setFlowSensitiveAliasing(false);
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);		
     }
@@ -37,6 +38,7 @@ public class MapTests extends JUnitTests {
     	IInfoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void writeReadPos1Test()>");
+		infoflow.getConfig().setFlowSensitiveAliasing(false);
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);	
     }
@@ -46,6 +48,7 @@ public class MapTests extends JUnitTests {
     	IInfoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void concreteWriteReadPos0Test()>");
+		infoflow.getConfig().setFlowSensitiveAliasing(false);
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
     }
@@ -56,6 +59,7 @@ public class MapTests extends JUnitTests {
     	infoflow.getConfig().setFlowSensitiveAliasing(false);
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void concreteLinkedWriteReadPos0Test()>");
+		infoflow.getConfig().setFlowSensitiveAliasing(false);
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
     }
@@ -65,6 +69,7 @@ public class MapTests extends JUnitTests {
     	IInfoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void concreteWriteReadPos1Test()>");
+		infoflow.getConfig().setFlowSensitiveAliasing(false);
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
     }
@@ -74,7 +79,8 @@ public class MapTests extends JUnitTests {
     	IInfoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void concreteWriteRead2Test()>");
-		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		infoflow.getConfig().setFlowSensitiveAliasing(false);
+    	infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		
 		// We only publish a constant string, though the key in the map is
 		// sensitive - but never gets sent out
@@ -86,6 +92,7 @@ public class MapTests extends JUnitTests {
     	IInfoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void iteratorTest()>");
+		infoflow.getConfig().setFlowSensitiveAliasing(false);
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);		
     }
@@ -95,6 +102,7 @@ public class MapTests extends JUnitTests {
     	IInfoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void entryTest()>");
+		infoflow.getConfig().setFlowSensitiveAliasing(false);
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);	
     }
@@ -104,6 +112,7 @@ public class MapTests extends JUnitTests {
     	IInfoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void concreteWriteReadTableTest()>");
+		infoflow.getConfig().setFlowSensitiveAliasing(false);
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
     }
@@ -114,6 +123,7 @@ public class MapTests extends JUnitTests {
     	IInfoflow infoflow = initInfoflow();
     	List<String> epoints = new ArrayList<String>();
     	epoints.add("<soot.jimple.infoflow.test.MapTestCode: void concreteWriteReadNegativeTest()>");
+		infoflow.getConfig().setFlowSensitiveAliasing(false);
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		negativeCheckInfoflow(infoflow);
     }
