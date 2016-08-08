@@ -10,22 +10,20 @@
  ******************************************************************************/
 package soot.jimple.infoflow.problems;
 
-import heros.FlowFunction;
-import heros.FlowFunctions;
-import heros.flowfunc.Identity;
-import heros.flowfunc.KillAll;
-import heros.solver.PathEdge;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import heros.FlowFunction;
+import heros.FlowFunctions;
+import heros.flowfunc.Identity;
+import heros.flowfunc.KillAll;
+import heros.solver.PathEdge;
 import soot.ArrayType;
 import soot.Local;
 import soot.PrimType;
 import soot.RefType;
-import soot.Scene;
 import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
@@ -668,6 +666,12 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 											continue;
 										if (TypeUtils.isStringType(source.getAccessPath().getBaseType())
 												&& !source.getAccessPath().getCanHaveImmutableAliases())
+											continue;
+										
+										// If the variable was overwritten somewehere in the callee, we assume it
+										// to overwritten on all paths (yeah, I know ...) Otherwise, we need SSA
+										// or lots of bookkeeping to avoid FPs (BytecodeTests.flowSensitivityTest1).
+										if (interproceduralCFG().methodWritesValue(callee, paramLocals[i]))
 											continue;
 										
 										Abstraction abs = checkAbstraction(source.deriveNewAbstraction

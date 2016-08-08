@@ -650,6 +650,12 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 								if (!source.getAccessPath().getTaintSubFields())
 									continue;
 								
+								// If the variable was overwritten somewehere in the callee, we assume it
+								// to overwritten on all paths (yeah, I know ...) Otherwise, we need SSA
+								// or lots of bookkeeping to avoid FPs (BytecodeTests.flowSensitivityTest1).
+								if (interproceduralCFG().methodWritesValue(callee, paramLocals[i]))
+									continue;
+								
 								Abstraction abs = newSource.deriveNewAbstraction
 										(newSource.getAccessPath().copyWithNewValue(originalCallArg), (Stmt) exitStmt);
 								if (abs != null) {

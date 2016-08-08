@@ -109,6 +109,26 @@ public class InfoflowCFG implements IInfoflowCFG {
 				}
 			});
 	
+	protected final LoadingCache<SootMethod,Local[]> methodToWrittenLocals =
+			IDESolver.DEFAULT_CACHE_BUILDER.build( new CacheLoader<SootMethod,Local[]>() {
+				@Override
+				public Local[] load(SootMethod method) throws Exception {
+					if (!method.isConcrete() || !method.hasActiveBody())
+						return new Local[0];
+					
+					List<Local> lcs = new ArrayList<Local>(method.getActiveBody().getLocalCount());
+					
+					for (Unit u : method.getActiveBody().getUnits())
+						if (u instanceof AssignStmt) {
+							AssignStmt assignStmt = (AssignStmt) u;
+							if (assignStmt.getLeftOp() instanceof Local)
+								lcs.add((Local) assignStmt.getLeftOp());
+						}
+					
+					return lcs.toArray(new Local[lcs.size()]);
+				}
+			});
+
 	public InfoflowCFG() {
 		this(new JimpleBasedInterproceduralCFG());
 	}
@@ -387,6 +407,16 @@ public class InfoflowCFG implements IInfoflowCFG {
 		return false;
 	}
 	
+	@Override
+	public boolean methodWritesValue(SootMethod m, Value v) {
+		Local[] writes = methodToWrittenLocals.getUnchecked(m);
+		if (writes != null)
+			for (Local l : writes)
+				if (l == v)
+					return true;
+		return false;
+	}
+
 	@Override
 	public boolean isExceptionalEdgeBetween(Unit u1, Unit u2) {
 		SootMethod m1 = getMethodOf(u1);

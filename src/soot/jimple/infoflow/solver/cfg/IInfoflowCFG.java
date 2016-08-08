@@ -140,6 +140,14 @@ public interface IInfoflowCFG extends BiDiInterproceduralCFG<Unit,SootMethod> {
 	public boolean methodReadsValue(SootMethod m, Value v);
 	
 	/**
+	 * Checks whether the given method writes the given value
+	 * @param m The method to check
+	 * @param v The value to check
+	 * @return True if the given method writes the given value, otherwise false
+	 */
+	public boolean methodWritesValue(SootMethod m, Value v);
+
+	/**
 	 * Gets whether the two given units are connected by an exceptional control
 	 * flow edge
 	 * @param u1 The first unit
