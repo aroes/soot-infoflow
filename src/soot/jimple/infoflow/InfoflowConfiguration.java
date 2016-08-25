@@ -92,6 +92,7 @@ public class InfoflowConfiguration {
 	private CodeEliminationMode codeEliminationMode = CodeEliminationMode.PropagateConstants;
 
 	private boolean taintAnalysisEnabled = true;
+	private boolean incrementalResultReporting = true;
 	
 	/**
 	 * Merges the given configuration options into this configuration object
@@ -107,12 +108,18 @@ public class InfoflowConfiguration {
 		this.enableTypeChecking = config.enableTypeChecking;
 		this.ignoreFlowsInSystemPackages = config.ignoreFlowsInSystemPackages;
 		this.maxThreadNum = config.maxThreadNum;
-		this.inspectSources = config.inspectSources;
-		this.inspectSinks = config.inspectSinks;
+		this.writeOutputFiles = config.writeOutputFiles;
+		this.logSourcesAndSinks = config.logSourcesAndSinks;
+		
 		this.callgraphAlgorithm = config.callgraphAlgorithm;
 		this.aliasingAlgorithm = config.aliasingAlgorithm;
-		this.codeEliminationMode = config.codeEliminationMode;
-		this.logSourcesAndSinks = config.logSourcesAndSinks;
+		this.codeEliminationMode = config.codeEliminationMode;		
+		
+		this.inspectSources = config.inspectSources;
+		this.inspectSinks = config.inspectSinks;
+		
+		this.taintAnalysisEnabled = config.taintAnalysisEnabled;
+		this.incrementalResultReporting = config.incrementalResultReporting;
 	}
 	
 	/**
@@ -556,12 +563,43 @@ public class InfoflowConfiguration {
 		this.logSourcesAndSinks = logSourcesAndSinks;
 	}
 
+	/**
+	 * Gets whether the taint analysis is enabled. If it is disabled, FlowDroid
+	 * will initialize the Soot instance and then return immediately.
+	 * @return True if data flow tracking shall be performed, false otherwise
+	 */
 	public boolean isTaintAnalysisEnabled() {
 		return taintAnalysisEnabled;
 	}
 
+	/**
+	 * Sets whether the taint analysis is enabled. If it is disabled, FlowDroid
+	 * will initialize the Soot instance and then return immediately.
+	 * @param taintAnalysisEnabled True if data flow tracking shall be performed,
+	 * false otherwise
+	 */
 	public void setTaintAnalysisEnabled(boolean taintAnalysisEnabled) {
 		this.taintAnalysisEnabled = taintAnalysisEnabled;
+	}
+	
+	/**
+	 * Gets whether the data flow results shall be reported incrementally instead
+	 * of being only available after the full data flow analysis has been completed.
+	 * @return True if incremental data flow results shall be available, otherwise
+	 * false
+	 */
+	public boolean getIncrementalResultReporting() {
+		return this.incrementalResultReporting;
+	}
+	
+	/**
+	 * Sets whether the data flow results shall be reported incrementally instead
+	 * of being only available after the full data flow analysis has been completed.
+	 * @param incrementalReporting True if incremental data flow results shall be
+	 * available, otherwise false
+	 */
+	public void setIncrementalResultReporting(boolean incrementalReporting) {
+		this.incrementalResultReporting = incrementalReporting;
 	}
 
 	/**

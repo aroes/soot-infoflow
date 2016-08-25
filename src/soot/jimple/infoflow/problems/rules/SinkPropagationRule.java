@@ -26,6 +26,8 @@ import soot.jimple.infoflow.util.ByReferenceBoolean;
  * @author Steven Arzt
  */
 public class SinkPropagationRule extends AbstractTaintPropagationRule {
+	
+	private boolean killState = false;
 
 	public SinkPropagationRule(InfoflowManager manager, Aliasing aliasing,
 			Abstraction zeroValue, TaintPropagationResults results) {
@@ -80,7 +82,8 @@ public class SinkPropagationRule extends AbstractTaintPropagationRule {
 							.getAccessPath().getPlainValue())
 					&& getManager().getSourceSinkManager().isSink(stmt,
 							getManager().getICFG(), source.getAccessPath()))
-				getResults().addResult(new AbstractionAtSink(source, stmt));
+				if (!getResults().addResult(new AbstractionAtSink(source, stmt)))
+					killState = true;
 		}
 	}
 
@@ -88,6 +91,10 @@ public class SinkPropagationRule extends AbstractTaintPropagationRule {
 	public Collection<Abstraction> propagateCallFlow(Abstraction d1,
 			Abstraction source, Stmt stmt, SootMethod dest,
 			ByReferenceBoolean killAll) {
+		// If we are in the kill state, we stop the analysis
+		if (killAll != null)
+			killAll.value |= killState;		
+
 		return null;
 	}
 
@@ -120,10 +127,15 @@ public class SinkPropagationRule extends AbstractTaintPropagationRule {
 					&& getManager().getSourceSinkManager() != null
 					&& getManager().getSourceSinkManager().isSink(stmt,
 							getManager().getICFG(), source.getAccessPath())) {
-				getResults().addResult(new AbstractionAtSink(source, stmt));
+				if (!getResults().addResult(new AbstractionAtSink(source, stmt)))
+					killState = true;
 			}
 		}
 
+		// If we are in the kill state, we stop the analysis
+		if (killAll != null)
+			killAll.value |= killState;
+		
 		return null;
 	}
 
@@ -143,8 +155,14 @@ public class SinkPropagationRule extends AbstractTaintPropagationRule {
 							returnStmt.getOp())
 					&& getManager().getSourceSinkManager().isSink(returnStmt,
 							getManager().getICFG(), source.getAccessPath()))
-				getResults().addResult(new AbstractionAtSink(source, returnStmt));
+				if (!getResults().addResult(new AbstractionAtSink(source, returnStmt)))
+					killState = true;
 		}
+		
+		// If we are in the kill state, we stop the analysis
+		if (killAll != null)
+			killAll.value |= killState;
+		
 		return null;
 	}
 

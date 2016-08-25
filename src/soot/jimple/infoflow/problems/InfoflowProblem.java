@@ -10,15 +10,14 @@
  ******************************************************************************/
 package soot.jimple.infoflow.problems;
 
-import heros.FlowFunction;
-import heros.FlowFunctions;
-import heros.flowfunc.KillAll;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import heros.FlowFunction;
+import heros.FlowFunctions;
+import heros.flowfunc.KillAll;
 import soot.ArrayType;
 import soot.BooleanType;
 import soot.Local;
@@ -47,7 +46,6 @@ import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.aliasing.Aliasing;
 import soot.jimple.infoflow.aliasing.IAliasingStrategy;
 import soot.jimple.infoflow.data.Abstraction;
-import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.data.AccessPath.ArrayTaintType;
 import soot.jimple.infoflow.data.AccessPathFactory;
@@ -986,8 +984,8 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
 	/**
 	 * Gets the results of the data flow analysis
 	 */
-    public Set<AbstractionAtSink> getResults(){
-   		return this.results.getResults();
+    public TaintPropagationResults getResults(){
+   		return this.results;
 	}
     
 }

@@ -41,12 +41,26 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 	 */
 	public ContextSensitivePathBuilder(IInfoflowCFG icfg, int maxThreadNum,
 			boolean reconstructPaths) {
-		super(icfg, reconstructPaths);
-        int numThreads = Runtime.getRuntime().availableProcessors();
-		this.executor = createExecutor(maxThreadNum == -1 ? numThreads
-				: Math.min(maxThreadNum, numThreads));
+		this(icfg, null, maxThreadNum, reconstructPaths);
 	}
 	
+	/**
+	 * Creates a new instance of the {@link ContextSensitivePathBuilder} class
+	 * @param icfg The interprocedural control flow graph
+	 * @param executor An existing executor to use for the path reconstruction
+	 * tasks. Pass null to have the path builder create its own executor.
+	 * @param maxThreadNum The maximum number of threads to use
+	 * @param reconstructPaths True if the exact propagation path between source
+	 * and sink shall be reconstructed.
+	 */
+	public ContextSensitivePathBuilder(IInfoflowCFG icfg, CountingThreadPoolExecutor executor,
+			int maxThreadNum, boolean reconstructPaths) {
+		super(icfg, reconstructPaths);
+        int numThreads = Runtime.getRuntime().availableProcessors();
+		this.executor = executor == null ? createExecutor(maxThreadNum == -1 ? numThreads
+				: Math.min(maxThreadNum, numThreads)) : executor;
+	}
+
 	/**
 	 * Creates a new executor object for spawning worker threads
 	 * @param numThreads The number of threads to use
