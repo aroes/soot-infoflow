@@ -31,10 +31,10 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
 
     private final InfoflowResults results = new InfoflowResults();
 	private final CountingThreadPoolExecutor executor;
-	
+
 	private ConcurrentIdentityHashMultiMap<Abstraction, SourceContextAndPath> pathCache =
 			new ConcurrentIdentityHashMultiMap<>();
-	
+		
 	/**
 	 * Creates a new instance of the {@link ContextSensitivePathBuilder} class
 	 * @param icfg The interprocedural control flow graph
@@ -172,7 +172,6 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
     	
     	// Start the propagation tasks
     	for (final AbstractionAtSink abs : res) {
-    		reduceAbstractionPath(abs.getAbstraction());
    			buildPathForAbstraction(abs);
    			
    			// Also build paths for the neighbors of our result abstraction
@@ -185,6 +184,7 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
     	}
 	}
 	
+	@Override
 	public void runIncrementalPathCompuation() {
 		for (Abstraction abs : pathCache.keySet())
 			for (SourceContextAndPath scap : pathCache.get(abs)) {

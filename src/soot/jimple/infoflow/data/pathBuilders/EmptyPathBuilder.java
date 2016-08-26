@@ -25,5 +25,9 @@ public class EmptyPathBuilder implements IAbstractionPathBuilder {
 	@Override
 	public void addResultAvailableHandler(OnPathBuilderResultAvailable handler) {
 	}
+
+	@Override
+	public void runIncrementalPathCompuation() {
+	}
 	
 }

@@ -11,13 +11,14 @@
 package soot.jimple.infoflow.data;
 
 
-import heros.solver.LinkedNode;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.collect.Sets;
+
+import heros.solver.LinkedNode;
 import soot.NullType;
 import soot.SootMethod;
 import soot.Type;
@@ -26,13 +27,10 @@ import soot.Value;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.collect.AtomicBitSet;
-import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.data.AccessPath.ArrayTaintType;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG.UnitContainer;
 import soot.jimple.infoflow.solver.fastSolver.FastSolverLinkedNode;
 import soot.jimple.internal.JimpleLocal;
-
-import com.google.common.collect.Sets;
 
 /**
  * The abstraction class contains all information that is necessary to track the taint.
@@ -56,9 +54,6 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	private Stmt correspondingCallSite = null;
 	
 	private SourceContext sourceContext = null;
-
-	// only used in path generation
-	private Set<SourceContextAndPath> pathCache = null;
 	
 	/**
 	 * Unit/Stmt which activates the taint when the abstraction passes it
@@ -251,31 +246,6 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 		
 		abs.exceptionThrown = false;
 		return abs;
-	}
-		
-	/**
-	 * Gets the path of statements from the source to the current statement
-	 * with which this abstraction is associated. If this path is ambiguous,
-	 * a single path is selected randomly.
-	 * @return The path from the source to the current statement
-	 */
-	public Set<SourceContextAndPath> getPaths() {
-		return pathCache == null ? null : Collections.unmodifiableSet(pathCache);
-	}
-	
-	public boolean addPathElement(SourceContextAndPath scap) {
-		if (this.pathCache == null) {
-			synchronized (this) {
-				if (this.pathCache == null) {
-					this.pathCache = new ConcurrentHashSet<SourceContextAndPath>();
-				}
-			}
-		}
-		return this.pathCache.add(scap);
-	}
-	
-	public void clearPathCache() {
-		this.pathCache = null;
 	}
 	
 	public boolean isAbstractionActive() {

@@ -117,4 +117,9 @@ public class ContextInsensitiveSourceFinder extends AbstractAbstractionPathBuild
 		return this.results;
 	}
 
+	@Override
+	public void runIncrementalPathCompuation() {
+		// not implemented
+	}
+
 }

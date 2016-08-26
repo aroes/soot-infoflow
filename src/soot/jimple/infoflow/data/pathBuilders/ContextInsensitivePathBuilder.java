@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import heros.solver.CountingThreadPoolExecutor;
+import soot.jimple.infoflow.collect.ConcurrentIdentityHashMultiMap;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.SourceContext;
@@ -26,7 +27,10 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
 
     private final InfoflowResults results = new InfoflowResults();
 	private final CountingThreadPoolExecutor executor;
-			
+	
+	private ConcurrentIdentityHashMultiMap<Abstraction, SourceContextAndPath> pathCache =
+			new ConcurrentIdentityHashMultiMap<>();
+	
 	/**
 	 * Creates a new instance of the {@link ContextSensitivePathBuilder} class
 	 * @param icfg The interprocedural control flow graph
@@ -54,7 +58,7 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
 		
 		@Override
 		public void run() {
-			final Set<SourceContextAndPath> paths = abstraction.getPaths();
+			final Set<SourceContextAndPath> paths = pathCache.get(abstraction);
 			final Abstraction pred = abstraction.getPredecessor();
 			
 			if (pred != null) {
@@ -82,7 +86,7 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
 			
 			// Add the new path
 			checkForSource(pred, extendedScap);
-			return pred.addPathElement(extendedScap);
+			return pathCache.put(pred, extendedScap);
 		}
 	}
 	
@@ -158,15 +162,28 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
 		SourceContextAndPath scap = new SourceContextAndPath(
 				abs.getAbstraction().getAccessPath(), abs.getSinkStmt());
 		scap = scap.extendPath(abs.getAbstraction());
-		abs.getAbstraction().addPathElement(scap);
-		
-		if (!checkForSource(abs.getAbstraction(), scap))
-			executor.execute(new SourceFindingTask(abs.getAbstraction()));
+		if (pathCache.put(abs.getAbstraction(), scap))
+			if (!checkForSource(abs.getAbstraction(), scap))
+				executor.execute(new SourceFindingTask(abs.getAbstraction()));
 	}
 	
 	@Override
 	public InfoflowResults getResults() {
 		return this.results;
+	}
+
+	@Override
+	public void runIncrementalPathCompuation() {
+		for (Abstraction abs : pathCache.keySet())
+			for (SourceContextAndPath scap : pathCache.get(abs)) {
+				if (abs.getNeighbors() != null && abs.getNeighbors().size() != scap.getNeighborCounter()) {
+					// This is a path for which we have to process the new neighbors
+					scap.setNeighborCounter(abs.getNeighbors().size());
+					
+					for (Abstraction neighbor : abs.getNeighbors())
+						buildPathForAbstraction(new AbstractionAtSink(neighbor, scap.getStmt()));
+				}
+			}
 	}
 
 }
