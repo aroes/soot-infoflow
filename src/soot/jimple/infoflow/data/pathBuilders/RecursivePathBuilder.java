@@ -1,19 +1,16 @@
 package soot.jimple.infoflow.data.pathBuilders;
 
-import heros.solver.CountingThreadPoolExecutor;
-import heros.solver.Pair;
-
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.Stack;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import heros.solver.CountingThreadPoolExecutor;
+import heros.solver.Pair;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
@@ -37,28 +34,16 @@ public class RecursivePathBuilder extends AbstractAbstractionPathBuilder {
 
 	/**
      * Creates a new instance of the {@link RecursivePathBuilder} class
-	 * @param maxThreadNum The maximum number of threads to use
+	 * @param icfg The interprocedural control flow graph
+	 * @param executor The executor in which to run the path reconstruction tasks
 	 * @param reconstructPaths True if the exact propagation path between source
 	 * and sink shall be reconstructed.
      */
-    public RecursivePathBuilder(IInfoflowCFG icfg, int maxThreadNum,
+    public RecursivePathBuilder(IInfoflowCFG icfg, CountingThreadPoolExecutor executor,
     		boolean reconstructPaths) {
     	super(icfg, reconstructPaths);
-    	int numThreads = Runtime.getRuntime().availableProcessors();
-		this.executor = createExecutor(maxThreadNum == -1 ? numThreads
-				: Math.min(maxThreadNum, numThreads));
+		this.executor = executor;
     }
-
-	/**
-	 * Creates a new executor object for spawning worker threads
-	 * @param numThreads The number of threads to use
-	 * @return The generated executor
-	 */
-	private CountingThreadPoolExecutor createExecutor(int numThreads) {
-		return new CountingThreadPoolExecutor
-				(numThreads, Integer.MAX_VALUE, 30, TimeUnit.SECONDS,
-				new LinkedBlockingQueue<Runnable>());
-	}
 	
 	/**
 	 * Gets the path of statements from the source to the current statement
@@ -190,8 +175,4 @@ public class RecursivePathBuilder extends AbstractAbstractionPathBuilder {
 		return this.results;
 	}
 
-	@Override
-	public void shutdown() {
-	}
-	
 }

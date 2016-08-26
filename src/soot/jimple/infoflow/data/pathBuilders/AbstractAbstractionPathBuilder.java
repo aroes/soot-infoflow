@@ -1,5 +1,8 @@
 package soot.jimple.infoflow.data.pathBuilders;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 
@@ -10,9 +13,10 @@ import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
  */
 public abstract class AbstractAbstractionPathBuilder implements
 		IAbstractionPathBuilder {
-
+	
 	protected final IInfoflowCFG icfg;
 	protected final boolean reconstructPaths;
+	protected Set<OnPathBuilderResultAvailable> resultAvailableHandlers = null;
 	
 	/**
 	 * Creates a new instance of the {@link AbstractAbstractionPathBuilder} class
@@ -33,6 +37,7 @@ public abstract class AbstractAbstractionPathBuilder implements
 	 * @param obj The abstraction at which to start the reduction
 	 */
 	protected void reduceAbstractionPath(Abstraction obj) {
+		/*
 		Abstraction pred = obj.getPredecessor();
 		while (obj.getNeighbors() == null
 				&& pred != null
@@ -46,9 +51,21 @@ public abstract class AbstractAbstractionPathBuilder implements
 			}
 			else {
 				pred = pred.getPredecessor();
+				
+				if (pred.toString().contains("tainted"))
+					System.out.println("x");
+				
 				obj.setPredecessor(pred);
 			}
 		}
+		*/
+	}
+
+	@Override
+	public void addResultAvailableHandler(OnPathBuilderResultAvailable handler) {
+		if (this.resultAvailableHandlers == null)
+			this.resultAvailableHandlers = new HashSet<>();
+		this.resultAvailableHandlers.add(handler);
 	}
 
 }

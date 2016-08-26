@@ -92,7 +92,7 @@ public class InfoflowConfiguration {
 	private CodeEliminationMode codeEliminationMode = CodeEliminationMode.PropagateConstants;
 
 	private boolean taintAnalysisEnabled = true;
-	private boolean incrementalResultReporting = true;
+	private boolean incrementalResultReporting = false;
 	
 	/**
 	 * Merges the given configuration options into this configuration object

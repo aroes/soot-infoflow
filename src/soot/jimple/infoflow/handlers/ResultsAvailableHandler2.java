@@ -1,7 +1,5 @@
 package soot.jimple.infoflow.handlers;
 
-import java.util.Collection;
-
 import soot.jimple.infoflow.results.ResultSinkInfo;
 import soot.jimple.infoflow.results.ResultSourceInfo;
 
@@ -16,11 +14,11 @@ public interface ResultsAvailableHandler2 extends ResultsAvailableHandler {
 	
 	/**
 	 * Notifies the handler that a new data flow result is available
-	 * @param source The sources from which the data flow originated
+	 * @param source The source from which the data flow originated
 	 * @param sinks The sink at which the data flow ended
 	 * @return True if the data flow analysis shall continue, otherwise false
 	 */
-	public boolean onSingleResultAvailable(Collection<ResultSourceInfo> source,
+	public boolean onSingleResultAvailable(ResultSourceInfo source,
 			ResultSinkInfo sinks);
 
 }

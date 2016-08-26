@@ -1,5 +1,9 @@
 package soot.jimple.infoflow.data.pathBuilders;
 
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+
+import heros.solver.CountingThreadPoolExecutor;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 
 /**
@@ -65,21 +69,39 @@ public class DefaultPathBuilderFactory implements IPathBuilderFactory {
 		this.reconstructPaths = reconstructPaths;
 	}
 	
+	/**
+	 * Creates a new executor object for spawning worker threads
+	 * @param maxThreadNum The number of threads to use
+	 * @return The generated executor
+	 */
+	private CountingThreadPoolExecutor createExecutor(int maxThreadNum) {
+        int numThreads = Runtime.getRuntime().availableProcessors();
+		return new CountingThreadPoolExecutor(maxThreadNum == -1 ? numThreads
+				: Math.min(maxThreadNum, numThreads), Integer.MAX_VALUE, 30, TimeUnit.SECONDS,
+				new LinkedBlockingQueue<Runnable>());
+	}
+	
 	@Override
 	public IAbstractionPathBuilder createPathBuilder(int maxThreadNum,
 			IInfoflowCFG icfg) {
+		return createPathBuilder(createExecutor(maxThreadNum), icfg);
+	}
+	
+	@Override
+	public IAbstractionPathBuilder createPathBuilder(CountingThreadPoolExecutor executor,
+			IInfoflowCFG icfg) {
 		switch (pathBuilder) {
 		case Recursive :
-			return new RecursivePathBuilder(icfg, maxThreadNum,
+			return new RecursivePathBuilder(icfg, executor,
 					reconstructPaths);
 		case ContextSensitive :
-			return new ContextSensitivePathBuilder(icfg, maxThreadNum,
+			return new ContextSensitivePathBuilder(icfg, executor,
 					reconstructPaths);
 		case ContextInsensitive :
-			return new ContextInsensitivePathBuilder(icfg, maxThreadNum,
+			return new ContextInsensitivePathBuilder(icfg, executor,
 					reconstructPaths);
 		case ContextInsensitiveSourceFinder :
-			return new ContextInsensitiveSourceFinder(icfg, maxThreadNum);
+			return new ContextInsensitiveSourceFinder(icfg, executor);
 		case None:
 			return new EmptyPathBuilder();
 		}

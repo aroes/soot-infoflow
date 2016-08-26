@@ -263,17 +263,6 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 		return pathCache == null ? null : Collections.unmodifiableSet(pathCache);
 	}
 	
-	public Set<SourceContextAndPath> getOrMakePathCache() {
-		// We're optimistic about having a path cache. If we definitely have one,
-		// we return it. Otherwise, we need to lock and create one.
-		if (this.pathCache == null)
-			synchronized (this) {
-				if (this.pathCache == null)
-					this.pathCache = new ConcurrentHashSet<SourceContextAndPath>();
-			}
-		return Collections.unmodifiableSet(pathCache);
-	}
-	
 	public boolean addPathElement(SourceContextAndPath scap) {
 		if (this.pathCache == null) {
 			synchronized (this) {

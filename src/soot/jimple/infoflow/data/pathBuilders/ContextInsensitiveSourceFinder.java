@@ -1,16 +1,13 @@
 package soot.jimple.infoflow.data.pathBuilders;
 
-import heros.solver.CountingThreadPoolExecutor;
-
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import heros.solver.CountingThreadPoolExecutor;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.results.InfoflowResults;
@@ -34,24 +31,12 @@ public class ContextInsensitiveSourceFinder extends AbstractAbstractionPathBuild
 	/**
 	 * Creates a new instance of the {@link ContextInsensitiveSourceFinder} class
 	 * @param icfg The interprocedural control flow graph
+	 * @param executor The executor in which to run the path reconstruction tasks
 	 * @param maxThreadNum The maximum number of threads to use
 	 */
-	public ContextInsensitiveSourceFinder(IInfoflowCFG icfg, int maxThreadNum) {
+	public ContextInsensitiveSourceFinder(IInfoflowCFG icfg, CountingThreadPoolExecutor executor) {
 		super(icfg, false);
-        int numThreads = Runtime.getRuntime().availableProcessors();
-		this.executor = createExecutor(maxThreadNum == -1 ? numThreads
-				: Math.min(maxThreadNum, numThreads));
-	}
-	
-	/**
-	 * Creates a new executor object for spawning worker threads
-	 * @param numThreads The number of threads to use
-	 * @return The generated executor
-	 */
-	private CountingThreadPoolExecutor createExecutor(int numThreads) {
-		return new CountingThreadPoolExecutor
-				(1/*numThreads*/, Integer.MAX_VALUE, 30, TimeUnit.SECONDS,
-				new LinkedBlockingQueue<Runnable>());
+		this.executor = executor;
 	}
 	
 	/**
@@ -127,11 +112,6 @@ public class ContextInsensitiveSourceFinder extends AbstractAbstractionPathBuild
     			(System.nanoTime() - beforePathTracking) / 1E9);
 	}
 	
-	@Override
-	public void shutdown() {
-    	executor.shutdown();		
-	}
-
 	@Override
 	public InfoflowResults getResults() {
 		return this.results;

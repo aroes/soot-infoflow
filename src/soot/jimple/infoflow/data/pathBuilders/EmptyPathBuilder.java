@@ -23,7 +23,7 @@ public class EmptyPathBuilder implements IAbstractionPathBuilder {
 	}
 
 	@Override
-	public void shutdown() {
+	public void addResultAvailableHandler(OnPathBuilderResultAvailable handler) {
 	}
-
+	
 }

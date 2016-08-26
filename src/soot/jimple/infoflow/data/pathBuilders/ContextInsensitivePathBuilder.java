@@ -1,14 +1,11 @@
 package soot.jimple.infoflow.data.pathBuilders;
 
-import heros.solver.CountingThreadPoolExecutor;
-
 import java.util.Set;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import heros.solver.CountingThreadPoolExecutor;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.SourceContext;
@@ -32,27 +29,15 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
 			
 	/**
 	 * Creates a new instance of the {@link ContextSensitivePathBuilder} class
-	 * @param maxThreadNum The maximum number of threads to use
+	 * @param icfg The interprocedural control flow graph
+	 * @param executor The executor in which to run the path reconstruction tasks
 	 * @param reconstructPaths True if the exact propagation path between source
 	 * and sink shall be reconstructed.
 	 */
-	public ContextInsensitivePathBuilder(IInfoflowCFG icfg, int maxThreadNum,
+	public ContextInsensitivePathBuilder(IInfoflowCFG icfg, CountingThreadPoolExecutor executor,
 			boolean reconstructPaths) {
 		super(icfg, reconstructPaths);
-        int numThreads = Runtime.getRuntime().availableProcessors();
-		this.executor = createExecutor(maxThreadNum == -1 ? numThreads
-				: Math.min(maxThreadNum, numThreads));
-	}
-	
-	/**
-	 * Creates a new executor object for spawning worker threads
-	 * @param numThreads The number of threads to use
-	 * @return The generated executor
-	 */
-	private CountingThreadPoolExecutor createExecutor(int numThreads) {
-		return new CountingThreadPoolExecutor
-				(numThreads, Integer.MAX_VALUE, 30, TimeUnit.SECONDS,
-				new LinkedBlockingQueue<Runnable>());
+		this.executor = executor;
 	}
 	
 	/**
@@ -179,11 +164,6 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
 			executor.execute(new SourceFindingTask(abs.getAbstraction()));
 	}
 	
-	@Override
-	public void shutdown() {
-    	executor.shutdown();		
-	}
-
 	@Override
 	public InfoflowResults getResults() {
 		return this.results;
