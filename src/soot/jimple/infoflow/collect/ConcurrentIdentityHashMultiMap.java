@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import soot.util.AbstractMultiMap;
 import soot.util.HashMultiMap;
@@ -36,7 +37,7 @@ import soot.util.MultiMap;
  * 
  */
 public class ConcurrentIdentityHashMultiMap<K,V> extends AbstractMultiMap<K, V> {
-    Map<K,Map<V, V>> m = new ConcurrentIdentityHashMap<K,Map<V, V>>();
+    Map<K,ConcurrentMap<V, V>> m = new ConcurrentIdentityHashMap<K,ConcurrentMap<V, V>>();
 
     public ConcurrentIdentityHashMultiMap() {}
     
@@ -61,12 +62,12 @@ public class ConcurrentIdentityHashMultiMap<K,V> extends AbstractMultiMap<K, V> 
         return false;
     }
 
-    protected Map<V,V> newSet() {
+    protected ConcurrentMap<V,V> newSet() {
         return new ConcurrentHashMap<V, V>();
     }
     
-    private Map<V, V> findSet( K key ) {
-    	Map<V, V> s = m.get( key );
+    private ConcurrentMap<V, V> findSet( K key ) {
+    	ConcurrentMap<V, V> s = m.get( key );
         if( s == null ) {
         	synchronized (this) {
         		// Better check twice, another thread may have created a set in
@@ -159,7 +160,7 @@ public class ConcurrentIdentityHashMultiMap<K,V> extends AbstractMultiMap<K, V> 
         @SuppressWarnings("unchecked")
 		MultiMap<K,V> mm = (MultiMap<K,V>) o;
         if( !keySet().equals( mm.keySet() ) ) return false;
-        for (Map.Entry<K, Map<V,V>> e : m.entrySet()) {
+        for (Map.Entry<K, ConcurrentMap<V,V>> e : m.entrySet()) {
             Map<V, V> s = e.getValue();
             if( !s.equals( mm.get( e.getKey() ) ) ) return false;
         }
