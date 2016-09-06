@@ -32,7 +32,7 @@ public class ContextSensitivePathBuilder extends AbstractAbstractionPathBuilder 
     private final InfoflowResults results = new InfoflowResults();
 	private final CountingThreadPoolExecutor executor;
 
-	private ConcurrentIdentityHashMultiMap<Abstraction, SourceContextAndPath> pathCache =
+	protected ConcurrentIdentityHashMultiMap<Abstraction, SourceContextAndPath> pathCache =
 			new ConcurrentIdentityHashMultiMap<>();
 		
 	/**
