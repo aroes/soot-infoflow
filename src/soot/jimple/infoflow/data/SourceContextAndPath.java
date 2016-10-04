@@ -90,8 +90,6 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 					// abstraction, we don't got on with a neighbor
 					if (a.getNeighbors() != null && a.getNeighbors().contains(abs))
 						return null;
-					if (abs.getNeighbors() != null && abs.getNeighbors().contains(a))
-						return null;
 					
 					// If this is exactly the same abstraction as one we have seen
 					// before, we skip it. Otherwise, we would run through loops
