@@ -219,6 +219,21 @@
 <java.math.BigInteger: void <init>(java.lang.String,int)>
 <java.math.BigInteger: java.math.BigInteger valueOf(long)>
 
+<java.math.BigInteger: java.math.BigInteger add(java.math.BigInteger)>
+<java.math.BigInteger: java.math.BigInteger and(java.math.BigInteger)>
+<java.math.BigInteger: java.math.BigInteger andNot(java.math.BigInteger)>
+<java.math.BigInteger: java.math.BigInteger divide(java.math.BigInteger)>
+<java.math.BigInteger: java.math.BigInteger[] divideAndRemainder(java.math.BigInteger)>
+<java.math.BigInteger: java.math.BigInteger gcd(java.math.BigInteger)>
+<java.math.BigInteger: java.math.BigInteger max(java.math.BigInteger)>
+<java.math.BigInteger: java.math.BigInteger min(java.math.BigInteger)>
+<java.math.BigInteger: java.math.BigInteger mod(java.math.BigInteger)>
+<java.math.BigInteger: java.math.BigInteger modInverse(java.math.BigInteger)>
+<java.math.BigInteger: java.math.BigInteger modPow(java.math.BigInteger,java.math.BigInteger)>
+<java.math.BigInteger: java.math.BigInteger multiply(java.math.BigInteger)>
+<java.math.BigInteger: java.math.BigInteger or(java.math.BigInteger)>
+<java.math.BigInteger: java.math.BigInteger xor(java.math.BigInteger)>
+
 <java.io.FileInputStream: void <init>(java.io.File)>
 <java.io.FileOutputStream: void <init>(java.lang.String)>
 
