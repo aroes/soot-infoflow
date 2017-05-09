@@ -146,6 +146,10 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 	@Override
 	protected SootMethod createDummyMainInternal(SootMethod emptySootMethod)
 	{
+		// Make sure that we don't have any leftover state
+		// from previous runs
+		reset();
+
 		Map<String, Set<String>> classMap = SootMethodRepresentationParser.v().parseClassNames
 				(additionalEntryPoints, false);
 		for (String androidClass : this.androidClasses)

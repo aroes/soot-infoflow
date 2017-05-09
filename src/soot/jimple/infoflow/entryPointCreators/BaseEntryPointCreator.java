@@ -668,4 +668,14 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 		this.allowSelfReferences = value;
 	}
 
+	/**
+	 * Resets the internal state to make sure that the entry point
+	 * creator is re-usable. Note that this method will not reset the
+	 * sets of failed classes and methods, because it doesn't make much
+	 * sense to try them again and fail again on later re-runs.
+	 */
+	protected void reset() {
+		localVarsForClasses.clear();
+	}
+
 }
