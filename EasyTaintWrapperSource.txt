@@ -18,11 +18,11 @@
 <java.util.Map: java.lang.Object putAll(java.util.Map)>
 
 <java.util.List: boolean add(java.lang.Object)>
-<java.util.List: void add(int,java.lang.Object)>
+<java.util.List: void add(int,<java.lang.Object)>
 <java.util.List: boolean addAll(java.util.Collection)>
 <java.util.List: boolean addAll(int,java.util.Collection)>
 -<java.util.List: void clear()>
-<java.util.List: java.util.Iterator iterator()>()
+<java.util.List: java.util.Iterator iterator()>
 ~<java.util.List: int size()>
 
 <java.util.Iterator: java.lang.Object next()>
