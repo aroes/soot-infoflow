@@ -16,7 +16,7 @@ import java.util.List;
 /**
  * Class containing constants for the well-known Android lifecycle methods
  */
-class AndroidEntryPointConstants {
+public class AndroidEntryPointConstants {
 	
 	/*========================================================================*/
 
@@ -27,6 +27,8 @@ class AndroidEntryPointConstants {
 	public static final String BROADCASTRECEIVERCLASS = "android.content.BroadcastReceiver";
 	public static final String CONTENTPROVIDERCLASS = "android.content.ContentProvider";
 	public static final String APPLICATIONCLASS = "android.app.Application";
+	public static final String FRAGMENTCLASS = "android.app.Fragment";
+	public static final String SERVICECONNECTIONINTERFACE = "android.content.ServiceConnection";
 	
 	public static final String ACTIVITY_ONCREATE = "void onCreate(android.os.Bundle)";
 	public static final String ACTIVITY_ONSTART = "void onStart()";
@@ -40,6 +42,7 @@ class AndroidEntryPointConstants {
 	public static final String ACTIVITY_ONSTOP = "void onStop()";
 	public static final String ACTIVITY_ONRESTART = "void onRestart()";
 	public static final String ACTIVITY_ONDESTROY = "void onDestroy()";
+	public static final String ACTIVITY_ONATTACHFRAGMENT = "void onAttachFragment(android.app.Fragment)";
 	
 	public static final String SERVICE_ONCREATE = "void onCreate()";
 	public static final String SERVICE_ONSTART1 = "void onStart(android.content.Intent,int)";
@@ -61,21 +64,46 @@ class AndroidEntryPointConstants {
 	public static final String GCMLISTENERSERVICE_ONMESSAGESENT = "void onMessageSent(java.lang.String)";
 	public static final String GCMLISTENERSERVICE_ONSENDERROR = "void onSendError(java.lang.String,java.lang.String)";
 	
+	public static final String FRAGMENT_ONCREATE = "void onCreate(android.os.Bundle)";
+	public static final String FRAGMENT_ONATTACH = "void onAttach(android.app.Activity)";
+	public static final String FRAGMENT_ONCREATEVIEW = "void onCreateView(android.view.LayoutInflater,android.view.ViewGroup,android.os.Bundle)";
+	public static final String FRAGMENT_ONVIEWCREATED = "void onViewCreated(android.view.View,android.os.Bundle)";
+	public static final String FRAGMENT_ONSTART = "void onStart()";
+	public static final String FRAGMENT_ONACTIVITYCREATED = "void onActivityCreated(android.os.Bundle)";
+	public static final String FRAGMENT_ONVIEWSTATERESTORED = "void onViewStateRestored(android.app.Activity)";
+	public static final String FRAGMENT_ONRESUME = "void onResume()";
+	public static final String FRAGMENT_ONPAUSE = "void onPause()";
+	public static final String FRAGMENT_ONSTOP = "void onStop()";
+	public static final String FRAGMENT_ONDESTROYVIEW = "void onDestroyView()";
+	public static final String FRAGMENT_ONDESTROY = "void onDestroy()";
+	public static final String FRAGMENT_ONDETACH = "void onDetach()";
+	public static final String FRAGMENT_ONSAVEINSTANCESTATE = "void onSaveInstanceState(android.os.Bundle)";
+	
 	public static final String BROADCAST_ONRECEIVE = "void onReceive(android.content.Context,android.content.Intent)";
 	
 	public static final String CONTENTPROVIDER_ONCREATE = "boolean onCreate()";
 	
 	public static final String APPLICATION_ONCREATE = "void onCreate()";
 	public static final String APPLICATION_ONTERMINATE = "void onTerminate()";
-
-	public static final String APPLIFECYCLECALLBACK_ONACTIVITYSTARTED = "void onActivityStarted(android.app.Activity)";
-	public static final String APPLIFECYCLECALLBACK_ONACTIVITYSTOPPED = "void onActivityStopped(android.app.Activity)";
-	public static final String APPLIFECYCLECALLBACK_ONACTIVITYSAVEINSTANCESTATE = "void onActivitySaveInstanceState(android.app.Activity,android.os.Bundle)";
-	public static final String APPLIFECYCLECALLBACK_ONACTIVITYRESUMED = "void onActivityResumed(android.app.Activity)";
-	public static final String APPLIFECYCLECALLBACK_ONACTIVITYPAUSED = "void onActivityPaused(android.app.Activity)";
-	public static final String APPLIFECYCLECALLBACK_ONACTIVITYDESTROYED = "void onActivityDestroyed(android.app.Activity)";
-	public static final String APPLIFECYCLECALLBACK_ONACTIVITYCREATED = "void onActivityCreated(android.app.Activity,android.os.Bundle)";
 	
+	public static final String SERVICECONNECTION_ONSERVICECONNECTED = "void onServiceConnected(android.content.ComponentName, android.os.IBinder)";
+	public static final String SERVICECONNECTION_ONSERVICEDISCONNECTED = "void onServiceDisconnected(android.content.ComponentName)";
+
+	public static final String ACTIVITYLIFECYCLECALLBACKSINTERFACE = "android.app.Application$ActivityLifecycleCallbacks";
+	public static final String ACTIVITYLIFECYCLECALLBACK_ONACTIVITYSTARTED = "void onActivityStarted(android.app.Activity)";
+	public static final String ACTIVITYLIFECYCLECALLBACK_ONACTIVITYSTOPPED = "void onActivityStopped(android.app.Activity)";
+	public static final String ACTIVITYLIFECYCLECALLBACK_ONACTIVITYSAVEINSTANCESTATE = "void onActivitySaveInstanceState(android.app.Activity,android.os.Bundle)";
+	public static final String ACTIVITYLIFECYCLECALLBACK_ONACTIVITYRESUMED = "void onActivityResumed(android.app.Activity)";
+	public static final String ACTIVITYLIFECYCLECALLBACK_ONACTIVITYPAUSED = "void onActivityPaused(android.app.Activity)";
+	public static final String ACTIVITYLIFECYCLECALLBACK_ONACTIVITYDESTROYED = "void onActivityDestroyed(android.app.Activity)";
+	public static final String ACTIVITYLIFECYCLECALLBACK_ONACTIVITYCREATED = "void onActivityCreated(android.app.Activity,android.os.Bundle)";
+	
+	public static final String COMPONENTCALLBACKSINTERFACE = "android.content.ComponentCallbacks";
+	public static final String COMPONENTCALLBACKS_ONCONFIGURATIONCHANGED = "void onConfigurationChanged(android.content.res.Configuration)";
+	
+	public static final String COMPONENTCALLBACKS2INTERFACE = "android.content.ComponentCallbacks2";
+	public static final String COMPONENTCALLBACKS2_ONTRIMMEMORY = "void onTrimMemory(int)";
+
 	/*========================================================================*/
 	
 	private static final String[] activityMethods = {ACTIVITY_ONCREATE,
@@ -90,6 +118,7 @@ class AndroidEntryPointConstants {
 		ACTIVITY_ONCREATEDESCRIPTION,
 		ACTIVITY_ONPOSTCREATE,
 		ACTIVITY_ONPOSTRESUME};
+	private static final List<String> activityMethodList = Arrays.asList(activityMethods);
 	
 	private static final String[] serviceMethods = {SERVICE_ONCREATE,
 		SERVICE_ONDESTROY,
@@ -98,6 +127,21 @@ class AndroidEntryPointConstants {
 		SERVICE_ONBIND,
 		SERVICE_ONREBIND,
 		SERVICE_ONUNBIND};
+	private static final List<String> serviceMethodList = Arrays.asList(serviceMethods);
+	
+	private static final String[] fragmentMethods = {FRAGMENT_ONCREATE,
+			FRAGMENT_ONDESTROY,
+			FRAGMENT_ONPAUSE,
+			FRAGMENT_ONATTACH,
+			FRAGMENT_ONDESTROYVIEW,
+			FRAGMENT_ONRESUME,
+			FRAGMENT_ONSTART,
+			FRAGMENT_ONSTOP,
+			FRAGMENT_ONCREATEVIEW,
+			FRAGMENT_ONACTIVITYCREATED,
+			FRAGMENT_ONVIEWSTATERESTORED,
+			FRAGMENT_ONDETACH};
+		private static final List<String> fragmentMethodList = Arrays.asList(fragmentMethods);
 	
 	private static final String[] gcmIntentServiceMethods = {GCMINTENTSERVICE_ONDELETEDMESSAGES,
 		GCMINTENTSERVICE_ONERROR,
@@ -105,56 +149,90 @@ class AndroidEntryPointConstants {
 		GCMINTENTSERVICE_ONRECOVERABLEERROR,
 		GCMINTENTSERVICE_ONREGISTERED,
 		GCMINTENTSERVICE_ONUNREGISTERED};
-	
+	private static final List<String> gcmIntentServiceMethodList = Arrays.asList(gcmIntentServiceMethods);
+
 	private static final String[] gcmListenerServiceMethods = {GCMLISTENERSERVICE_ONDELETEDMESSAGES,
 		GCMLISTENERSERVICE_ONMESSAGERECEIVED,
 		GCMLISTENERSERVICE_ONMESSAGESENT,
 		GCMLISTENERSERVICE_ONSENDERROR};
+	private static final List<String> gcmListenerServiceMethodList = Arrays.asList(gcmListenerServiceMethods);
 	
 	private static final String[] broadcastMethods = {BROADCAST_ONRECEIVE};
+	private static final List<String> broadcastMethodList = Arrays.asList(broadcastMethods);
 	
 	private static final String[] contentproviderMethods = {CONTENTPROVIDER_ONCREATE};
+	private static final List<String> contentProviderMethodList = Arrays.asList(contentproviderMethods);
 	
 	private static final String[] applicationMethods = {APPLICATION_ONCREATE,
-		APPLICATION_ONTERMINATE,
-		APPLIFECYCLECALLBACK_ONACTIVITYSTARTED,
-		APPLIFECYCLECALLBACK_ONACTIVITYSTOPPED,
-		APPLIFECYCLECALLBACK_ONACTIVITYSAVEINSTANCESTATE,
-		APPLIFECYCLECALLBACK_ONACTIVITYRESUMED,
-		APPLIFECYCLECALLBACK_ONACTIVITYPAUSED,
-		APPLIFECYCLECALLBACK_ONACTIVITYDESTROYED,
-		APPLIFECYCLECALLBACK_ONACTIVITYCREATED};
+		APPLICATION_ONTERMINATE};
+	private static final List<String> applicationMethodList = Arrays.asList(applicationMethods);
 	
+	private static final String[] activityLifecycleMethods = {ACTIVITYLIFECYCLECALLBACK_ONACTIVITYSTARTED,
+		ACTIVITYLIFECYCLECALLBACK_ONACTIVITYSTOPPED,
+		ACTIVITYLIFECYCLECALLBACK_ONACTIVITYSAVEINSTANCESTATE,
+		ACTIVITYLIFECYCLECALLBACK_ONACTIVITYRESUMED,
+		ACTIVITYLIFECYCLECALLBACK_ONACTIVITYPAUSED,
+		ACTIVITYLIFECYCLECALLBACK_ONACTIVITYDESTROYED,
+		ACTIVITYLIFECYCLECALLBACK_ONACTIVITYCREATED};
+	private static final List<String> activityLifecycleMethodList = Arrays.asList(activityLifecycleMethods);
+	
+	private static final String[] componentCallbackMethods = { COMPONENTCALLBACKS_ONCONFIGURATIONCHANGED };
+	private static final List<String> componentCallbackMethodList = Arrays.asList(componentCallbackMethods);
+
+	private static final String[] componentCallback2Methods = { COMPONENTCALLBACKS2_ONTRIMMEMORY };
+	private static final List<String> componentCallback2MethodList = Arrays.asList(componentCallback2Methods);
+
+	private static final String[] serviceConnectionMethods = { SERVICECONNECTION_ONSERVICECONNECTED, SERVICECONNECTION_ONSERVICEDISCONNECTED };
+	private static final List<String> serviceConnectionMethodList = Arrays.asList(serviceConnectionMethods);
 	/*========================================================================*/
 	
 	public static List<String> getActivityLifecycleMethods(){
-		return Arrays.asList(activityMethods);
+		return activityMethodList;
 	}
 	
 	public static List<String> getServiceLifecycleMethods(){
-		return Arrays.asList(serviceMethods);
+		return serviceMethodList;
+	}
+	
+	public static List<String> getFragmentLifecycleMethods(){
+		return fragmentMethodList;
 	}
 
 	public static List<String> getGCMIntentServiceMethods(){
-		return Arrays.asList(gcmIntentServiceMethods);
+		return gcmIntentServiceMethodList;
 	}
 	
 	public static List<String> getGCMListenerServiceMethods(){
-		return Arrays.asList(gcmListenerServiceMethods);
+		return gcmListenerServiceMethodList;
 	}
 	
 	public static List<String> getBroadcastLifecycleMethods(){
-		return Arrays.asList(broadcastMethods);
+		return broadcastMethodList;
 	}
 	
 	public static List<String> getContentproviderLifecycleMethods(){
-		return Arrays.asList(contentproviderMethods);
+		return contentProviderMethodList;
 	}
 
 	public static List<String> getApplicationLifecycleMethods(){
-		return Arrays.asList(applicationMethods);
+		return applicationMethodList;
 	}
 
+	public static List<String> getActivityLifecycleCallbackMethods(){
+		return activityLifecycleMethodList;
+	}
+	
+	public static List<String> getComponentCallbackMethods(){
+		return componentCallbackMethodList;
+	}
+
+	public static List<String> getComponentCallback2Methods(){
+		return componentCallback2MethodList;
+	}
+
+	public static List<String> getServiceConnectionMethods(){
+		return serviceConnectionMethodList;
+	}
 	/*========================================================================*/
 	
 	/**
@@ -167,9 +245,17 @@ class AndroidEntryPointConstants {
 	public static boolean isLifecycleClass(String className) {
 		return className.equals(ACTIVITYCLASS)
 				|| className.equals(SERVICECLASS)
+				|| className.equals(FRAGMENTCLASS)
 				|| className.equals(BROADCASTRECEIVERCLASS)
 				|| className.equals(CONTENTPROVIDERCLASS)
 				|| className.equals(APPLICATIONCLASS);
+	}
+	
+	/**
+	 * Do not allow anyone to instantiate this class.
+	 */
+	private AndroidEntryPointConstants() {
+		
 	}
 
 }

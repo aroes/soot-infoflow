@@ -28,6 +28,7 @@ class XmlConstants {
 		public static final String taintPath = "TaintPath";
 		public static final String pathElement = "PathElement";
 		
+		
 	}
 	
 	class Attributes {
@@ -39,6 +40,7 @@ class XmlConstants {
 		public static final String value = "Value";
 		public static final String type = "Type";
 		public static final String taintSubFields = "TaintSubFields";
+		
 		
 	}
 	

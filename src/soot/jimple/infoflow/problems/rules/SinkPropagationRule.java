@@ -81,7 +81,7 @@ public class SinkPropagationRule extends AbstractTaintPropagationRule {
 					&& getAliasing().mayAlias(val, source
 							.getAccessPath().getPlainValue())
 					&& getManager().getSourceSinkManager().isSink(stmt,
-							getManager().getICFG(), source.getAccessPath()))
+							getManager(), source.getAccessPath()))
 				if (!getResults().addResult(new AbstractionAtSink(source, stmt)))
 					killState = true;
 		}
@@ -126,7 +126,7 @@ public class SinkPropagationRule extends AbstractTaintPropagationRule {
 			if (found
 					&& getManager().getSourceSinkManager() != null
 					&& getManager().getSourceSinkManager().isSink(stmt,
-							getManager().getICFG(), source.getAccessPath())) {
+							getManager(), source.getAccessPath())) {
 				if (!getResults().addResult(new AbstractionAtSink(source, stmt)))
 					killState = true;
 			}
@@ -154,7 +154,7 @@ public class SinkPropagationRule extends AbstractTaintPropagationRule {
 					&& getAliasing().mayAlias(source.getAccessPath().getPlainValue(),
 							returnStmt.getOp())
 					&& getManager().getSourceSinkManager().isSink(returnStmt,
-							getManager().getICFG(), source.getAccessPath()))
+							getManager(), source.getAccessPath()))
 				if (!getResults().addResult(new AbstractionAtSink(source, returnStmt)))
 					killState = true;
 		}

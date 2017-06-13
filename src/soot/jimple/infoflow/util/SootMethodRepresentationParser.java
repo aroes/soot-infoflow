@@ -20,6 +20,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import soot.jimple.infoflow.data.SootMethodAndClass;
+import soot.util.HashMultiMap;
+import soot.util.MultiMap;
 /**
  * handles conversion from the string representation of SootMethod to our internal format {@link soot.jimple.infoflow.data.SootMethodAndClass}
  *
@@ -106,6 +108,29 @@ public class SootMethodRepresentationParser {
 					methodList.add(params);
 					result.put(className, methodList);
 				}
+	        }
+		}
+		return result;
+	}
+
+	/*
+	 * Returns classname and unresolved! method names and return types and parameters
+	 */
+	public MultiMap<String, String> parseClassNames2(Collection<String> methods, boolean subSignature){
+		MultiMap<String, String> result = new HashMultiMap<>();
+		Pattern pattern = Pattern.compile("^\\s*<(.*?):\\s*(.*?)>\\s*$");
+		for(String parseString : methods){
+			//parse className:
+			String className = "";
+	        Matcher matcher = pattern.matcher(parseString);
+	        if(matcher.find()){
+	        	className = matcher.group(1);
+	        	String params = "";
+				if(subSignature)
+					params = matcher.group(2);
+				else
+					params = parseString;
+				result.put(className, params);
 	        }
 		}
 		return result;

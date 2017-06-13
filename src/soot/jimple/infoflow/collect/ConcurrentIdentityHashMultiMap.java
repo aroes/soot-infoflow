@@ -37,7 +37,10 @@ import soot.util.MultiMap;
  * 
  */
 public class ConcurrentIdentityHashMultiMap<K,V> extends AbstractMultiMap<K, V> {
-    Map<K,ConcurrentMap<V, V>> m = new ConcurrentIdentityHashMap<K,ConcurrentMap<V, V>>();
+
+	private static final long serialVersionUID = -6721251660349964507L;
+	
+	Map<K,ConcurrentMap<V, V>> m = new ConcurrentIdentityHashMap<K,ConcurrentMap<V, V>>();
 
     public ConcurrentIdentityHashMultiMap() {}
     

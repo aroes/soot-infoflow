@@ -4,39 +4,32 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import heros.solver.CountingThreadPoolExecutor;
+import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
-import soot.jimple.infoflow.results.InfoflowResults;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
+import soot.jimple.infoflow.solver.executors.InterruptableExecutor;
 
 /**
  * Class for reconstructing abstraction paths from sinks to source
  * 
  * @author Steven Arzt
  */
-public class ContextInsensitiveSourceFinder extends AbstractAbstractionPathBuilder {
-	
-    private final Logger logger = LoggerFactory.getLogger(getClass());
-
-    private final InfoflowResults results = new InfoflowResults();
-	private final CountingThreadPoolExecutor executor;
-	
+public class ContextInsensitiveSourceFinder extends ConcurrentAbstractionPathBuilder {
+		
 	private int lastTaskId = 0;
 	private int numTasks = 0;
 	
 	/**
 	 * Creates a new instance of the {@link ContextInsensitiveSourceFinder} class
 	 * @param icfg The interprocedural control flow graph
+	 * @param config The configuration of the data flow solver
 	 * @param executor The executor in which to run the path reconstruction tasks
 	 * @param maxThreadNum The maximum number of threads to use
 	 */
-	public ContextInsensitiveSourceFinder(IInfoflowCFG icfg, CountingThreadPoolExecutor executor) {
-		super(icfg, false);
-		this.executor = executor;
+	public ContextInsensitiveSourceFinder(IInfoflowCFG icfg,
+			InfoflowConfiguration config, InterruptableExecutor executor) {
+		super(icfg, config, executor, false);
 	}
 	
 	/**
@@ -59,8 +52,13 @@ public class ContextInsensitiveSourceFinder extends AbstractAbstractionPathBuild
 		@Override
 		public void run() {
 			while (!abstractionQueue.isEmpty()) {
-				Abstraction abstraction = abstractionQueue.remove(0);
+				// Terminate the thread when we run out of memory
+				if (isKilled()) {
+					abstractionQueue.clear();
+					return;
+				}
 				
+				Abstraction abstraction = abstractionQueue.remove(0);
 				if (abstraction.getSourceContext() != null) {
 					// Register the result
 					results.addResult(flagAbs.getAbstraction().getAccessPath(),
@@ -86,40 +84,24 @@ public class ContextInsensitiveSourceFinder extends AbstractAbstractionPathBuild
 	}
 	
 	@Override
-	public void computeTaintPaths(final Set<AbstractionAtSink> res) {
-		if (res.isEmpty())
-			return;
-		
-		long beforePathTracking = System.nanoTime();
-    	logger.info("Obtainted {} connections between sources and sinks", res.size());
-    	
-    	// Start the propagation tasks
-    	int curResIdx = 0;
-    	numTasks = res.size() + 1;
-    	for (final AbstractionAtSink abs : res) {
-    		logger.info("Building path " + ++curResIdx + " with task id " + lastTaskId);
-    		executor.execute(new SourceFindingTask(lastTaskId++, abs, abs.getAbstraction()));
-    	}
-
-    	try {
-			executor.awaitCompletion();
-		} catch (InterruptedException ex) {
-			logger.error("Could not wait for path executor completion: {0}", ex.getMessage());
-			ex.printStackTrace();
-		}
-    	
-    	logger.info("Path processing took {} seconds in total",
-    			(System.nanoTime() - beforePathTracking) / 1E9);
+	protected boolean triggerComputationForNeighbors() {
+		return false;
 	}
 	
 	@Override
-	public InfoflowResults getResults() {
-		return this.results;
+	protected Runnable getTaintPathTask(AbstractionAtSink abs) {
+		return new SourceFindingTask(lastTaskId++, abs, abs.getAbstraction());
 	}
-
+	
 	@Override
 	public void runIncrementalPathCompuation() {
 		// not implemented
 	}
 
+	@Override
+	public void computeTaintPaths(final Set<AbstractionAtSink> res) {
+		numTasks = res.size();
+		super.computeTaintPaths(res);
+	}
+	
 }

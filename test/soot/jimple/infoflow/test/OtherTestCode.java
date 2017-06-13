@@ -629,5 +629,20 @@ public class OtherTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(imei);
 	}
+	
+	public void skipOverObjectTest1() {
+		String imei = TelephonyManager.getDeviceId();
+		Object o = new Object();
+		System.out.println(o);
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(imei);
+	}
 		
+	public void skipOverObjectTest2() {
+		C1 a = new C1(TelephonyManager.getDeviceId());
+		a.notify();
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(a.field1);
+	}
+
 }

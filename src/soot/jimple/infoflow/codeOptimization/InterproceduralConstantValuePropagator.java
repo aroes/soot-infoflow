@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import heros.solver.Pair;
 import soot.Body;
 import soot.DoubleType;
 import soot.FloatType;
@@ -52,9 +53,9 @@ import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.ThisRef;
 import soot.jimple.ThrowStmt;
+import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.entryPointCreators.BaseEntryPointCreator;
 import soot.jimple.infoflow.entryPointCreators.IEntryPointCreator;
-import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
 import soot.jimple.infoflow.util.SystemClassHandler;
@@ -72,31 +73,30 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 	
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
-    private final IInfoflowCFG icfg;
+    private final InfoflowManager manager;
 	private final Set<SootMethod> excludedMethods;
 	private final ISourceSinkManager sourceSinkManager;
 	private final ITaintPropagationWrapper taintWrapper;
 	private boolean removeSideEffectFreeMethods = true;
 	private boolean excludeSystemClasses = true;
 	
-	protected final Map<SootMethod, Boolean> methodSideEffects =
-			new ConcurrentHashMap<SootMethod, Boolean>();
-	protected final Map<SootMethod, Boolean> methodSinks =
-			new ConcurrentHashMap<SootMethod, Boolean>();
-	protected final Map<SootMethod, Boolean> methodFieldReads =
-			new ConcurrentHashMap<SootMethod, Boolean>();
+	protected final Map<SootMethod, Boolean> methodSideEffects = new ConcurrentHashMap<>();
+	protected final Map<SootMethod, Boolean> methodSinks = new ConcurrentHashMap<>();
+	protected final Map<SootMethod, Boolean> methodFieldReads = new ConcurrentHashMap<>();
 	
 	protected SootClass exceptionClass = null;
-	protected final Map<SootClass, SootMethod> exceptionThrowers =
-			new HashMap<SootClass, SootMethod>();
+	protected final Map<SootClass, SootMethod> exceptionThrowers = new HashMap<>();
+	
+	private final List<SootMethod> propagationWorklist = new ArrayList<>();
+	private final Set<Pair<SootMethod, Integer>> propagatedParameters = new HashSet<>();
 	
 	/**
 	 * Creates a new instance of the {@link InterproceduralConstantValuePropagator}
 	 * class
-	 * @param icfg The interprocedural control flow graph to use
+	 * @param manager The data flow manager for interacting with the solver
 	 */
-	public InterproceduralConstantValuePropagator(IInfoflowCFG icfg) {
-		this.icfg = icfg;
+	public InterproceduralConstantValuePropagator(InfoflowManager manager) {
+		this.manager = manager;
 		this.excludedMethods = null;
 		this.sourceSinkManager = null;
 		this.taintWrapper = null;
@@ -105,7 +105,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 	/**
 	 * Creates a new instance of the {@link InterproceduralConstantValuePropagator}
 	 * class
-	 * @param icfg The interprocedural control flow graph to use
+	 * @param manager The data flow manager for interacting with the solver
 	 * @param excludedMethods The methods that shall be excluded. If one of these
 	 * methods calls another method with a constant argument, this argument will
 	 * not be propagated into the callee.
@@ -114,11 +114,11 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 	 * @param taintWrapper The taint wrapper to be used for not breaking dummy
 	 * values that will later be replaced by artificial taints
 	 */
-	public InterproceduralConstantValuePropagator(IInfoflowCFG icfg,
+	public InterproceduralConstantValuePropagator(InfoflowManager manager,
 			Collection<SootMethod> excludedMethods,
 			ISourceSinkManager sourceSinkManager,
 			ITaintPropagationWrapper taintWrapper) {
-		this.icfg = icfg;
+		this.manager = manager;
 		this.excludedMethods = new HashSet<SootMethod>(excludedMethods);
 		this.sourceSinkManager = sourceSinkManager;
 		this.taintWrapper = taintWrapper;
@@ -144,33 +144,56 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 		this.excludeSystemClasses = excludeSystemClasses;
 	}
 	
+	/**
+	 * Checks whether optimizations are possible for the given method and, if
+	 * so, adds it to the global worklist
+	 * @param sm The method to check and add to the worklist
+	 */
+	private void checkAndAddMethod(SootMethod sm) {
+		if (sm == null || !sm.hasActiveBody())
+			return;
+		
+		// If this callee is excluded, we do not propagate out of it
+		if (excludedMethods != null && excludedMethods.contains(sm))
+			return;
+		if (excludeSystemClasses
+				&& SystemClassHandler.isClassInSystemPackage(sm.getDeclaringClass().getName()))
+			return;
+		
+		if (sm.getReturnType() != VoidType.v() || sm.getParameterCount() > 0) {
+			if (!propagationWorklist.contains(sm))
+				propagationWorklist.add(sm);
+		}
+	}
+	
 	@Override
 	protected void internalTransform(String phaseName, Map<String, String> options) {
 		logger.info("Removing side-effect free methods is "
 				+ (removeSideEffectFreeMethods ? "enabled" : "disabled"));
 		
+		// Clear up any potential old state
+		propagationWorklist.clear();
+		propagatedParameters.clear();
+		
 		// Collect all application methods that take parameters or return values
+		// and place them in the initial worklist.
 		for (QueueReader<MethodOrMethodContext> rdr = Scene.v().getReachableMethods().listener();
 				rdr.hasNext(); ) {
 			MethodOrMethodContext mom = rdr.next();
 			SootMethod sm = mom.method();
-			if (sm == null || !sm.hasActiveBody())
-				continue;
+			checkAndAddMethod(sm);
+		}
+		
+		while (!propagationWorklist.isEmpty()) {
+			SootMethod sm = propagationWorklist.remove(0);
 			
-			// If this callee is excluded, we do not propagate out of it
-			if (excludedMethods != null && excludedMethods.contains(sm))
-				continue;
-			if (excludeSystemClasses
-					&& SystemClassHandler.isClassInSystemPackage(sm.getDeclaringClass().getName()))
-				continue;
+			// Propagate constants from caller into callee
+			if (sm.getParameterCount() > 0)
+				propagateConstantsIntoCallee(sm);
 			
-			if (sm.getReturnType() != VoidType.v() || sm.getParameterCount() > 0) {
-				if (sm.getParameterCount() > 0)
-					propagateConstantsIntoCallee(sm);
-				
-				if (typeSupportsConstants(sm.getReturnType()))
-					propagateReturnValueIntoCallers(sm);
-			}
+			// Propagate constant return values from callee to caller
+			if (typeSupportsConstants(sm.getReturnType()))
+				propagateReturnValueIntoCallers(sm);
 		}
 		
 		// Check for calls we can remove altogether
@@ -277,14 +300,14 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 		
 		// If this method is a source on its own, we must keep it
 		if (sourceSinkManager != null
-				&& sourceSinkManager.getSourceInfo((Stmt) callSite, icfg) != null) {
+				&& sourceSinkManager.getSourceInfo((Stmt) callSite, manager) != null) {
 			methodFieldReads.put(method, true);
 			return true;
 		}
 		
 		// If this method is a sink, we must keep it as well
 		if (sourceSinkManager != null
-				&& sourceSinkManager.isSink((Stmt) callSite, icfg, null)) {
+				&& sourceSinkManager.isSink((Stmt) callSite, manager, null)) {
 			methodSinks.put(method, true);
 			return true;
 		}
@@ -349,7 +372,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 		// We need to make sure that all exit nodes agree on the same
 		// constant value
 		Constant value = null;
-		for (Unit retSite : icfg.getEndPointsOf(sm)) {
+		for (Unit retSite : manager.getICFG().getEndPointsOf(sm)) {
 			// Skip exceptional exits
 			if (!(retSite instanceof ReturnStmt))
 				continue;
@@ -365,7 +388,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 		
 		// Propagate the return value into the callers
 		if (value != null)
-			for (Unit callSite : icfg.getCallersOf(sm))
+			for (Unit callSite : manager.getICFG().getCallersOf(sm))
 				if (callSite instanceof AssignStmt) {
 					AssignStmt assign = (AssignStmt) callSite;
 					
@@ -377,17 +400,17 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 					// If this is a call to a source method, we do not propagate
 					// constants out of the callee for not destroying data flows
 					if (sourceSinkManager != null
-							&& sourceSinkManager.getSourceInfo(assign, icfg) != null)
+							&& sourceSinkManager.getSourceInfo(assign, manager) != null)
 						continue;
 					
 					// Make sure that we don't access anything we have already removed
-					SootMethod caller = icfg.getMethodOf(assign);
+					SootMethod caller = manager.getICFG().getMethodOf(assign);
 					if (!caller.getActiveBody().getUnits().contains(assign))
 						continue;
 					
 					// If the call site has multiple callees, we cannot propagate a
 					// single constant
-					if (icfg.getCalleesOfCallAt(callSite).size() > 1)
+					if (manager.getICFG().getCalleesOfCallAt(callSite).size() > 1)
 						continue;
 					
 					// If the call has no side effects, we can remove it altogether,
@@ -400,8 +423,10 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 						// We don't have side effects, so we can just change
 						// a = b.foo() into a = 0.
 						caller.getActiveBody().getUnits().swapWith(assign, assignConst);
-						if (excludedMethods == null || !excludedMethods.contains(caller))
+						if (excludedMethods == null || !excludedMethods.contains(caller)) {
 							ConstantPropagatorAndFolder.v().transform(caller.getActiveBody());
+							checkAndAddMethod(caller);
+						}
 						
 						// Fix the callgraph
 						if (Scene.v().hasCallGraph())
@@ -411,8 +436,10 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 						// We have side effects, so we need to keep the method call. Change
 						// a = b.foo() into b.foo(); a = 0;
 						caller.getActiveBody().getUnits().insertAfter(assignConst, assign);
-						if (excludedMethods == null || !excludedMethods.contains(caller)) 
+						if (excludedMethods == null || !excludedMethods.contains(caller)) {
 							ConstantPropagatorAndFolder.v().transform(caller.getActiveBody());
+							checkAndAddMethod(caller);
+						}
 						caller.getActiveBody().getUnits().remove(assignConst);
 						
 						Stmt inv = Jimple.v().newInvokeStmt(assign.getInvokeExpr());
@@ -575,7 +602,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 			if (s.containsInvokeExpr()) {
 				// If this method calls a sink, we need to keep it
 				if (sourceSinkManager != null
-						&& sourceSinkManager.isSink((Stmt) u, icfg, null)) {
+						&& sourceSinkManager.isSink((Stmt) u, manager, null)) {
 					methodSinks.put(method, true);
 					return true;
 				}
@@ -720,7 +747,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 	 * @param sm The method for which to look for call sites.
 	 */
 	private void propagateConstantsIntoCallee(SootMethod sm) {		
-		Collection<Unit> callSites = icfg.getCallersOf(sm);
+		Collection<Unit> callSites = manager.getICFG().getCallersOf(sm);
 		if (callSites.isEmpty())
 			return;
 		
@@ -733,26 +760,38 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 		boolean hasCallSites = false;
 		for (Unit callSite : callSites) {
 			// If this call site is in an excluded method, we ignore it
-			if (excludedMethods != null && excludedMethods.contains(icfg.getMethodOf(callSite)))
+			if (excludedMethods != null
+					&& manager.getICFG().isReachable(callSite)
+					&& excludedMethods.contains(manager.getICFG().getMethodOf(callSite)))
 				continue;
 			
 			InvokeExpr iiExpr = ((Stmt) callSite).getInvokeExpr();
 			hasCallSites = true;
 			
-			// Check whether we have constant parameter values
-			for (int i = 0; i < iiExpr.getArgCount(); i++) {
-				final Value argVal = iiExpr.getArg(i);
-				if (argVal instanceof Constant) {
-					// If we already have a value for this argument and the
-					// new one does not agree, this parameter is not globally
-					// constant.
-					if (values[i] != null && !values[i].equals(argVal))
-						isConstant[i] = false;
-					else
-						values[i] = (Constant) argVal;
-				}
-				else
+			// If we have a reflective call site, we never have constant arguments, because
+			// they are always passed in using an array
+			if (manager.getICFG().isReflectiveCallSite(callSite)) {
+				for (int i = 0; i < isConstant.length; i++)
 					isConstant[i] = false;
+			}
+			else {
+				// Check whether we have constant parameter values
+				for (int i = 0; i < iiExpr.getArgCount(); i++) {
+					if (isConstant[i]) {
+						final Value argVal = iiExpr.getArg(i);
+						if (argVal instanceof Constant) {
+							// If we already have a value for this argument and the
+							// new one does not agree, this parameter is not globally
+							// constant.
+							if (values[i] != null && !values[i].equals(argVal))
+								isConstant[i] = false;
+							else
+								values[i] = (Constant) argVal;
+						}
+						else
+							isConstant[i] = false;
+					}
+				}
 			}
 		}
 		
@@ -760,7 +799,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 			// Get the constant parameters
 			List<Unit> inserted = null;
 			for (int i = 0; i < isConstant.length; i++) {
-				if (isConstant[i]) {
+				if (isConstant[i] && propagatedParameters.add(new Pair<>(sm, i))) {
 					// Propagate the constant into the callee
 					Local paramLocal = sm.getActiveBody().getParameterLocal(i);
 					Unit point = getFirstNonIdentityStmt(sm);
@@ -779,6 +818,10 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 				for (Unit u : inserted)
 					sm.getActiveBody().getUnits().remove(u);
 				
+				// This might lead to more opportunities of constant propagation
+				for (Unit u : sm.getActiveBody().getUnits())
+					for (SootMethod callee : manager.getICFG().getCalleesOfCallAt(u))
+						checkAndAddMethod(callee);
 			}
 		}
 	}

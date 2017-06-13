@@ -11,8 +11,7 @@ import soot.Unit;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.InfoflowConfiguration.CodeEliminationMode;
-import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
-import soot.jimple.infoflow.solver.cfg.InfoflowCFG;
+import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
 import soot.jimple.infoflow.util.SystemClassHandler;
@@ -39,7 +38,7 @@ public class DeadCodeEliminator implements ICodeOptimizer {
 	}
 	
 	@Override
-	public void run(IInfoflowCFG icfg,
+	public void run(InfoflowManager manager,
 			Collection<SootMethod> entryPoints,
 			ISourceSinkManager sourcesSinks,
 			ITaintPropagationWrapper taintWrapper) {
@@ -70,8 +69,7 @@ public class DeadCodeEliminator implements ICodeOptimizer {
 		
 		// Perform an inter-procedural constant propagation and code cleanup
 		InterproceduralConstantValuePropagator ipcvp =
-				new InterproceduralConstantValuePropagator(
-						new InfoflowCFG(),
+				new InterproceduralConstantValuePropagator(manager,
 						Scene.v().getEntryPoints(),
 						sourcesSinks,
 						taintWrapper);
@@ -101,7 +99,7 @@ public class DeadCodeEliminator implements ICodeOptimizer {
 			List<Unit> newCallSites = getCallsInMethod(sm.method());
 			if (callSites != null)
 				for (Unit u : callSites)
-					if (newCallSites == null ||  !newCallSites.contains(u))
+					if (newCallSites == null || !newCallSites.contains(u))
 						Scene.v().getCallGraph().removeAllEdgesOutOf(u);
 		}
 	}

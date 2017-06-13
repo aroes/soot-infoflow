@@ -16,6 +16,7 @@ import java.util.List;
 import soot.jimple.infoflow.config.IInfoflowConfig;
 import soot.jimple.infoflow.data.pathBuilders.IPathBuilderFactory;
 import soot.jimple.infoflow.entryPointCreators.IEntryPointCreator;
+import soot.jimple.infoflow.handlers.PostAnalysisHandler;
 import soot.jimple.infoflow.handlers.PreAnalysisHandler;
 import soot.jimple.infoflow.ipc.IIPCManager;
 import soot.jimple.infoflow.nativ.INativeCallHandler;
@@ -70,7 +71,14 @@ public interface IInfoflow {
      */
     public void setPreProcessors(Collection<? extends PreAnalysisHandler> preprocessors);
 
-	/**
+    /**
+     * Sets the set of post-processors that shall be executed after the data flow
+     * analysis has finished
+     * @param postprocessors The post-processors to execute on the results
+     */
+    public void setPostProcessors(Collection<? extends PostAnalysisHandler> postprocessors);
+
+    /**
 	 * Computes the information flow on a list of entry point methods. This list
 	 * is used to construct an artificial main method following the Android
 	 * life cycle for all methods that are detected to be part of Android's

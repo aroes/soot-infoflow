@@ -20,7 +20,8 @@ import soot.SootMethod;
  */
 public class EmptySourceSinkManager extends MethodBasedSourceSinkManager {
 
-	public EmptySourceSinkManager(){
+	public EmptySourceSinkManager() {
+		//
 	}
 	
 	@Override
@@ -31,6 +32,11 @@ public class EmptySourceSinkManager extends MethodBasedSourceSinkManager {
 	@Override
 	public boolean isSinkMethod(SootMethod sMethod) {
 		return false;
+	}
+
+	@Override
+	public void initialize() {
+		//
 	}
 
 }

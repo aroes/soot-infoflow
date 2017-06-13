@@ -16,6 +16,7 @@ import java.util.Set;
 import soot.Value;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
+import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.data.AccessPath.ArrayTaintType;
 
 public class DefaultNativeCallHandler extends AbstractNativeCallHandler {
@@ -37,8 +38,9 @@ public class DefaultNativeCallHandler extends AbstractNativeCallHandler {
 			if(call.getInvokeExpr().getMethod().getSignature().equals(SIG_ARRAYCOPY)) {
 				if(params[0].equals(source.getAccessPath().getPlainValue())) {
 					if (manager.getTypeUtils().checkCast(source.getAccessPath(), params[2].getType())) {
-						Abstraction abs = source.deriveNewAbstraction(params[2], false, call,
-								source.getAccessPath().getBaseType());
+						AccessPath ap = manager.getAccessPathFactory().copyWithNewValue(source.getAccessPath(),
+								params[2], source.getAccessPath().getBaseType(), false);
+						Abstraction abs = source.deriveNewAbstraction(ap, call);
 						abs.setCorrespondingCallSite(call);
 						return Collections.singleton(abs);
 					}
@@ -47,8 +49,9 @@ public class DefaultNativeCallHandler extends AbstractNativeCallHandler {
 			else if(call.getInvokeExpr().getMethod().getSignature().equals(SIG_NEW_ARRAY)) {
 				if(params[1].equals(source.getAccessPath().getPlainValue())) {
 					if (manager.getTypeUtils().checkCast(source.getAccessPath(), params[1].getType())) {
-						Abstraction abs = source.deriveNewAbstraction(params[1], false, call,
-								source.getAccessPath().getBaseType(), ArrayTaintType.Length);
+						AccessPath ap = manager.getAccessPathFactory().copyWithNewValue(source.getAccessPath(),
+								params[1], source.getAccessPath().getBaseType(), false, true, ArrayTaintType.Length);
+						Abstraction abs = source.deriveNewAbstraction(ap, call);
 						abs.setCorrespondingCallSite(call);
 						return Collections.singleton(abs);
 					}

@@ -13,18 +13,22 @@ package soot.jimple.infoflow.data;
 import java.util.Arrays;
 
 import soot.Local;
+import soot.NullType;
 import soot.SootField;
 import soot.Type;
 import soot.Value;
 import soot.jimple.ArrayRef;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.StaticFieldRef;
+import soot.jimple.internal.JimpleLocal;
 
 /**
  * This class represents the taint, containing a base value and a list of fields
  * (length is bounded by Infoflow.ACCESSPATHLENGTH)
  */
 public class AccessPath implements Cloneable {
+
+	private static AccessPath zeroAccessPath = null;
 	
 	public enum ArrayTaintType {
 		Contents,
@@ -252,54 +256,6 @@ public class AccessPath implements Cloneable {
 		
 		return str;
 	}
-
-	public AccessPath copyWithNewValue(Value val){
-		return copyWithNewValue(val, baseType, false);
-	}
-	
-	/**
-	 * value val gets new base, fields are preserved.
-	 * @param val The new base value
-	 * @return This access path with the base replaced by the value given in
-	 * the val parameter
-	 */
-	public AccessPath copyWithNewValue(Value val, Type newType,
-			boolean cutFirstField){
-		return copyWithNewValue(val, newType, cutFirstField, true);
-	}
-	
-	/**
-	 * value val gets new base, fields are preserved.
-	 * @param val The new base value
-	 * @param reduceBases True if circurlar types shall be reduced to bases
-	 * @return This access path with the base replaced by the value given in
-	 * the val parameter
-	 */
-	public AccessPath copyWithNewValue(Value val, Type newType,
-			boolean cutFirstField, boolean reduceBases) {
-		return copyWithNewValue(val, newType, cutFirstField,
-				reduceBases, arrayTaintType);
-	}
-	
-	/**
-	 * value val gets new base, fields are preserved.
-	 * @param val The new base value
-	 * @param reduceBases True if circular types shall be reduced to bases
-	 * @param arrayTaintType The way a tainted array shall be handled
-	 * @return This access path with the base replaced by the value given in
-	 * the val parameter
-	 */
-	public AccessPath copyWithNewValue(Value val, Type newType, boolean cutFirstField,
-			boolean reduceBases, ArrayTaintType arrayTaintType) {
-		if (this.value != null && this.value.equals(val)
-				&& this.baseType.equals(newType)
-				&& this.arrayTaintType == arrayTaintType)
-			return this;
-		
-		return AccessPathFactory.v().createAccessPath(val, fields, newType,
-				fieldTypes, this.taintSubFields,
-				cutFirstField, reduceBases, arrayTaintType, this.canHaveImmutableAliases);
-	}
 	
 	@Override
 	public AccessPath clone(){
@@ -354,67 +310,6 @@ public class AccessPath implements Cloneable {
 					return false;
 		}
 		return true;
-	}
-	
-	/**
-	 * Merges this access path with the given one, i.e., adds the fields of the
-	 * given access path to this one.
-	 * @param ap The access path whose fields to append to this one
-	 * @return The new access path
-	 */
-	public AccessPath merge(AccessPath ap) {
-		return appendFields(ap.fields, ap.fieldTypes, ap.taintSubFields);
-	}
-	
-	/**
-	 * Appends additional fields to this access path
-	 * @param apFields The fields to append
-	 * @param apFieldTypes The types of the fields to append
-	 * @param taintSubFields True if the new access path shall taint all objects
-	 * reachable through it, false if it shall only point to precisely one object
-	 * @return The new access path
-	 */
-	public AccessPath appendFields(SootField[] apFields, Type[] apFieldTypes, boolean taintSubFields) {
-		int offset = this.fields == null ? 0 : this.fields.length;
-		SootField[] fields = new SootField[offset + (apFields == null ? 0 : apFields.length)];
-		Type[] fieldTypes = new Type[offset + (apFields == null ? 0 : apFields.length)];
-		if (this.fields != null) {
-			System.arraycopy(this.fields, 0, fields, 0, this.fields.length);
-			System.arraycopy(this.fieldTypes, 0, fieldTypes, 0, this.fieldTypes.length);
-		}
-		if (apFields != null && apFields.length > 0) {
-			System.arraycopy(apFields, 0, fields, offset, apFields.length);
-			System.arraycopy(apFieldTypes, 0, fieldTypes, offset, apFieldTypes.length);
-		}
-		
-		return AccessPathFactory.v().createAccessPath(this.value, fields, baseType,
-				fieldTypes, taintSubFields, false, true, arrayTaintType);
-	}
-	
-	/**
-	 * Gets a copy of this access path, but drops the first field. If this
-	 * access path has no fields, the identity is returned.
-	 * @return A copy of this access path with the first field being dropped.
-	 */
-	public AccessPath dropFirstField() {
-		if (fields == null || fields.length == 0)
-			return this;
-		
-		final SootField[] newFields;
-		final Type[] newTypes;
-		if (fields.length > 1) {
-			newFields = new SootField[fields.length - 1];
-			System.arraycopy(fields, 1, newFields, 0, fields.length - 1);
-
-			newTypes = new Type[fields.length - 1];
-			System.arraycopy(fieldTypes, 1, newTypes, 0, fields.length - 1);
-		}
-		else {
-			newFields = null;
-			newTypes = null;
-		}
-		return AccessPathFactory.v().createAccessPath(value, newFields, fieldTypes[0],
-				newTypes, taintSubFields, false, true, arrayTaintType);		
 	}
 	
 	/**
@@ -514,6 +409,17 @@ public class AccessPath implements Cloneable {
 	 */
 	public boolean getCanHaveImmutableAliases() {
 		return canHaveImmutableAliases;
+	}
+	
+	/**
+	 * Creates the access path that is used in the zero abstraction
+	 * @return The access path that is used in the zero abstraction
+	 */
+	static AccessPath getZeroAccessPath() {
+		if (zeroAccessPath == null)
+			zeroAccessPath = new AccessPath(new JimpleLocal("zero", NullType.v()), null,
+					NullType.v(), null, false, false, ArrayTaintType.ContentsAndLength, false);
+		return zeroAccessPath;
 	}
 	
 }

@@ -35,7 +35,7 @@ public class SourcePropagationRule extends AbstractTaintPropagationRule {
 		if (source == getZeroValue()) {
 			// Check whether this can be a source at all
 			final SourceInfo sourceInfo = getManager().getSourceSinkManager() != null
-					? getManager().getSourceSinkManager().getSourceInfo(stmt, getManager().getICFG()) : null;
+					? getManager().getSourceSinkManager().getSourceInfo(stmt, getManager()) : null;
 					
 			// We never propagate zero facts onwards
 			killSource.value = true;
@@ -108,7 +108,7 @@ public class SourcePropagationRule extends AbstractTaintPropagationRule {
 		if (!getManager().getConfig().getInspectSources()
 				&& getManager().getSourceSinkManager() != null) {
 			final SourceInfo sourceInfo = getManager().getSourceSinkManager().getSourceInfo(
-					stmt, getManager().getICFG());
+					stmt, getManager());
 			if (sourceInfo != null)
 				killAll.value = true;
 		}
@@ -117,7 +117,7 @@ public class SourcePropagationRule extends AbstractTaintPropagationRule {
 		if (!getManager().getConfig().getInspectSinks()
 				&& getManager().getSourceSinkManager() != null) {
 			final boolean isSink = getManager().getSourceSinkManager().isSink(
-					stmt, getManager().getICFG(), source.getAccessPath());
+					stmt, getManager(), source.getAccessPath());
 			if (isSink)
 				killAll.value = true;
 		}

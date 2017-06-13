@@ -10,12 +10,11 @@
  ******************************************************************************/
 package soot.jimple.infoflow.source;
 
-import heros.InterproceduralCFG;
 import soot.RefType;
 import soot.SootMethod;
 import soot.Type;
-import soot.Unit;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.data.AccessPath;
 
 /**
@@ -32,7 +31,7 @@ public abstract class MethodBasedSourceSinkManager implements ISourceSinkManager
 	public abstract boolean isSinkMethod(SootMethod method);
 	
 	@Override
-	public SourceInfo getSourceInfo(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg) {
+	public SourceInfo getSourceInfo(Stmt sCallSite, InfoflowManager manager) {
 		assert sCallSite != null;
 		if (!sCallSite.containsInvokeExpr())
 			return null;
@@ -40,8 +39,7 @@ public abstract class MethodBasedSourceSinkManager implements ISourceSinkManager
 	}
 
 	@Override
-	public boolean isSink(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg,
-			AccessPath ap) {
+	public boolean isSink(Stmt sCallSite, InfoflowManager manager, AccessPath ap) {
 		assert sCallSite != null;
 		return sCallSite.containsInvokeExpr()
 				&& isSinkMethod(sCallSite.getInvokeExpr().getMethod());

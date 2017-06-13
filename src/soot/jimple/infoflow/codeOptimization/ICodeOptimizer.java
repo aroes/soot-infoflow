@@ -4,6 +4,7 @@ import java.util.Collection;
 
 import soot.SootMethod;
 import soot.jimple.infoflow.InfoflowConfiguration;
+import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.taintWrappers.ITaintPropagationWrapper;
@@ -25,12 +26,12 @@ public interface ICodeOptimizer {
 	
 	/**
 	 * Runs the coe optimization
-	 * @param icfg The interprocedural control flow graph
+	 * @param manager The data flow manager for interacting with the solver
 	 * @param entryPoints The set of entry points for the data flow analysis
 	 * @param sourcesSinks The SourceSinkManager
 	 * @param taintWrapper The taint wrapper
 	 */
-	public void run(IInfoflowCFG icfg,
+	public void run(InfoflowManager manager,
 			Collection<SootMethod> entryPoints,
 			ISourceSinkManager sourcesSinks,
 			ITaintPropagationWrapper taintWrapper);

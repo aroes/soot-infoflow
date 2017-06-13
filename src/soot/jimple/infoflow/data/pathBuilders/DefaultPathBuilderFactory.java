@@ -3,8 +3,9 @@ package soot.jimple.infoflow.data.pathBuilders;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import heros.solver.CountingThreadPoolExecutor;
+import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
+import soot.jimple.infoflow.solver.executors.InterruptableExecutor;
 
 /**
  * Default factory class for abstraction path builders
@@ -74,34 +75,34 @@ public class DefaultPathBuilderFactory implements IPathBuilderFactory {
 	 * @param maxThreadNum The number of threads to use
 	 * @return The generated executor
 	 */
-	private CountingThreadPoolExecutor createExecutor(int maxThreadNum) {
+	private InterruptableExecutor createExecutor(int maxThreadNum) {
         int numThreads = Runtime.getRuntime().availableProcessors();
-		return new CountingThreadPoolExecutor(maxThreadNum == -1 ? numThreads
+		return new InterruptableExecutor(maxThreadNum == -1 ? numThreads
 				: Math.min(maxThreadNum, numThreads), Integer.MAX_VALUE, 30, TimeUnit.SECONDS,
 				new LinkedBlockingQueue<Runnable>());
 	}
 	
 	@Override
-	public IAbstractionPathBuilder createPathBuilder(int maxThreadNum,
-			IInfoflowCFG icfg) {
-		return createPathBuilder(createExecutor(maxThreadNum), icfg);
+	public IAbstractionPathBuilder createPathBuilder(InfoflowConfiguration config,
+			int maxThreadNum, IInfoflowCFG icfg) {
+		return createPathBuilder(config, createExecutor(maxThreadNum), icfg);
 	}
 	
 	@Override
-	public IAbstractionPathBuilder createPathBuilder(CountingThreadPoolExecutor executor,
-			IInfoflowCFG icfg) {
+	public IAbstractionPathBuilder createPathBuilder(InfoflowConfiguration config,
+			InterruptableExecutor executor, IInfoflowCFG icfg) {
 		switch (pathBuilder) {
 		case Recursive :
-			return new RecursivePathBuilder(icfg, executor,
+			return new RecursivePathBuilder(icfg, config, executor,
 					reconstructPaths);
 		case ContextSensitive :
-			return new ContextSensitivePathBuilder(icfg, executor,
+			return new ContextSensitivePathBuilder(icfg, config, executor,
 					reconstructPaths);
 		case ContextInsensitive :
-			return new ContextInsensitivePathBuilder(icfg, executor,
+			return new ContextInsensitivePathBuilder(icfg, config, executor,
 					reconstructPaths);
 		case ContextInsensitiveSourceFinder :
-			return new ContextInsensitiveSourceFinder(icfg, executor);
+			return new ContextInsensitiveSourceFinder(icfg, config, executor);
 		case None:
 			return new EmptyPathBuilder();
 		}

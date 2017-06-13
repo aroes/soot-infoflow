@@ -39,7 +39,16 @@ public class InfoflowConfiguration {
 		/**
 		 * A flow-insensitive algorithm based on Soot's point-to-sets
 		 */
-		PtsBased
+		PtsBased,
+		/**
+		 * Do not perform any alias analysis
+		 */
+		None,
+		/**
+		 * Perform lazy aliasing. Propagate every taint everywhere to on-demand
+		 * check whether it aliases with any value access
+		 */
+		Lazy
 	}
 
 	/**
@@ -64,13 +73,34 @@ public class InfoflowConfiguration {
 		RemoveSideEffectFreeCode
 	}
 	
-	private static int accessPathLength = 5;
-	private static boolean useRecursiveAccessPaths = true;
-	private static boolean useThisChainReduction = true;
+	/**
+	 * Enumeration containing the supported data flow solvers
+	 */
+	public enum DataFlowSolver {
+		/**
+		 * Use the Heros-based legacy solver
+		 */
+		@Deprecated
+		Heros,
+		
+		/**
+		 * Use a flow- and context-sensitive solver
+		 */
+		ContextFlowSensitive,
+		
+		/**
+		 * Use a context-sensitive, but flow-insensitive solver
+		 */
+		FlowInsensitive
+	}
+	
+	private int accessPathLength = 5;
+	private boolean useRecursiveAccessPaths = true;
+	private boolean useThisChainReduction = true;
 	private static boolean pathAgnosticResults = true;
 	private static boolean oneResultPerAccessPath = false;
 	private static boolean mergeNeighbors = false;
-	private static boolean useTypeTightening = true;
+	private boolean singleJoinPointAbstraction = false;
 	
 	private int stopAfterFirstKFlows = 0;
 	private boolean enableImplicitFlows = false;
@@ -79,26 +109,47 @@ public class InfoflowConfiguration {
 	private boolean enableArraySizeTainting = true;
 	private boolean flowSensitiveAliasing = true;
 	private boolean enableTypeChecking = true;
-	private boolean ignoreFlowsInSystemPackages = true;
+	private boolean ignoreFlowsInSystemPackages = false;
+	private boolean excludeSootLibraryClasses = false;
 	private int maxThreadNum = -1;
 	private boolean writeOutputFiles = false;
 	private boolean logSourcesAndSinks = false;
+	private boolean enableReflection = false;
+	private boolean sequentialPathProcessing = false;
 	
 	private boolean inspectSources = false;
 	private boolean inspectSinks = false;
 	
+	// this option will exclude the passed values to sources and sink into the xml output,
+	// in order to improve the performance
+	private boolean noPassedValues = false;
+	// this option exclude the call graph fraction from the entry points to the source in
+	// the xml output
+	private boolean noCallGraphFraction = false; 
+	private int maxCallersInOutputFile = 5;
+	private long resultSerializationTimeout = 0;
+	
 	private CallgraphAlgorithm callgraphAlgorithm = CallgraphAlgorithm.AutomaticSelection;
 	private AliasingAlgorithm aliasingAlgorithm = AliasingAlgorithm.FlowSensitive;
 	private CodeEliminationMode codeEliminationMode = CodeEliminationMode.PropagateConstants;
+	private DataFlowSolver dataFlowSolver = DataFlowSolver.ContextFlowSensitive;
 
 	private boolean taintAnalysisEnabled = true;
 	private boolean incrementalResultReporting = false;
+	private long dataFlowTimeout = 0;
+	private long pathReconstructionTimeout = 0;
+	private boolean oneSourceAtATime = false;
 	
 	/**
 	 * Merges the given configuration options into this configuration object
 	 * @param config The configuration data to merge in
 	 */
 	public void merge(InfoflowConfiguration config) {
+		this.accessPathLength = config.accessPathLength;
+		this.useRecursiveAccessPaths = config.useRecursiveAccessPaths;
+		this.useThisChainReduction = config.useThisChainReduction;
+		this.singleJoinPointAbstraction = config.singleJoinPointAbstraction;
+		
 		this.stopAfterFirstKFlows = config.stopAfterFirstKFlows;
 		this.enableImplicitFlows = config.enableImplicitFlows;
 		this.enableStaticFields = config.enableStaticFields;
@@ -107,9 +158,12 @@ public class InfoflowConfiguration {
 		this.flowSensitiveAliasing = config.flowSensitiveAliasing;
 		this.enableTypeChecking = config.enableTypeChecking;
 		this.ignoreFlowsInSystemPackages = config.ignoreFlowsInSystemPackages;
+		this.excludeSootLibraryClasses = config.excludeSootLibraryClasses;
 		this.maxThreadNum = config.maxThreadNum;
 		this.writeOutputFiles = config.writeOutputFiles;
 		this.logSourcesAndSinks = config.logSourcesAndSinks;
+		this.enableReflection = config.enableReflection;
+		this.sequentialPathProcessing = config.sequentialPathProcessing;
 		
 		this.callgraphAlgorithm = config.callgraphAlgorithm;
 		this.aliasingAlgorithm = config.aliasingAlgorithm;
@@ -118,8 +172,21 @@ public class InfoflowConfiguration {
 		this.inspectSources = config.inspectSources;
 		this.inspectSinks = config.inspectSinks;
 		
-		this.taintAnalysisEnabled = config.taintAnalysisEnabled;
+		this.noPassedValues = config.noPassedValues;
+		this.noCallGraphFraction = config.noCallGraphFraction;
+		this.maxCallersInOutputFile = config.maxCallersInOutputFile;
+		this.resultSerializationTimeout = config.resultSerializationTimeout;
+		
+		this.callgraphAlgorithm = config.callgraphAlgorithm;
+		this.aliasingAlgorithm = config.aliasingAlgorithm;
+		this.codeEliminationMode = config.codeEliminationMode;
+		this.dataFlowSolver = config.dataFlowSolver;
+		
+		this.taintAnalysisEnabled = config.writeOutputFiles;
 		this.incrementalResultReporting = config.incrementalResultReporting;
+		this.dataFlowTimeout = config.dataFlowTimeout;
+		this.pathReconstructionTimeout = config.pathReconstructionTimeout;
+		this.oneSourceAtATime = config.oneSourceAtATime;
 	}
 	
 	/**
@@ -127,7 +194,7 @@ public class InfoflowConfiguration {
 	 * if they exceed the given size.
 	 * @param accessPathLength the maximum value of an access path.
 	 */
-	public static int getAccessPathLength() {
+	public int getAccessPathLength() {
 		return accessPathLength;
 	}
 	
@@ -139,8 +206,8 @@ public class InfoflowConfiguration {
 	 *  (which is imprecise but gains performance)
 	 *  Default value is 5.
 	 */
-	public static void setAccessPathLength(int accessPathLength) {
-		InfoflowConfiguration.accessPathLength = accessPathLength;
+	public void setAccessPathLength(int accessPathLength) {
+		this.accessPathLength = accessPathLength;
 	}
 	
 	/**
@@ -203,31 +270,35 @@ public class InfoflowConfiguration {
 	}
 	
 	/**
-	 * Gets whether runtime type information shall be tightened as much as
-	 * possible when deriving new taints
-	 * @return True if the runtime type information shall automatically be
-	 * tightened when deriving new taints, otherwise false
+	 * Gets whether the data flow tracker shall only record one incoming
+	 * abstraction per join point. This greatly reduces the memory requirements
+	 * of the analysis. On the other hand, if data is tainted from two different
+	 * sources, only one of them will be reported.
+	 * @return True if only one incoming abstraction shall be reported per join
+	 * point
 	 */
-	public static boolean getUseTypeTightening() {
-		return InfoflowConfiguration.useTypeTightening;
+	public boolean getSingleJoinPointAbstraction() {
+		return this.singleJoinPointAbstraction;
 	}
 	
 	/**
-	 * Sets whether runtime type information shall be tightened as much as
-	 * possible when deriving new taints
-	 * @param useTypeTightening True if the runtime type information shall
-	 * automatically be tightened when deriving new taints, otherwise false
+	 * Gets whether the data flow tracker shall only record one incoming
+	 * abstraction per join point. This greatly reduces the memory requirements
+	 * of the analysis. On the other hand, if data is tainted from two different
+	 * sources, only one of them will be reported.
+	 * @param singleJoinPointAbstraction True if only one incoming abstraction
+	 * shall be reported per join point
 	 */
-	public static void setUseTypeTightening(boolean useTypeTightening) {
-		InfoflowConfiguration.useTypeTightening = useTypeTightening;
+	public void setSingleJoinPointAbstraction(boolean singleJoinPointAbstraction) {
+		this.singleJoinPointAbstraction = singleJoinPointAbstraction;
 	}
-	
+
 	/**
 	 * Gets whether recursive access paths shall be reduced, e.g. whether we
 	 * shall propagate a.[next].data instead of a.next.next.data.
 	 * @return True if recursive access paths shall be reduced, otherwise false
 	 */
-	public static boolean getUseRecursiveAccessPaths() {
+	public boolean getUseRecursiveAccessPaths() {
 		return useRecursiveAccessPaths;
 	}
 
@@ -237,8 +308,8 @@ public class InfoflowConfiguration {
 	 * @param useRecursiveAccessPaths True if recursive access paths shall be
 	 * reduced, otherwise false
 	 */
-	public static void setUseRecursiveAccessPaths(boolean useRecursiveAccessPaths) {
-		InfoflowConfiguration.useRecursiveAccessPaths = useRecursiveAccessPaths;
+	public void setUseRecursiveAccessPaths(boolean useRecursiveAccessPaths) {
+		this.useRecursiveAccessPaths = useRecursiveAccessPaths;
 	}
 	
 	/**
@@ -247,8 +318,8 @@ public class InfoflowConfiguration {
 	 * @return True if access paths including outer objects shall be reduced,
 	 * otherwise false
 	 */
-	public static boolean getUseThisChainReduction() {
-		return useThisChainReduction;
+	public boolean getUseThisChainReduction() {
+		return this.useThisChainReduction;
 	}
 
 	/**
@@ -257,8 +328,8 @@ public class InfoflowConfiguration {
 	 * @param useThisChainReduction True if access paths including outer objects
 	 * shall be reduced, otherwise false
 	 */
-	public static void setUseThisChainReduction(boolean useThisChainReduction) {
-		InfoflowConfiguration.useThisChainReduction = useThisChainReduction;
+	public void setUseThisChainReduction(boolean useThisChainReduction) {
+		this.useThisChainReduction = useThisChainReduction;
 	}
 
 	/**
@@ -484,6 +555,28 @@ public class InfoflowConfiguration {
 	}
 	
 	/**
+	 * Sets whether classes that are declared library classes in Soot shall be
+	 * excluded from the data flow analysis, i.e., no flows shall be tracked
+	 * through them
+	 * @param excludeSootLibraryClasses True to exclude Soot library classes from
+	 * the data flow analysis, otherwise false
+	 */
+	public void setExcludeSootLibraryClasses(boolean excludeSootLibraryClasses) {
+		this.excludeSootLibraryClasses = excludeSootLibraryClasses;
+	}
+	
+	/**
+	 * Gets whether classes that are declared library classes in Soot shall be
+	 * excluded from the data flow analysis, i.e., no flows shall be tracked
+	 * through them
+	 * @return True to exclude Soot library classes from the data flow analysis,
+	 * otherwise false
+	 */
+	public boolean getExcludeSootLibraryClasses() {
+		return this.excludeSootLibraryClasses;
+	}
+	
+	/**
 	 * Sets the maximum number of threads to be used by the solver. A value of -1
 	 * indicates an unlimited number of threads, i.e., there will be as many threads
 	 * as there are CPU cores on the machine.
@@ -546,6 +639,22 @@ public class InfoflowConfiguration {
 	}
 	
 	/**
+	 * Gets the data flow solver to be used for the taint analysis
+	 * @return The data flow solver to be used for the taint analysis
+	 */
+	public DataFlowSolver getDataFlowSolver() {
+		return this.dataFlowSolver;
+	}
+	
+	/**
+	 * Sets the data flow solver to be used for the taint analysis
+	 * @param solver The data flow solver to be used for the taint analysis
+	 */
+	public void setDataFlowSolver(DataFlowSolver solver) {
+		this.dataFlowSolver = solver;
+	}
+
+	/**
 	 * Gets whether the discovered sources and sinks shall be logged
 	 * @return True if the discovered sources and sinks shall be logged,
 	 * otherwise false
@@ -561,6 +670,45 @@ public class InfoflowConfiguration {
 	 */
 	public void setLogSourcesAndSinks(boolean logSourcesAndSinks) {
 		this.logSourcesAndSinks = logSourcesAndSinks;
+	}
+	
+	/**
+	 * Gets whether reflective method calls shall be supported
+	 * @return True if reflective method calls shall be supported, otherwise false
+	 */
+	public boolean getEnableReflection() {
+		return this.enableReflection;
+	}
+	
+	/**
+	 * Sets whether reflective method calls shall be supported
+	 * @param enableReflections True if reflective method calls shall be supported,
+	 * otherwise false
+	 */
+	public void setEnableRefection(boolean enableReflections) {
+		this.enableReflection = enableReflections;
+	}
+	
+	/**
+	 * Gets whether FlowDroid shall perform sequential path reconstruction instead
+	 * of running all reconstruction tasks concurrently. This can reduce the memory
+	 * consumption, but will likely take longer when memory is not an issue.
+	 * @return True if the path reconstruction tasks shall be run sequentially,
+	 * false for running them in parallel
+	 */
+	public boolean getSequentialPathProcessing() {
+		return this.sequentialPathProcessing;
+	}
+	
+	/**
+	 * Sets whether FlowDroid shall perform sequential path reconstruction instead
+	 * of running all reconstruction tasks concurrently. This can reduce the memory
+	 * consumption, but will likely take longer when memory is not an issue.
+	 * @param sequentialPathProcessing True if the path reconstruction tasks shall
+	 * be run sequentially, false for running them in parallel
+	 */
+	public void setSequentialPathProcessing(boolean sequentialPathProcessing) {
+		this.sequentialPathProcessing = sequentialPathProcessing;
 	}
 
 	/**
@@ -601,6 +749,158 @@ public class InfoflowConfiguration {
 	public void setIncrementalResultReporting(boolean incrementalReporting) {
 		this.incrementalResultReporting = incrementalReporting;
 	}
+	
+	/**
+	 * Gets the timeout in seconds after which the taint analysis shall be
+	 * aborted. This timeout only applies to the taint analysis itself, not
+	 * to the path reconstruction that happens afterwards.
+	 * @return The timeout in seconds after which the analysis shall be aborted
+	 */
+	public long getDataFlowTimeout() {
+		return this.dataFlowTimeout;
+	}
+	
+	/**
+	 * Sets the timeout in seconds after which the analysis shall be aborted.
+	 * This timeout only applies to the taint analysis itself, not to the path
+	 * reconstruction that happens afterwards.
+	 * @param timeout The timeout in seconds after which the analysis shall be
+	 * aborted
+	 */	
+	public void setDataFlowTimeout(long timeout) {
+		this.dataFlowTimeout = timeout;
+	}
+	
+	/**
+	 * Gets the timeout in seconds after which path reconstruction shall be
+	 * aborted. This timeout is applied after the data flow analysis has been
+	 * completed. If incremental path reconstruction is used, it is applied for
+	 * the remaining path reconstruction after the data flow analysis has been
+	 * completed. If incremental path reconstruction is not used, the timeout
+	 * is applied to the complete path reconstruction phase, because it does not
+	 * overlap with the data flow analysis phase in this case.
+	 * @return The timeout in seconds after which the path reconstruction shall
+	 * be aborted
+	 */
+	public long getPathReconstructionTimeout() {
+		return this.pathReconstructionTimeout;
+	}
+
+	/**
+	 * Sets the timeout in seconds after which path reconstruction shall be
+	 * aborted. This timeout is applied after the data flow analysis has been
+	 * completed. If incremental path reconstruction is used, it is applied for
+	 * the remaining path reconstruction after the data flow analysis has been
+	 * completed. If incremental path reconstruction is not used, the timeout
+	 * is applied to the complete path reconstruction phase, because it does not
+	 * overlap with the data flow analysis phase in this case.
+	 * @param timeout The timeout in seconds after which the path reconstruction
+	 * shall be aborted
+	 */
+	public void setPathReconstructionTimeout(long timeout) {
+		this.pathReconstructionTimeout = timeout;
+	}
+
+	/**
+	 * Gets whether FlowDroid shall exclude the passed values to sources and sinks 
+	 * from the xml output from the analysis
+	 *  @return True if FlowDroid shall exclude the passed values to sources and 
+	 *  sinks, otherwise false
+	 */
+	public boolean getNoPassedValues(){
+		return this.noPassedValues;
+	}
+	
+	/**
+	 * Sets whether to exclude the call graph fraction from the entry points to the source
+	 * in the xml output
+	 * @param noCallGraphFraction True if the call graph fraction from the entry points to
+	 * the source shall be excluded from the xml output 
+	 */
+	public void setNoCallGraphFraction(boolean noCallGraphFraction){
+		this.noCallGraphFraction = noCallGraphFraction;
+	}
+	
+	/**
+	 * Gets whether to exclude the call graph fraction from the entry points to the source
+	 * in the xml output
+	 * @return True if the call graph fraction from the entry points to the source shall
+	 * be excluded from the xml output 
+	 */
+	public boolean getNoCallGraphFraction(){
+		return noCallGraphFraction;
+	}
+	
+	/**
+	 * Specifies the maximum number of callers that shall be considered per node
+	 * when writing out the call graph fraction from the entry point to the source.
+	 * @param maxCallers The maximum number of callers to consider when writing
+	 * out the call graph fraction between entry point and source
+	 */
+	public void setMaxCallersInOutputFile(int maxCallers) {
+		this.maxCallersInOutputFile = maxCallers;
+	}
+	
+	/**
+	 * Gets the maximum number of callers that shall be considered per node when
+	 * writing out the call graph fraction from the entry point to the source.
+	 * @return The maximum number of callers to consider when writing out the call
+	 * graph fraction between entry point and source
+	 */
+	public int getMaxCallersInOutputFile() {
+		return this.maxCallersInOutputFile;
+	}
+	
+	/**
+	 * Sets the timeout in seconds for the result serialization process.
+	 * Writing out the results is aborted if it takes longer than the given
+	 * amount of time.
+	 * @param timeout The maximum time for writing out the results in seconds
+	 */
+	public void setResultSerializationTimeout(long timeout) {
+		this.resultSerializationTimeout = timeout;
+	}
+	
+	/**
+	 * Gets the timeout for the result serialization process in seconds. Writing
+	 * out the results is aborted if it takes longer than the given amount of
+	 * time.
+	 * @result The maximum time for writing out the results in seconds
+	 */
+	public long getResultSerializationTimeout() {
+		return this.resultSerializationTimeout;
+	}
+	
+	/**
+	 * Sets the option for exclusion of the passed values to sources and sinks 
+	 * in the xml output 
+	 * @param noPassedValues the boolean value whether passed values should 
+	 * be excluded from the xml output 
+	 */
+	public void setNoPassedValues (boolean noPassedValues){
+		this.noPassedValues=noPassedValues;
+	}
+	
+	/**
+	 * Gets whether one source shall be analyzed at a time instead of all
+	 * sources together
+	 * @return True if the analysis shall be run with one analysis at a time,
+	 * false if the analysis shall be run with all sources together
+	 */
+	public boolean getOneSourceAtATime() {
+		return this.oneSourceAtATime;
+	}
+	
+	/**
+	 * Sets whether one source shall be analyzed at a time instead of all
+	 * sources together
+	 * @param oneSourceAtATime True if the analysis shall be run with one
+	 * analysis at a time, false if the analysis shall be run with all sources
+	 * together
+	 */
+	public void setOneSourceAtATime(boolean oneSourceAtATime) {
+		this.oneSourceAtATime = oneSourceAtATime;
+	}
 
 	/**
 	 * Prints a summary of this data flow configuration
@@ -628,6 +928,9 @@ public class InfoflowConfiguration {
 		else
 			logger.info("Recursive access path shortening is NOT enabled");
 		logger.info("Taint analysis enabled: " + taintAnalysisEnabled);
+		if (oneSourceAtATime)
+			logger.info("Running with one source at a time");
+		logger.info("Using alias algorithm " + aliasingAlgorithm);
 	}
 	
 }

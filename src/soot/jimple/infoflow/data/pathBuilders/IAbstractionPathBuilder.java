@@ -3,6 +3,7 @@ package soot.jimple.infoflow.data.pathBuilders;
 import java.util.Set;
 
 import soot.jimple.infoflow.data.AbstractionAtSink;
+import soot.jimple.infoflow.memory.IMemoryBoundedSolver;
 import soot.jimple.infoflow.results.InfoflowResults;
 import soot.jimple.infoflow.results.ResultSinkInfo;
 import soot.jimple.infoflow.results.ResultSourceInfo;
@@ -13,7 +14,7 @@ import soot.jimple.infoflow.results.ResultSourceInfo;
  *  
  * @author Steven Arzt
  */
-public interface IAbstractionPathBuilder {
+public interface IAbstractionPathBuilder extends IMemoryBoundedSolver {
 	
 	/**
 	 * Callback interface that is triggered whenever a path builder has

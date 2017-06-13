@@ -15,14 +15,18 @@ import java.util.List;
 
 import soot.SootMethod;
 import soot.Type;
+
 /**
- * data container which stores the string representation of a SootMethod and its corresponding class
+ * Data container which stores the string representation of a SootMethod and its corresponding class
  */
 public class SootMethodAndClass {
 	private final String methodName;
 	private final String className;
 	private final String returnType;
 	private final List<String> parameters;
+
+	private String subSignature = null;
+	private String signature = null;
 	private int hashCode = 0;
 	
 	public SootMethodAndClass
@@ -69,26 +73,52 @@ public class SootMethodAndClass {
 	}
 	
 	public String getSubSignature() {
-		String s = (this.returnType.length() == 0 ? "" : this.returnType + " ") + this.methodName + "(";
+		if (subSignature != null)
+			return subSignature;
+		
+		StringBuilder sb = new StringBuilder(10 + this.returnType.length() + this.methodName.length() + (this.parameters.size() * 30));
+		if (!this.returnType.isEmpty()) {
+			sb.append(this.returnType);
+			sb.append(" ");
+		}
+		sb.append(this.methodName);
+		sb.append("(");
+		
 		for (int i = 0; i < this.parameters.size(); i++) {
 			if (i > 0)
-				s += ",";
-			s += this.parameters.get(i).trim();
+				sb.append(",");
+			sb.append(this.parameters.get(i).trim());
 		}
-		s += ")";
-		return s;
+		sb.append(")");
+		this.subSignature = sb.toString();
+		
+		return this.subSignature;
 	}
 
 	public String getSignature() {
-		String s = "<" + this.className + ": " + (this.returnType.length() == 0 ? "" : this.returnType + " ")
-				+ this.methodName + "(";
+		if (signature != null)
+			return signature;
+		
+		StringBuilder sb = new StringBuilder(10 + this.className.length() + this.returnType.length() + this.methodName.length() + (this.parameters.size() * 30));
+		sb.append("<");
+		sb.append(this.className);
+		sb.append(": ");
+		if (!this.returnType.isEmpty()) {
+			sb.append(this.returnType);
+			sb.append(" ");
+		}
+		sb.append(this.methodName);
+		sb.append("(");
+		
 		for (int i = 0; i < this.parameters.size(); i++) {
 			if (i > 0)
-				s += ",";
-			s += this.parameters.get(i).trim();
+				sb.append(",");
+			sb.append(this.parameters.get(i).trim());
 		}
-		s += ")>";
-		return s;
+		sb.append(")>");
+		this.signature = sb.toString();
+		
+		return this.signature;
 	}
 
 	@Override
@@ -124,7 +154,8 @@ public class SootMethodAndClass {
 		sb.append(": ");
 		sb.append(returnType);
 		sb.append(" ");
-		sb.append("methodName(");
+		sb.append(methodName);
+		sb.append("(");
 		boolean isFirst = true;
 		for (String param : parameters) {
 			if (!isFirst)

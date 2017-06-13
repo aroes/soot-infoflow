@@ -1,6 +1,8 @@
 package soot.jimple.infoflow;
 
 import soot.FastHierarchy;
+import soot.jimple.infoflow.data.AccessPathFactory;
+import soot.jimple.infoflow.memory.IMemoryBoundedSolver;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 import soot.jimple.infoflow.source.ISourceSinkManager;
@@ -23,13 +25,15 @@ public class InfoflowManager {
 	private final ITaintPropagationWrapper taintWrapper;
 	private final TypeUtils typeUtils;
 	private final FastHierarchy hierarchy;
+	private final AccessPathFactory accessPathFactory;
 	
 	InfoflowManager(InfoflowConfiguration config,
 			IInfoflowSolver forwardSolver,
 			IInfoflowCFG icfg,
 			ISourceSinkManager sourceSinkManager,
 			ITaintPropagationWrapper taintWrapper,
-			FastHierarchy hierarchy) {
+			FastHierarchy hierarchy,
+			AccessPathFactory accessPathFactory) {
 		this.config = config;
 		this.forwardSolver = forwardSolver;
 		this.icfg = icfg;
@@ -37,6 +41,7 @@ public class InfoflowManager {
 		this.taintWrapper = taintWrapper;
 		this.typeUtils = new TypeUtils(this);
 		this.hierarchy = hierarchy;
+		this.accessPathFactory = accessPathFactory;
 	}
 	
 	/**
@@ -103,6 +108,24 @@ public class InfoflowManager {
 	 */
 	public FastHierarchy getHierarchy() {
 		return hierarchy;
+	}
+	
+	/**
+	 * Gets the factory object for creating new access paths
+	 * @return The factory object for creating new access paths
+	 */
+	public AccessPathFactory getAccessPathFactory() {
+		return this.accessPathFactory;
+	}
+
+	/**
+	 * Checks whether the analysis has been aborted
+	 * @return True if the analysis has been aborted, otherwise false
+	 */
+	public boolean isAnalysisAborted() {
+		if (forwardSolver instanceof IMemoryBoundedSolver)
+			return ((IMemoryBoundedSolver) forwardSolver).isKilled();
+		return false;
 	}
 	
 }

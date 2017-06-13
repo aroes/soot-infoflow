@@ -27,7 +27,7 @@ import soot.Unit;
  * @author Eric Bodden
  * @author Steven Arzt
  */
-public class WeakPathEdge<N,D> {
+class WeakPathEdge<N,D> {
 
 	protected final WeakReference<N> target;
 	protected final WeakReference<D> dSource, dTarget;

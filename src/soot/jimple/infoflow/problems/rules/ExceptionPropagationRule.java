@@ -11,6 +11,7 @@ import soot.jimple.ThrowStmt;
 import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.aliasing.Aliasing;
 import soot.jimple.infoflow.data.Abstraction;
+import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.problems.TaintPropagationResults;
 import soot.jimple.infoflow.util.ByReferenceBoolean;
 
@@ -41,7 +42,10 @@ public class ExceptionPropagationRule extends AbstractTaintPropagationRule {
 			DefinitionStmt def = (DefinitionStmt) stmt;
 			if (def.getRightOp() instanceof CaughtExceptionRef) {
 				killSource.value = true;
-				return Collections.singleton(source.deriveNewAbstractionOnCatch(def.getLeftOp()));
+				AccessPath ap = getManager().getAccessPathFactory().copyWithNewValue(
+						source.getAccessPath(), def.getLeftOp());
+				return ap == null ? null : Collections.singleton(
+						source.deriveNewAbstractionOnCatch(ap));
 			}
 		}
 		

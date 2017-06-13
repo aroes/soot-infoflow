@@ -4,16 +4,20 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 
+
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
+
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.results.InfoflowResults;
 import soot.jimple.infoflow.results.ResultSinkInfo;
 import soot.jimple.infoflow.results.ResultSourceInfo;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
+
 
 /**
  * Class for serializing FlowDroid results to XML
@@ -25,14 +29,16 @@ public class InfoflowResultsSerializer {
 	
 	public static final int FILE_FORMAT_VERSION = 100;
 	
-	private boolean serializeTaintPath = false;
-	private final IInfoflowCFG icfg;
+	protected boolean serializeTaintPath = true;
+	protected IInfoflowCFG icfg;
+	protected InfoflowConfiguration config;
+	protected long startTime = 0;
 	
 	/**
 	 * Creates a new instance of the InfoflowResultsSerializer class
 	 */
 	public InfoflowResultsSerializer() {
-		this(null);	
+		this(null, null);	
 	}
 	
 	/**
@@ -40,8 +46,10 @@ public class InfoflowResultsSerializer {
 	 * @param cfg The control flow graph to be used for obtaining additional
 	 * information such as the methods containing source or sink statements
 	 */
-	public InfoflowResultsSerializer(IInfoflowCFG cfg) {
+	public InfoflowResultsSerializer(IInfoflowCFG cfg,
+			InfoflowConfiguration config) {
 		this.icfg = cfg;
+		this.config = config;
 	}
 	
 	/**
@@ -53,11 +61,13 @@ public class InfoflowResultsSerializer {
 	 */
 	public void serialize(InfoflowResults results, String fileName)
 			throws FileNotFoundException, XMLStreamException {
+		this.startTime = System.currentTimeMillis();
+		
 		OutputStream out = new FileOutputStream(fileName);
 		XMLOutputFactory factory = XMLOutputFactory.newInstance();
-		XMLStreamWriter writer = factory.createXMLStreamWriter(out);
+		XMLStreamWriter writer = factory.createXMLStreamWriter(out, "UTF-8");
 		
-		writer.writeStartDocument();
+		writer.writeStartDocument("UTF-8", "1.0");
 		writer.writeStartElement(XmlConstants.Tags.root);
 		writer.writeAttribute(XmlConstants.Attributes.fileFormatVersion,
 				FILE_FORMAT_VERSION + "");
@@ -76,7 +86,7 @@ public class InfoflowResultsSerializer {
 	 * @param writer The stream writer into which to write the results
 	 * @throws XMLStreamException Thrown if the XML data cannot be written
 	 */
-	private void writeDataFlows(InfoflowResults results,
+	protected void writeDataFlows(InfoflowResults results,
 			XMLStreamWriter writer) throws XMLStreamException {
 		for (ResultSinkInfo sink : results.getResults().keySet()) {
 			writer.writeStartElement(XmlConstants.Tags.result);
@@ -93,6 +103,8 @@ public class InfoflowResultsSerializer {
 		
 	}
 	
+
+	
 	/**
 	 * Writes the given source information into the given XML stream writer
 	 * @param source The source information to write out
@@ -107,6 +119,8 @@ public class InfoflowResultsSerializer {
 		if (icfg != null)
 			writer.writeAttribute(XmlConstants.Attributes.method,
 					icfg.getMethodOf(source.getSource()).getSignature());
+		
+		
 		writeAccessPath(source.getAccessPath(), writer);
 		
 		if (serializeTaintPath && source.getPath() != null) {
@@ -129,6 +143,7 @@ public class InfoflowResultsSerializer {
 			writer.writeEndElement();			
 		}
 		
+		
 		writer.writeEndElement();
 	}
 
@@ -150,13 +165,14 @@ public class InfoflowResultsSerializer {
 		writer.writeEndElement();
 	}
 	
+	
 	/**
 	 * Writes the given access path int othe given XML stream writer
 	 * @param accessPath The access path to write out
 	 * @param writer The stream writer into which to write the data
 	 * @throws XMLStreamException Thrown if the XML data cannot be written
 	 */
-	private void writeAccessPath(AccessPath accessPath, XMLStreamWriter writer)
+	protected void writeAccessPath(AccessPath accessPath, XMLStreamWriter writer)
 			throws XMLStreamException {
 		writer.writeStartElement(XmlConstants.Tags.accessPath);
 		
@@ -196,5 +212,7 @@ public class InfoflowResultsSerializer {
 	public void setSerializeTaintPath(boolean serialize) {
 		this.serializeTaintPath = serialize;
 	}
+	
+	
 
 }

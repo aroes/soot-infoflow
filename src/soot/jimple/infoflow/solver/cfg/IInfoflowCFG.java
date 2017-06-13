@@ -176,4 +176,26 @@ public interface IInfoflowCFG extends BiDiInterproceduralCFG<Unit,SootMethod> {
 	 */
 	public boolean isExecutorExecute(InvokeExpr ie, SootMethod dest);
 	
+	/**
+	 * Checks whether the given call site is a reflective method call
+	 * @param u The call site to check
+	 * @return True if the given call site contains a reflective method call,
+	 * otherwise false
+	 */
+	public boolean isReflectiveCallSite(Unit u);
+	
+	/**
+	 * Checks whether the given call site is a reflective method call
+	 * @param iexpr The call site to check
+	 * @return True if the given call site contains a reflective method call,
+	 * otherwise false
+	 */
+	public boolean isReflectiveCallSite(InvokeExpr iexpr);
+	
+	/**
+	 * Clears all caches and temporary data from memory. This method has no
+	 * effect on the functional behavior of the class.
+	 */
+	public void purge();
+
 }

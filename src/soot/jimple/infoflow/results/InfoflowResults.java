@@ -40,6 +40,18 @@ public class InfoflowResults {
 	private final MultiMap<ResultSinkInfo, ResultSourceInfo> results =
 			new ConcurrentHashMultiMap<ResultSinkInfo, ResultSourceInfo>();
 	
+	// here we keep the names of all exceptions that occurred during the analysis
+	// in order to serialize them
+	private List<String> exceptions = new ArrayList<String>();
+	
+	public List<String> getExceptions() {
+		return exceptions;
+	}
+	
+	public void addException (String ex){
+		exceptions.add(ex);
+	}
+	
 	public InfoflowResults() {
 		
 	}

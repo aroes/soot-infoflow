@@ -60,5 +60,28 @@ public class BasicTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(i);		
 	}
+	
+	public void arithmeticLoopTest1() {
+		int i = TelephonyManager.getIMEI();
+		while (i < 100)
+			i = increment(i);
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(i);
+	}
+
+	public void arithmeticLoopTest2() {
+		int j = 0;
+		int i = TelephonyManager.getIMEI();
+		while (i < 100) {
+			i = j;
+			j = increment(i);
+		}
+		ConnectionManager cm = new ConnectionManager();
+		cm.publish(i);
+	}
+
+	private int increment(int i) {
+		return i+1;
+	}
 
 }

@@ -1,10 +1,13 @@
 package soot.jimple.infoflow.aliasing;
 
-import heros.solver.IDESolver;
-
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Set;
 
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+
+import heros.solver.IDESolver;
 import soot.ArrayType;
 import soot.Local;
 import soot.PrimType;
@@ -20,18 +23,14 @@ import soot.jimple.FieldRef;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
-import soot.jimple.infoflow.data.AccessPathFactory;
 import soot.jimple.infoflow.data.AccessPathFactory.BasePair;
-import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 import soot.jimple.infoflow.util.TypeUtils;
 import soot.jimple.toolkits.pointer.LocalMustAliasAnalysis;
 import soot.jimple.toolkits.pointer.StrongLocalMustAliasAnalysis;
 import soot.toolkits.graph.UnitGraph;
-
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 
 /**
  * Helper class for aliasing operations
@@ -42,21 +41,23 @@ public class Aliasing {
 	
 	private final IAliasingStrategy aliasingStrategy;
 	private final IAliasingStrategy implicitFlowAliasingStrategy;
-	private final IInfoflowCFG cfg;
+	private final InfoflowManager manager;
+	
+	private final Set<SootMethod> excludedFromMustAliasAnalysis = new HashSet<>();
 	
 	protected final LoadingCache<SootMethod,LocalMustAliasAnalysis> strongAliasAnalysis =
 			IDESolver.DEFAULT_CACHE_BUILDER.build( new CacheLoader<SootMethod,LocalMustAliasAnalysis>() {
 				@Override
 				public LocalMustAliasAnalysis load(SootMethod method) throws Exception {
 					return new StrongLocalMustAliasAnalysis
-							((UnitGraph) cfg.getOrCreateUnitGraph(method));
+							((UnitGraph) manager.getICFG().getOrCreateUnitGraph(method));
 				}
 			});
 	
-	public Aliasing(IAliasingStrategy aliasingStrategy, IInfoflowCFG cfg) {
+	public Aliasing(IAliasingStrategy aliasingStrategy, InfoflowManager manager) {
 		this.aliasingStrategy = aliasingStrategy;
-		this.implicitFlowAliasingStrategy = new ImplicitFlowAliasStrategy(cfg);
-		this.cfg = cfg;
+		this.implicitFlowAliasingStrategy = new ImplicitFlowAliasStrategy(manager);
+		this.manager = manager;
 	}
 	
 	/**
@@ -97,51 +98,6 @@ public class Aliasing {
 	}
 	
 	/**
-	 * Gets whether an access path can point to the same runtime object as another
-	 * or to an object reachable through the other
-	 * @param taintedAP The access path that is tainted
-	 * @param referencedAP The access path that is accessed
-	 * @return The access path that actually matched if the access paths alias.
-	 * In the simplest case, this is the given tainted access path.
-	 * When using recursive access paths, it can however also be a base
-	 * expansion. If the given access paths do not alias, null is returned.
-	 */
-	public AccessPath mayAlias(AccessPath taintedAP, AccessPath referencedAP) {
-		// Check whether the access paths are directly equal
-		if (taintedAP.equals(referencedAP))
-			return taintedAP;
-		
-		// Ask an interactive aliasing strategy if we have one
-		// TODO
-		/*
-		if (aliasingStrategy.isInteractive())
-			return aliasingStrategy.mayAlias(taintedAP, referencedAP);
-		*/
-		
-		if (taintedAP.isInstanceFieldRef() || taintedAP.isLocal()) {
-			// For instance field references, the base must match
-			if (taintedAP.getPlainValue() != referencedAP.getPlainValue())
-				return null;
-			
-			// Shortcut: If we have no fields and the base matches, we're done
-			if (referencedAP.getFieldCount() == 0)
-				return taintedAP;
-			
-			// If the referenced AP is not an instance field reference, we're done
-			if (!referencedAP.isInstanceFieldRef())
-				return null;
-		}
-		
-		// If one reference is static, the other one must be static as well
-		if (taintedAP.isStaticFieldRef())
-			if (!referencedAP.isStaticFieldRef())
-				return null;
-		
-		// Match the bases
-		return getReferencedAPBase(taintedAP, referencedAP.getFields());
-	}
-	
-	/**
 	 * Matches the given access path against the given array of fields
 	 * @param taintedAP The tainted access paths
 	 * @param referencedFields The array of referenced access paths
@@ -151,8 +107,8 @@ public class Aliasing {
 	private AccessPath getReferencedAPBase(AccessPath taintedAP,
 			SootField[] referencedFields) {
 		final Collection<BasePair> bases = taintedAP.isStaticFieldRef()
-				? AccessPathFactory.v().getBaseForType(taintedAP.getFirstFieldType())
-						: AccessPathFactory.v().getBaseForType(taintedAP.getBaseType());
+				? manager.getAccessPathFactory().getBaseForType(taintedAP.getFirstFieldType())
+						: manager.getAccessPathFactory().getBaseForType(taintedAP.getBaseType());
 		
 		int fieldIdx = 0;
 		while (fieldIdx < referencedFields.length) {
@@ -189,7 +145,7 @@ public class Aliasing {
 							System.arraycopy(taintedAP.getFieldTypes(), fieldIdx, cutFieldTypes,
 									fieldIdx + base.getTypes().length, taintedAP.getFieldCount() - fieldIdx);
 
-							return AccessPathFactory.v().createAccessPath(taintedAP.getPlainValue(),
+							return manager.getAccessPathFactory().createAccessPath(taintedAP.getPlainValue(),
 									cutFields, taintedAP.getBaseType(), cutFieldTypes,
 									taintedAP.getTaintSubFields(), false, false, taintedAP.getArrayTaintType());
 						}
@@ -228,8 +184,8 @@ public class Aliasing {
 		// If we have an interactive aliasing algorithm, we check that as well
 		if (aliasingStrategy.isInteractive())
 			return aliasingStrategy.mayAlias(
-					AccessPathFactory.v().createAccessPath(val1, false),
-					AccessPathFactory.v().createAccessPath(val2, false));
+					manager.getAccessPathFactory().createAccessPath(val1, false),
+					manager.getAccessPathFactory().createAccessPath(val2, false));
 		
 		return false;		
 	}
@@ -254,22 +210,29 @@ public class Aliasing {
 		if (val instanceof Constant)
 			return null;
 		
-		// For instance field references, the base must match
-		if (val instanceof Local)
-			if (ap.getPlainValue() != val)
+		// If we have an interactive aliasing algorithm, we check that as well
+		if (aliasingStrategy.isInteractive()) {
+			if (!aliasingStrategy.mayAlias(ap, manager.getAccessPathFactory().createAccessPath(val, true)))
 				return null;
-		
-		// For array references, the base must match
-		if (val instanceof ArrayRef)
-			if (ap.getPlainValue() != ((ArrayRef) val).getBase())
-				return null;
-		
-		// For instance field references, the base local must match
-		if (val instanceof InstanceFieldRef) {
-			if (!ap.isLocal() && !ap.isInstanceFieldRef())
-				return null;
-			if (((InstanceFieldRef) val).getBase() != ap.getPlainValue())
-				return null;
+		}
+		else {
+			// For instance field references, the base must match
+			if (val instanceof Local)
+				if (ap.getPlainValue() != val)
+					return null;
+			
+			// For array references, the base must match
+			if (val instanceof ArrayRef)
+				if (ap.getPlainValue() != ((ArrayRef) val).getBase())
+					return null;
+			
+			// For instance field references, the base local must match
+			if (val instanceof InstanceFieldRef) {
+				if (!ap.isLocal() && !ap.isInstanceFieldRef())
+					return null;
+				if (((InstanceFieldRef) val).getBase() != ap.getPlainValue())
+					return null;
+			}
 		}
 		
 		// If the value is a static field reference, the access path must be
@@ -277,12 +240,6 @@ public class Aliasing {
 		if (val instanceof StaticFieldRef)
 			if (!ap.isStaticFieldRef())
 				return null;
-						
-		// If we have an interactive aliasing algorithm, we check that as well
-		/*
-		if (aliasingStrategy.isInteractive())
-			return aliasingStrategy.mayAlias(new AccessPath(val1, false), new AccessPath(val2, false));
-		*/
 		
 		// Get the field set from the value
 		SootField[] fields = val instanceof FieldRef
@@ -315,8 +272,19 @@ public class Aliasing {
 			return true;
 		if (!(val1.getType() instanceof RefLikeType) || !(val2.getType() instanceof RefLikeType))
 			return false;
-
-		LocalMustAliasAnalysis lmaa = strongAliasAnalysis.getUnchecked(cfg.getMethodOf(position));
+		
+		// We do not query aliases for certain excluded methods
+		SootMethod method = manager.getICFG().getMethodOf(position);
+		if (excludedFromMustAliasAnalysis.contains(method))
+			return false;
+		
+		// The must-alias analysis can take time and memory. We therefore first
+		// check whether the analysis was aborted.
+		if (manager.isAnalysisAborted())
+			return false;
+		
+		// Query the must-alias analysis
+		LocalMustAliasAnalysis lmaa = strongAliasAnalysis.getUnchecked(method);
 		return lmaa.mustAlias(val1, position, val2, position);
 	}
 	
@@ -358,6 +326,20 @@ public class Aliasing {
 		
 		return val instanceof FieldRef
 				|| (val instanceof Local && ((Local)val).getType() instanceof ArrayType);
+	}
+	
+	/**
+	 * Gets whether the given access path can have aliases
+	 * @param ap The access path to check
+	 * @return True if the given accesds path can have aliases, otherwise false
+	 */
+	public static boolean canHaveAliases(AccessPath ap) {
+		// String cannot have aliases
+		if (TypeUtils.isStringType(ap.getBaseType())
+				&& !ap.getCanHaveImmutableAliases())
+			return false;
+		
+		return true;
 	}
 	
 	/**
@@ -406,6 +388,14 @@ public class Aliasing {
 			return source.getAccessPath().getFieldCount() == 1;
 		
 		throw new RuntimeException("Unexpected left side");
+	}
+	
+	/**
+	 * Adds a new method to be excluded from the must-alias analysis
+	 * @param method The method to be excluded
+	 */
+	public void excludeMethodFromMustAlias(SootMethod method) {
+		this.excludedFromMustAliasAnalysis.add(method);
 	}
 
 }

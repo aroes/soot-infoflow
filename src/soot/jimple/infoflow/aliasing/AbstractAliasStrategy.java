@@ -1,8 +1,7 @@
 package soot.jimple.infoflow.aliasing;
 
 import soot.SootMethod;
-import soot.jimple.infoflow.solver.IInfoflowSolver;
-import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
+import soot.jimple.infoflow.InfoflowManager;
 
 /**
  * Common base class for alias strategies
@@ -11,24 +10,10 @@ import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
  */
 public abstract class AbstractAliasStrategy implements IAliasingStrategy {
 
-	private final IInfoflowCFG cfg;
-	private IInfoflowSolver fSolver;
+	protected final InfoflowManager manager;
 	
-	public AbstractAliasStrategy(IInfoflowCFG cfg) {
-		this.cfg = cfg;
-	}
-	
-	public IInfoflowCFG interproceduralCFG() {
-		return this.cfg;
-	}
-	
-	@Override
-	public void setForwardSolver(IInfoflowSolver fSolver) {
-		this.fSolver = fSolver;
-	}
-	
-	protected IInfoflowSolver getForwardSolver() {
-		return this.fSolver;
+	public AbstractAliasStrategy(InfoflowManager manager) {
+		this.manager = manager;
 	}
 	
 	@Override

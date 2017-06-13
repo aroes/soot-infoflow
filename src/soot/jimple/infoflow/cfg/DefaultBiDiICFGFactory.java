@@ -59,7 +59,7 @@ public class DefaultBiDiICFGFactory implements BiDirICFGFactory {
     	// If we are running on Android, we need to use a different throw analysis
     	BiDiInterproceduralCFG<Unit, SootMethod> baseCFG = null;
     	if (isAndroid) {
-    		baseCFG = new JimpleBasedInterproceduralCFG(enableExceptions) {
+    		baseCFG = new JimpleBasedInterproceduralCFG(enableExceptions, true) {
     			
     			protected DirectedGraph<Unit> makeGraph(Body body) {
     				return enableExceptions
@@ -70,7 +70,7 @@ public class DefaultBiDiICFGFactory implements BiDirICFGFactory {
     		};
     	}
     	else
-    		baseCFG = new JimpleBasedInterproceduralCFG(enableExceptions);
+    		baseCFG = new JimpleBasedInterproceduralCFG(enableExceptions, true);
     	
         return new InfoflowCFG(baseCFG);
     }

@@ -7,9 +7,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import soot.Unit;
 import soot.jimple.ReturnStmt;
 import soot.jimple.ReturnVoidStmt;
-import soot.jimple.infoflow.solver.IMemoryManager;
+import soot.jimple.infoflow.solver.memory.IMemoryManager;
 
 /**
  * Memory manager implementation for FlowDroid
@@ -17,7 +18,7 @@ import soot.jimple.infoflow.solver.IMemoryManager;
  * @author Steven Arzt
  *
  */
-public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
+public class FlowDroidMemoryManager implements IMemoryManager<Abstraction, Unit> {
 	
     private final Logger logger = LoggerFactory.getLogger(getClass());
     
@@ -181,11 +182,19 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 		if (erasePathData != PathDataErasureMode.EraseNothing) {
 			Abstraction curAbs = obj;
 			while (curAbs != null) {
-				boolean doErase = erasePathData == PathDataErasureMode.EraseAll;
-				if (erasePathData == PathDataErasureMode.KeepOnlyContextData
-						&& curAbs.getCorrespondingCallSite() == curAbs.getCurrentStmt())
-					doErase = true;
-				if (erasePathData == PathDataErasureMode.KeepOnlyContextData
+				// Unconditional erasure
+				if (erasePathData == PathDataErasureMode.EraseAll) {
+					curAbs.setCurrentStmt(null);
+					curAbs.setCorrespondingCallSite(null);
+				}
+				// Call-to-return edges
+				else if (erasePathData == PathDataErasureMode.KeepOnlyContextData
+						&& curAbs.getCorrespondingCallSite() == curAbs.getCurrentStmt()) {
+					curAbs.setCurrentStmt(null);
+					curAbs.setCorrespondingCallSite(null);
+				}
+				// Normal statements
+				else if (erasePathData == PathDataErasureMode.KeepOnlyContextData
 						&& curAbs.getCorrespondingCallSite() == null
 						&& curAbs.getCurrentStmt() != null) {
 					// Lock the abstraction and check again. This is to make sure that no
@@ -197,14 +206,9 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 								&& !curAbs.getCurrentStmt().containsInvokeExpr()
 								&& !(curAbs.getCurrentStmt() instanceof ReturnStmt)
 								&& !(curAbs.getCurrentStmt() instanceof ReturnVoidStmt)) {
-							doErase = true;
+							curAbs.setCurrentStmt(null);
+							curAbs.setCorrespondingCallSite(null);
 						}
-					}
-				}
-				synchronized (curAbs) {
-					if (doErase) {
-						curAbs.setCurrentStmt(null);
-						curAbs.setCorrespondingCallSite(null);
 					}
 				}
 				curAbs = curAbs.getPredecessor();
@@ -272,6 +276,11 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction> {
 	 */
 	public void setUseAbstractionCache(boolean useAbstractionCache) {
 		this.useAbstractionCache = useAbstractionCache;
+	}
+
+	@Override
+	public boolean isEssentialJoinPoint(Abstraction abs, Unit relatedCallSite) {
+		return relatedCallSite != null && erasePathData != PathDataErasureMode.EraseAll;
 	}
 
 }

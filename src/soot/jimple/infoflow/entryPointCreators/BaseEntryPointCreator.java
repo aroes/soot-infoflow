@@ -11,7 +11,9 @@
 package soot.jimple.infoflow.entryPointCreators;
 
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -30,6 +32,7 @@ import soot.ByteType;
 import soot.CharType;
 import soot.G;
 import soot.Local;
+import soot.PrimType;
 import soot.RefType;
 import soot.Scene;
 import soot.ShortType;
@@ -54,6 +57,7 @@ import soot.jimple.NewExpr;
 import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
 import soot.jimple.StringConstant;
+import soot.jimple.infoflow.util.SystemClassHandler;
 
 /**
  * Common base class for all entry point creators. Implementors must override the
@@ -69,11 +73,16 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 	private boolean substituteCallParams = false;
 	private List<String> substituteClasses;
 	private boolean allowSelfReferences = false;
+	private boolean ignoreSystemClassParams = true;
 
 	private final Set<SootMethod> failedMethods = new HashSet<>();
 	
 	protected String dummyClassName = "dummyMainClass";
 	protected String dummyMethodName = "dummyMainMethod";
+	
+	protected boolean shallowMode = false;
+	protected boolean overwriteDummyMainMethod = false;
+	protected boolean warnOnConstructorLoop = false;
 	
 	/**
 	 * Returns a copy of all classes that could not be instantiated properly
@@ -120,7 +129,7 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 	}
 
 	protected SootMethod createDummyMainInternal() {
-		SootMethod emptySootMethod = createEmptyMainMethod(Jimple.v().newBody());
+		SootMethod emptySootMethod = createEmptyMainMethod();
 		return createDummyMainInternal(emptySootMethod);
 	}
 	
@@ -133,10 +142,9 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 	
 	/**
 	 * Creates a new, empty main method containing the given body
-	 * @param body The body to be used for the new main method
 	 * @return The newly generated main method
 	 */
-	protected SootMethod createEmptyMainMethod(Body body){
+	protected SootMethod createEmptyMainMethod(){
 		// If we already have a main class, we need to make sure to use a fresh
 		// method name
 		final SootClass mainClass;
@@ -144,8 +152,9 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 		if (Scene.v().containsClass(dummyClassName)) {
 			int methodIndex = 0;
 			mainClass = Scene.v().getSootClass(dummyClassName);
-			while (mainClass.declaresMethodByName(methodName))
-				methodName = dummyMethodName + "_" + methodIndex++;
+			if (!overwriteDummyMainMethod)
+				while (mainClass.declaresMethodByName(methodName))
+					methodName = dummyMethodName + "_" + methodIndex++;
 		}
 		else {
 			mainClass = new SootClass(dummyClassName);
@@ -153,11 +162,33 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 		}
 		
 		Type stringArrayType = ArrayType.v(RefType.v("java.lang.String"), 1);
-		SootMethod mainMethod = new SootMethod(methodName,
-				Collections.singletonList(stringArrayType), VoidType.v());
+		
+		Body body;
+		SootMethod mainMethod = mainClass.getMethodByNameUnsafe(methodName);
+		
+		// Remove the existing main method if necessary. Do not clear the existing
+		// one, this would take much too long.
+		if (mainMethod != null) {
+			mainClass.removeMethod(mainMethod);
+			mainMethod = null;
+		}
+		
+		// Create the method
+		mainMethod = new SootMethod(methodName, Collections.singletonList(
+				stringArrayType), VoidType.v());
+		
+		// Create the body
+		body = Jimple.v().newBody();
 		body.setMethod(mainMethod);
 		mainMethod.setActiveBody(body);
+		
+		// Add the method to the class
 		mainClass.addMethod(mainMethod);
+		
+		// First add class to scene, then make it an application class
+		// as addClass contains a call to "setLibraryClass" 
+		mainClass.setApplicationClass();
+		mainMethod.setModifiers(Modifier.PUBLIC | Modifier.STATIC);
 		
 		// Add a parameter reference to the body
 		LocalGenerator lg = new LocalGenerator(body);
@@ -165,10 +196,6 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 		body.getUnits().addFirst(Jimple.v().newIdentityStmt(paramLocal,
 				Jimple.v().newParameterRef(stringArrayType, 0)));
 		
-		// First add class to scene, then make it an application class
-		// as addClass contains a call to "setLibraryClass" 
-		mainClass.setApplicationClass();
-		mainMethod.setModifiers(Modifier.PUBLIC | Modifier.STATIC);
 		return mainMethod;
 	}
 	
@@ -187,7 +214,19 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 		return buildMethodCall(methodToCall, body, classLocal, gen,
 				Collections.<SootClass>emptySet());
 	}
-
+	
+	/**
+	 * Builds a new invocation statement that invokes the given method
+	 * @param methodToCall The method to call
+	 * @param body The body in which to create the invocation statement
+	 * @param classLocal The local containing an instance of the class on which
+	 * to invoke the method
+	 * @param gen The local generator to be used for generating locals that hold
+	 * any additional values required for the call parameters
+	 * @param parentClasses The classes for which we already have instances that
+	 * shall be reused
+	 * @return The newly created invocation statement
+	 */
 	protected Stmt buildMethodCall(SootMethod methodToCall, Body body,
 			Local classLocal, LocalGenerator gen,
 			Set<SootClass> parentClasses){
@@ -243,10 +282,15 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 		}
 		body.getUnits().add(stmt);
 		
-		// Clean up
-		for (Object val : args)
-			if (val instanceof Local && ((Value) val).getType() instanceof RefType)
-				body.getUnits().add(Jimple.v().newAssignStmt((Value) val, NullConstant.v()));
+		// Clean up. If we re-use parent objects, do not destroy those. We can
+		// only clean up what we have created.
+		for (Value val : args)
+			if (val instanceof Local && val.getType() instanceof RefType) {
+				if (!parentClasses.contains(((RefType) val.getType()).getSootClass())) {
+					body.getUnits().add(Jimple.v().newAssignStmt(val, NullConstant.v()));
+					localVarsForClasses.remove(((RefType) val.getType()).getSootClass().getName());
+				}
+			}
 		
 		return stmt;
 	}
@@ -268,6 +312,29 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 	 */
 	private Value getValueForType(Body body, LocalGenerator gen,
 			Type tp, Set<SootClass> constructionStack, Set<SootClass> parentClasses) {
+		return getValueForType(body, gen, tp, constructionStack, parentClasses, null);
+	}
+	
+	/**
+	 * Creates a value of the given type to be used as a substitution in method
+	 * invocations or fields
+	 * @param body The body in which to create the value
+	 * @param gen The local generator
+	 * @param tp The type for which to get a value
+	 * @param constructionStack The set of classes we're currently constructing.
+	 * Attempts to create a parameter of one of these classes will trigger
+	 * the constructor loop check and the respective parameter will be
+	 * substituted by null.
+	 * @param parentClasses If the given type is compatible with one of the types
+	 * in this list, the already-created object is used instead of creating a
+	 * new one.
+	 * @param generatedLocals The set that receives all (temporary) locals
+	 * created to provide a value of the requested type
+	 * @return The generated value, or null if no value could be generated
+	 */
+	private Value getValueForType(Body body, LocalGenerator gen,
+			Type tp, Set<SootClass> constructionStack, Set<SootClass> parentClasses,
+			Set<Local> generatedLocals) {
 		// Depending on the parameter type, we try to find a suitable
 		// concrete substitution
 		if (isSimpleType(tp.toString()))
@@ -285,19 +352,30 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 							return val;
 					}
 
+				// If this is a system class, we may want to skip it
+				if (ignoreSystemClassParams && SystemClassHandler.isClassInSystemPackage(
+						classToType.getName()))
+					return NullConstant.v();
+				
 				// Create a new instance to plug in here
-				Value val = generateClassConstructor(classToType, body, constructionStack, parentClasses);
+				Value val = generateClassConstructor(classToType, body, constructionStack,
+						parentClasses, generatedLocals);
 				
 				// If we cannot create a parameter, we try a null reference.
 				// Better than not creating the whole invocation...
 				if(val == null)
 					return NullConstant.v();
 				
+				// Keep track of the locals we generate
+				if (generatedLocals != null && val instanceof Local)
+					generatedLocals.add((Local) val);
+				
 				return val;
 			}
 		}
 		else if (tp instanceof ArrayType) {
-			Value arrVal = buildArrayOfType(body, gen, (ArrayType) tp, constructionStack, parentClasses);
+			Value arrVal = buildArrayOfType(body, gen, (ArrayType) tp,
+					constructionStack, parentClasses, generatedLocals);
 			if (arrVal == null){
 				logger.warn("Array parameter substituted by null");
 				return NullConstant.v();
@@ -322,23 +400,28 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 	 * @param parentClasses If a requested type is compatible with one of the
 	 * types in this list, the already-created object is used instead of
 	 * creating a new one.
+	 * @param generatedLocals A set that receives the (temporary) locals that
+	 * were generated to create the requested array
 	 * @return The local referencing the newly created array, or null if the
 	 * array generation failed
 	 */
 	private Value buildArrayOfType(Body body, LocalGenerator gen, ArrayType tp,
-			Set<SootClass> constructionStack, Set<SootClass> parentClasses) {
-		Local local = gen.generateLocal(tp);
-
+			Set<SootClass> constructionStack, Set<SootClass> parentClasses,
+			Set<Local> generatedLocals) {
+		// Generate a single element in the array
+		Value singleElement = getValueForType(body, gen, tp.getElementType(), constructionStack, parentClasses);
+		
 		// Generate a new single-element array
+		Local local = gen.generateLocal(tp);
 		NewArrayExpr newArrayExpr = Jimple.v().newNewArrayExpr(tp.getElementType(),
 				IntConstant.v(1));
 		AssignStmt assignArray = Jimple.v().newAssignStmt(local, newArrayExpr);
 		body.getUnits().add(assignArray);
 		
-		// Generate a single element in the array
+		// Assign the element to the first element of the array
 		AssignStmt assign = Jimple.v().newAssignStmt
 				(Jimple.v().newArrayRef(local, IntConstant.v(0)),
-				getValueForType(body, gen, tp.getElementType(), constructionStack, parentClasses));
+				singleElement);
 		body.getUnits().add(assign);
 		return local;
 	}
@@ -353,7 +436,7 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 	 */
 	protected Local generateClassConstructor(SootClass createdClass, Body body) {
 		return this.generateClassConstructor(createdClass, body, new HashSet<SootClass>(),
-				Collections.<SootClass>emptySet());
+				Collections.<SootClass>emptySet(), null);
 	}
 	
 	/**
@@ -370,7 +453,7 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 	protected Local generateClassConstructor(SootClass createdClass, Body body,
 			Set<SootClass> parentClasses) {
 		return this.generateClassConstructor(createdClass, body, new HashSet<SootClass>(),
-				parentClasses);
+				parentClasses, null);
 	}
 
 	/**
@@ -385,13 +468,21 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 	 * @param parentClasses If a constructor call requires an object of a type
 	 * which is compatible with one of the types in this list, the already-created
 	 * object is used instead of creating a new one.
+	 * @param tempLocals The set that receives all generated temporary locals that
+	 * were necessary for calling the constructor of the requested class
 	 * @return The local containing the new object instance if the operation
 	 * completed successfully, otherwise null.
 	 */
-	private Local generateClassConstructor(SootClass createdClass, Body body,
-			Set<SootClass> constructionStack, Set<SootClass> parentClasses) {
+	protected Local generateClassConstructor(SootClass createdClass, Body body,
+			Set<SootClass> constructionStack, Set<SootClass> parentClasses,
+			Set<Local> tempLocals) {
 		if (createdClass == null || this.failedClasses.contains(createdClass))
 			return null;
+		
+		// If we already have a class local of that type, we re-use it
+		Local existingLocal = localVarsForClasses.get(createdClass.getName());
+		if (existingLocal != null)
+			return existingLocal;
 		
 		// We cannot create instances of phantom classes as we do not have any
 		// constructor information for them
@@ -418,54 +509,60 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 		
 		// Make sure that we don't run into loops
 		if (!constructionStack.add(createdClass)) {
-			logger.warn("Ran into a constructor generation loop for class " + createdClass
-					+ ", substituting with null...");
+			if (warnOnConstructorLoop) {
+				logger.warn("Ran into a constructor generation loop for class " + createdClass
+						+ ", substituting with null...");
+			}
 			Local tempLocal = generator.generateLocal(RefType.v(createdClass));			
 			AssignStmt assignStmt = Jimple.v().newAssignStmt(tempLocal, NullConstant.v());
 			body.getUnits().add(assignStmt);
 			return tempLocal;
 		}
 		if(createdClass.isInterface() || createdClass.isAbstract()){
-			if(substituteCallParams) {
-				// Find a matching implementor of the interface
-				List<SootClass> classes;
-				if (createdClass.isInterface())
-					classes = Scene.v().getActiveHierarchy().getImplementersOf(createdClass);
-				else
-					classes = Scene.v().getActiveHierarchy().getSubclassesOf(createdClass);
-				
-				// Generate an instance of the substitution class. If we fail,
-				// try the next substitution. If we don't find any possible
-				// substitution, we're in trouble
-				for(SootClass sClass : classes)
-					if(substituteClasses.contains(sClass.toString())) {
-						Local cons = generateClassConstructor(sClass, body, constructionStack, parentClasses);
-						if (cons == null)
-							continue;
-						return cons;
-					}
-				logger.warn("Cannot create valid constructor for {}, because it is {} and cannot substitute with subclass", createdClass,
-                        (createdClass.isInterface() ? "an interface" :(createdClass.isAbstract() ? "abstract" : "")));
-				this.failedClasses.add(createdClass);
-				return null;
-			}
-			else{
-                logger.warn("Cannot create valid constructor for {}, because it is {} and cannot substitute with subclass", createdClass,
-                        (createdClass.isInterface() ? "an interface" :(createdClass.isAbstract() ? "abstract" : "")));
-				this.failedClasses.add(createdClass);
-				return null;
-			}
+			return generateSubstitutedClassConstructor(createdClass, body,
+					constructionStack, parentClasses);
 		}
 		else{			
 			// Find a constructor we can invoke. We do this first as we don't want
 			// to change anything in our method body if we cannot create a class
 			// instance anyway.
+			List<SootMethod> constructors = new ArrayList<>();
 			for (SootMethod currentMethod : createdClass.getMethods()) {
-				if (currentMethod.isPrivate() || !currentMethod.isConstructor())
+				if (currentMethod.isPrivate() || currentMethod.isProtected()
+						|| !currentMethod.isConstructor())
 					continue;
+				constructors.add(currentMethod);
+			}
+			
+			// The fewer parameters a constructor has, the better for us
+			Collections.sort(constructors, new Comparator<SootMethod>() {
+
+				@Override
+				public int compare(SootMethod o1, SootMethod o2) {
+					if (o1.getParameterCount() == o2.getParameterCount()) {
+						int o1Prims = 0, o2Prims = 0;
+						for (int i = 0; i < o1.getParameterCount(); i++)
+							if (o1.getParameterType(i) instanceof PrimType)
+								o1Prims++;
+						for (int i = 0; i < o2.getParameterCount(); i++)
+							if (o2.getParameterType(i) instanceof PrimType)
+								o2Prims++;
+						return o1Prims - o2Prims;
+					}
+					return o1.getParameterCount() - o2.getParameterCount();
+				}
 				
+			});
+			
+			if (!constructors.isEmpty()) {
+				SootMethod currentMethod = constructors.remove(0);
 				List<Value> params = new LinkedList<Value>();
 				for (Type type : currentMethod.getParameterTypes()) {
+					// We need to reset the construction stack. Just because we already created
+					// a class instance for parameter 1, there is no reason for not being able
+					// to create the same class instance again for parameter 2.
+					Set<SootClass> newStack = new HashSet<>(constructionStack);
+					
 					// We need to check whether we have a reference to the
 					// outer class. In this case, we do not generate a new
 					// instance, but use the one we already have.
@@ -475,7 +572,16 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 							&& this.localVarsForClasses.containsKey(typeName))
 						params.add(this.localVarsForClasses.get(typeName));
 					else
-						params.add(getValueForType(body, generator, type, constructionStack, parentClasses));
+						if (shallowMode) {
+							if (isSimpleType(type.toString()))
+								params.add(getSimpleDefaultValue(type.toString()));
+							else
+								params.add(NullConstant.v());
+						}
+						else {
+							Value val = getValueForType(body, generator, type, newStack, parentClasses, tempLocals);
+							params.add(val);
+						}
 				}
 
 				// Build the "new" expression
@@ -491,15 +597,10 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 				else
 					vInvokeExpr = Jimple.v().newSpecialInvokeExpr(tempLocal, currentMethod.makeRef(), params);
 
-				// Make sure to store return values
-				if (!(currentMethod.getReturnType() instanceof VoidType)) { 
-					Local possibleReturn = generator.generateLocal(currentMethod.getReturnType());
-					AssignStmt assignStmt2 = Jimple.v().newAssignStmt(possibleReturn, vInvokeExpr);
-					body.getUnits().add(assignStmt2);
-				}
-				else
-					body.getUnits().add(Jimple.v().newInvokeStmt(vInvokeExpr));
-					
+				// We don't need return values
+				body.getUnits().add(Jimple.v().newInvokeStmt(vInvokeExpr));
+				if (tempLocals != null)
+					tempLocals.add(tempLocal);
 				return tempLocal;
 			}
 
@@ -507,6 +608,52 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 			this.failedClasses.add(createdClass);
 			return null;
 		}
+	}
+
+	/**
+	 * Generates a call to a constructor for a an interface or an abstract class
+	 * that is substituted with an actual implementation
+	 * @param createdClass The class for which to create a constructor call
+	 * @param body The body of the dummy main method to which to add the call statement
+	 * @param constructionStack The stack for making sure that we do not run into loops
+	 * @param parentClasses If a constructor call requires an object of a type
+	 * which is compatible with one of the types in this list, the already-created
+	 * object is used instead of creating a new one.
+	 * @return The local containing the new object instance if the operation
+	 * completed successfully, otherwise null.
+	 */
+	private Local generateSubstitutedClassConstructor(SootClass createdClass,
+			Body body, Set<SootClass> constructionStack, 
+			Set<SootClass> parentClasses) {
+		// This feature must be enabled explicitly
+		if(!substituteCallParams) {
+            logger.warn("Cannot create valid constructor for {}, because it is {} and cannot substitute with subclass", createdClass,
+                    (createdClass.isInterface() ? "an interface" :(createdClass.isAbstract() ? "abstract" : "")));
+			this.failedClasses.add(createdClass);
+			return null;
+		}
+		
+		// Find a matching implementor of the interface
+		List<SootClass> classes;
+		if (createdClass.isInterface())
+			classes = Scene.v().getActiveHierarchy().getImplementersOf(createdClass);
+		else
+			classes = Scene.v().getActiveHierarchy().getSubclassesOf(createdClass);
+		
+		// Generate an instance of the substitution class. If we fail,
+		// try the next substitution. If we don't find any possible
+		// substitution, we're in trouble
+		for(SootClass sClass : classes)
+			if(substituteClasses.contains(sClass.toString())) {
+				Local cons = generateClassConstructor(sClass, body, constructionStack, parentClasses, null);
+				if (cons == null)
+					continue;
+				return cons;
+			}
+		logger.warn("Cannot create valid constructor for {}, because it is {} and cannot substitute with subclass", createdClass,
+		        (createdClass.isInterface() ? "an interface" :(createdClass.isAbstract() ? "abstract" : "")));
+		this.failedClasses.add(createdClass);
+		return null;
 	}
 
 	private Type getSimpleTypeFromType(Type type) {
@@ -603,24 +750,8 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 	 * as a substitute for "expected", otherwise false
 	 */
 	protected boolean isCompatible(SootClass actual, SootClass expected) {
-		SootClass act = actual;
-		while (true) {
-			// Do we have a direct match?
-			if (act.getName().equals(expected.getName()))
-				return true;
-			
-			// If we expect an interface, the current class might implement it
-			if (expected.isInterface())
-				for (SootClass intf : act.getInterfaces())
-					if (intf.getName().equals(expected.getName()))
-						return true;
-			
-			// If we cannot continue our search further up the hierarchy, the
-			// two types are incompatible
-			if (!act.hasSuperclass())
-				return false;
-			act = act.getSuperclass();
-		}
+		return Scene.v().getOrMakeFastHierarchy().canStoreType(actual.getType(),
+				expected.getType());
 	}
 	
 	/**
@@ -666,6 +797,87 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 	 */
 	public void setAllowSelfReferences(boolean value) {
 		this.allowSelfReferences = value;
+	}
+	
+	/**
+	 * Sets whether shallow mode shall be used. Normally, if a call to a method
+	 * a() is to be created, this class first creates instances of all required
+	 * parameter objects. If these, in turn, require other objects, they are
+	 * instantiated as well. In shallow mode, this does not happen. Instead, all
+	 * values on the first level are replaced with default values (e.g., null for
+	 * objects).
+	 * @param shallowMode True if shallow mode shall be used, otherwise false
+	 */
+	public void setShallowMode(boolean shallowMode) {
+		this.shallowMode = shallowMode;
+	}
+	
+	/**
+	 * Gets whether shallow mode shall be used. Normally, if a call to a method
+	 * a() is to be created, this class first creates instances of all required
+	 * parameter objects. If these, in turn, require other objects, they are
+	 * instantiated as well. In shallow mode, this does not happen. Instead, all
+	 * values on the first level are replaced with default values (e.g., null for
+	 * objects).
+	 * @return True if shallow mode shall be used, otherwise false
+	 */
+	public boolean getShallowMode() {
+		return this.shallowMode;
+	}
+
+	/**
+	 * Sets whether the entry point crearor shall always pass "null" if a method
+	 * expects an object of a system class.
+	 * @param ignoreSystemClassParams
+	 */
+	public void setIgnoreSystemClassParams(boolean ignoreSystemClassParams) {
+		this.ignoreSystemClassParams = ignoreSystemClassParams;
+	}
+	
+	/**
+	 * Sets whether the dummy main method shall be overwritten if it already exists.
+	 * If this flag is set to "false", a new, non-conflicting method and class name
+	 * is chosen.
+	 * @param reuseDummyMainValue True if existing methods that conflict with the
+	 * entry point to be created shall be overwritten, false to automatically chose
+	 * a new, non-conflicting name.
+	 */
+	public void setOverwriteDummyMainMethod(boolean overwriteDummyMainValue) {
+		this.overwriteDummyMainMethod = overwriteDummyMainValue;
+	}
+	
+	/**
+	 * Gets whether the dummy main method shall be overwritten if it already exists.
+	 * If this flag is set to "false", a new, non-conflicting method and class name
+	 * is chosen.
+	 * @return True if existing methods that conflict with the entry point to be
+	 * created shall be overwritten, false to automatically chose a new, non-conflicting
+	 * name.
+	 */
+	public boolean getOverwriteDummyMainMethod() {
+		return this.overwriteDummyMainMethod;
+	}
+	
+	/**
+	 * Sets whether a warning shall be written to the log when a constructor call
+	 * cannot be generated because the analysis ran into a loop when trying to
+	 * generate parameter values.
+	 * @param warnOnConstructorLoop True if a warning shall be written to the log
+	 * when a constructor generation loop is encountered, otherwise false
+	 */
+	public void setWarnOnConstructorLoop(boolean warnOnConstructorLoop) {
+		this.warnOnConstructorLoop = warnOnConstructorLoop;
+	}
+	
+	/**
+	 * Gets whether a warning shall be written to the log when a constructor call
+	 * cannot be generated because the analysis ran into a loop when trying to
+	 * generate parameter values.
+	 * @return True if a warning shall be written to the log when a constructor
+	 * generation loop is encountered, otherwise false
+	 */
+	public boolean getWarnOnConstructorLoop() {
+		return this.warnOnConstructorLoop;
 	}
 
 	/**

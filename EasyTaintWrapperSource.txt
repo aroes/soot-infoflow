@@ -2,6 +2,7 @@
 ^android.
 ^java.
 ^org.apache.http.
+^org.joda.time.
 
 <java.util.Stack: java.lang.Object push(java.lang.Object)>
 
@@ -18,7 +19,7 @@
 <java.util.Map: java.lang.Object putAll(java.util.Map)>
 
 <java.util.List: boolean add(java.lang.Object)>
-<java.util.List: void add(int,<java.lang.Object)>
+<java.util.List: void add(int,java.lang.Object)>
 <java.util.List: boolean addAll(java.util.Collection)>
 <java.util.List: boolean addAll(int,java.util.Collection)>
 -<java.util.List: void clear()>
@@ -241,6 +242,10 @@
 <java.io.InputStreamReader: void <init>(java.io.InputStream,java.lang.String)>
 <java.io.BufferedReader: void <init>(java.io.Reader)>
 
+<java.io.OutputStream: void write(byte[])>
+<java.io.OutputStream: void write(byte[],int,int)>
+<java.io.OutputStream: void write(int)>
+
 <java.io.ByteArrayOutputStream: void write(byte[],int,int)>
 
 <java.io.ObjectOutputStream: void writeObject(java.lang.Object>
@@ -332,7 +337,7 @@
 <android.content.Intent: android.content.Intent putExtras(android.content.Intent)>
 <android.content.Intent: android.content.Intent putExtras(android.os.Bundle)>
 
-~<android.content.ContextWrapper: android.content.Context getBaseContext()>
+<android.content.ContextWrapper: android.content.Context getBaseContext()>
 
 <android.content.IntentFilter: void addAction(java.lang.String)>
 
@@ -394,7 +399,15 @@
 
 ~<android.content.ContextWrapper: android.content.Context getApplicationContext()>
 
+<android.content.Context: void sendBroadcast(android.content.Intent)>
+<android.content.Context: void sendBroadcast(android.content.Intent, java.lang.String)>
+<android.content.Context: android.content.Intent registerReceiver(android.content.BroadcastReceiver,android.content.IntentFilter,java.lang.String,android.os.Handler)>
+<android.content.Context: android.content.Intent registerReceiver(android.content.BroadcastReceiver,android.content.IntentFilter)>
+~<android.view.ContextThemeWrapper: android.content.Intent registerReceiver(android.content.BroadcastReceiver,android.content.IntentFilter,java.lang.String,android.os.Handler)>
+~<android.view.ContextThemeWrapper: android.content.Intent registerReceiver(android.content.BroadcastReceiver,android.content.IntentFilter)>
+
 <java.util.regex.Pattern: java.util.regex.Matcher matcher(java.lang.CharSequence)>
+
 
 <java.lang.ProcessBuilder: java.lang.ProcessBuilder command(java.lang.String[])>
 
@@ -449,3 +462,92 @@
 ~<android.content.SharedPreferences: android.content.SharedPreferences$Editor edit()>
 
 <android.app.DownloadManager$Request: void <init>(android.net.Uri)>
+
+<java.lang.Throwable: void <init>(java.lang.String)>
+<java.lang.Throwable: void <init>(java.lang.String,java.lang.Throwable)>
+<java.lang.Throwable: void <init>(java.lang.String,java.lang.Throwable,boolean,boolean)>
+<java.lang.Throwable: void <init>(java.lang.Throwable)>
+
+<org.joda.time.convert.CalendarConverter: org.joda.time.Chronology getChronology(java.lang.Object,org.joda.time.Chronology)>
+<org.joda.time.convert.CalendarConverter: org.joda.time.Chronology getChronology(java.lang.Object,org.joda.time.DateTimeZone)>
+
+<org.joda.time.chrono.BuddhistChronology: org.joda.time.chrono.BuddhistChronology getInstance()>
+<org.joda.time.chrono.BuddhistChronology: org.joda.time.chrono.BuddhistChronology getInstance(org.joda.time.DateTimeZone)>
+<org.joda.time.chrono.BuddhistChronology: org.joda.time.chrono.BuddhistChronology getInstanceUTC()>
+
+<org.joda.time.chrono.CopticChronology: org.joda.time.chrono.CopticChronology getInstance()>
+<org.joda.time.chrono.CopticChronology: org.joda.time.chrono.CopticChronology getInstance(org.joda.time.DateTimeZone)>
+<org.joda.time.chrono.CopticChronology: org.joda.time.chrono.CopticChronology getInstance(org.joda.time.DateTimeZone,int)>
+<org.joda.time.chrono.CopticChronology: org.joda.time.chrono.CopticChronology getInstanceUTC()>
+
+<org.joda.time.chrono.EthiopicChronology: org.joda.time.chrono.EthiopicChronology getInstance()>
+<org.joda.time.chrono.EthiopicChronology: org.joda.time.chrono.EthiopicChronology getInstance(org.joda.time.DateTimeZone)>
+<org.joda.time.chrono.EthiopicChronology: org.joda.time.chrono.EthiopicChronology getInstance(org.joda.time.DateTimeZone,int)>
+<org.joda.time.chrono.EthiopicChronology: org.joda.time.chrono.EthiopicChronology getInstanceUTC()>
+
+<org.joda.time.chrono.GregorianChronology: org.joda.time.chrono.GregorianChronology getInstance()>
+<org.joda.time.chrono.GregorianChronology: org.joda.time.chrono.GregorianChronology getInstance(org.joda.time.DateTimeZone)>
+<org.joda.time.chrono.GregorianChronology: org.joda.time.chrono.GregorianChronology getInstance(org.joda.time.DateTimeZone,int)>
+<org.joda.time.chrono.GregorianChronology: org.joda.time.chrono.GregorianChronology getInstanceUTC()>
+
+<org.joda.time.chrono.IslamicChronology: org.joda.time.chrono.IslamicChronology getInstance()>
+<org.joda.time.chrono.IslamicChronology: org.joda.time.chrono.IslamicChronology getInstance(org.joda.time.DateTimeZone)>
+<org.joda.time.chrono.IslamicChronology: org.joda.time.chrono.IslamicChronology getInstance(org.joda.time.DateTimeZone,org.joda.time.chrono.IslamicChronology$LeapYearPatternType)>
+<org.joda.time.chrono.IslamicChronology: org.joda.time.chrono.IslamicChronology getInstanceUTC()>
+
+<org.joda.time.chrono.ISOChronology: org.joda.time.chrono.BuddhistChronology getInstance()>
+<org.joda.time.chrono.ISOChronology: org.joda.time.chrono.BuddhistChronology getInstance(org.joda.time.DateTimeZone)>
+<org.joda.time.chrono.ISOChronology: org.joda.time.chrono.BuddhistChronology getInstanceUTC()>
+
+<org.joda.time.chrono.JulianChronology: org.joda.time.chrono.JulianChronology getInstance()>
+<org.joda.time.chrono.JulianChronology: org.joda.time.chrono.JulianChronology getInstance(org.joda.time.DateTimeZone)>
+<org.joda.time.chrono.JulianChronology: org.joda.time.chrono.JulianChronology getInstance(org.joda.time.DateTimeZone,int)>
+<org.joda.time.chrono.JulianChronology: org.joda.time.chrono.JulianChronology getInstanceUTC()>
+
+<org.joda.time.chrono.LenientChronology: org.joda.time.chrono.LenientChronology getInstance(org.joda.time.Chronology)>
+<org.joda.time.chrono.LimitChronology: org.joda.time.chrono.LimitChronology getInstance(org.joda.time.Chronology,org.joda.time.ReadableDateTime,org.joda.time.ReadableDateTime)>
+<org.joda.time.chrono.StrictChronology: org.joda.time.chrono.StrictChronology getInstance(org.joda.time.Chronology)>
+<org.joda.time.chrono.ZonedChronology: org.joda.time.chrono.ZonedChronology getInstance(org.joda.time.Chronology,org.joda.time.DateTimeZone)>
+
+<java.util.TimeZone: java.util.TimeZone getTimeZone(java.lang.String)>
+
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(byte[],java.lang.Class)>
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(byte[],int,int,java.lang.Class)>
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(byte[],int,int,com.fasterxml.jackson.databind.JavaType)>
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(byte[],int,int,com.fasterxml.jackson.core.type.TypeReference)>
+
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(byte[],com.fasterxml.jackson.databind.JavaType)>
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(byte[],com.fasterxml.jackson.core.type.TypeReference)>
+
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(java.io.File,java.lang.Class)>
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(java.io.File,com.fasterxml.jackson.databind.JavaType)>
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(java.io.File,com.fasterxml.jackson.core.type.TypeReference)>
+
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(java.io.InputStream,java.lang.Class)>
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(java.io.InputStream,com.fasterxml.jackson.databind.JavaType)>
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(java.io.InputStream,com.fasterxml.jackson.core.type.TypeReference)>
+
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(com.fasterxml.jackson.core.JsonParser,java.lang.Class)>
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(com.fasterxml.jackson.core.JsonParser,com.fasterxml.jackson.databind.JavaType)>
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(com.fasterxml.jackson.core.JsonParser,com.fasterxml.jackson.core.type.ResolvedType)>
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(com.fasterxml.jackson.core.JsonParser,com.fasterxml.jackson.core.type.TypeReference)>
+
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(java.io.reader,java.lang.Class)>
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(java.io.reader,com.fasterxml.jackson.databind.JavaType)>
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(java.io.reader,com.fasterxml.jackson.core.type.TypeReference)>
+
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(java.lang.String,java.lang.Class)>
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(java.lang.String,com.fasterxml.jackson.databind.JavaType)>
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(java.lang.String,com.fasterxml.jackson.core.type.TypeReference)>
+
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(java.net.URL,java.lang.Class)>
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(java.net.URL,com.fasterxml.jackson.databind.JavaType)>
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.Object readValue(java.net.URL,com.fasterxml.jackson.core.type.TypeReference)>
+
+<com.fasterxml.jackson.databind.ObjectMapper: com.fasterxml.jackson.databind.MappingIterator readValues(com.fasterxml.jackson.core.JsonParser,java.lang.Class)>
+<com.fasterxml.jackson.databind.ObjectMapper: com.fasterxml.jackson.databind.MappingIterator readValues(com.fasterxml.jackson.core.JsonParser,com.fasterxml.jackson.databind.JavaType)>
+<com.fasterxml.jackson.databind.ObjectMapper: com.fasterxml.jackson.databind.MappingIterator readValues(com.fasterxml.jackson.core.JsonParser,com.fasterxml.jackson.core.type.ResolvedType)>
+<com.fasterxml.jackson.databind.ObjectMapper: com.fasterxml.jackson.databind.MappingIterator readValues(com.fasterxml.jackson.core.JsonParser,com.fasterxml.jackson.core.type.TypeReference)>
+
+<com.fasterxml.jackson.databind.ObjectMapper: byte[] writeValueAsBytes(java.lang.Object)>
+<com.fasterxml.jackson.databind.ObjectMapper: java.lang.String writeValueAsString(java.lang.Object)>

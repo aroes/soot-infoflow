@@ -10,8 +10,6 @@
  ******************************************************************************/
 package soot.jimple.infoflow.solver.cfg;
 
-import heros.solver.IDESolver;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -21,7 +19,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+
+import heros.solver.IDESolver;
 import soot.Local;
+import soot.RefType;
 import soot.Scene;
 import soot.SootField;
 import soot.SootMethod;
@@ -33,15 +36,13 @@ import soot.jimple.FieldRef;
 import soot.jimple.InvokeExpr;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
+import soot.jimple.VirtualInvokeExpr;
 import soot.jimple.toolkits.callgraph.Edge;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import soot.toolkits.graph.DirectedGraph;
 import soot.toolkits.graph.ExceptionalUnitGraph;
 import soot.toolkits.graph.MHGPostDominatorsFinder;
-
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 
 /**
  * Interprocedural control-flow graph for the infoflow solver
@@ -130,7 +131,7 @@ public class InfoflowCFG implements IInfoflowCFG {
 			});
 
 	public InfoflowCFG() {
-		this(new JimpleBasedInterproceduralCFG());
+		this(new JimpleBasedInterproceduralCFG(true, true));
 	}
 	
 	public InfoflowCFG(BiDiInterproceduralCFG<Unit, SootMethod> delegate) {
@@ -480,6 +481,42 @@ public class InfoflowCFG implements IInfoflowCFG {
 			if (!sm.isStaticInitializer() && !isExecutorExecute(iexpr, sm))
 				callees.add(sm);
 		return callees;
+	}
+	
+	@Override
+	public boolean isReflectiveCallSite(Unit u) {
+		if (isCallStmt(u)) {
+			InvokeExpr iexpr = ((Stmt) u).getInvokeExpr();
+			return isReflectiveCallSite(iexpr);
+		}
+		return false;
+	}
+	
+	@Override
+	public boolean isReflectiveCallSite(InvokeExpr iexpr) {
+		if (iexpr instanceof VirtualInvokeExpr) {
+			VirtualInvokeExpr viexpr = (VirtualInvokeExpr) iexpr;
+			if (viexpr.getBase().getType() instanceof RefType)
+				if (((RefType) viexpr.getBase().getType()).getSootClass().getName().equals("java.lang.reflect.Method"))
+					if (viexpr.getMethod().getName().equals("invoke"))
+						return true;
+		}
+		return false;
+	}
+
+	@Override
+	public void purge() {
+		methodSideEffects.clear();
+		staticFieldUses.clear();
+		
+		methodToUsedLocals.invalidateAll();
+		methodToUsedLocals.cleanUp();
+		
+		methodToWrittenLocals.invalidateAll();
+		methodToWrittenLocals.cleanUp();
+		
+		unitToPostdominator.invalidateAll();
+		unitToPostdominator.cleanUp();
 	}
 	
 }

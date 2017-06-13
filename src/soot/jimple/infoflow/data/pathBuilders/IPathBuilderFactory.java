@@ -1,7 +1,8 @@
 package soot.jimple.infoflow.data.pathBuilders;
 
-import heros.solver.CountingThreadPoolExecutor;
+import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
+import soot.jimple.infoflow.solver.executors.InterruptableExecutor;
 
 
 /**
@@ -14,23 +15,25 @@ public interface IPathBuilderFactory {
 	/**
 	 * Creates a new path builder. Use this overload to have the path builder
 	 * manage its own executors.
+	 * @param config The FlowDroid configuration object
 	 * @param maxThreadNum The maximum number of threads to use
 	 * @param icfg The interprocedural CFG to use
 	 * @return The newly created path builder
 	 */
-	public IAbstractionPathBuilder createPathBuilder(int maxThreadNum, 
-			IInfoflowCFG icfg);
+	public IAbstractionPathBuilder createPathBuilder(InfoflowConfiguration config,
+			int maxThreadNum, IInfoflowCFG icfg);
 	
 	/**
 	 * Creates a new path builder. Use this overload if you want the path builder
 	 * to submit its tasks to an existing executor.
+	 * @param config The FlowDroid configuration object
 	 * @param executor The executor in which to run the path reconstruction
 	 * tasks.
 	 * @param icfg The interprocedural CFG to use
 	 * @return The newly created path builder
 	 */
-	public IAbstractionPathBuilder createPathBuilder(
-			CountingThreadPoolExecutor executor, IInfoflowCFG icfg);
+	public IAbstractionPathBuilder createPathBuilder(InfoflowConfiguration config,
+			InterruptableExecutor executor, IInfoflowCFG icfg);
 	
 	/**
 	 * Gets whether the {@link IAbstractionPathBuilder} object created by this

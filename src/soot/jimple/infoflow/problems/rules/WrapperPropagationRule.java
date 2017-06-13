@@ -88,7 +88,7 @@ public class WrapperPropagationRule extends AbstractTaintPropagationRule {
 		if (!getManager().getConfig().getInspectSources()) {
 			// Check whether this can be a source at all
 			final SourceInfo sourceInfo = getManager().getSourceSinkManager() != null
-					? getManager().getSourceSinkManager().getSourceInfo(iStmt, getManager().getICFG()) : null;
+					? getManager().getSourceSinkManager().getSourceInfo(iStmt, getManager()) : null;
 			if (sourceInfo != null)
 				return null;
 		}
@@ -140,7 +140,8 @@ public class WrapperPropagationRule extends AbstractTaintPropagationRule {
 			// and do not pass on the incoming abstraction on our own
 			for (Abstraction wrapperAbs : wrapperTaints)
 				if (wrapperAbs.getAccessPath().equals(source.getAccessPath())) {
-					killSource.value = true;
+					if (wrapperAbs != source)
+						killSource.value = true;
 					break;
 				}
 		}

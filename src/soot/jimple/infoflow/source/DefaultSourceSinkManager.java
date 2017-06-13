@@ -10,14 +10,18 @@
  ******************************************************************************/
 package soot.jimple.infoflow.source;
 
-import heros.InterproceduralCFG;
-
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+
+import heros.solver.IDESolver;
+import soot.Scene;
+import soot.SootClass;
 import soot.SootMethod;
-import soot.Unit;
 import soot.Value;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.IdentityStmt;
@@ -26,8 +30,8 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.ParameterRef;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.data.AccessPath;
-import soot.jimple.infoflow.data.AccessPathFactory;
 import soot.jimple.infoflow.util.SystemClassHandler;
 
 /**
@@ -36,12 +40,35 @@ import soot.jimple.infoflow.util.SystemClassHandler;
  * @author Steven Arzt
  */
 public class DefaultSourceSinkManager implements ISourceSinkManager  {
+	
+	private Collection<String> sourceDefs;
+	private Collection<String> sinkDefs;
 
-	private Collection<String> sources;
-	private Collection<String> sinks;
+	private Collection<SootMethod> sources;
+	private Collection<SootMethod> sinks;
 
-	private Collection<String> returnTaintMethods;
-	private Collection<String> parameterTaintMethods;
+	private Collection<String> returnTaintMethodDefs;
+	private Collection<String> parameterTaintMethodDefs;
+	
+	private Collection<SootMethod> returnTaintMethods;
+	private Collection<SootMethod> parameterTaintMethods;
+
+	protected final LoadingCache<SootClass, Collection<SootClass>> interfacesOf =
+			IDESolver.DEFAULT_CACHE_BUILDER.build(new CacheLoader<SootClass, Collection<SootClass>>() {
+				
+		@Override
+		public Collection<SootClass> load(SootClass sc) throws Exception {
+			Set<SootClass> set = new HashSet<SootClass>(sc.getInterfaceCount());
+			for (SootClass i : sc.getInterfaces()) {
+				set.add(i);
+				set.addAll(interfacesOf.getUnchecked(i));
+			}
+			if (sc.hasSuperclass())
+				set.addAll(interfacesOf.getUnchecked(sc.getSuperclass()));
+			return set;
+		}
+		
+	});
 	
 	/**
 	 * Creates a new instance of the {@link DefaultSourceSinkManager} class
@@ -69,11 +96,12 @@ public class DefaultSourceSinkManager implements ISourceSinkManager  {
 	 *            The list of methods whose return values shall be regarded as
 	 *            sinks
 	 */
-	public DefaultSourceSinkManager(Collection<String> sources, Collection<String> sinks, Collection<String> parameterTaintMethods, Collection<String> returnTaintMethods) {
-		this.sources = sources;
-		this.sinks = sinks;
-		this.parameterTaintMethods = (parameterTaintMethods != null) ? parameterTaintMethods : new HashSet<String>();
-		this.returnTaintMethods = (returnTaintMethods != null) ? returnTaintMethods : new HashSet<String>();
+	public DefaultSourceSinkManager(Collection<String> sources, Collection<String> sinks,
+			Collection<String> parameterTaintMethods, Collection<String> returnTaintMethods) {
+		this.sourceDefs = sources;
+		this.sinkDefs = sinks;
+		this.parameterTaintMethodDefs = (parameterTaintMethods != null) ? parameterTaintMethods : new HashSet<String>();
+		this.returnTaintMethodDefs = (returnTaintMethods != null) ? returnTaintMethods : new HashSet<String>();
 	}
 
 	/**
@@ -83,7 +111,7 @@ public class DefaultSourceSinkManager implements ISourceSinkManager  {
 	 *            The list of methods to be treated as sources
 	 */
 	public void setSources(List<String> sources) {
-		this.sources = sources;
+		this.sourceDefs = sources;
 	}
 
 	/**
@@ -93,26 +121,26 @@ public class DefaultSourceSinkManager implements ISourceSinkManager  {
 	 *            The list of methods to be treated as sinks
 	 */
 	public void setSinks(List<String> sinks) {
-		this.sinks = sinks;
+		this.sinkDefs = sinks;
 	}
 	
 	@Override
-	public SourceInfo getSourceInfo(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg) {
+	public SourceInfo getSourceInfo(Stmt sCallSite, InfoflowManager manager) {
 		SootMethod callee = sCallSite.containsInvokeExpr() ?
 				sCallSite.getInvokeExpr().getMethod() : null;
 		
 		AccessPath targetAP = null;
-		if (callee != null && sources.contains(callee.toString())) {
+		if (isSourceMethod(manager, sCallSite)) {
 			if (callee.getReturnType() != null 
 					&& sCallSite instanceof DefinitionStmt) {
 				// Taint the return value
 				Value leftOp = ((DefinitionStmt) sCallSite).getLeftOp();
-				targetAP = AccessPathFactory.v().createAccessPath(leftOp, true);
+				targetAP = manager.getAccessPathFactory().createAccessPath(leftOp, true);
 			}
 			else if (sCallSite.getInvokeExpr() instanceof InstanceInvokeExpr) {
 				// Taint the base object
 				Value base = ((InstanceInvokeExpr) sCallSite.getInvokeExpr()).getBase();
-				targetAP = AccessPathFactory.v().createAccessPath(base, true);
+				targetAP = manager.getAccessPathFactory().createAccessPath(base, true);
 			}
 		}
 		// Check whether we need to taint parameters
@@ -120,9 +148,9 @@ public class DefaultSourceSinkManager implements ISourceSinkManager  {
 			IdentityStmt istmt = (IdentityStmt) sCallSite;
 			if (istmt.getRightOp() instanceof ParameterRef) {
 				ParameterRef pref = (ParameterRef) istmt.getRightOp();
-				SootMethod currentMethod = cfg.getMethodOf(istmt);
-				if (parameterTaintMethods.contains(currentMethod.toString()))
-					targetAP = AccessPathFactory.v().createAccessPath(currentMethod.getActiveBody()
+				SootMethod currentMethod = manager.getICFG().getMethodOf(istmt);
+				if (parameterTaintMethods.contains(currentMethod))
+					targetAP = manager.getAccessPathFactory().createAccessPath(currentMethod.getActiveBody()
 							.getParameterLocal(pref.getIndex()), true);
 			}
 		}
@@ -134,42 +162,112 @@ public class DefaultSourceSinkManager implements ISourceSinkManager  {
 		return new SourceInfo(targetAP);
 	}
 
+	/**
+	 * Checks whether the given call sites invokes a source method
+	 * @param manager The manager object providing access to the configuration
+	 * and the interprocedural control flow graph
+	 * @param sCallSite The call site to check
+	 * @return True if the given call site invoked a source method, otherwise
+	 * false
+	 */
+	private boolean isSourceMethod(InfoflowManager manager, Stmt sCallSite) {
+		// We only support method calls
+		if (!sCallSite.containsInvokeExpr())
+			return false;
+		
+		// Check for a direct match
+		SootMethod callee = sCallSite.getInvokeExpr().getMethod();
+		if (this.sources.contains(callee))
+			return true;
+		
+		// Check whether we have any of the interfaces on the list
+		String subSig = callee.getSubSignature();
+		for (SootClass i : interfacesOf.getUnchecked(sCallSite.getInvokeExpr().getMethod().getDeclaringClass())) {
+			if (i.declaresMethod(subSig)) {
+				if (this.sources.contains(subSig))
+					return true;
+			}
+		}
+		
+		// Ask the CFG in case we don't know any better
+		for (SootMethod sm : manager.getICFG().getCalleesOfCallAt(sCallSite)) {
+			if (this.sources.contains(sm))
+				return true;
+		}
+		
+		// nothing found
+		return false;
+	}
+
 	@Override
-	public boolean isSink(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg,
-			AccessPath ap) {
+	public boolean isSink(Stmt sCallSite, InfoflowManager manager, AccessPath ap) {
 		// Check whether values returned by the current method are to be
 		// considered as sinks
 		if (this.returnTaintMethods != null
 				&& sCallSite instanceof ReturnStmt
-				&& this.returnTaintMethods.contains(cfg.getMethodOf(sCallSite).getSignature()))
+				&& this.returnTaintMethods.contains(manager.getICFG().getMethodOf(sCallSite)))
 			return true;
 		
 		// Check whether the callee is a sink
-		if (this.sinks != null
-				&& sCallSite.containsInvokeExpr()
-				&& this.sinks.contains(sCallSite.getInvokeExpr().getMethod().getSignature())) {
+		if (this.sinks != null && sCallSite.containsInvokeExpr()) {
 			InvokeExpr iexpr = sCallSite.getInvokeExpr();
 			
-			// Check that the incoming taint is visible in the callee at all
-			if (SystemClassHandler.isTaintVisible(ap, iexpr.getMethod())) {
-				// If we don't have an access path, we can only over-approximate
-				if (ap == null)
-					return true;
-				
-				// The given access path must at least be referenced somewhere in the sink
-				if (!ap.isStaticFieldRef()) {
-					for (int i = 0; i < iexpr.getArgCount(); i++)
-						if (iexpr.getArg(i) == ap.getPlainValue()) {
-							if (ap.getTaintSubFields() || ap.isLocal())
+			// Is this method on the list?
+			if (isSinkMethod(manager, sCallSite)) {			
+				// Check that the incoming taint is visible in the callee at all
+				if (SystemClassHandler.isTaintVisible(ap, iexpr.getMethod())) {
+					// If we don't have an access path, we can only over-approximate
+					if (ap == null)
+						return true;
+					
+					// The given access path must at least be referenced somewhere in the sink
+					if (!ap.isStaticFieldRef()) {
+						for (int i = 0; i < iexpr.getArgCount(); i++)
+							if (iexpr.getArg(i) == ap.getPlainValue()) {
+								if (ap.getTaintSubFields() || ap.isLocal())
+									return true;
+							}
+						if (iexpr instanceof InstanceInvokeExpr)
+							if (((InstanceInvokeExpr) iexpr).getBase() == ap.getPlainValue())
 								return true;
-						}
-					if (iexpr instanceof InstanceInvokeExpr)
-						if (((InstanceInvokeExpr) iexpr).getBase() == ap.getPlainValue())
-							return true;
+					}
 				}
 			}
 		}
 		
+		return false;
+	}
+
+	/**
+	 * Checks whether the given call sites invokes a sink method
+	 * @param manager The manager object providing access to the configuration
+	 * and the interprocedural control flow graph
+	 * @param sCallSite The call site to check
+	 * @return True if the given call site invoked a sink method, otherwise
+	 * false
+	 */
+	private boolean isSinkMethod(InfoflowManager manager, Stmt sCallSite) {
+		// Is the method directly in the sink set?
+		SootMethod callee = sCallSite.getInvokeExpr().getMethod();
+		if (this.sinks.contains(callee))
+			return true;
+		
+		// Check whether we have any of the interfaces on the list
+		String subSig = callee.getSubSignature();
+		for (SootClass i : interfacesOf.getUnchecked(sCallSite.getInvokeExpr().getMethod().getDeclaringClass())) {
+			if (i.declaresMethod(subSig)) {
+				if (this.sinks.contains(subSig))
+					return true;
+			}
+		}
+		
+		// Ask the CFG in case we don't know any better
+		for (SootMethod sm : manager.getICFG().getCalleesOfCallAt(sCallSite)) {
+			if (this.sinks.contains(sm))
+				return true;
+		}
+		
+		// nothing found
 		return false;
 	}
 
@@ -182,7 +280,7 @@ public class DefaultSourceSinkManager implements ISourceSinkManager  {
 	 *            taint sources
 	 */
 	public void setParameterTaintMethods(List<String> parameterTaintMethods) {
-		this.parameterTaintMethods = parameterTaintMethods;
+		this.parameterTaintMethodDefs = parameterTaintMethods;
 	}
 
 	/**
@@ -194,7 +292,50 @@ public class DefaultSourceSinkManager implements ISourceSinkManager  {
 	 *            taint sinks
 	 */
 	public void setReturnTaintMethods(List<String> returnTaintMethods) {
-		this.returnTaintMethods = returnTaintMethods;
+		this.returnTaintMethodDefs = returnTaintMethods;
+	}
+
+	@Override
+	public void initialize() {
+		if (sourceDefs != null) {
+			sources = new HashSet<>();
+			for (String signature : sourceDefs) {
+				SootMethod sm = Scene.v().grabMethod(signature);
+				if (sm != null)
+					sources.add(sm);
+			}
+			sourceDefs = null;
+		}
+		
+		if (sinkDefs != null) {
+			sinks = new HashSet<>();
+			for (String signature : sinkDefs) {
+				SootMethod sm = Scene.v().grabMethod(signature);
+				if (sm != null)
+					sinks.add(sm);
+			}
+			sinkDefs = null;
+		}
+
+		if (returnTaintMethodDefs != null) {
+			returnTaintMethods = new HashSet<>();
+			for (String signature : returnTaintMethodDefs) {
+				SootMethod sm = Scene.v().grabMethod(signature);
+				if (sm != null)
+					returnTaintMethods.add(sm);
+			}
+			returnTaintMethodDefs = null;
+		}
+		
+		if (parameterTaintMethodDefs != null) {
+			parameterTaintMethods = new HashSet<>();
+			for (String signature : parameterTaintMethodDefs) {
+				SootMethod sm = Scene.v().grabMethod(signature);
+				if (sm != null)
+					parameterTaintMethods.add(sm);
+			}
+			parameterTaintMethodDefs = null;
+		}
 	}
 	
 }

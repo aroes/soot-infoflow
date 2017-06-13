@@ -3,6 +3,10 @@ package soot.jimple.infoflow.data.pathBuilders;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 
 /**
@@ -13,19 +17,24 @@ import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 public abstract class AbstractAbstractionPathBuilder implements
 		IAbstractionPathBuilder {
 	
-	protected final IInfoflowCFG icfg;
+    protected final Logger logger = LoggerFactory.getLogger(getClass());
+
+    protected final IInfoflowCFG icfg;
 	protected final boolean reconstructPaths;
+	protected final InfoflowConfiguration config;
 	protected Set<OnPathBuilderResultAvailable> resultAvailableHandlers = null;
 	
 	/**
 	 * Creates a new instance of the {@link AbstractAbstractionPathBuilder} class
 	 * @param icfg The interprocedural control flow graph
+	 * @param config The configuration of the data flow solver
 	 * @param reconstructPaths True if the exact propagation path between source
 	 * and sink shall be reconstructed.
 	 */
 	public AbstractAbstractionPathBuilder(IInfoflowCFG icfg,
-			boolean reconstructPaths) {
+			InfoflowConfiguration config, boolean reconstructPaths) {
 		this.icfg = icfg;
+		this.config = config;
 		this.reconstructPaths = reconstructPaths;
 	}
 	

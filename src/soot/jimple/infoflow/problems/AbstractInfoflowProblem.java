@@ -265,4 +265,13 @@ public abstract class AbstractInfoflowProblem extends DefaultJimpleIFDSTabulatio
 		return outgoing;
 	}
 	
+	@Override
+	public boolean computeValues() {
+		return false;
+	}
+	
+	public InfoflowManager getManager() {
+		return this.manager;
+	}
+
 }

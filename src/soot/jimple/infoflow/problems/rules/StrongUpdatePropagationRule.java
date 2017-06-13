@@ -19,7 +19,7 @@ import soot.jimple.infoflow.util.ByReferenceBoolean;
 /**
  * Propagation rule that implements strong updates
  * 
- * @author Steven
+ * @author Steven Arzt
  *
  */
 public class StrongUpdatePropagationRule extends AbstractTaintPropagationRule {
@@ -132,6 +132,16 @@ public class StrongUpdatePropagationRule extends AbstractTaintPropagationRule {
 	public Collection<Abstraction> propagateCallToReturnFlow(Abstraction d1,
 			Abstraction source, Stmt stmt, ByReferenceBoolean killSource,
 			ByReferenceBoolean killAll) {
+		// Do not propagate abstractions for locals that get overwritten
+		if (stmt instanceof AssignStmt) {
+			// a = foo() with a tainted
+			AssignStmt assignStmt = (AssignStmt) stmt;
+			if (!source.getAccessPath().isStaticFieldRef()
+					&& assignStmt.getLeftOp() instanceof Local
+					&& getAliasing().mayAlias(assignStmt.getLeftOp(), source.getAccessPath().getPlainValue()))
+				killSource.value = true;
+		}
+		
 		return null;
 	}
 

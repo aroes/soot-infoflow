@@ -1,12 +1,12 @@
 package soot.jimple.infoflow.aliasing;
 
+import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.data.AccessPath;
-import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
 
 public abstract class AbstractBulkAliasStrategy extends AbstractAliasStrategy {
 
-	public AbstractBulkAliasStrategy(IInfoflowCFG cfg) {
-		super(cfg);
+	public AbstractBulkAliasStrategy(InfoflowManager manager) {
+		super(manager);
 	}
 
 	@Override
@@ -19,4 +19,10 @@ public abstract class AbstractBulkAliasStrategy extends AbstractAliasStrategy {
 		return false;
 	}
 	
+
+	@Override
+	public boolean isLazyAnalysis() {
+		return false;
+	}
+
 }

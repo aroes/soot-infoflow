@@ -1,11 +1,10 @@
 package soot.jimple.infoflow.data;
 
-import heros.solver.Pair;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import heros.solver.Pair;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.InfoflowConfiguration;
 
@@ -201,7 +200,8 @@ public class SourceContextAndPath extends SourceContext implements Cloneable {
 	
 	@Override
 	public synchronized SourceContextAndPath clone() {
-		final SourceContextAndPath scap = new SourceContextAndPath(getAccessPath(), getStmt(), getUserData());
+		final SourceContextAndPath scap = new SourceContextAndPath(
+				getAccessPath(), getStmt(), getUserData());
 		if (path != null)
 			scap.path = new ArrayList<Abstraction>(this.path);
 		if (callStack != null)

@@ -6,12 +6,10 @@ import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.Stack;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import heros.solver.CountingThreadPoolExecutor;
 import heros.solver.Pair;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.SourceContextAndPath;
@@ -25,8 +23,6 @@ import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
  */
 public class RecursivePathBuilder extends AbstractAbstractionPathBuilder {
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
-
     private final InfoflowResults results = new InfoflowResults();
 	private final CountingThreadPoolExecutor executor;
     
@@ -35,13 +31,14 @@ public class RecursivePathBuilder extends AbstractAbstractionPathBuilder {
 	/**
      * Creates a new instance of the {@link RecursivePathBuilder} class
 	 * @param icfg The interprocedural control flow graph
+	 * @param config The configuration of the data flow solver
 	 * @param executor The executor in which to run the path reconstruction tasks
 	 * @param reconstructPaths True if the exact propagation path between source
 	 * and sink shall be reconstructed.
      */
-    public RecursivePathBuilder(IInfoflowCFG icfg, CountingThreadPoolExecutor executor,
-    		boolean reconstructPaths) {
-    	super(icfg, reconstructPaths);
+    public RecursivePathBuilder(IInfoflowCFG icfg, InfoflowConfiguration config, 
+    		CountingThreadPoolExecutor executor, boolean reconstructPaths) {
+    	super(icfg, config, reconstructPaths);
 		this.executor = executor;
     }
 	
@@ -178,6 +175,31 @@ public class RecursivePathBuilder extends AbstractAbstractionPathBuilder {
 	@Override
 	public void runIncrementalPathCompuation() {
 		// not implemented
+	}
+
+	@Override
+	public void forceTerminate() {
+		// This path builder cannot be terminated
+	}
+
+	@Override
+	public boolean isTerminated() {
+		return false;
+	}
+
+	@Override
+	public boolean isKilled() {
+		return false;
+	}
+
+	@Override
+	public void reset() {
+		// This path builder cannot be terminated
+	}
+
+	@Override
+	public void addStatusListener(IMemoryBoundedSolverStatusNotification listener) {
+		// not supported
 	}
 
 }

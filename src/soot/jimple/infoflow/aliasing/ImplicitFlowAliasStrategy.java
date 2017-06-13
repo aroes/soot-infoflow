@@ -1,12 +1,14 @@
 package soot.jimple.infoflow.aliasing;
 
-import heros.solver.IDESolver;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+
+import heros.solver.IDESolver;
 import soot.Local;
 import soot.SootMethod;
 import soot.Unit;
@@ -16,14 +18,10 @@ import soot.jimple.FieldRef;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.Jimple;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
-import soot.jimple.infoflow.data.AccessPathFactory;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
-import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
-
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 
 /**
  * Aliasing strategy to be used for conditionally-called methods when analyzing
@@ -41,8 +39,8 @@ public class ImplicitFlowAliasStrategy extends AbstractBulkAliasStrategy {
 				}
 			});
 	
-	public ImplicitFlowAliasStrategy(IInfoflowCFG cfg) {
-		super(cfg);
+	public ImplicitFlowAliasStrategy(InfoflowManager manager) {
+		super(manager);
 	}
     
 	/**
@@ -68,8 +66,8 @@ public class ImplicitFlowAliasStrategy extends AbstractBulkAliasStrategy {
 								|| assign.getLeftOp() instanceof Local)))
 					continue;
 			
-			final AccessPath apLeft = AccessPathFactory.v().createAccessPath(assign.getLeftOp(), true);
-			final AccessPath apRight = AccessPathFactory.v().createAccessPath(assign.getRightOp(), true);
+			final AccessPath apLeft = manager.getAccessPathFactory().createAccessPath(assign.getLeftOp(), true);
+			final AccessPath apRight = manager.getAccessPathFactory().createAccessPath(assign.getRightOp(), true);
 			
 			Set<AccessPath> mapLeft = res.get(apLeft);
 			if (mapLeft == null) {
@@ -94,11 +92,11 @@ public class ImplicitFlowAliasStrategy extends AbstractBulkAliasStrategy {
 		// Use global aliasing
 		Value baseValue = ((InstanceFieldRef) targetValue).getBase();
 		Set<AccessPath> aliases = methodToAliases.getUnchecked(method).get
-				(AccessPathFactory.v().createAccessPath(baseValue, true));
+				(manager.getAccessPathFactory().createAccessPath(baseValue, true));
 		if (aliases != null)
 			for (AccessPath ap : aliases) {
-				Abstraction aliasAbs = newAbs.deriveNewAbstraction(
-						ap.merge(newAbs.getAccessPath()), null);
+				AccessPath newAP = manager.getAccessPathFactory().merge(ap, newAbs.getAccessPath());
+				Abstraction aliasAbs = newAbs.deriveNewAbstraction(newAP, null);
 				if (taintSet.add(aliasAbs))
 					// We have found a new alias. This new base object may however yet
 					// again alias with something, so we need to check again
@@ -128,6 +126,17 @@ public class ImplicitFlowAliasStrategy extends AbstractBulkAliasStrategy {
 	@Override
 	public boolean hasProcessedMethod(SootMethod method) {
 		return methodToAliases.getIfPresent(method) != null;
+	}
+
+	@Override
+	public IInfoflowSolver getSolver() {
+		return null;
+	}
+
+	@Override
+	public void cleanup() {
+		methodToAliases.invalidateAll();
+		methodToAliases.cleanUp();
 	}
 	
 }

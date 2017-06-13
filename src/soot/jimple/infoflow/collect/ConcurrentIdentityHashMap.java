@@ -128,5 +128,10 @@ public class ConcurrentIdentityHashMap<K, V> implements Map<K, V> {
 			set.add(new MapEntry(entry.getKey().getContents(), entry.getValue()));
 		return set;
 	}
+	
+	@Override
+	public String toString() {
+		return innerMap.toString();
+	}
 
 }

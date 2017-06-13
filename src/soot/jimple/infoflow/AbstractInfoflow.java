@@ -23,6 +23,7 @@ import soot.jimple.infoflow.data.pathBuilders.DefaultPathBuilderFactory;
 import soot.jimple.infoflow.data.pathBuilders.IPathBuilderFactory;
 import soot.jimple.infoflow.entryPointCreators.DefaultEntryPointCreator;
 import soot.jimple.infoflow.entryPointCreators.IEntryPointCreator;
+import soot.jimple.infoflow.handlers.PostAnalysisHandler;
 import soot.jimple.infoflow.handlers.PreAnalysisHandler;
 import soot.jimple.infoflow.ipc.DefaultIPCManager;
 import soot.jimple.infoflow.ipc.IIPCManager;
@@ -50,6 +51,7 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	
 	protected final BiDirICFGFactory icfgFactory;
 	protected Collection<? extends PreAnalysisHandler> preProcessors = Collections.emptyList();
+	protected Collection<? extends PostAnalysisHandler> postProcessors = Collections.emptyList();
 	
 	protected final String androidPath;
 	protected final boolean forceAndroidJar;
@@ -114,6 +116,11 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	@Override
 	public void setPreProcessors(Collection<? extends PreAnalysisHandler> preprocessors) {
         this.preProcessors = preprocessors;
+	}
+
+	@Override
+	public void setPostProcessors(Collection<? extends PostAnalysisHandler> postprocessors) {
+        this.postProcessors = postprocessors;
 	}
 
 	@Override
@@ -247,6 +254,8 @@ public abstract class AbstractInfoflow implements IInfoflow {
 		if (config.getCallgraphAlgorithm() != CallgraphAlgorithm.OnDemand) {
 			Options.v().set_whole_program(true);
 			Options.v().setPhaseOption("cg", "trim-clinit:false");
+			if (config.getEnableReflection())
+				Options.v().setPhaseOption("cg", "types-for-invoke:true");
 		}
 
 		// do not merge variables (causes problems with PointsToSets)
@@ -323,7 +332,8 @@ public abstract class AbstractInfoflow implements IInfoflow {
 	 */
 	protected void constructCallgraph() {
 		// Allow the ICC manager to change the Soot Scene before we continue
-		ipcManager.updateJimpleForICC();
+		if (ipcManager != null)
+			ipcManager.updateJimpleForICC();
 
 		// Run the preprocessors
         for (PreAnalysisHandler tr : preProcessors)

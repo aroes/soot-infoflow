@@ -136,4 +136,13 @@ public class OverwriteTests extends JUnitTests {
 		Assert.assertEquals(1, infoflow.getResults().size());
 	}
 	
+	@Test(timeout = 300000)
+	public void simpleOverwriteAliasTest1() {
+		IInfoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.OverwriteTestCode: void simpleOverwriteAliasTest1()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		negativeCheckInfoflow(infoflow);
+	}
+
 }

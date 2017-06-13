@@ -19,7 +19,6 @@ import soot.jimple.infoflow.aliasing.Aliasing;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.data.AccessPath.ArrayTaintType;
-import soot.jimple.infoflow.data.AccessPathFactory;
 import soot.jimple.infoflow.problems.TaintPropagationResults;
 import soot.jimple.infoflow.util.ByReferenceBoolean;
 
@@ -59,7 +58,7 @@ public class ArrayPropagationRule extends AbstractTaintPropagationRule {
 					return null;
 				
 				// Taint the array length
-				AccessPath ap = AccessPathFactory.v().createAccessPath(
+				AccessPath ap = getManager().getAccessPathFactory().createAccessPath(
 						leftVal, null, IntType.v(),
 						(Type[]) null, true, false, true, ArrayTaintType.ContentsAndLength);
 				newAbs = source.deriveNewAbstraction(ap, assignStmt);
@@ -78,8 +77,9 @@ public class ArrayPropagationRule extends AbstractTaintPropagationRule {
 				
 				// Create the new taint abstraction
 				ArrayTaintType arrayTaintType = source.getAccessPath().getArrayTaintType();
-				newAbs = source.deriveNewAbstraction(leftVal,
-						false, assignStmt, targetType, arrayTaintType);
+				AccessPath ap = getManager().getAccessPathFactory().copyWithNewValue(source.getAccessPath(),
+						leftVal, targetType, false, true, arrayTaintType);
+				newAbs = source.deriveNewAbstraction(ap, assignStmt);
 			}
 			
 			// y = x[i] with i tainted
@@ -88,8 +88,9 @@ public class ArrayPropagationRule extends AbstractTaintPropagationRule {
 					&& getManager().getConfig().getEnableImplicitFlows()) {
 				// Create the new taint abstraction
 				ArrayTaintType arrayTaintType = ArrayTaintType.ContentsAndLength;
-				newAbs = source.deriveNewAbstraction(leftVal,
-						false, assignStmt, null, arrayTaintType);
+				AccessPath ap = getManager().getAccessPathFactory().copyWithNewValue(source.getAccessPath(),
+						leftVal, null, false, true, arrayTaintType);
+				newAbs = source.deriveNewAbstraction(ap, assignStmt);
 			}
 		}
 		// y = new A[i] with i tainted
@@ -98,8 +99,9 @@ public class ArrayPropagationRule extends AbstractTaintPropagationRule {
 			NewArrayExpr newArrayExpr = (NewArrayExpr) rightVal;
 			if (getAliasing().mayAlias(source.getAccessPath().getPlainValue(), newArrayExpr.getSize())) {
 				// Create the new taint abstraction
-				newAbs = source.deriveNewAbstraction(leftVal,
-						false, assignStmt, null, ArrayTaintType.Length);
+				AccessPath ap = getManager().getAccessPathFactory().copyWithNewValue(source.getAccessPath(),
+						leftVal, null, false, true, ArrayTaintType.Length);
+				newAbs = source.deriveNewAbstraction(ap, assignStmt);
 			}
 		}
 		

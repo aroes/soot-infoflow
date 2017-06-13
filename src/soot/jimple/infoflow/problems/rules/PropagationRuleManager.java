@@ -50,6 +50,7 @@ public class PropagationRuleManager {
 		ruleList.add(new StrongUpdatePropagationRule(manager, aliasing, zeroValue, results));
 		if (manager.getConfig().getEnableTypeChecking())
 			ruleList.add(new TypingPropagationRule(manager, aliasing, zeroValue, results));
+		ruleList.add(new SkipSystemClassRule(manager, aliasing, zeroValue, results));
 		
 		this.rules = ruleList.toArray(new ITaintPropagationRule[ruleList.size()]);
 	}

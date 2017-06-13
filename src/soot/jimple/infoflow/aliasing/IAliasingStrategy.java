@@ -50,13 +50,6 @@ public interface IAliasingStrategy {
 	public boolean mayAlias(AccessPath ap1, AccessPath ap2);
 	
 	/**
-	 * Sets the forward solver. Implementors can use this reference to inject
-	 * edges for taint aliases at right position.
-	 * @param fSolver The forward solver performing the taint propagation
-	 */
-	public void setForwardSolver(IInfoflowSolver fSolver);
-
-	/**
 	 * Notifies the aliasing strategy that a method has been called in the
 	 * taint analysis. This may be helpful for interprocedural alias analyses.
 	 * @param abs The abstraction on the callee's start unit
@@ -88,9 +81,32 @@ public interface IAliasingStrategy {
 	 * given method or not. Strategies that do not want to implement this method
 	 * should always return true. 
 	 * @param method The method to check
-	 * @return True if this aliasing strategy has alreay computed aliases in the
+	 * @return True if this aliasing strategy has already computed aliases in the
 	 * given method, otherwise false.
 	 */
 	public boolean hasProcessedMethod(SootMethod method);
+	
+	/**
+	 * Gets whether this analysis is lazy, i.e., needs all taints to be
+	 * propagated into all methods, even if the respective access path is not
+	 * even visible inside the callee (but an alias may be visible).
+	 * @return True if the alias analysis requires all taints to be propagated
+	 * into all methods
+	 */
+	public boolean isLazyAnalysis();
+	
+	/**
+	 * If this aliasing strategy uses an additional IFDS solver, it is returned
+	 * by this method. If this IFDS problem does not have a an additional solver,
+	 * null is returned.
+	 * @return The additional IFDS solver used by this aliasing strategy if
+	 * applicable, null otherwise
+	 */
+	public IInfoflowSolver getSolver();
+	
+	/**
+	 * Performs a clean up, i.e., removes all generated data from memory
+	 */
+	public void cleanup();
 
 }

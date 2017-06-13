@@ -222,5 +222,14 @@ public class OverwriteTestCode {
 		cm.publish(dc.dataClass2.data);
 		cm.publish(dc2.dataClass2.data);
 	}
+	
+	public void simpleOverwriteAliasTest1() {
+		DataClass dc1 = new DataClass();
+		DataClass dc2 = dc1;
+		dc1.data = TelephonyManager.getDeviceId();
+		dc2.data = null;
+		ConnectionManager cm = new ConnectionManager();		
+		cm.publish(dc1.data);
+	}
 
 }

@@ -10,6 +10,12 @@
  ******************************************************************************/
 package soot.jimple.infoflow.solver.heros;
 
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+import com.google.common.collect.Table;
+
 import heros.EdgeFunction;
 import heros.FlowFunction;
 import heros.edgefunc.EdgeIdentity;
@@ -18,37 +24,37 @@ import heros.solver.IFDSSolver;
 import heros.solver.Pair;
 import heros.solver.PathEdge;
 import heros.solver.PathTrackingIFDSSolver;
-
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.infoflow.data.Abstraction;
+import soot.jimple.infoflow.memory.IMemoryBoundedSolver;
+import soot.jimple.infoflow.memory.IMemoryBoundedSolver.IMemoryBoundedSolverStatusNotification;
 import soot.jimple.infoflow.problems.AbstractInfoflowProblem;
 import soot.jimple.infoflow.solver.IFollowReturnsPastSeedsHandler;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
-import soot.jimple.infoflow.solver.IMemoryManager;
+import soot.jimple.infoflow.solver.executors.InterruptableExecutor;
 import soot.jimple.infoflow.solver.functions.SolverCallFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverCallToReturnFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverNormalFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverReturnFlowFunction;
+import soot.jimple.infoflow.solver.memory.IMemoryManager;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
-
-import com.google.common.collect.Table;
 /**
  * We are subclassing the JimpleIFDSSolver because we need the same executor for both the forward and the backward analysis
  * Also we need to be able to insert edges containing new taint information
  * 
  */
 public class InfoflowSolver extends PathTrackingIFDSSolver<Unit, Abstraction, SootMethod, BiDiInterproceduralCFG<Unit, SootMethod>>
-		implements IInfoflowSolver {
+		implements IInfoflowSolver, IMemoryBoundedSolver {
 	
 	private IFollowReturnsPastSeedsHandler followReturnsPastSeedsHandler = null;
+	private Set<IMemoryBoundedSolverStatusNotification> notificationListeners = new HashSet<>();
+	private boolean killFlag = false;
+	private final AbstractInfoflowProblem problem;
 	
-	public InfoflowSolver(AbstractInfoflowProblem problem, CountingThreadPoolExecutor executor) {
+	public InfoflowSolver(AbstractInfoflowProblem problem, InterruptableExecutor executor) {
 		super(problem);
+		this.problem = problem;
 		this.executor = executor;
 		problem.setSolver(this);		
 	}
@@ -223,8 +229,79 @@ public class InfoflowSolver extends PathTrackingIFDSSolver<Unit, Abstraction, So
 	}
 
 	@Override
-	public IMemoryManager<Abstraction> getMemoryManager() {
+	public IMemoryManager<Abstraction, Unit> getMemoryManager() {
 		return null;
 	}
+
+	@Override
+	public void setMemoryManager(IMemoryManager<Abstraction, Unit> memoryManager) {
+		// 
+	}
+
+	@Override
+	public void setJumpPredecessors(boolean setJumpPredecessors) {
+		// 
+	}
+
+	@Override
+	public long getPropagationCount() {
+		return propagationCount;
+	}
+
+	@Override
+	public void setSolverId(boolean solverId) {
+		// TODO Auto-generated method stub
+		
+	}
 	
+	@Override
+	public void forceTerminate() {
+		this.killFlag = true;
+		((InterruptableExecutor) this.executor).interrupt();
+		this.executor.shutdown();
+	}
+	
+	@Override
+	public boolean isTerminated() {
+		return false;
+	}
+
+	@Override
+	public boolean isKilled() {
+		return killFlag;
+	}
+
+	@Override
+	public void reset() {
+		this.killFlag = false;
+	}
+
+	@Override
+	public AbstractInfoflowProblem getTabulationProblem() {
+		return this.problem;
+	}
+
+	@Override
+	public void setSingleJoinPointAbstraction(boolean singleJoinPointAbstraction) {
+		// not supported
+	}
+	
+	@Override
+	public void solve() {
+		// Notify the listeners that the solver has been started
+		for (IMemoryBoundedSolverStatusNotification listener : notificationListeners)
+			listener.notifySolverStarted(this);
+		
+		super.solve();
+		
+		// Notify the listeners that the solver has been terminated
+		for (IMemoryBoundedSolverStatusNotification listener : notificationListeners)
+			listener.notifySolverTerminated(this);
+	}
+
+	@Override
+	public void addStatusListener(IMemoryBoundedSolverStatusNotification listener) {
+		this.notificationListeners.add(listener);
+	}
+
 }

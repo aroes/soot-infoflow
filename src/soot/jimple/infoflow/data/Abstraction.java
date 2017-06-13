@@ -19,18 +19,13 @@ import java.util.Set;
 import com.google.common.collect.Sets;
 
 import heros.solver.LinkedNode;
-import soot.NullType;
 import soot.SootMethod;
-import soot.Type;
 import soot.Unit;
-import soot.Value;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.collect.AtomicBitSet;
-import soot.jimple.infoflow.data.AccessPath.ArrayTaintType;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG.UnitContainer;
 import soot.jimple.infoflow.solver.fastSolver.FastSolverLinkedNode;
-import soot.jimple.internal.JimpleLocal;
 
 /**
  * The abstraction class contains all information that is necessary to track the taint.
@@ -198,23 +193,6 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 		return abs;
 	}
 	
-	public final Abstraction deriveNewAbstraction(Value taint, boolean cutFirstField, Stmt currentStmt,
-			Type baseType) {
-		return deriveNewAbstraction(taint, cutFirstField, currentStmt, baseType,
-				getAccessPath().getArrayTaintType());
-	}
-	
-	public final Abstraction deriveNewAbstraction(Value taint, boolean cutFirstField, Stmt currentStmt,
-			Type baseType, ArrayTaintType arrayTaintType) {
-		assert !this.getAccessPath().isEmpty();
-		
-		AccessPath newAP = accessPath.copyWithNewValue(taint, baseType, cutFirstField, true,
-				arrayTaintType);
-		if (this.getAccessPath().equals(newAP) && this.currentStmt == currentStmt)
-			return this;
-		return deriveNewAbstractionMutable(newAP, currentStmt);
-	}
-
 	/**
 	 * Derives a new abstraction that models the current local being thrown as
 	 * an exception
@@ -222,7 +200,6 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	 * @return The newly derived abstraction
 	 */
 	public final Abstraction deriveNewAbstractionOnThrow(Stmt throwStmt){
-		assert !this.exceptionThrown;
 		Abstraction abs = clone();
 		
 		abs.currentStmt = throwStmt;
@@ -234,13 +211,12 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	/**
 	 * Derives a new abstraction that models the current local being caught as
 	 * an exception
-	 * @param taint The value in which the tainted exception is stored
+	 * @param ap The access path in which the tainted exception is stored
 	 * @return The newly derived abstraction
 	 */
-	public final Abstraction deriveNewAbstractionOnCatch(Value taint){
+	public final Abstraction deriveNewAbstractionOnCatch(AccessPath ap){
 		assert this.exceptionThrown;
-		Abstraction abs = deriveNewAbstractionMutable(
-				AccessPathFactory.v().createAccessPath(taint, true), null);
+		Abstraction abs = deriveNewAbstractionMutable(ap, null);
 		if (abs == null)
 			return null;
 		
@@ -270,7 +246,8 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	}
 	
 	public Abstraction getActiveCopy(){
-		assert !this.isAbstractionActive();
+		if (this.isAbstractionActive())
+			return this;
 		
 		Abstraction a = clone();
 		a.sourceContext = null;
@@ -524,7 +501,7 @@ public class Abstraction implements Cloneable, FastSolverLinkedNode<Abstraction,
 	
 	public static Abstraction getZeroAbstraction(boolean flowSensitiveAliasing) {
 		Abstraction zeroValue = new Abstraction(
-				AccessPathFactory.v().createAccessPath(new JimpleLocal("zero", NullType.v()), false),
+				AccessPath.getZeroAccessPath(),
 				null,
 				false,
 				false);

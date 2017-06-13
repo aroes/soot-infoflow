@@ -2,6 +2,7 @@ package soot.jimple.infoflow.cfg;
 
 import java.util.Collections;
 
+
 import soot.Body;
 import soot.Local;
 import soot.Modifier;
@@ -13,10 +14,13 @@ import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
 import soot.VoidType;
+import soot.jimple.Constant;
 import soot.jimple.IntConstant;
+import soot.jimple.InvokeExpr;
 import soot.jimple.Jimple;
 import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
+import soot.jimple.StringConstant;
 
 /**
  * Class for patching OS libraries such as java.lang.Thread so that we get
@@ -26,6 +30,8 @@ import soot.jimple.Stmt;
  *
  */
 public class LibraryClassPatcher {
+	
+	private final Constant stubConst = StringConstant.v("Stub!");
 	
 	public LibraryClassPatcher() {
 		
@@ -46,6 +52,33 @@ public class LibraryClassPatcher {
 		
 		// Patch the java.util.Timer implementation
 		patchTimerImplementation();
+		
+		patchServiceConnection();
+		
+		// Patch activity getFragmentManager()
+		patchActivityGetFragmentManager();
+	}
+	
+	/**
+	 * Checks whether the given method body is a stub implementation and can
+	 * safely be overwritten
+	 * @param body The body to check
+	 * @return True if the given method body is a stub implementation, otherwise
+	 * false
+	 */
+	private boolean isStubImplementation(Body body) {
+		for (Unit u : body.getUnits()) {
+			Stmt stmt = (Stmt) u;
+			if (stmt.containsInvokeExpr()) {
+				InvokeExpr iexpr = stmt.getInvokeExpr();
+				SootMethod targetMethod = iexpr.getMethod();
+				if (targetMethod.isConstructor() && targetMethod.getDeclaringClass()
+						.getName().equals("java.lang.RuntimeException"))
+					if (iexpr.getArgCount() > 0 && iexpr.getArg(0).equals(stubConst))
+						return true;
+			}
+		}
+		return false;
 	}
 	
 	/**
@@ -61,9 +94,10 @@ public class LibraryClassPatcher {
 		sc.setLibraryClass();
 		
 		SootMethod smRun = sc.getMethodUnsafe("android.app.Application getApplication()");
-		if (smRun == null || smRun.hasActiveBody())
+		if (smRun == null || (smRun.hasActiveBody() && !isStubImplementation(smRun.getActiveBody())))
 			return;
 		smRun.setPhantom(false);
+		smRun.addTag(new FlowDroidEssentialMethodTag());
 		
 		Body b = Jimple.v().newBody(smRun);
 		smRun.setActiveBody(b);
@@ -122,12 +156,14 @@ public class LibraryClassPatcher {
 		sc.setLibraryClass();
 		
 		SootMethod smRun = sc.getMethodUnsafe("void run()");
-		if (smRun == null || smRun.hasActiveBody())
+		if (smRun == null || (smRun.hasActiveBody() && !isStubImplementation(smRun.getActiveBody())))
 			return;
+		smRun.addTag(new FlowDroidEssentialMethodTag());
 		
 		SootMethod smCons = sc.getMethodUnsafe("void <init>(java.lang.Runnable)");
-		if (smCons == null || smCons.hasActiveBody())
+		if (smCons == null || (smCons.hasActiveBody() && !isStubImplementation(smCons.getActiveBody())))
 			return;
+		smCons.addTag(new FlowDroidEssentialMethodTag());
 		
 		SootClass runnable = Scene.v().getSootClassUnsafe("java.lang.Runnable");
 		if (runnable == null)
@@ -244,22 +280,43 @@ public class LibraryClassPatcher {
 				"boolean postAtTime(java.lang.Runnable,long)");
 		SootMethod smPostDelayed = sc.getMethodUnsafe(
 				"boolean postDelayed(java.lang.Runnable,long)");
-		
-		if (smPost != null && !smPost.hasActiveBody())
-			patchHandlerPostBody(smPost, runnable);
-		if (smPostAtFrontOfQueue != null && !smPostAtFrontOfQueue.hasActiveBody())
-			patchHandlerPostBody(smPostAtFrontOfQueue, runnable);
-		if (smPostAtTime != null && !smPostAtTime.hasActiveBody())
-			patchHandlerPostBody(smPostAtTime, runnable);
-		if (smPostAtTimeWithToken != null && !smPostAtTimeWithToken.hasActiveBody())
-			patchHandlerPostBody(smPostAtTimeWithToken, runnable);
-		if (smPostDelayed != null && !smPostDelayed.hasActiveBody())
-			patchHandlerPostBody(smPostDelayed, runnable);
-	
 		SootMethod smDispatchMessage = sc.getMethodUnsafe(
 				"void dispatchMessage(android.os.Message)");
-		if(smDispatchMessage != null && !smDispatchMessage.hasActiveBody()) 
+		
+		if (smPost != null && (!smPost.hasActiveBody() || isStubImplementation(smPost.getActiveBody()))) {
+			patchHandlerPostBody(smPost, runnable);
+			smPost.addTag(new FlowDroidEssentialMethodTag());
+		}
+		
+		if (smPostAtFrontOfQueue != null && (!smPostAtFrontOfQueue.hasActiveBody()
+				|| isStubImplementation(smPostAtFrontOfQueue.getActiveBody()))) {
+			patchHandlerPostBody(smPostAtFrontOfQueue, runnable);
+			smPostAtFrontOfQueue.addTag(new FlowDroidEssentialMethodTag());
+		}
+		
+		if (smPostAtTime != null && (!smPostAtTime.hasActiveBody()
+				 || isStubImplementation(smPostAtTime.getActiveBody()))) {
+			patchHandlerPostBody(smPostAtTime, runnable);
+			smPostAtTime.addTag(new FlowDroidEssentialMethodTag());
+		}
+		
+		if (smPostAtTimeWithToken != null && (!smPostAtTimeWithToken.hasActiveBody()
+				|| isStubImplementation(smPostAtTimeWithToken.getActiveBody()))) {
+			patchHandlerPostBody(smPostAtTimeWithToken, runnable);
+			smPostAtTimeWithToken.addTag(new FlowDroidEssentialMethodTag());
+		}
+		
+		if (smPostDelayed != null && (!smPostDelayed.hasActiveBody()
+				|| isStubImplementation(smPostDelayed.getActiveBody()))) {
+			patchHandlerPostBody(smPostDelayed, runnable);
+			smPostDelayed.addTag(new FlowDroidEssentialMethodTag());
+		}
+	
+		if (smDispatchMessage != null && (!smDispatchMessage.hasActiveBody()
+				|| isStubImplementation(smDispatchMessage.getActiveBody()))) {
 			patchHandlerDispatchBody(smDispatchMessage);
+			smDispatchMessage.addTag(new FlowDroidEssentialMethodTag());
+		}
 	}
 	
 	/**
@@ -353,28 +410,40 @@ public class LibraryClassPatcher {
 		sc.setLibraryClass();
 		
 		SootMethod smSchedule1 = sc.getMethodUnsafe("void schedule(java.util.TimerTask,long)");
-		if (smSchedule1 != null && !smSchedule1.hasActiveBody())
+		if (smSchedule1 != null && !smSchedule1.hasActiveBody()) {
 			patchTimerScheduleMethod(smSchedule1);
+			smSchedule1.addTag(new FlowDroidEssentialMethodTag());
+		}
 
 		SootMethod smSchedule2 = sc.getMethodUnsafe("void schedule(java.util.TimerTask,java.util.Date)");
-		if (smSchedule2 != null && !smSchedule2.hasActiveBody())
+		if (smSchedule2 != null && !smSchedule2.hasActiveBody()) {
 			patchTimerScheduleMethod(smSchedule2);
+			smSchedule2.addTag(new FlowDroidEssentialMethodTag());
+		}
 		
 		SootMethod smSchedule3 = sc.getMethodUnsafe("void schedule(java.util.TimerTask,java.util.Date,long)");
-		if (smSchedule3 != null && !smSchedule3.hasActiveBody())
+		if (smSchedule3 != null && !smSchedule3.hasActiveBody()) {
 			patchTimerScheduleMethod(smSchedule3);
+			smSchedule3.addTag(new FlowDroidEssentialMethodTag());
+		}
 		
 		SootMethod smSchedule4 = sc.getMethodUnsafe("void schedule(java.util.TimerTask,long,long)");
-		if (smSchedule4 != null && !smSchedule4.hasActiveBody())
+		if (smSchedule4 != null && !smSchedule4.hasActiveBody()) {
 			patchTimerScheduleMethod(smSchedule4);
+			smSchedule4.addTag(new FlowDroidEssentialMethodTag());
+		}
 		
 		SootMethod smSchedule5 = sc.getMethodUnsafe("void scheduleAtFixedRate(java.util.TimerTask,java.util.Date,long)");
-		if (smSchedule5 != null && !smSchedule5.hasActiveBody())
+		if (smSchedule5 != null && !smSchedule5.hasActiveBody()) {
 			patchTimerScheduleMethod(smSchedule5);
+			smSchedule5.addTag(new FlowDroidEssentialMethodTag());
+		}
 		
 		SootMethod smSchedule6 = sc.getMethodUnsafe("void scheduleAtFixedRate(java.util.TimerTask,long,long)");
-		if (smSchedule6 != null && !smSchedule6.hasActiveBody())
+		if (smSchedule6 != null && !smSchedule6.hasActiveBody()) {
 			patchTimerScheduleMethod(smSchedule6);
+			smSchedule6.addTag(new FlowDroidEssentialMethodTag());
+		}
 	}
 
 	/**
@@ -415,6 +484,74 @@ public class LibraryClassPatcher {
 		
 		// Add the return statement
 		b.getUnits().add(Jimple.v().newReturnVoidStmt());
+	}
+	
+	/**
+	* Modifies Activity::getFragmentManager() to
+	* return new MyFragmentManager(this);
+	*/
+	private void patchActivityGetFragmentManager() {
+		SootClass sc = Scene.v().getSootClassUnsafe("android.app.Activity");
+		if (sc == null)
+			return;
+		sc.setApplicationClass();
+		SootMethod smGetFM = sc.getMethodUnsafe("android.app.FragmentManager getFragmentManager()");
+		if (smGetFM == null || smGetFM.hasActiveBody())
+			return;
+		Body b = Jimple.v().newBody(smGetFM);
+		smGetFM.setActiveBody(b);
+		Local thisLocal = Jimple.v().newLocal("this", sc.getType());
+		b.getLocals().add(thisLocal);
+		b.getUnits().add(Jimple.v().newIdentityStmt(thisLocal,
+				Jimple.v().newThisRef(sc.getType())));
+		
+		SootClass scFragmentTransaction = Scene.v().forceResolve("android.app.FragmentManager", SootClass.SIGNATURES);
+		Local retLocal = Jimple.v().newLocal("retFragMan", Scene.v().getSootClassUnsafe("android.app.FragmentManager").getType()); 
+		b.getLocals().add(retLocal); 
+		b.getUnits().add(Jimple.v().newAssignStmt(retLocal, Jimple.v().newNewExpr(scFragmentTransaction.getType())));
+		b.getUnits().add(Jimple.v().newReturnStmt(retLocal));
+	}
+	
+	private void patchServiceConnection() {
+		SootClass sc = Scene.v().getSootClassUnsafe("android.content.ServiceConnection");
+		if (sc == null)
+			return;
+		sc.setApplicationClass();
+		
+		SootMethod smGetFM = sc.getMethodUnsafe("void onServiceConnected(android.content.ComponentName,android.os.IBinder)");
+		if (smGetFM == null || smGetFM.hasActiveBody())
+			return;
+		
+		smGetFM.setPhantom(false);
+		
+		Body b = Jimple.v().newBody(smGetFM);
+		//smGetFM.setActiveBody(b);
+		
+		Local thisLocal = Jimple.v().newLocal("this", sc.getType());
+		b.getLocals().add(thisLocal);
+		b.getUnits().add(Jimple.v().newIdentityStmt(thisLocal,
+				Jimple.v().newThisRef(sc.getType())));
+		
+		// Assign the parameters
+		Local firstParam = null;
+		for (int i = 0; i < smGetFM.getParameterCount(); ++i)  {
+			Local paramLocal = Jimple.v().newLocal("param" + i, smGetFM.getParameterType(i));
+			b.getLocals().add(paramLocal);
+			b.getUnits().add(Jimple.v().newIdentityStmt(paramLocal,
+					Jimple.v().newParameterRef(smGetFM.getParameterType(i), i)));
+			if (i == 0)
+				firstParam = paramLocal;
+		}		
+		
+		b.getUnits().add(Jimple.v().newInvokeStmt(Jimple.v().newInterfaceInvokeExpr(thisLocal,
+				Scene.v().makeMethodRef(sc, "onServiceConnected", 
+						Collections.<Type>singletonList(smGetFM.getParameterType(0)), VoidType.v(), false), firstParam)));
+		
+		Unit retStmt = Jimple.v().newReturnVoidStmt();
+		b.getUnits().add(retStmt);
+		
+		b.validate();
+		
 	}
 	
 }

@@ -1,18 +1,16 @@
 package soot.jimple.infoflow.data.pathBuilders;
 
+import java.util.HashSet;
 import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import heros.solver.CountingThreadPoolExecutor;
+import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.collect.ConcurrentIdentityHashMultiMap;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
 import soot.jimple.infoflow.data.SourceContext;
 import soot.jimple.infoflow.data.SourceContextAndPath;
-import soot.jimple.infoflow.results.InfoflowResults;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
+import soot.jimple.infoflow.solver.executors.InterruptableExecutor;
 
 /**
  * Class for reconstructing abstraction paths from sinks to source. This builder
@@ -21,27 +19,22 @@ import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
  * 
  * @author Steven Arzt
  */
-public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilder {
-	
-    private final Logger logger = LoggerFactory.getLogger(getClass());
-
-    private final InfoflowResults results = new InfoflowResults();
-	private final CountingThreadPoolExecutor executor;
-	
+public class ContextInsensitivePathBuilder extends ConcurrentAbstractionPathBuilder {
+		
 	private ConcurrentIdentityHashMultiMap<Abstraction, SourceContextAndPath> pathCache =
 			new ConcurrentIdentityHashMultiMap<>();
 	
 	/**
 	 * Creates a new instance of the {@link ContextSensitivePathBuilder} class
 	 * @param icfg The interprocedural control flow graph
+	 * @param config The configuration of the data flow solver
 	 * @param executor The executor in which to run the path reconstruction tasks
 	 * @param reconstructPaths True if the exact propagation path between source
 	 * and sink shall be reconstructed.
 	 */
-	public ContextInsensitivePathBuilder(IInfoflowCFG icfg, CountingThreadPoolExecutor executor,
-			boolean reconstructPaths) {
-		super(icfg, reconstructPaths);
-		this.executor = executor;
+	public ContextInsensitivePathBuilder(IInfoflowCFG icfg, InfoflowConfiguration config, 
+			InterruptableExecutor executor, boolean reconstructPaths) {
+		super(icfg, config, executor, reconstructPaths);
 	}
 	
 	/**
@@ -66,14 +59,14 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
 					// Process the predecessor
 					if (processPredecessor(scap, pred))
 						// Schedule the predecessor
-						executor.execute(new SourceFindingTask(pred));
+						scheduleDependentTask(new SourceFindingTask(pred));
 					
 					// Process the predecessor's neighbors
 					if (pred.getNeighbors() != null)
 						for (Abstraction neighbor : pred.getNeighbors())
 							if (processPredecessor(scap, neighbor))
 								// Schedule the predecessor
-								executor.execute(new SourceFindingTask(neighbor));
+								scheduleDependentTask(new SourceFindingTask(neighbor));
 				}
 			}
 		}
@@ -88,6 +81,29 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
 			checkForSource(pred, extendedScap);
 			return pathCache.put(pred, extendedScap);
 		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((abstraction == null) ? 0 : abstraction.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			SourceFindingTask other = (SourceFindingTask) obj;
+			if (abstraction != other.abstraction)
+				return false;
+			return true;
+		}
+
 	}
 	
 	/**
@@ -117,63 +133,24 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
 	}
 	
 	@Override
-	public void computeTaintPaths(final Set<AbstractionAtSink> res) {
-		runSourceFindingTasks(res);
-	}
-	
-	private void runSourceFindingTasks(final Set<AbstractionAtSink> res) {
-		if (res.isEmpty())
-			return;
-		
-		long beforePathTracking = System.nanoTime();
-    	logger.info("Obtainted {} connections between sources and sinks", res.size());
-    	
-    	// Start the propagation tasks
-    	int curResIdx = 0;
-    	for (final AbstractionAtSink abs : res) {
-    		logger.info("Building path " + ++curResIdx);
-   			buildPathForAbstraction(abs);
-   			
-   			// Also build paths for the neighbors of our result abstraction
-   			if (abs.getAbstraction().getNeighbors() != null)
-   				for (Abstraction neighbor : abs.getAbstraction().getNeighbors()) {
-   					AbstractionAtSink neighborAtSink = new AbstractionAtSink(neighbor,
-   							abs.getSinkStmt());
-   		   			buildPathForAbstraction(neighborAtSink);
-   				}
-    	}
-
-    	try {
-			executor.awaitCompletion();
-		} catch (InterruptedException ex) {
-			logger.error("Could not wait for path executor completion: {0}", ex.getMessage());
-			ex.printStackTrace();
-		}
-    	
-    	logger.info("Path processing took {} seconds in total",
-    			(System.nanoTime() - beforePathTracking) / 1E9);
-	}
-	
-	/**
-	 * Builds the path for the given abstraction that reached a sink
-	 * @param abs The abstraction that reached a sink
-	 */
-	private void buildPathForAbstraction(final AbstractionAtSink abs) {
+	protected Runnable getTaintPathTask(final AbstractionAtSink abs) {
 		SourceContextAndPath scap = new SourceContextAndPath(
 				abs.getAbstraction().getAccessPath(), abs.getSinkStmt());
 		scap = scap.extendPath(abs.getAbstraction());
 		if (pathCache.put(abs.getAbstraction(), scap))
 			if (!checkForSource(abs.getAbstraction(), scap))
-				executor.execute(new SourceFindingTask(abs.getAbstraction()));
-	}
-	
-	@Override
-	public InfoflowResults getResults() {
-		return this.results;
+				return new SourceFindingTask(abs.getAbstraction());
+		return null;
 	}
 
 	@Override
+	protected boolean triggerComputationForNeighbors() {
+		return true;
+	}
+	
+	@Override
 	public void runIncrementalPathCompuation() {
+		Set<AbstractionAtSink> incrementalAbs = new HashSet<>();
 		for (Abstraction abs : pathCache.keySet())
 			for (SourceContextAndPath scap : pathCache.get(abs)) {
 				if (abs.getNeighbors() != null && abs.getNeighbors().size() != scap.getNeighborCounter()) {
@@ -181,9 +158,12 @@ public class ContextInsensitivePathBuilder extends AbstractAbstractionPathBuilde
 					scap.setNeighborCounter(abs.getNeighbors().size());
 					
 					for (Abstraction neighbor : abs.getNeighbors())
-						buildPathForAbstraction(new AbstractionAtSink(neighbor, scap.getStmt()));
+						incrementalAbs.add(new AbstractionAtSink(neighbor, scap.getStmt()));
 				}
 			}
+		
+		if (!incrementalAbs.isEmpty())
+			this.computeTaintPaths(incrementalAbs);
 	}
 
 }

@@ -3,11 +3,12 @@ package soot.jimple.infoflow.problems;
 import java.util.HashSet;
 import java.util.Set;
 
+import soot.Unit;
 import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.collect.MyConcurrentHashMap;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
-import soot.jimple.infoflow.solver.IMemoryManager;
+import soot.jimple.infoflow.solver.memory.IMemoryManager;
 import soot.jimple.infoflow.util.SystemClassHandler;
 
 /**
@@ -65,7 +66,8 @@ public class TaintPropagationResults {
 		abs.setCorrespondingCallSite(resultAbs.getSinkStmt());
 		
 		// Reduce the incoming abstraction
-		IMemoryManager<Abstraction> memoryManager = manager.getForwardSolver().getMemoryManager();
+		IMemoryManager<Abstraction, Unit> memoryManager = manager
+				.getForwardSolver().getMemoryManager();
 		if (memoryManager != null) {
 			abs = memoryManager.handleMemoryObject(abs);
 			if (abs == null)

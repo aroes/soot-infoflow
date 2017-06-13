@@ -60,4 +60,22 @@ public class BasicTests extends JUnitTests {
 		checkInfoflow(infoflow, 1);
 	}
 
+	@Test
+	public void arithmeticLoopTest1() {
+		IInfoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.BasicTestCode: void arithmeticLoopTest1()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+	}
+
+	@Test
+	public void arithmeticLoopTest2() {
+		IInfoflow infoflow = initInfoflow();
+		List<String> epoints = new ArrayList<String>();
+		epoints.add("<soot.jimple.infoflow.test.BasicTestCode: void arithmeticLoopTest2()>");
+		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
+		checkInfoflow(infoflow, 1);
+	}
+
 }

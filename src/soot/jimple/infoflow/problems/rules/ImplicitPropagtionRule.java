@@ -24,7 +24,7 @@ import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.collect.MyConcurrentHashMap;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AbstractionAtSink;
-import soot.jimple.infoflow.data.AccessPathFactory;
+import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.problems.TaintPropagationResults;
 import soot.jimple.infoflow.solver.cfg.IInfoflowCFG.UnitContainer;
 import soot.jimple.infoflow.util.ByReferenceBoolean;
@@ -204,7 +204,7 @@ public class ImplicitPropagtionRule extends AbstractTaintPropagationRule {
 		// If we are inside a conditional branch, we consider every sink call a leak
 		if (source.isAbstractionActive()) {
 			if (source.getAccessPath().isEmpty() || source.getTopPostdominator() != null) {
-				if (getManager().getSourceSinkManager().isSink(stmt, getManager().getICFG(), null))
+				if (getManager().getSourceSinkManager().isSink(stmt, getManager(), null))
 					getResults().addResult(new AbstractionAtSink(source, stmt));
 			}
 			else {
@@ -213,7 +213,7 @@ public class ImplicitPropagtionRule extends AbstractTaintPropagationRule {
 						&& source.getAccessPath().getFirstField() == null
 						&& getAliasing().mayAlias(curMethod.getActiveBody().getThisLocal(),
 								source.getAccessPath().getPlainValue())
-						&& getManager().getSourceSinkManager().isSink(stmt, getManager().getICFG(), null))
+						&& getManager().getSourceSinkManager().isSink(stmt, getManager(), null))
 					getResults().addResult(new AbstractionAtSink(source, stmt));
 			}
 		}
@@ -237,8 +237,8 @@ public class ImplicitPropagtionRule extends AbstractTaintPropagationRule {
 						&& !(leftVal instanceof FieldRef))
 					return null;
 				
-				Abstraction abs = source.deriveNewAbstraction(
-						AccessPathFactory.v().createAccessPath(leftVal, true), stmt);
+				Abstraction abs = source.deriveNewAbstraction(getManager().getAccessPathFactory()
+						.createAccessPath(leftVal, true), stmt);
 				return Collections.singleton(abs);
 			}
 		}
@@ -264,8 +264,9 @@ public class ImplicitPropagtionRule extends AbstractTaintPropagationRule {
 					&& ((ReturnStmt) returnStmt).getOp() instanceof Constant)
 				if (callSite instanceof DefinitionStmt) {
 					DefinitionStmt def = (DefinitionStmt) callSite;
-					Abstraction abs = source.deriveNewAbstraction
-							(source.getAccessPath().copyWithNewValue(def.getLeftOp()), returnStmt);
+					AccessPath ap = getManager().getAccessPathFactory().copyWithNewValue(
+							source.getAccessPath(), def.getLeftOp());
+					Abstraction abs = source.deriveNewAbstraction(ap, returnStmt);
 
 					Set<Abstraction> res = new HashSet<Abstraction>();
 					res.add(abs);
@@ -296,8 +297,9 @@ public class ImplicitPropagtionRule extends AbstractTaintPropagationRule {
 					|| source.getAccessPath().isEmpty();
 
 			if (insideConditional && leftOp instanceof FieldRef) {
-				Abstraction abs = source.deriveNewAbstraction
-						(source.getAccessPath().copyWithNewValue(leftOp), returnStmt);
+				AccessPath ap = getManager().getAccessPathFactory().copyWithNewValue(
+						source.getAccessPath(), leftOp);
+				Abstraction abs = source.deriveNewAbstraction(ap, returnStmt);
 				
 				// Aliases of implicitly tainted variables must be mapped back
 				// into the caller's context on return when we leave the last

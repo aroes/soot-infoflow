@@ -263,8 +263,14 @@ public class TypeUtils {
 	 * @return The resulting array
 	 */
 	public static Type buildArrayOrAddDimension(Type type) {
+		// If code takes a tainted array and recursively creates a higher-
+		// dimensional one that receives the old array as an element, we end up
+		// with an infinitely growing number of dimensions. We therefore kill
+		// the type information if we get more dimensions.
 		if (type instanceof ArrayType) {
 			ArrayType array = (ArrayType) type;
+			if (array.numDimensions >= 3)
+				return null;
 			return array.makeArrayType();
 		}
 		else

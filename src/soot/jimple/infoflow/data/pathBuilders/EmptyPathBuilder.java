@@ -29,5 +29,28 @@ public class EmptyPathBuilder implements IAbstractionPathBuilder {
 	@Override
 	public void runIncrementalPathCompuation() {
 	}
+
+	@Override
+	public void forceTerminate() {
+	}
+
+	@Override
+	public boolean isTerminated() {
+		return false;
+	}
+
+	@Override
+	public boolean isKilled() {
+		return false;
+	}
+
+	@Override
+	public void reset() {
+	}
+
+	@Override
+	public void addStatusListener(IMemoryBoundedSolverStatusNotification listener) {
+		// not supported
+	}
 	
 }

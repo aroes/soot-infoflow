@@ -26,6 +26,8 @@ import org.junit.BeforeClass;
 import soot.jimple.infoflow.IInfoflow;
 import soot.jimple.infoflow.Infoflow;
 import soot.jimple.infoflow.config.ConfigForTest;
+import soot.jimple.infoflow.data.pathBuilders.DefaultPathBuilderFactory;
+import soot.jimple.infoflow.data.pathBuilders.DefaultPathBuilderFactory.PathBuilder;
 import soot.jimple.infoflow.data.pathBuilders.IPathBuilderFactory;
 import soot.jimple.infoflow.results.InfoflowResults;
 import soot.jimple.infoflow.taintWrappers.EasyTaintWrapper;
@@ -140,7 +142,8 @@ public abstract class JUnitTests {
 	}
 
 	protected IInfoflow initInfoflow(boolean useTaintWrapper) {
-		return initInfoflow(useTaintWrapper, null);
+		return initInfoflow(useTaintWrapper, new DefaultPathBuilderFactory(
+				PathBuilder.ContextSensitive, false));
 	}
 
 	protected IInfoflow initInfoflow(boolean useTaintWrapper,

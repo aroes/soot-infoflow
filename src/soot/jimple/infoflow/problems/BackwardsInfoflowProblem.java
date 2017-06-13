@@ -52,7 +52,6 @@ import soot.jimple.infoflow.collect.MutableTwoElementSet;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.handlers.TaintPropagationHandler.FlowFunctionType;
-import soot.jimple.infoflow.solver.IInfoflowSolver;
 import soot.jimple.infoflow.solver.functions.SolverCallFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverCallToReturnFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverNormalFlowFunction;
@@ -66,7 +65,6 @@ import soot.jimple.infoflow.util.TypeUtils;
  * required for on-demand alias analysis.
  */
 public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
-	private IInfoflowSolver fSolver;
 	
 	public void setTaintWrapper(ITaintPropagationWrapper wrapper) {
 		taintWrapper = wrapper;
@@ -74,10 +72,6 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 	
 	public BackwardsInfoflowProblem(InfoflowManager manager) {
 		super(manager);
-	}
-
-	public void setForwardSolver(IInfoflowSolver forwardSolver) {
-		fSolver = forwardSolver;
 	}
 	
 	@Override
@@ -145,7 +139,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 					// all taint propagations must be below that point, so this is the
 					// right point to turn around.
 					for (Unit u : interproceduralCFG().getPredsOf(defStmt))
-						fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, source));
+						manager.getForwardSolver().processEdge(new PathEdge<Unit, Abstraction>(d1, u, source));
 				}
 				
 				// We only handle assignments and identity statements
@@ -201,8 +195,9 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						if (source.getAccessPath().isInstanceFieldRef()
 								&& ref.getBase() == source.getAccessPath().getPlainValue()
 								&& source.getAccessPath().firstFieldMatches(ref.getField())) {
-							newLeftAbs = checkAbstraction(source.deriveNewAbstraction(leftValue, true,
-									defStmt, source.getAccessPath().getFirstFieldType()));
+							AccessPath ap = manager.getAccessPathFactory().copyWithNewValue(
+									source.getAccessPath(), leftValue, source.getAccessPath().getFirstFieldType(), true);
+							newLeftAbs = checkAbstraction(source.deriveNewAbstraction(ap, defStmt));
 						}
 					}
 					else if (manager.getConfig().getEnableStaticFieldTracking()
@@ -210,8 +205,9 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						StaticFieldRef ref = (StaticFieldRef) rightValue;
 						if (source.getAccessPath().isStaticFieldRef()
 								&& source.getAccessPath().firstFieldMatches(ref.getField())) {
-							newLeftAbs = checkAbstraction(source.deriveNewAbstraction(leftValue, true,
-									defStmt, source.getAccessPath().getBaseType()));
+							AccessPath ap = manager.getAccessPathFactory().copyWithNewValue(source.getAccessPath(),
+									leftValue, source.getAccessPath().getBaseType(), true);
+							newLeftAbs = checkAbstraction(source.deriveNewAbstraction(ap, defStmt));
 						}
 					}
 					else if (rightValue == source.getAccessPath().getPlainValue()) {
@@ -246,9 +242,11 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							return res;
 						}
 						
-						if (newLeftAbs == null)
-							newLeftAbs = checkAbstraction(source.deriveNewAbstraction(
-									source.getAccessPath().copyWithNewValue(leftValue, newType, false), defStmt));
+						if (newLeftAbs == null) {
+							AccessPath ap = manager.getAccessPathFactory().copyWithNewValue(source.getAccessPath(),
+									leftValue, newType, false);
+							newLeftAbs = checkAbstraction(source.deriveNewAbstraction(ap, defStmt));
+						}
 					}
 					
 					if (newLeftAbs != null) {
@@ -263,7 +261,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							
 							// Inject the new alias into the forward solver
 							for (Unit u : interproceduralCFG().getPredsOf(defStmt))
-								fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, newLeftAbs));
+								manager.getForwardSolver().processEdge(new PathEdge<Unit, Abstraction>(d1, u, newLeftAbs));
 						}
 					}
 				}
@@ -365,14 +363,15 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								addRightValue = false;
 
 						if (addRightValue) {
-							Abstraction newAbs = checkAbstraction(source.deriveNewAbstraction(
-									rightValue, cutFirstField, defStmt, targetType));
+							AccessPath ap = manager.getAccessPathFactory().copyWithNewValue(source.getAccessPath(),
+									rightValue, targetType, cutFirstField);
+							Abstraction newAbs = checkAbstraction(source.deriveNewAbstraction(ap, defStmt));
 							if (newAbs != null && !newAbs.getAccessPath().equals(source.getAccessPath())) {
 								res.add(newAbs);
 								
 								// Inject the new alias into the forward solver
 								for (Unit u : interproceduralCFG().getPredsOf(defStmt))
-									fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, newAbs));
+									manager.getForwardSolver().processEdge(new PathEdge<Unit, Abstraction>(d1, u, newAbs));
 							}
 						}
 					}
@@ -430,15 +429,16 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				final Stmt stmt = (Stmt) src;
 				final InvokeExpr ie = (stmt != null && stmt.containsInvokeExpr())
 						? stmt.getInvokeExpr() : null;
+				final boolean isReflectiveCallSite = interproceduralCFG().isReflectiveCallSite(ie);
 
 				final Value[] paramLocals = new Value[dest.getParameterCount()]; 
 				for (int i = 0; i < dest.getParameterCount(); i++)
 					paramLocals[i] = dest.getActiveBody().getParameterLocal(i);
 				
 				final boolean isSource = manager.getSourceSinkManager() != null
-						? manager.getSourceSinkManager().getSourceInfo((Stmt) src, interproceduralCFG()) != null : false;
+						? manager.getSourceSinkManager().getSourceInfo((Stmt) src, manager) != null : false;
 				final boolean isSink = manager.getSourceSinkManager() != null
-						? manager.getSourceSinkManager().isSink(stmt, interproceduralCFG(), null) : false;
+						? manager.getSourceSinkManager().isSink(stmt, manager, null) : false;
 				
 				// This is not cached by Soot, so accesses are more expensive
 				// than one might think
@@ -504,9 +504,9 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 										if (rStmt.getOp() instanceof Local
 												|| rStmt.getOp() instanceof FieldRef)
 											if (manager.getTypeUtils().checkCast(source.getAccessPath(), rStmt.getOp().getType())) {
-												Abstraction abs = checkAbstraction(source.deriveNewAbstraction
-														(source.getAccessPath().copyWithNewValue
-																(rStmt.getOp(), null, false), (Stmt) src));
+												AccessPath ap = manager.getAccessPathFactory().copyWithNewValue
+														(source.getAccessPath(), rStmt.getOp(), null, false);
+												Abstraction abs = checkAbstraction(source.deriveNewAbstraction(ap, (Stmt) src));
 												if (abs != null)
 													res.add(abs);
 											}
@@ -530,19 +530,26 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 								&& !source.getAccessPath().isStaticFieldRef()
 								&& !dest.isStatic()) {
 							InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();
-							if (iIExpr.getBase() == sourceBase && manager.getTypeUtils().hasCompatibleTypesForCall(
+							Value callBase = isReflectiveCallSite ? iIExpr.getArg(0) : iIExpr.getBase();
+							
+							if (callBase == sourceBase && manager.getTypeUtils().hasCompatibleTypesForCall(
 									source.getAccessPath(), dest.getDeclaringClass())) {
 								boolean param = false;
 								// check if it is not one of the params (then we have already fixed it)
-								for (int i = 0; i < dest.getParameterCount(); i++) {
-									if (stmt.getInvokeExpr().getArg(i) == sourceBase) {
-										param = true;
-										break;
+								if (!isReflectiveCallSite) {
+									for (int i = 0; i < dest.getParameterCount(); i++) {
+										if (stmt.getInvokeExpr().getArg(i) == sourceBase) {
+											param = true;
+											break;
+										}
 									}
 								}
+								
+								// Map the base local into the callee
 								if (!param) {
-									Abstraction abs = checkAbstraction(source.deriveNewAbstraction
-											(source.getAccessPath().copyWithNewValue(thisLocal), (Stmt) src));
+									AccessPath ap = manager.getAccessPathFactory().copyWithNewValue(
+											source.getAccessPath(), thisLocal);
+									Abstraction abs = checkAbstraction(source.deriveNewAbstraction(ap, (Stmt) src));
 									if (abs != null)
 										res.add(abs);
 								}
@@ -552,8 +559,9 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						// Map the parameter values into the callee
 						if (isExecutorExecute) {
 							if (ie.getArg(0) == source.getAccessPath().getPlainValue()) {
-								Abstraction abs = checkAbstraction(source.deriveNewAbstraction
-										(source.getAccessPath().copyWithNewValue(thisLocal), stmt));
+								AccessPath ap = manager.getAccessPathFactory().copyWithNewValue(
+										source.getAccessPath(), thisLocal);
+								Abstraction abs = checkAbstraction(source.deriveNewAbstraction(ap, stmt));
 								if (abs != null)
 									res.add(abs);
 							}
@@ -561,15 +569,36 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						else if (ie != null && dest.getParameterCount() > 0) {
 							assert dest.getParameterCount() == ie.getArgCount();
 							// check if param is tainted:
-							for (int i = 0; i < ie.getArgCount(); i++) {
-								if (ie.getArg(i) == source.getAccessPath().getPlainValue()) {									
-									Abstraction abs = checkAbstraction(source.deriveNewAbstraction(
-											source.getAccessPath().copyWithNewValue(paramLocals[i]), stmt));
-									if (abs != null)
-										res.add(abs);
+							for (int i = isReflectiveCallSite ? 1 : 0; i < ie.getArgCount(); i++) {
+								if (ie.getArg(i) == source.getAccessPath().getPlainValue()) {
+									
+									if (isReflectiveCallSite) {
+										// If we have a reflective method call and the argument array is
+										// tainted, we taint all parameters
+										for (int j = 0; i < paramLocals.length; i++) {
+											AccessPath ap = manager.getAccessPathFactory().copyWithNewValue(
+													source.getAccessPath(), paramLocals[j], null, false);
+											Abstraction abs = checkAbstraction(source.deriveNewAbstraction(ap, stmt));
+											if (abs != null)
+												res.add(abs);
+										}
+									}
+									else {
+										// Taint the respective parameter local
+										AccessPath ap = manager.getAccessPathFactory().copyWithNewValue(
+												source.getAccessPath(), paramLocals[i]);
+										Abstraction abs = checkAbstraction(source.deriveNewAbstraction(ap, stmt));
+										if (abs != null)
+											res.add(abs);
+									}
 								}
 							}
 						}
+						
+						// Inject our calling context into the other solver
+						if (res != null && !res.isEmpty())
+							for (Abstraction d3 : res)
+								manager.getForwardSolver().injectContext(solver, dest, d3, src, source, d1);
 						
 						return notifyOutFlowHandlers(src, d1, source, res,
 								FlowFunctionType.CallFlowFunction);
@@ -587,10 +616,11 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 				final Stmt stmt = (Stmt) callSite;
 				final InvokeExpr ie = (stmt != null && stmt.containsInvokeExpr())
 						? stmt.getInvokeExpr() : null;
+				final boolean isReflectiveCallSite = interproceduralCFG().isReflectiveCallSite(ie);
 				
 				// This is not cached by Soot, so accesses are more expensive
 				// than one might think
-				final Local thisLocal = callee.isStatic() ? null : callee.getActiveBody().getThisLocal();	
+				final Local thisLocal = callee.isStatic() ? null : callee.getActiveBody().getThisLocal();
 				
 				// Android executor methods are handled specially. getSubSignature()
 				// is slow, so we try to avoid it whenever we can
@@ -634,8 +664,9 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						if (isExecutorExecute) {
 							// Map the "this" object to the first argument of the call site
 							if (source.getAccessPath().getPlainValue() == thisLocal) {
-								Abstraction abs = checkAbstraction(source.deriveNewAbstraction
-										(source.getAccessPath().copyWithNewValue(ie.getArg(0)), (Stmt) exitStmt));
+								AccessPath ap = manager.getAccessPathFactory().copyWithNewValue(
+										source.getAccessPath(), ie.getArg(0));
+								Abstraction abs = checkAbstraction(source.deriveNewAbstraction(ap, (Stmt) exitStmt));
 								if (abs != null) {
 									res.add(abs);
 									registerActivationCallSite(callSite, callee, abs);
@@ -646,18 +677,17 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							boolean parameterAliases = false;
 							
 							// check one of the call params are tainted (not if simple type)
-							Value originalCallArg = null;
 							for (int i = 0; i < paramLocals.length; i++) {
 								if (paramLocals[i] == sourceBase) {
 									parameterAliases = true;
 									if (callSite instanceof Stmt) {
-										originalCallArg = ie.getArg(i);
+										Value originalCallArg = ie.getArg(isReflectiveCallSite ? 1 : i);
 										
 										// If this is a constant parameter, we can safely ignore it
 										if (!AccessPath.canContainValue(originalCallArg))
 											continue;
-										if (!manager.getTypeUtils().checkCast(source.getAccessPath(),
-												originalCallArg.getType()))
+										if (!isReflectiveCallSite && !manager.getTypeUtils().checkCast(
+												source.getAccessPath(), originalCallArg.getType()))
 											continue;
 										
 										// Primitive types and strings cannot have aliases and thus
@@ -673,9 +703,14 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 										// or lots of bookkeeping to avoid FPs (BytecodeTests.flowSensitivityTest1).
 										if (interproceduralCFG().methodWritesValue(callee, paramLocals[i]))
 											continue;
-										
-										Abstraction abs = checkAbstraction(source.deriveNewAbstraction
-												(source.getAccessPath().copyWithNewValue(originalCallArg), (Stmt) exitStmt));
+
+										AccessPath ap = manager.getAccessPathFactory().copyWithNewValue(
+												source.getAccessPath(), originalCallArg,
+												isReflectiveCallSite ? null : source.getAccessPath().getBaseType(),
+												false);
+										Abstraction abs = checkAbstraction(source.deriveNewAbstraction(
+												ap, (Stmt) exitStmt));
+
 										if (abs != null) {
 											res.add(abs);
 											registerActivationCallSite(callSite, callee, abs);
@@ -694,8 +729,15 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 											Stmt stmt = (Stmt) callSite;
 											if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
 												InstanceInvokeExpr iIExpr = (InstanceInvokeExpr) stmt.getInvokeExpr();
-												Abstraction abs = checkAbstraction(source.deriveNewAbstraction
-														(source.getAccessPath().copyWithNewValue(iIExpr.getBase()), (Stmt) exitStmt));
+												Value callerBaseLocal = interproceduralCFG().isReflectiveCallSite(iIExpr)
+														? iIExpr.getArg(0) : iIExpr.getBase();
+												
+												AccessPath ap = manager.getAccessPathFactory().copyWithNewValue(
+														source.getAccessPath(), callerBaseLocal,
+														isReflectiveCallSite ? null : source.getAccessPath().getBaseType(),
+														false);
+												Abstraction abs = checkAbstraction(source.deriveNewAbstraction(
+														ap, (Stmt) exitStmt));
 												if (abs != null) {
 													res.add(abs);
 													registerActivationCallSite(callSite, callee, abs);
@@ -754,7 +796,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 											== abs.getAccessPath().getPlainValue()) {
 										// Do not pass on this taint, but trigger the forward analysis
 										for (Unit u : interproceduralCFG().getPredsOf(defStmt))
-											fSolver.processEdge(new PathEdge<Unit, Abstraction>(d1, u, abs));
+											manager.getForwardSolver().processEdge(new PathEdge<Unit, Abstraction>(d1, u, abs));
 									}
 									else
 										passOnSet.add(abs);

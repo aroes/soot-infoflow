@@ -27,11 +27,9 @@ import soot.jimple.DefinitionStmt;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.IInfoflow;
-import soot.jimple.infoflow.InfoflowConfiguration;
 import soot.jimple.infoflow.InfoflowConfiguration.AliasingAlgorithm;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
-import soot.jimple.infoflow.data.AccessPathFactory;
 import soot.jimple.infoflow.taintWrappers.AbstractTaintWrapper;
 
 /**
@@ -268,18 +266,12 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
 
-		int oldAPLength = InfoflowConfiguration.getAccessPathLength();
-		InfoflowConfiguration.setAccessPathLength(1);
-
+		infoflow.getConfig().setAccessPathLength(1);
 		infoflow.getConfig().setInspectSinks(false);
 		List<String> epoints = new ArrayList<String>();
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void threeLevelTest()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
-
-		InfoflowConfiguration.setAccessPathLength(oldAPLength); // this is a global setting!
-													// Restore it when we're
-													// done
 	}
 
 	@Test(timeout = 300000)
@@ -385,9 +377,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 	public void aliasesTest() {
 		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
-		int oldLength = InfoflowConfiguration.getAccessPathLength();
-		InfoflowConfiguration.setAccessPathLength(3);
-
+		infoflow.getConfig().setAccessPathLength(3);
 		infoflow.getConfig().setInspectSources(false);
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(false);
@@ -396,16 +386,13 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void testAliases()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
-
-		InfoflowConfiguration.setAccessPathLength(oldLength);
 	}
 
 	@Test(timeout = 300000)
 	public void wrapperAliasesTest() {
 		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
-		int oldLength = InfoflowConfiguration.getAccessPathLength();
-		InfoflowConfiguration.setAccessPathLength(3);
+		infoflow.getConfig().setAccessPathLength(3);
 
 		infoflow.setTaintWrapper(new AbstractTaintWrapper() {
 			
@@ -435,7 +422,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 							.getInvokeExpr();
 					if (taintedPath.getPlainValue() == iinv.getArg(0)) {
 						RefType rt = (RefType) iinv.getBase().getType();
-						AccessPath ap = AccessPathFactory.v().createAccessPath(
+						AccessPath ap = manager.getAccessPathFactory().createAccessPath(
 								iinv.getBase(),
 								new SootField[] { rt.getSootClass()
 										.getFieldByName("b1") /*
@@ -455,7 +442,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 					}
 					if (taintedPath.getPlainValue() == iinv.getArg(1)) {
 						RefType rt = (RefType) iinv.getBase().getType();
-						AccessPath ap = AccessPathFactory.v().createAccessPath(
+						AccessPath ap = manager.getAccessPathFactory().createAccessPath(
 								iinv.getBase(),
 								new SootField[] { rt.getSootClass()
 										.getFieldByName("b2") /*
@@ -479,7 +466,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 							.getInvokeExpr();
 					if (taintedPath.getPlainValue() == iinv.getArg(0)) {
 						RefType rt = (RefType) iinv.getBase().getType();
-						AccessPath ap = AccessPathFactory.v().createAccessPath(
+						AccessPath ap = manager.getAccessPathFactory().createAccessPath(
 								iinv.getBase(),
 								new SootField[] { rt.getSootClass()
 										.getFieldByName("b1") /*
@@ -502,7 +489,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 					 * .attr && taintedPath.getLastField().getName().equals("b")
 					 */) {
 						DefinitionStmt def = (DefinitionStmt) stmt;
-						AccessPath ap = AccessPathFactory.v().createAccessPath(
+						AccessPath ap = manager.getAccessPathFactory().createAccessPath(
 								def.getLeftOp(),
 								new SootField[] { Scene.v()
 										.getSootClass(
@@ -541,8 +528,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void testWrapperAliases()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 1);
-
-		InfoflowConfiguration.setAccessPathLength(oldLength);
 	}
 
 	@Test(timeout = 300000)
@@ -564,9 +549,7 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 	public void aliasPerformanceTest() {
 		IInfoflow infoflow = initInfoflow();
 		infoflow.getConfig().setAliasingAlgorithm(AliasingAlgorithm.PtsBased);
-		int oldLength = InfoflowConfiguration.getAccessPathLength();
-		InfoflowConfiguration.setAccessPathLength(3);
-
+		infoflow.getConfig().setAccessPathLength(3);
 		infoflow.getConfig().setInspectSources(false);
 		infoflow.getConfig().setInspectSinks(false);
 		infoflow.getConfig().setEnableImplicitFlows(false);
@@ -575,8 +558,6 @@ public class HeapTestsPtsAliasing extends JUnitTests {
 		epoints.add("<soot.jimple.infoflow.test.HeapTestCode: void aliasPerformanceTest()>");
 		infoflow.computeInfoflow(appPath, libPath, epoints, sources, sinks);
 		checkInfoflow(infoflow, 3); // +1 for flow insensitivty
-
-		InfoflowConfiguration.setAccessPathLength(oldLength);
 	}
 
 	@Test(timeout = 300000)

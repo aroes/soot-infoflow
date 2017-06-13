@@ -1,12 +1,15 @@
 package soot.jimple.infoflow.aliasing;
 
-import heros.solver.PathEdge;
-
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Table;
+
+import heros.solver.PathEdge;
 import soot.Local;
 import soot.PointsToAnalysis;
 import soot.PointsToSet;
@@ -24,15 +27,10 @@ import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
+import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
-import soot.jimple.infoflow.data.AccessPathFactory;
 import soot.jimple.infoflow.solver.IInfoflowSolver;
-import soot.jimple.infoflow.solver.cfg.IInfoflowCFG;
-
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Sets;
-import com.google.common.collect.Table;
 
 /**
  * A simple points-to-based aliasing strategy for FlowDroid
@@ -43,8 +41,8 @@ public class PtsBasedAliasStrategy extends AbstractBulkAliasStrategy {
 	
 	private final Table<SootMethod, Abstraction, Set<Abstraction>> aliases = HashBasedTable.create();
 	
-	public PtsBasedAliasStrategy(IInfoflowCFG cfg) {
-		super(cfg);
+	public PtsBasedAliasStrategy(InfoflowManager manager) {
+		super(manager);
 	}
 	
 	@Override
@@ -97,7 +95,7 @@ public class PtsBasedAliasStrategy extends AbstractBulkAliasStrategy {
 		// can just say that every use of a variable aliased with a tainted
 		// one automatically taints the corresponding def set.
 		boolean beforeActUnit = method.getActiveBody().getUnits().contains(actStmt);
-		for (Unit u : method.getActiveBody().getUnits()) {			
+		for (Unit u : method.getActiveBody().getUnits()) {
 			Stmt stmt = (Stmt) u;
 			if (stmt == actStmt)
 				beforeActUnit = false;
@@ -123,11 +121,12 @@ public class PtsBasedAliasStrategy extends AbstractBulkAliasStrategy {
 						}
 					
 				if (baseAliases || parameterAliases) {
-					Abstraction absCallee = newAbs.deriveNewAbstraction(newAbs.getAccessPath().appendFields
-							(appendFieldsA, appendTypesA, taintSubFields), stmt);
+					AccessPath newAP = manager.getAccessPathFactory().appendFields
+							(newAbs.getAccessPath(), appendFieldsA, appendTypesA, taintSubFields);
+					Abstraction absCallee = newAbs.deriveNewAbstraction(newAP, stmt);
 					if (beforeActUnit)
 						absCallee = absCallee.deriveInactiveAbstraction(actStmt);
-					getForwardSolver().processEdge(new PathEdge<Unit, Abstraction>(d1, u, absCallee));
+					manager.getForwardSolver().processEdge(new PathEdge<Unit, Abstraction>(d1, u, absCallee));
 				}
 			}
 			else if (u instanceof DefinitionStmt) {
@@ -140,7 +139,7 @@ public class PtsBasedAliasStrategy extends AbstractBulkAliasStrategy {
 					if (isAliasedAtStmt(ptsTaint, assign.getRightOp())
 							&& (appendFields != null && appendFields.size() > 0)) {
 						Abstraction aliasAbsLeft = newAbs.deriveNewAbstraction(
-								AccessPathFactory.v().createAccessPath(assign.getLeftOp(),
+								manager.getAccessPathFactory().createAccessPath(assign.getLeftOp(),
 										appendFieldsA, taintSubFields), stmt);
 						if (beforeActUnit)
 							aliasAbsLeft = aliasAbsLeft.deriveInactiveAbstraction(actStmt);
@@ -160,11 +159,11 @@ public class PtsBasedAliasStrategy extends AbstractBulkAliasStrategy {
 							|| assign.getRightOp() instanceof ArrayRef) {
 						if (isAliasedAtStmt(ptsTaint, assign.getLeftOp())) {
 							Abstraction aliasAbsRight = newAbs.deriveNewAbstraction(
-									AccessPathFactory.v().createAccessPath(assign.getRightOp(),
+									manager.getAccessPathFactory().createAccessPath(assign.getRightOp(),
 											appendFieldsA, taintSubFields), stmt);
 							if (beforeActUnit)
 								aliasAbsRight = aliasAbsRight.deriveInactiveAbstraction(actStmt);
-							getForwardSolver().processEdge(new PathEdge<Unit, Abstraction>(d1, u, aliasAbsRight));
+							manager.getForwardSolver().processEdge(new PathEdge<Unit, Abstraction>(d1, u, aliasAbsRight));
 						}
 					}
 			}
@@ -234,5 +233,15 @@ public class PtsBasedAliasStrategy extends AbstractBulkAliasStrategy {
 	public boolean requiresAnalysisOnReturn() {
 		return true;
 	}
+
+	@Override
+	public IInfoflowSolver getSolver() {
+		return null;
+	}
 	
+	@Override
+	public void cleanup() {
+		aliases.clear();
+	}
+
 }

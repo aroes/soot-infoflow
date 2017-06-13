@@ -20,7 +20,6 @@ import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
-import soot.jimple.infoflow.data.AccessPathFactory;
 
 /**
  * Taints the return value of a method call if one of the parameter values
@@ -46,7 +45,7 @@ public class IdentityTaintWrapper extends AbstractTaintWrapper {
 			// If the base object is tainted, the return value is always tainted
 			if (taintedPath.getPlainValue().equals(iiExpr.getBase()))
 				if (stmt instanceof AssignStmt)
-					return Collections.singleton(AccessPathFactory.v().createAccessPath(
+					return Collections.singleton(manager.getAccessPathFactory().createAccessPath(
 							((AssignStmt) stmt).getLeftOp(), taintedPath.getTaintSubFields()));
 		}
 			
@@ -54,7 +53,7 @@ public class IdentityTaintWrapper extends AbstractTaintWrapper {
 		for (Value param : stmt.getInvokeExpr().getArgs())
 			if (taintedPath.getPlainValue().equals(param))
 				if (stmt instanceof AssignStmt)
-					return Collections.singleton(AccessPathFactory.v().createAccessPath(
+					return Collections.singleton(manager.getAccessPathFactory().createAccessPath(
 							((AssignStmt) stmt).getLeftOp(), taintedPath.getTaintSubFields()));
 		
 		return Collections.emptySet();

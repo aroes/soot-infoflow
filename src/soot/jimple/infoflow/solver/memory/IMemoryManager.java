@@ -1,4 +1,4 @@
-package soot.jimple.infoflow.solver;
+package soot.jimple.infoflow.solver.memory;
 
 /**
  * Common interface of all memory managers that can be used with FlowDroid's
@@ -7,7 +7,7 @@ package soot.jimple.infoflow.solver;
  * @author Steven Arzt
  *
  */
-public interface IMemoryManager<D> {
+public interface IMemoryManager<D, N> {
 	
 	/**
 	 * Tells the memory manager to handle the given object. Implementations are
@@ -25,5 +25,18 @@ public interface IMemoryManager<D> {
 	 * @return The new refrence to use instead of the original output
 	 */
 	public D handleGeneratedMemoryObject(D input, D output);
+
+	/**
+	 * Checks whether the given abstraction at the given call site is essential
+	 * and must be kept. Non-essential taint abstractions will not be registered
+	 * as neighbors for join points if the "single join point abstraction" option
+	 * is enabled
+	 * @param abs The abstraction
+	 * @param relatedCallSite The call site over which the abstraction is being
+	 * propagated
+	 * @return True if the abstraction is essential and must be kept, otherwise
+	 * false
+	 */
+	public boolean isEssentialJoinPoint(D abs, N relatedCallSite);
 	
 }

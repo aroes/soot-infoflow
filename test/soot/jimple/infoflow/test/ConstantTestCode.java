@@ -135,7 +135,7 @@ public class ConstantTestCode {
 	
 	private void leakRecursive(int i) {
 		if (i > 0) {			
-			String tainted =  TelephonyManager.getDeviceId();
+			String tainted = TelephonyManager.getDeviceId();
 			ConnectionManager cm = new ConnectionManager();
 			cm.publish(tainted);
 			return;
@@ -212,5 +212,40 @@ public class ConstantTestCode {
 		ConnectionManager cm = new ConnectionManager();
 		cm.publish(copy);
 	}
-
+	
+	private void nextNextLevelConst(int i) {
+		if (i > 10) {
+			String tainted = TelephonyManager.getDeviceId();
+			ConnectionManager cm = new ConnectionManager();
+			cm.publish(tainted);
+		}
+	}
+	
+	public void multiLevelConstTest1() {
+		nextNextLevelConst(1);
+		nextLevelConst(1);
+	}
+	
+	private void nextLevelConst(int i) {
+		nextNextLevelConst(i);
+	}
+	
+	public void multiLevelReturnTest1() {
+		int i = returnFromNextLevel();
+		int j = returnFromNextNextLevel();
+		if (i != j) {
+			String tainted = TelephonyManager.getDeviceId();
+			ConnectionManager cm = new ConnectionManager();
+			cm.publish(tainted);
+		}
+	}
+	
+	private int returnFromNextLevel() {
+		return returnFromNextNextLevel();
+	}
+	
+	private int returnFromNextNextLevel() {
+		return 5;
+	}
+	
 }

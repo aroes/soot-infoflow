@@ -22,6 +22,17 @@ public interface FastSolverLinkedNode<D, N> extends LinkedNode<D>, Cloneable {
 	 */
 	public D getPredecessor();
 	
+	/**
+	 * Clones this data flow abstraction
+	 * @return A clone of the current data flow abstraction
+	 */
 	public D clone();
+	
+	/**
+	 * If this abstraction supports alias analysis, this returns the active copy
+	 * of the current abstraction. Otherwise, "this" is returned.
+	 * @return The active copy if supported, otherwise the "this" reference
+	 */
+	public D getActiveCopy();
 	
 }

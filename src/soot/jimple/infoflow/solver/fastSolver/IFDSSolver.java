@@ -14,19 +14,9 @@
 package soot.jimple.infoflow.solver.fastSolver;
 
 
-import heros.DontSynchronize;
-import heros.FlowFunction;
-import heros.FlowFunctionCache;
-import heros.FlowFunctions;
-import heros.IFDSTabulationProblem;
-import heros.SynchronizedBy;
-import heros.ZeroedFlowFunctions;
-import heros.solver.CountingThreadPoolExecutor;
-import heros.solver.Pair;
-import heros.solver.PathEdge;
-
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -38,14 +28,26 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.cache.CacheBuilder;
+
+import heros.DontSynchronize;
+import heros.FlowFunction;
+import heros.FlowFunctionCache;
+import heros.FlowFunctions;
+import heros.IFDSTabulationProblem;
+import heros.SynchronizedBy;
+import heros.ZeroedFlowFunctions;
+import heros.solver.Pair;
+import heros.solver.PathEdge;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.infoflow.collect.ConcurrentHashSet;
 import soot.jimple.infoflow.collect.MyConcurrentHashMap;
-import soot.jimple.infoflow.solver.IMemoryManager;
+import soot.jimple.infoflow.memory.IMemoryBoundedSolver;
+import soot.jimple.infoflow.solver.executors.InterruptableExecutor;
+import soot.jimple.infoflow.solver.executors.SetPoolExecutor;
+import soot.jimple.infoflow.solver.memory.IMemoryManager;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
-
-import com.google.common.cache.CacheBuilder;
 
 
 /**
@@ -54,11 +56,11 @@ import com.google.common.cache.CacheBuilder;
  * 
  * @param <N> The type of nodes in the interprocedural control-flow graph. Typically {@link Unit}.
  * @param <D> The type of data-flow facts to be computed by the tabulation problem.
- * @param <M> The type of objects used to represent methods. Typically {@link SootMethod}.
  * @param <I> The type of inter-procedural control-flow graph being used.
  * @see IFDSTabulationProblem
  */
-public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiInterproceduralCFG<N, M>> {
+public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,I extends BiDiInterproceduralCFG<N, SootMethod>>
+			implements IMemoryBoundedSolver {
 	
 	public static CacheBuilder<Object, Object> DEFAULT_CACHE_BUILDER = CacheBuilder.newBuilder().concurrencyLevel
 			(Runtime.getRuntime().availableProcessors()).initialCapacity(10000).softValues();
@@ -68,13 +70,14 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
     //enable with -Dorg.slf4j.simpleLogger.defaultLogLevel=trace
     public static final boolean DEBUG = logger.isDebugEnabled();
 
-	protected CountingThreadPoolExecutor executor;
+	protected InterruptableExecutor executor;
 	
 	@DontSynchronize("only used by single thread")
 	protected int numThreads;
 	
 	@SynchronizedBy("thread safe data structure, consistent locking when used")
-	protected final JumpFunctions<N,D> jumpFn;
+	protected MyConcurrentHashMap<PathEdge<N, D>,D> jumpFunctions =
+			new MyConcurrentHashMap<PathEdge<N,D>, D>();
 	
 	@SynchronizedBy("thread safe data structure, only modified internally")
 	protected final I icfg;
@@ -82,17 +85,17 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 	//stores summaries that were queried before they were computed
 	//see CC 2010 paper by Naeem, Lhotak and Rodriguez
 	@SynchronizedBy("consistent lock on 'incoming'")
-	protected final MyConcurrentHashMap<Pair<M,D>,Set<Pair<N,D>>> endSummary =
-			new MyConcurrentHashMap<Pair<M,D>, Set<Pair<N,D>>>();
+	protected final MyConcurrentHashMap<Pair<SootMethod,D>,Set<Pair<N,D>>> endSummary =
+			new MyConcurrentHashMap<Pair<SootMethod,D>, Set<Pair<N,D>>>();
 	
 	//edges going along calls
 	//see CC 2010 paper by Naeem, Lhotak and Rodriguez
 	@SynchronizedBy("consistent lock on field")
-	protected final MyConcurrentHashMap<Pair<M,D>,MyConcurrentHashMap<N,Map<D, D>>> incoming =
-			new MyConcurrentHashMap<Pair<M,D>,MyConcurrentHashMap<N,Map<D, D>>>();
+	protected final MyConcurrentHashMap<Pair<SootMethod,D>,MyConcurrentHashMap<N,Map<D, D>>> incoming =
+			new MyConcurrentHashMap<Pair<SootMethod,D>,MyConcurrentHashMap<N,Map<D, D>>>();
 	
 	@DontSynchronize("stateless")
-	protected final FlowFunctions<N, D, M> flowFunctions;
+	protected final FlowFunctions<N, D, SootMethod> flowFunctions;
 	
 	@DontSynchronize("only used by single thread")
 	protected final Map<N,Set<D>> initialSeeds;
@@ -104,7 +107,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 	protected final D zeroValue;
 	
 	@DontSynchronize("readOnly")
-	protected final FlowFunctionCache<N,D,M> ffCache; 
+	protected final FlowFunctionCache<N,D,SootMethod> ffCache; 
 	
 	@DontSynchronize("readOnly")
 	protected final boolean followReturnsPastSeeds;
@@ -116,13 +119,21 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 	private boolean enableMergePointChecking = false;
 	
 	@DontSynchronize("readOnly")
-	protected IMemoryManager<D> memoryManager = null;
+	private boolean singleJoinPointAbstraction = false;
+
+	@DontSynchronize("readOnly")
+	protected IMemoryManager<D, N> memoryManager = null;
+	
+	protected boolean solverId;
+	
+	private Set<IMemoryBoundedSolverStatusNotification> notificationListeners = new HashSet<>();
+	private boolean killFlag = false;
 	
 	/**
 	 * Creates a solver for the given problem, which caches flow functions and edge functions.
 	 * The solver must then be started by calling {@link #solve()}.
 	 */
-	public IFDSSolver(IFDSTabulationProblem<N,D,M,I> tabulationProblem) {
+	public IFDSSolver(IFDSTabulationProblem<N,D,SootMethod,I> tabulationProblem) {
 		this(tabulationProblem, DEFAULT_CACHE_BUILDER);
 	}
 
@@ -134,34 +145,45 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 	 * @param flowFunctionCacheBuilder A valid {@link CacheBuilder} or
 	 * <code>null</code> if no caching is to be used for flow functions.
 	 */
-	public IFDSSolver(IFDSTabulationProblem<N,D,M,I> tabulationProblem,
+	public IFDSSolver(IFDSTabulationProblem<N,D,SootMethod,I> tabulationProblem,
 			@SuppressWarnings("rawtypes") CacheBuilder flowFunctionCacheBuilder) {
 		if(logger.isDebugEnabled())
 			flowFunctionCacheBuilder = flowFunctionCacheBuilder.recordStats();
 		this.zeroValue = tabulationProblem.zeroValue();
 		this.icfg = tabulationProblem.interproceduralCFG();		
-		FlowFunctions<N, D, M> flowFunctions = tabulationProblem.autoAddZero() ?
-				new ZeroedFlowFunctions<N,D,M>(tabulationProblem.flowFunctions(), zeroValue) : tabulationProblem.flowFunctions(); 
+		FlowFunctions<N, D, SootMethod> flowFunctions = tabulationProblem.autoAddZero() ?
+				new ZeroedFlowFunctions<N,D,SootMethod>(tabulationProblem.flowFunctions(), zeroValue) : tabulationProblem.flowFunctions(); 
 		if(flowFunctionCacheBuilder!=null) {
-			ffCache = new FlowFunctionCache<N,D,M>(flowFunctions, flowFunctionCacheBuilder);
+			ffCache = new FlowFunctionCache<N,D,SootMethod>(flowFunctions, flowFunctionCacheBuilder);
 			flowFunctions = ffCache;
 		} else {
 			ffCache = null;
 		}
 		this.flowFunctions = flowFunctions;
 		this.initialSeeds = tabulationProblem.initialSeeds();
-		this.jumpFn = new JumpFunctions<N,D>();
 		this.followReturnsPastSeeds = tabulationProblem.followReturnsPastSeeds();
 		this.numThreads = Math.max(1,tabulationProblem.numThreads());
 		this.executor = getExecutor();
 	}
 	
+	public void setSolverId(boolean solverId) {
+		this.solverId = solverId;
+	}
+	
 	/**
 	 * Runs the solver on the configured problem. This can take some time.
 	 */
-	public void solve() {		
+	public void solve() {
+		// Notify the listeners that the solver has been started
+		for (IMemoryBoundedSolverStatusNotification listener : notificationListeners)
+			listener.notifySolverStarted(this);
+		
 		submitInitialSeeds();
 		awaitCompletionComputeValuesAndShutdown();
+		
+		// Notify the listeners that the solver has been terminated
+		for (IMemoryBoundedSolverStatusNotification listener : notificationListeners)
+			listener.notifySolverTerminated(this);
 	}
 
 	/**
@@ -174,7 +196,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 			N startPoint = seed.getKey();
 			for(D val: seed.getValue())
 				propagate(zeroValue, startPoint, val, null, false);
-			jumpFn.addFunction(new PathEdge<N, D>(zeroValue, startPoint, zeroValue));
+			addFunction(new PathEdge<N, D>(zeroValue, startPoint, zeroValue));
 		}
 	}
 
@@ -200,7 +222,8 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 			try {
 				Thread.sleep(100);
 			} catch (InterruptedException e) {
-				e.printStackTrace();
+				// silently ignore the exception, it's not an issue if the
+				// thread gets aborted
 			}
 		}
 	}
@@ -227,10 +250,10 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
     protected void scheduleEdgeProcessing(PathEdge<N,D> edge){
     	// If the executor has been killed, there is little point
     	// in submitting new tasks
-    	if (executor.isTerminating())
+    	if (killFlag || executor.isTerminating() || executor.isTerminated())
     		return;
     	
-    	executor.execute(new PathEdgeProcessingTask(edge));
+    	executor.execute(new PathEdgeProcessingTask(edge, solverId));
     	propagationCount++;
     }
 	
@@ -251,8 +274,12 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 		Collection<N> returnSiteNs = icfg.getReturnSitesOfCallAt(n);
 		
 		//for each possible callee
-		Collection<M> callees = icfg.getCalleesOfCallAt(n);
-		for(M sCalledProcN: callees) { //still line 14
+		Collection<SootMethod> callees = icfg.getCalleesOfCallAt(n);
+		for(SootMethod sCalledProcN: callees) { //still line 14
+			// Early termination check
+	    	if (killFlag)
+	    		return;
+	    	
 			//compute the call-flow function
 			FlowFunction<D> function = flowFunctions.getCallFlowFunction(n, sCalledProcN);
 			Set<D> res = computeCallFlowFunction(function, d1, d2);
@@ -362,7 +389,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 	 */
 	protected void processExit(PathEdge<N,D> edge) {
 		final N n = edge.getTarget(); // an exit node; line 21...
-		M methodThatNeedsSummary = icfg.getMethodOf(n);
+		SootMethod methodThatNeedsSummary = icfg.getMethodOf(n);
 		
 		final D d1 = edge.factAtSource();
 		final D d2 = edge.factAtTarget();
@@ -379,6 +406,10 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 		//(see processCall(..))
 		if (inc != null)
 			for (Entry<N,Map<D, D>> entry: inc.entrySet()) {
+				// Early termination check
+		    	if (killFlag)
+		    		return;
+				
 				//line 22
 				N c = entry.getKey();
 				Set<D> callerSideDs = entry.getValue().keySet();
@@ -420,7 +451,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 		if(followReturnsPastSeeds && d1 == zeroValue && (inc == null || inc.isEmpty())) {			
 			Collection<N> callers = icfg.getCallersOf(methodThatNeedsSummary);
 			for(N c: callers) {
-				M callerMethod = icfg.getMethodOf(c);
+				SootMethod callerMethod = icfg.getMethodOf(c);
 				for(N retSiteC: icfg.getReturnSitesOfCallAt(c)) {					
 					FlowFunction<D> retFunction = flowFunctions.getReturnFlowFunction(c, methodThatNeedsSummary,n,retSiteC);
 					Set<D> targets = computeReturnFlowFunction(retFunction, d1, d2, c, Collections.singleton(zeroValue));
@@ -468,6 +499,11 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 		final D d2 = edge.factAtTarget();
 		
 		for (N m : icfg.getSuccsOf(n)) {
+			// Early termination check
+	    	if (killFlag)
+	    		return;
+			
+	    	// Compute the flow function
 			FlowFunction<D> flowFunction = flowFunctions.getNormalFlowFunction(n,m);
 			Set<D> res = computeNormalFlowFunction(flowFunction, d1, d2);
 			for (D d3 : res) {
@@ -535,15 +571,39 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 		
 		final PathEdge<N,D> edge = new PathEdge<N,D>(sourceVal, target, targetVal);
 		final D existingVal = (forceRegister || !enableMergePointChecking || isMergePoint(target)) ?
-				jumpFn.addFunction(edge) : null;
+				addFunction(edge) : null;
 		if (existingVal != null) {
 			if (existingVal != targetVal) {
-				existingVal.addNeighbor(targetVal);
+				// Check whether we need to retain this abstraction
+				boolean isEssential;
+				if (memoryManager == null)
+					isEssential = relatedCallSite != null && icfg.isCallStmt(relatedCallSite);
+				else
+					isEssential = memoryManager.isEssentialJoinPoint(targetVal, relatedCallSite);
+				
+				if (!singleJoinPointAbstraction || isEssential)
+					existingVal.addNeighbor(targetVal);
 			}
 		}
 		else {
+			// If this is an inactive abstraction and we have already processed
+			// its active counterpart, we can skip this one
+			D activeVal = targetVal.getActiveCopy();
+			if (activeVal != targetVal) {
+				PathEdge<N, D> activeEdge = new PathEdge<>(sourceVal, target, activeVal);
+				if (jumpFunctions.containsKey(activeEdge))
+					return;
+			}
 			scheduleEdgeProcessing(edge);
 		}
+	}
+	
+	/**
+	 * Records a jump function. The source statement is implicit.
+	 * @see PathEdge
+	 */
+	public D addFunction(PathEdge<N, D> edge) {
+		return jumpFunctions.putIfAbsent(edge, edge.factAtTarget());
 	}
 	
 	/**
@@ -571,28 +631,28 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 		return false;
 	}
 
-	protected Set<Pair<N, D>> endSummary(M m, D d3) {
-		Set<Pair<N, D>> map = endSummary.get(new Pair<M, D>(m, d3));
+	protected Set<Pair<N, D>> endSummary(SootMethod m, D d3) {
+		Set<Pair<N, D>> map = endSummary.get(new Pair<SootMethod, D>(m, d3));
 		return map;
 	}
 
-	private boolean addEndSummary(M m, D d1, N eP, D d2) {
+	private boolean addEndSummary(SootMethod m, D d1, N eP, D d2) {
 		if (d1 == zeroValue)
 			return true;
 		
 		Set<Pair<N, D>> summaries = endSummary.putIfAbsentElseGet
-				(new Pair<M, D>(m, d1), new ConcurrentHashSet<Pair<N, D>>());
+				(new Pair<SootMethod, D>(m, d1), new ConcurrentHashSet<Pair<N, D>>());
 		return summaries.add(new Pair<N, D>(eP, d2));
 	}
 	
-	protected Map<N, Map<D, D>> incoming(D d1, M m) {
-		Map<N, Map<D, D>> map = incoming.get(new Pair<M, D>(m, d1));
+	protected Map<N, Map<D, D>> incoming(D d1, SootMethod m) {
+		Map<N, Map<D, D>> map = incoming.get(new Pair<SootMethod, D>(m, d1));
 		return map;
 	}
 	
-	protected boolean addIncoming(M m, D d3, N n, D d1, D d2) {
+	protected boolean addIncoming(SootMethod m, D d3, N n, D d1, D d2) {
 		MyConcurrentHashMap<N, Map<D, D>> summaries = incoming.putIfAbsentElseGet
-				(new Pair<M, D>(m, d3), new MyConcurrentHashMap<N, Map<D, D>>());
+				(new Pair<SootMethod, D>(m, d3), new MyConcurrentHashMap<N, Map<D, D>>());
 		Map<D, D> set = summaries.putIfAbsentElseGet(n, new ConcurrentHashMap<D, D>());
 		return set.put(d1, d2) == null;
 	}
@@ -600,7 +660,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 	/**
 	 * Factory method for this solver's thread-pool executor.
 	 */
-	protected CountingThreadPoolExecutor getExecutor() {
+	protected InterruptableExecutor getExecutor() {
 		return new SetPoolExecutor(1, this.numThreads, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
 	}
 	
@@ -624,9 +684,11 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 	private class PathEdgeProcessingTask implements Runnable {
 		
 		private final PathEdge<N,D> edge;
+		private final boolean solverId;
 
-		public PathEdgeProcessingTask(PathEdge<N,D> edge) {
+		public PathEdgeProcessingTask(PathEdge<N,D> edge, boolean solverId) {
 			this.edge = edge;
+			this.solverId = solverId;
 		}
 
 		public void run() {
@@ -647,6 +709,7 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 			final int prime = 31;
 			int result = 1;
 			result = prime * result + ((edge == null) ? 0 : edge.hashCode());
+			result = prime * result + (solverId ? 1231 : 1237);
 			return result;
 		}
 
@@ -663,6 +726,8 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 				if (other.edge != null)
 					return false;
 			} else if (!edge.equals(other.edge))
+				return false;
+			if (solverId != other.solverId)
 				return false;
 			return true;
 		}
@@ -689,11 +754,21 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 	}
 	
 	/**
+	 * Sets whether only a single abstraction shall be recorded per join point.
+	 * In other words, enabling this option disables the recording of neighbors.
+	 * @param singleJoinPointAbstraction True to only record a single abstraction
+	 * per join point, false to record all incoming neighbors
+	 */
+	public void setSingleJoinPointAbstraction(boolean singleJoinPointAbstraction) {
+		this.singleJoinPointAbstraction = singleJoinPointAbstraction;
+	}
+
+	/**
 	 * Sets the memory manager that shall be used to manage the abstractions
 	 * @param memoryManager The memory manager that shall be used to manage the
 	 * abstractions
 	 */
-	public void setMemoryManager(IMemoryManager<D> memoryManager) {
+	public void setMemoryManager(IMemoryManager<D, N> memoryManager) {
 		this.memoryManager = memoryManager;
 	}
 	
@@ -701,8 +776,35 @@ public class IFDSSolver<N,D extends FastSolverLinkedNode<D, N>,M,I extends BiDiI
 	 * Gets the memory manager used by this solver to reduce memory consumption
 	 * @return The memory manager registered with this solver
 	 */	
-	public IMemoryManager<D> getMemoryManager() {
+	public IMemoryManager<D, N> getMemoryManager() {
 		return this.memoryManager;
 	}
 
+	@Override
+	public void forceTerminate() {
+		this.killFlag = true;
+		this.executor.interrupt();
+		this.executor.shutdown();
+	}
+
+	@Override
+	public boolean isTerminated() {
+		return killFlag || this.executor.isFinished();
+	}
+
+	@Override
+	public boolean isKilled() {
+		return killFlag;
+	}
+
+	@Override
+	public void reset() {
+		this.killFlag = false;
+	}
+
+	@Override
+	public void addStatusListener(IMemoryBoundedSolverStatusNotification listener) {
+		this.notificationListeners.add(listener);
+	}
+	
 }

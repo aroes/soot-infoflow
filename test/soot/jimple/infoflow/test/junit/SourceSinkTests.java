@@ -10,8 +10,6 @@
  ******************************************************************************/
 package soot.jimple.infoflow.test.junit;
 
-import heros.InterproceduralCFG;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,15 +17,14 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import soot.SootMethod;
-import soot.Unit;
 import soot.Value;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.IfStmt;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.infoflow.IInfoflow;
+import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.data.AccessPath;
-import soot.jimple.infoflow.data.AccessPathFactory;
 import soot.jimple.infoflow.entryPointCreators.DefaultEntryPointCreator;
 import soot.jimple.infoflow.source.ISourceSinkManager;
 import soot.jimple.infoflow.source.SourceInfo;
@@ -49,7 +46,12 @@ public class SourceSinkTests extends JUnitTests {
 	private abstract class BaseSourceSinkManager implements ISourceSinkManager {
 
 		@Override
-		public boolean isSink(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg,
+		public void initialize() {
+			//
+		}
+		
+		@Override
+		public boolean isSink(Stmt sCallSite, InfoflowManager manager,
 				AccessPath ap) {
 			if (!sCallSite.containsInvokeExpr())
 				return false;
@@ -72,11 +74,11 @@ public class SourceSinkTests extends JUnitTests {
 	private final ISourceSinkManager getSecretSSM = new BaseSourceSinkManager() {
 
 		@Override
-		public SourceInfo getSourceInfo(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg) {
+		public SourceInfo getSourceInfo(Stmt sCallSite, InfoflowManager manager) {
 			if (sCallSite.containsInvokeExpr()
 					&& sCallSite instanceof DefinitionStmt
 					&& sCallSite.getInvokeExpr().getMethod().getName().equals("getSecret")) {
-				AccessPath ap = AccessPathFactory.v().createAccessPath(
+				AccessPath ap = manager.getAccessPathFactory().createAccessPath(
 						((DefinitionStmt) sCallSite).getLeftOp(), true);
 				return new SourceInfo(ap);
 			}
@@ -88,12 +90,12 @@ public class SourceSinkTests extends JUnitTests {
 	private final ISourceSinkManager getSecretOrSecret2SSM = new BaseSourceSinkManager() {
 
 		@Override
-		public SourceInfo getSourceInfo(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg) {
+		public SourceInfo getSourceInfo(Stmt sCallSite, InfoflowManager manager) {
 			if (sCallSite.containsInvokeExpr()
 					&& sCallSite instanceof DefinitionStmt
 					&& (sCallSite.getInvokeExpr().getMethod().getName().equals("getSecret")
 							|| (sCallSite.getInvokeExpr().getMethod().getName().equals("getSecret2")))) {
-				AccessPath ap = AccessPathFactory.v().createAccessPath(
+				AccessPath ap = manager.getAccessPathFactory().createAccessPath(
 						((DefinitionStmt) sCallSite).getLeftOp(), true);
 				return new SourceInfo(ap);
 			}
@@ -105,11 +107,11 @@ public class SourceSinkTests extends JUnitTests {
 	private final ISourceSinkManager noTaintSubFieldsSSM = new BaseSourceSinkManager() {
 
 		@Override
-		public SourceInfo getSourceInfo(Stmt sCallSite, InterproceduralCFG<Unit, SootMethod> cfg) {
+		public SourceInfo getSourceInfo(Stmt sCallSite, InfoflowManager manager) {
 			if (sCallSite.containsInvokeExpr()
 					&& sCallSite instanceof DefinitionStmt
 					&& sCallSite.getInvokeExpr().getMethod().getName().equals("getSecret")) {
-				AccessPath ap = AccessPathFactory.v().createAccessPath(
+				AccessPath ap = manager.getAccessPathFactory().createAccessPath(
 						((DefinitionStmt) sCallSite).getLeftOp(), false);
 				return new SourceInfo(ap);
 			}
@@ -121,21 +123,24 @@ public class SourceSinkTests extends JUnitTests {
 	private final class ifAsSinkSSM implements ISourceSinkManager {
 
 		@Override
-		public SourceInfo getSourceInfo(Stmt sCallSite,
-				InterproceduralCFG<Unit, SootMethod> cfg) {
+		public SourceInfo getSourceInfo(Stmt sCallSite, InfoflowManager manager) {
 			if (sCallSite instanceof DefinitionStmt
 					&& sCallSite.containsInvokeExpr()
 					&& sCallSite.getInvokeExpr().getMethod().getName().equals("currentTimeMillis")) {
 				Value val = ((DefinitionStmt) sCallSite).getLeftOp();
-				return new SourceInfo(AccessPathFactory.v().createAccessPath(val, true));
+				return new SourceInfo(manager.getAccessPathFactory().createAccessPath(val, true));
 			}
 			return null;
 		}
 
 		@Override
-		public boolean isSink(Stmt sCallSite,
-				InterproceduralCFG<Unit, SootMethod> cfg, AccessPath ap) {
+		public boolean isSink(Stmt sCallSite, InfoflowManager manager, AccessPath ap) {
 			return sCallSite instanceof IfStmt;
+		}
+
+		@Override
+		public void initialize() {
+			// 
 		}
 		
 	}
@@ -143,13 +148,12 @@ public class SourceSinkTests extends JUnitTests {
 	private final class sourceToSourceSSM extends BaseSourceSinkManager {
 
 		@Override
-		public SourceInfo getSourceInfo(Stmt sCallSite,
-				InterproceduralCFG<Unit, SootMethod> cfg) {
+		public SourceInfo getSourceInfo(Stmt sCallSite, InfoflowManager manager) {
 			if (sCallSite instanceof DefinitionStmt
 					&& sCallSite.containsInvokeExpr()
 					&& sCallSite.getInvokeExpr().getMethod().getName().equals("getSecret")) {
 				Value val = ((DefinitionStmt) sCallSite).getLeftOp();
-				return new SourceInfo(AccessPathFactory.v().createAccessPath(val, true));
+				return new SourceInfo(manager.getAccessPathFactory().createAccessPath(val, true));
 			}
 			return null;
 		}
@@ -159,15 +163,14 @@ public class SourceSinkTests extends JUnitTests {
 	private final class parameterSourceSSM extends BaseSourceSinkManager {
 
 		@Override
-		public SourceInfo getSourceInfo(Stmt sCallSite,
-				InterproceduralCFG<Unit, SootMethod> cfg) {
+		public SourceInfo getSourceInfo(Stmt sCallSite, InfoflowManager manager) {
 			if (sCallSite.containsInvokeExpr()) {
 				InvokeExpr iexpr = sCallSite.getInvokeExpr();
 				String name = iexpr.getMethod().getName();
 				boolean includeExistingImmutableAliases = name.equals("annotatedSource");
 				if ((name.equals("source") || includeExistingImmutableAliases)
 						&& iexpr.getArgCount() > 0) {
-					AccessPath ap = AccessPathFactory.v().createAccessPath(iexpr.getArg(0), null, null, null, true,
+					AccessPath ap = manager.getAccessPathFactory().createAccessPath(iexpr.getArg(0), null, null, null, true,
 							false, true, AccessPath.ArrayTaintType.ContentsAndLength, true);
 					return new SourceInfo(ap);
 				}
