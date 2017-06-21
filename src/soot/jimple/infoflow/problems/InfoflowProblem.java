@@ -46,7 +46,6 @@ import soot.jimple.Stmt;
 import soot.jimple.infoflow.InfoflowManager;
 import soot.jimple.infoflow.aliasing.Aliasing;
 import soot.jimple.infoflow.aliasing.IAliasingStrategy;
-import soot.jimple.infoflow.cfg.FlowDroidEssentialMethodTag;
 import soot.jimple.infoflow.data.Abstraction;
 import soot.jimple.infoflow.data.AccessPath;
 import soot.jimple.infoflow.data.AccessPath.ArrayTaintType;
@@ -58,7 +57,6 @@ import soot.jimple.infoflow.solver.functions.SolverNormalFlowFunction;
 import soot.jimple.infoflow.solver.functions.SolverReturnFlowFunction;
 import soot.jimple.infoflow.util.BaseSelector;
 import soot.jimple.infoflow.util.ByReferenceBoolean;
-import soot.jimple.infoflow.util.SystemClassHandler;
 import soot.jimple.infoflow.util.TypeUtils;
 
 public class InfoflowProblem extends AbstractInfoflowProblem {
@@ -1062,31 +1060,5 @@ public class InfoflowProblem extends AbstractInfoflowProblem {
     public TaintPropagationResults getResults(){
    		return this.results;
 	}
-    
-    /**
-     * Checks whether the given method is excluded from the data flow analysis,
-     * i.e., should not be analyzed
-     * @param sm The method to check
-     * @return True if the method is excluded and shall not be analyzed,
-     * otherwise false
-     */
-    private boolean isExcluded(SootMethod sm) {
-    	// Is this an essential method?
-    	if (sm.hasTag(FlowDroidEssentialMethodTag.TAG_NAME))
-    		return false;
-    	
-    	// We can exclude Soot library classes
-    	if (manager.getConfig().getExcludeSootLibraryClasses()
-    			&& sm.getDeclaringClass().isLibraryClass())
-    		return true;
-    	
-    	// We can ignore system classes according to FlowDroid's definition
-    	if (manager.getConfig().getIgnoreFlowsInSystemPackages()
-    			&& SystemClassHandler.isClassInSystemPackage(
-    					sm.getDeclaringClass().getName()))
-    		return true;
-    	
-    	return false;
-    }
-    
+        
 }

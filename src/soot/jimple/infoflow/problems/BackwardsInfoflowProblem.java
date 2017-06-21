@@ -483,6 +483,11 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						if(taintWrapper != null && taintWrapper.isExclusive(stmt, source))
 							return Collections.emptySet();
 						
+						// Do not propagate into Soot library classes if that
+						// optimization is enabled
+						if (isExcluded(dest))
+							return Collections.emptySet();
+						
 						// Only propagate the taint if the target field is actually read
 						if (manager.getConfig().getEnableStaticFieldTracking()
 								&& source.getAccessPath().isStaticFieldRef())
@@ -806,9 +811,14 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 							}
 						}
 						
+						// Additional check: If all callees are library
+						// classes, we pass it on as well
+						boolean mustPropagate = isExcluded(callee);
+						
 						// If the callee does not read the given value, we also need to pass it on
 						// since we do not propagate it into the callee.
-						if (manager.getConfig().getEnableStaticFieldTracking()
+						if (!mustPropagate
+								&& manager.getConfig().getEnableStaticFieldTracking()
 								&& source.getAccessPath().isStaticFieldRef()) {
 							if (interproceduralCFG().isStaticFieldUsed(callee,
 									source.getAccessPath().getFirstField()))
@@ -822,7 +832,7 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						
 						// If the base local of the invocation is tainted, we do not
 						// pass on the taint
-						if (iStmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
+						if (!mustPropagate && iStmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
 							InstanceInvokeExpr iinv = (InstanceInvokeExpr) iStmt.getInvokeExpr();
 							if (iinv.getBase() == source.getAccessPath().getPlainValue()
 									&& !interproceduralCFG().getCalleesOfCallAt(call).isEmpty())
@@ -830,9 +840,11 @@ public class BackwardsInfoflowProblem extends AbstractInfoflowProblem {
 						}
 						
 						// We do not pass taints on parameters over the call-to-return edge
-						for (int i = 0; i < callArgs.length; i++)
-							if (callArgs[i] == source.getAccessPath().getPlainValue())
-								return Collections.emptySet();
+						if (!mustPropagate) {
+							for (int i = 0; i < callArgs.length; i++)
+								if (callArgs[i] == source.getAccessPath().getPlainValue())
+									return Collections.emptySet();
+						}
 												
 						return notifyOutFlowHandlers(call, d1, source, Collections.singleton(source),
 								FlowFunctionType.CallToReturnFlowFunction);

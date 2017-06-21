@@ -30,7 +30,7 @@ public class FlowDroidMemoryManager implements IMemoryManager<Abstraction, Unit>
 	 * @author Steven Arzt
 	 *
 	 */
-	private class AbstractionCacheKey {
+	private static class AbstractionCacheKey {
 		
 		private final Abstraction abs;
 		

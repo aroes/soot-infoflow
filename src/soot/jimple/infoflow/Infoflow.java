@@ -926,9 +926,7 @@ public class Infoflow extends AbstractInfoflow {
 		int sinkCount = 0;
 		if (m.hasActiveBody()) {
 			// Check whether this is a system class we need to ignore
-			final String className = m.getDeclaringClass().getName();
-			if (config.getIgnoreFlowsInSystemPackages()
-					&& SystemClassHandler.isClassInSystemPackage(className))
+			if (!isValidSeedMethod(m))
 				return sinkCount;
 
 			// Look for a source in the method. Also look for sinks. If we
