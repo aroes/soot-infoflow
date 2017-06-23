@@ -449,6 +449,10 @@ public class Infoflow extends AbstractInfoflow {
 				// We need to prune access paths that are entailed by another one
 				removeEntailedAbstractions(res);
 				
+				// Shut down the native call handler
+				if (nativeCallHandler != null)
+					nativeCallHandler.shutdown();
+				
 				logger.info("IFDS problem with {} forward and {} backward edges solved, "
 						+ "processing {} results...", forwardSolver.getPropagationCount(),
 						aliasingStrategy.getSolver() == null ? 0 : aliasingStrategy.getSolver().getPropagationCount(),

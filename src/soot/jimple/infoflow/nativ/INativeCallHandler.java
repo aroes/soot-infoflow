@@ -52,5 +52,10 @@ public interface INativeCallHandler {
 	 * given call site, otherwise false
 	 */
 	public abstract boolean supportsCall(Stmt call);
+
+	/**
+	 * Tells the native call handler that it can free all resources it has allocated at initialization time
+	 */
+	public void shutdown();
 	
 }

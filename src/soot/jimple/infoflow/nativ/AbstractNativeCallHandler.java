@@ -19,5 +19,10 @@ public abstract class AbstractNativeCallHandler implements INativeCallHandler {
 	public void initialize(InfoflowManager manager) {
 		this.manager = manager;
 	}
+	
+	@Override
+	public void shutdown() {
+		//
+	}
 
 }
