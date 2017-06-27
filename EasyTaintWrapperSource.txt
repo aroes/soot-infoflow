@@ -551,3 +551,7 @@
 
 <com.fasterxml.jackson.databind.ObjectMapper: byte[] writeValueAsBytes(java.lang.Object)>
 <com.fasterxml.jackson.databind.ObjectMapper: java.lang.String writeValueAsString(java.lang.Object)>
+
+<org.apache.http.util.EntityUtils: java.lang.String toString(org.apache.http.HttpEntity)>
+<org.apache.http.util.EntityUtils: java.lang.String toString(org.apache.http.HttpEntity,java.nio.Charset)>
+<org.apache.http.util.EntityUtils: java.lang.String toString(org.apache.http.HttpEntity,java.lang.String)>
