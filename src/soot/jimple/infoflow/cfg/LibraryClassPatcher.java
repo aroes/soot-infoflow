@@ -89,7 +89,7 @@ public class LibraryClassPatcher {
 		SootClass scApplicationHolder = createOrGetApplicationHolder();
 		
 		SootClass sc = Scene.v().getSootClassUnsafe("android.app.Activity");
-		if (sc == null)
+		if (sc == null || sc.resolvingLevel() < SootClass.SIGNATURES)
 			return;
 		sc.setLibraryClass();
 		
@@ -151,7 +151,7 @@ public class LibraryClassPatcher {
 	 */
 	private void patchThreadImplementation() {
 		SootClass sc = Scene.v().getSootClassUnsafe("java.lang.Thread");
-		if (sc == null)
+		if (sc == null || sc.resolvingLevel() < SootClass.SIGNATURES)
 			return;
 		sc.setLibraryClass();
 		
@@ -166,7 +166,7 @@ public class LibraryClassPatcher {
 		smCons.addTag(new FlowDroidEssentialMethodTag());
 		
 		SootClass runnable = Scene.v().getSootClassUnsafe("java.lang.Runnable");
-		if (runnable == null)
+		if (runnable == null || runnable.resolvingLevel() < SootClass.SIGNATURES)
 			return;
 		
 		// Create a field for storing the runnable
@@ -262,12 +262,12 @@ public class LibraryClassPatcher {
 	 */
 	private void patchHandlerImplementation() {
 		SootClass sc = Scene.v().getSootClassUnsafe("android.os.Handler");
-		if (sc == null)
+		if (sc == null || sc.resolvingLevel() < SootClass.SIGNATURES)
 			return;
 		sc.setLibraryClass();
 		
 		SootClass runnable = Scene.v().getSootClassUnsafe("java.lang.Runnable");
-		if (runnable == null)
+		if (sc == null || sc.resolvingLevel() < SootClass.SIGNATURES)
 			return;
 		
 		SootMethod smPost = sc.getMethodUnsafe(
@@ -405,7 +405,7 @@ public class LibraryClassPatcher {
 	 */
 	private void patchTimerImplementation() {
 		SootClass sc = Scene.v().getSootClassUnsafe("java.util.Timer");
-		if (sc == null)
+		if (sc == null || sc.resolvingLevel() < SootClass.SIGNATURES)
 			return;
 		sc.setLibraryClass();
 		
@@ -492,7 +492,7 @@ public class LibraryClassPatcher {
 	*/
 	private void patchActivityGetFragmentManager() {
 		SootClass sc = Scene.v().getSootClassUnsafe("android.app.Activity");
-		if (sc == null)
+		if (sc == null || sc.resolvingLevel() < SootClass.SIGNATURES)
 			return;
 		sc.setApplicationClass();
 		SootMethod smGetFM = sc.getMethodUnsafe("android.app.FragmentManager getFragmentManager()");
@@ -514,7 +514,7 @@ public class LibraryClassPatcher {
 	
 	private void patchServiceConnection() {
 		SootClass sc = Scene.v().getSootClassUnsafe("android.content.ServiceConnection");
-		if (sc == null)
+		if (sc == null || sc.resolvingLevel() < SootClass.SIGNATURES)
 			return;
 		sc.setApplicationClass();
 		

@@ -174,7 +174,7 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 		}
 		
 		// Create the method
-		mainMethod = new SootMethod(methodName, Collections.singletonList(
+		mainMethod = Scene.v().makeSootMethod(methodName, Collections.singletonList(
 				stringArrayType), VoidType.v());
 		
 		// Create the body

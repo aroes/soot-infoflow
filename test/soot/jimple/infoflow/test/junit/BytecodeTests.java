@@ -113,7 +113,7 @@ public class BytecodeTests extends JUnitTests {
 		// Create the first method that calls the second one and passes on the
 		// parameter
 		RefType containerType = Scene.v().getRefType("soot.jimple.infoflow.test.junit.BytecodeTests$Container");
-		SootMethod smOnCreate = new SootMethod("onCreate", Collections.<Type>singletonList(containerType), VoidType.v());
+		SootMethod smOnCreate = Scene.v().makeSootMethod("onCreate", Collections.<Type>singletonList(containerType), VoidType.v());
 		testClass.addMethod(smOnCreate);
 		smOnCreate.setModifiers(Modifier.STATIC | Modifier.PUBLIC);
 		
@@ -128,7 +128,7 @@ public class BytecodeTests extends JUnitTests {
 		bOnCreate.getUnits().add(Jimple.v().newIdentityStmt(param0onCreate, Jimple.v().newParameterRef(containerType, 0)));
 				
 		// Create the second method that receives the parameter
-		SootMethod smTarget = new SootMethod("callTarget", Collections.<Type>singletonList(containerType), VoidType.v());
+		SootMethod smTarget = Scene.v().makeSootMethod("callTarget", Collections.<Type>singletonList(containerType), VoidType.v());
 		testClass.addMethod(smTarget);
 		smTarget.setModifiers(Modifier.STATIC | Modifier.PUBLIC);
 

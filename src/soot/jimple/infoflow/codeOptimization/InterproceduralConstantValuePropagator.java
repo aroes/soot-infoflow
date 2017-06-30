@@ -472,7 +472,7 @@ public class InterproceduralConstantValuePropagator extends SceneTransformer {
 					}
 					
 					// Create the new method
-					thrower = new SootMethod("throw" + exceptionThrowers.size(),
+					thrower = Scene.v().makeSootMethod("throw" + exceptionThrowers.size(),
 							Collections.<Type>emptyList(), VoidType.v());
 					thrower.setModifiers(Modifier.PUBLIC | Modifier.STATIC);
 					
