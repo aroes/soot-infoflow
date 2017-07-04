@@ -134,7 +134,7 @@ public class LibraryClassPatcher {
 			scApplicationHolder = new SootClass(applicationHolderClassName, Modifier.PUBLIC);
 			scApplicationHolder.setSuperclass(Scene.v().getSootClass("java.lang.Object"));
 			
-			scApplicationHolder.addField(new SootField("application", scApplication.getType(), Modifier.PUBLIC | Modifier.STATIC));
+			scApplicationHolder.addField(Scene.v().makeSootField("application", scApplication.getType(), Modifier.PUBLIC | Modifier.STATIC));
 			Scene.v().addClass(scApplicationHolder);
 			
 			scApplicationHolder.validate();
@@ -174,7 +174,7 @@ public class LibraryClassPatcher {
 		SootField fldTarget = null;
 		while ((fldTarget = sc.getFieldByNameUnsafe("target" + fieldIdx)) != null)
 			fieldIdx++;
-		fldTarget = new SootField("target" + fieldIdx, runnable.getType());
+		fldTarget = Scene.v().makeSootField("target" + fieldIdx, runnable.getType());
 		sc.addField(fldTarget);
 		
 		// Create a new constructor
