@@ -158,6 +158,7 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 		}
 		else {
 			mainClass = Scene.v().makeSootClass(dummyClassName);
+			mainClass.setResolvingLevel(SootClass.BODIES);
 			Scene.v().addClass(mainClass);
 		}
 		
