@@ -157,7 +157,7 @@ public abstract class BaseEntryPointCreator implements IEntryPointCreator {
 					methodName = dummyMethodName + "_" + methodIndex++;
 		}
 		else {
-			mainClass = new SootClass(dummyClassName);
+			mainClass = Scene.v().makeSootClass(dummyClassName);
 			Scene.v().addClass(mainClass);
 		}
 		
