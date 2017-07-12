@@ -29,6 +29,8 @@ public class AndroidEntryPointConstants {
 	public static final String APPLICATIONCLASS = "android.app.Application";
 	public static final String FRAGMENTCLASS = "android.app.Fragment";
 	public static final String SERVICECONNECTIONINTERFACE = "android.content.ServiceConnection";
+	//WEAR SUPPORT
+	public static final String GOOGLEAPICLIENTINTERFACE = "com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks";
 	
 	public static final String ACTIVITY_ONCREATE = "void onCreate(android.os.Bundle)";
 	public static final String ACTIVITY_ONSTART = "void onStart()";
@@ -63,6 +65,8 @@ public class AndroidEntryPointConstants {
 	public static final String GCMLISTENERSERVICE_ONMESSAGERECEIVED = "void onMessageReceived(java.lang.String,android.os.Bundle)";
 	public static final String GCMLISTENERSERVICE_ONMESSAGESENT = "void onMessageSent(java.lang.String)";
 	public static final String GCMLISTENERSERVICE_ONSENDERROR = "void onSendError(java.lang.String,java.lang.String)";
+	//WEAR SUPPORT
+	public static final String GOOGLEAPICLIENT_ONCONNECTED = "void onConnected(android.os.Bundle)";
 	
 	public static final String FRAGMENT_ONCREATE = "void onCreate(android.os.Bundle)";
 	public static final String FRAGMENT_ONATTACH = "void onAttach(android.app.Activity)";
@@ -157,6 +161,10 @@ public class AndroidEntryPointConstants {
 		GCMLISTENERSERVICE_ONSENDERROR};
 	private static final List<String> gcmListenerServiceMethodList = Arrays.asList(gcmListenerServiceMethods);
 	
+	//WEAR SUPPORT
+	private static final String[] googleApiClientMethods = {GOOGLEAPICLIENT_ONCONNECTED};
+	public static final List<String> googleApiClientMethodsList = Arrays.asList(googleApiClientMethods);
+	
 	private static final String[] broadcastMethods = {BROADCAST_ONRECEIVE};
 	private static final List<String> broadcastMethodList = Arrays.asList(broadcastMethods);
 	
@@ -204,6 +212,11 @@ public class AndroidEntryPointConstants {
 	
 	public static List<String> getGCMListenerServiceMethods(){
 		return gcmListenerServiceMethodList;
+	}
+	
+	//WEAR SUPPORT
+	public static List<String> getGoogleApiClientMethods() {
+		return googleApiClientMethodsList;
 	}
 	
 	public static List<String> getBroadcastLifecycleMethods(){

@@ -25,6 +25,8 @@ public class AndroidEntryPointUtils {
 	private SootClass osClassContentProvider;
 	private SootClass osClassGCMBaseIntentService;
 	private SootClass osClassGCMListenerService;
+	//WEAR SUPPORT
+	private SootClass osInterfaceGoogleApiClient;
 	private SootClass osInterfaceServiceConnection;
 
 	/**
@@ -39,6 +41,8 @@ public class AndroidEntryPointUtils {
 		ContentProvider,
 		GCMBaseIntentService,
 		GCMListenerService,
+		//WEAR SUPPORT
+		GoogleApiClient,
 		ServiceConnection,
 		Plain
 	}
@@ -57,6 +61,8 @@ public class AndroidEntryPointUtils {
 		osClassContentProvider = Scene.v().getSootClassUnsafe(AndroidEntryPointConstants.CONTENTPROVIDERCLASS);
 		osClassGCMBaseIntentService = Scene.v().getSootClassUnsafe(AndroidEntryPointConstants.GCMBASEINTENTSERVICECLASS);
 		osClassGCMListenerService = Scene.v().getSootClassUnsafe(AndroidEntryPointConstants.GCMLISTENERSERVICECLASS);
+		//WEAR SUPPORT
+		osInterfaceGoogleApiClient = Scene.v().getSootClassUnsafe(AndroidEntryPointConstants.GOOGLEAPICLIENTINTERFACE);
 		osInterfaceServiceConnection = Scene.v().getSootClassUnsafe(AndroidEntryPointConstants.SERVICECONNECTIONINTERFACE);
 	}
 	
@@ -104,6 +110,10 @@ public class AndroidEntryPointUtils {
 		else if (osClassGCMListenerService != null && Scene.v().getOrMakeFastHierarchy().canStoreType(
 				currentClass.getType(), osClassGCMListenerService.getType()))
 			ctype = ComponentType.GCMListenerService;
+		//WEAR SUPPORT
+		else if (osInterfaceGoogleApiClient != null && Scene.v().getOrMakeFastHierarchy().canStoreType(
+				currentClass.getType(), osInterfaceGoogleApiClient.getType()))
+			ctype = ComponentType.GoogleApiClient;
 		// (9) android.content.ServiceConnection
 		else if (osInterfaceServiceConnection != null && Scene.v().getOrMakeFastHierarchy().canStoreType(
 			currentClass.getType(), osInterfaceServiceConnection.getType()))
@@ -154,6 +164,10 @@ public class AndroidEntryPointUtils {
 			return true;
 		if (componentType == ComponentType.GCMListenerService
 				&& AndroidEntryPointConstants.getGCMListenerServiceMethods().contains(subsignature))
+			return true;
+		//WEAR SUPPORT
+		if (componentType == ComponentType.GoogleApiClient
+				&& AndroidEntryPointConstants.getGoogleApiClientMethods().contains(subsignature))
 			return true;
 		if (componentType == ComponentType.ServiceConnection
 				&& AndroidEntryPointConstants.getServiceConnectionMethods().contains(subsignature))

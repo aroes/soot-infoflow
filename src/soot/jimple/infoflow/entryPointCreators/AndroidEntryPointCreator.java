@@ -323,6 +323,8 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 				case Service:
 				case GCMBaseIntentService:
 				case GCMListenerService:
+				//WEAR SUPPORT
+				case GoogleApiClient:
 					generateServiceLifecycle(callbackSigs, currentClass, endClassStmt,
 							classLocal);
 					break;
@@ -665,6 +667,15 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 					hasAdditionalMethods |= createPlainMethodCall(classLocal, sm);
 			}
 		}
+		//WEAR SUPPORT
+		else if(componentType == ComponentType.GoogleApiClient) {
+			for(String sig: AndroidEntryPointConstants.getGoogleApiClientMethods()) {
+				SootMethod sm = findMethod(currentClass, sig);
+				if (sm != null && !sm.getDeclaringClass().getName().equals(
+						AndroidEntryPointConstants.GOOGLEAPICLIENTINTERFACE))
+					hasAdditionalMethods |= createPlainMethodCall(classLocal, sm);
+			}
+		}
 		addCallbackMethods(currentClass);
 		body.getUnits().add(endWhileStmt);
 		if (hasAdditionalMethods)
@@ -693,6 +704,13 @@ public class AndroidEntryPointCreator extends BaseEntryPointCreator implements I
 			for (String sig : AndroidEntryPointConstants.getGCMIntentServiceMethods()) {
 				SootMethod sm = findMethod(currentClass, sig);
 				if (sm != null && !sm.getName().equals(AndroidEntryPointConstants.GCMBASEINTENTSERVICECLASS))
+					hasAdditionalMethods |= createPlainMethodCall(classLocal, sm);
+			}
+		//WEAR SUPPORT
+		if (componentType == ComponentType.GoogleApiClient)
+			for (String sig : AndroidEntryPointConstants.getGoogleApiClientMethods()) {
+				SootMethod sm = findMethod(currentClass, sig);
+				if (sm != null && !sm.getName().equals(AndroidEntryPointConstants.GOOGLEAPICLIENTINTERFACE))
 					hasAdditionalMethods |= createPlainMethodCall(classLocal, sm);
 			}
 		addCallbackMethods(currentClass);
